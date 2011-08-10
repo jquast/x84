@@ -1,0 +1,5 @@
+#!/usr/local/bin/python2.5
+# EASY-INSTALL-SCRIPT: 'ZConfig==2.8.0','zconfig_schema2html'
+__requires__ = 'ZConfig==2.8.0'
+import pkg_resources
+pkg_resources.run_script('ZConfig==2.8.0', 'zconfig_schema2html')

@@ -1,0 +1,13 @@
+#!/usr/bin/env python
+"""
+ Main entry point for X/84 bbs, http://1984.ws
+ $Id: x84,v 1.1 2009/05/18 15:36:55 maze Exp $
+"""
+__license__ = 'ISC'
+__author__ = 'Jeffrey Quast <dingo@1984.ws>'
+__copyright__ = ['Copyright (C) 2009 Jeffrey Quast <dingo@1984.ws>',
+                 'Copyright (C) 2005 Johannes Lundberg <Johannes.Lundberg@gmail.com']
+
+if __name__ == '__main__':
+  from x84 import engine
+  engine.main()
