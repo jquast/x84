@@ -1,0 +1,182 @@
+# The Progressive - Highly customizable BBS system.
+# Copyright (C) 2005 Johannes Lundberg
+#           (C) 2007 Jeffrey Quast
+
+Table of Contents
+==================
+. Introduction
+. Requirements
+  . OpenBSD
+  . NetBSD
+  . Debian
+  . Ubuntu
+  . Mac OSX
+  . Windows
+. Getting Started
+. Documentation
+. Support
+
+
+Introduction
+=============
+
+This software is in development, and we encourage feedback and contributions.
+
+This software is written in Python. It requires Python to run. Additionaly,
+the telnet and ssh features are provided through the python twisted framework.
+Finally, the ZODB package, an independant portion of the Zope software suite
+is necessary for the BBS system data.
+
+Requirements
+=============
+
+The system requires:
+   Python 2.5
+   ZODB 3-3.3 or newer
+   Twisted framework
+
+ZODB is not often found in distribution systems unbundled from zope, however
+zope is not required. ZODB can be installed independantly from source, using
+file ZODB3-3.4.2.tgz or newer.
+
+Only the telnet portion of the twisted framework is required.
+The ssh portion of twisted, twisted-conch, is optional.
+
+OpenBSD
+========
+
+ The following packages from ports are required:
+   py-twisted-conch
+   py-zopeinterface
+   py-openssl
+   py-crypto
+
+NetBSD
+=======
+
+ The following packages from pkgsrc are required:
+   py-twisted
+   py-amkCrypto
+   py-ZopeInterface
+   ZODB3
+
+Debian
+=======
+
+ For lenny, the following packages are required:
+   python
+   python-dev
+   python-twisted-core
+   python-setuptools
+
+ And to install ZODB3, you need to run:
+   easy_install ZODB3
+
+ For etch, the default Python 2.5 doesn't support ZODB, so you should 
+ use Python 2.4. The following packages are required:
+   python2.4
+   python-twisted-core
+   python-zodb
+
+ For incoming SSH, you need the package:
+   python-twisted-conch
+
+Ubuntu
+=======
+
+ Follow the instructions above for "Debian etch".
+
+Mac OSX
+========
+
+ Using the MacPorts framework avaialble at http://www.macports.org/
+ ensure the following ports are installed:
+   py-zopeinterface
+   py-twisted
+   py-zodb
+
+ * Note:
+
+   You must use the python made available through ports, at location:
+     /opt/local/bin/python
+
+   and not the system distributed python made available at location:
+     /Library/Frameworks/Python.framework/Versions/Current/bin/python
+
+   use the which(1) command to see which python is being used, and modify
+   the path apropriately to ensure the ports-based python is at a higher
+   priority in the search $PATH, for example:
+     export PATH="/opt/local/bin:$PATH"
+     sudo ln -s /opt/local/bin/python2.4 /opt/local/bin/python
+     sudo ln -s /optlocal/bin/pydoc2.4 /opt/local/bin/pydoc
+
+   this should be placed in any apropriate startup script, and may be done
+   for you by the macports installation.
+
+Windows
+========
+
+ This software has been known to run in windows natively, provided the python
+ software and the above described modules are available. However, some
+ minor modifications to the kernel may be necessary, and the installation
+ may be more involved.
+
+
+Getting Started
+================
+
+To start the system, execute main.py through the python interpreter. The 
+process does NOT daemonized, and debug messages can be viewed on stdout.
+
+For unix systems, you may use the .sh scripts provided to assist in background
+startups and rapid teardown and startup of the bbs system as an unprivledged
+account. All of these scripts require the 'dtach' package. These scripts
+are optional and are provided only for administration and rapid or remote
+development:
+
+   startup.sh  - for use in rc.d scripts
+   attach.sh   - to attach to bbs, or run interactively
+   restart.sh  - to force restart of the bbs system
+   destroy.sh  - to force kill the bbs system
+
+A successfull run of the bulletin board should apear as this:
+
++ PYTHON=/usr/pkg/bin/python
++ BBSPATH=/usr/local/src/bbs
++ BBSUSER=bbs
++ cd /tmp/bbs
++ sudo su bbs -c /usr/pkg/bin/python /usr/local/src//bbs/main.py
++ [telnet] Listening on port 1945
++ [SSH] Generating new host key. This may take a while.
++ [SSH] New host key generated.
+
+then, telnet to the described telnet port. If you recieve errors regarding
+import, you are missing a zodb or twisted package. Once the BBS is up, create
+the sysop account by logging in and typing 'new' at the login prompt:
+
+connectMade, init send
+- New Session started.
+[unknown]: matrix ()
+[unknown]: /nua ('',)
+userbase: first new user, 'head boss' becomes sysop.
+[unknown]: //top ('head boss',)
+
+Change the telnet and ssh port using default.py
+
+Documentation
+==============
+
+Please refer to the inline documentation for developer assistance. You may use
+the pydoc program to extract manual pages from code, or use the latest snapshot
+documentation, available online at:
+
+    http://1984.ws/bbs
+
+Support
+========
+
+Join the mailing list at http://1984.ws for development discussion and cvs
+commit log notifications.
+
+A irc channel, #prsv on efnet, is also available for development discussion.
+
