@@ -13,7 +13,7 @@ from twisted.internet.protocol import Protocol
 from twisted.internet import reactor
 
 from ascii import esc
-import engine
+import session
 import ansi
 import log
 import keys
@@ -95,7 +95,7 @@ class Terminal(object):
     # but a thread spawned inside session.start() prevents us
     # from farming this information without introducing
     # thread race conditions
-    self.xSession = engine.Session(self)
+    self.xSession = session.Session(self)
     self.xSession.start (handle=user, script=scriptname)
 
   def handleinput(self, data):
@@ -180,7 +180,7 @@ class Terminal(object):
     self.xSession.detachterminal (self)
 
     if self.resume_sessions:
-      callback = engine.getsession(self.resume_sessions.pop())
+      callback = session.getsession(self.resume_sessions.pop())
       if callback:
         log.write('tty%s' % (self.tty,), \
           'resuming %s terminal %s to session %i' \

@@ -19,8 +19,8 @@ CRLF = '\r\n'
 
 class FingerProtocol(basic.LineReceiver):
   # Implementing http://tools.ietf.org/html/rfc1288
-  def __init__(self, sessionlist):
-    self.sessionlist = sessionlist
+  def __init__(self, sessions):
+    self.sessions = sessions
 
   def findUser(self, u):
     return 'Login name: %-8s%s' \
@@ -30,7 +30,7 @@ class FingerProtocol(basic.LineReceiver):
 
   def findOnline(self, u):
     l= []
-    for sid, s in self.sessionlist.items():
+    for sid, s in self.sessions.iteritems():
       if u.handle == s.handle:
         for t in s.terminals:
           # return only the oldest attached terminal
@@ -79,7 +79,7 @@ class FingerProtocol(basic.LineReceiver):
       log.write ('finger', '%s:%s null query' % (address.host, address.port,))
       # finger @domain, list all terminal sessions
       response += 'Login    From         TTY Idle      When  Office%s' % (CRLF,)
-      for sid, session in self.sessionlist.items():
+      for sid, session in self.sessions.iteritems():
         user = userbase.getuser(session.handle)
         handle = user and user.handle or '?'
         ttys = []
@@ -131,8 +131,8 @@ class FingerProtocol(basic.LineReceiver):
   humantime = staticmethod(humantime)
 
 class FingerFactory(ServerFactory):
-  def __init__(self, sessionlist):
-    self.sessionlist = sessionlist
+  def __init__(self, sessions):
+    self.sessions = sessions
 
   def buildProtocol(self, addr):
-    return FingerProtocol(self.sessionlist)
+    return FingerProtocol(self.sessions)

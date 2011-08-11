@@ -12,8 +12,10 @@ import random
 import glob
 import strutils
 
-import engine
-from session import session, user
+#import engine
+#from session import session, user
+import session
+#from session import sessions
 import log
 
 # file contents
@@ -125,7 +127,7 @@ def abspath(filename=None):
     # find apropriate relative filepath
     try:
       # called from user session
-      path = engine.getsession().path
+      path = session.sessions.getsession().path
     except KeyError:
       # called from main engine daemon
       path = os.path.curdir

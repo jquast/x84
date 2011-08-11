@@ -24,7 +24,7 @@ deps = [ \
   'ui.ansiwin', 'ui.pager', 'ui.leftright', 'ui.lightwin',
   'ui.editor']
 
-import engine
+#import engine
 import log
 
 def init():
@@ -79,7 +79,7 @@ def sendevent(sid, event, data):
   @param event: tag of event, such as 'input'
   @param data: content of event, such as 'hijacked input'
   """
-  return engine.sendevent(sid, event, data)
+  return session.sendevent(sid, event, data)
 
 def broadcastevent(event, data):
   """
@@ -88,7 +88,7 @@ def broadcastevent(event, data):
   @param event: tag of event, such as 'post'
   @param data: content event, such as ('new post by dingo', msg.number)
   """
-  return engine.broadcastevent(event, data)
+  return session.broadcastevent(event, data)
 
 def globalevent (data):
   """
@@ -139,7 +139,7 @@ def getsession(sid=None):
   return caller's Session instance. If L{sid} is specified, return session
   instance keyed by id L{sid}.
   """
-  return engine.getsession(sid)
+  return session.sessions.getsession(sid)
 
 def terminate():
   """
@@ -159,8 +159,7 @@ def terminate():
 
 def sessionlist():
   " List all session instances "
-  return [engine.sessionlist[sid] \
-          for sid in engine.sessionlist.keys()]
+  return sessions.values()
 
 def attachsession(sid, spy=None, killCurrent=False):
   """
@@ -175,8 +174,8 @@ def attachsession(sid, spy=None, killCurrent=False):
   removed. Otherwise, when the target session is removed (such as disconnect),
   the caller is returned to the session prior to attachment.
   """
-  if engine.sessionlist.has_key(sid):
-    remote_session = engine.getsession(sid)
+  if sid in session.sessions:
+    remote_session = session.getsession(sid)
 
     session = getsession()
     for number, term in enumerate(getsession().terminals):
@@ -203,7 +202,7 @@ def attachsession(sid, spy=None, killCurrent=False):
 
 def handle():
   " return handle used by caller's session "
-  return session().handle
+  return session.sessions.getsession().handle
 
 ##              ##
 # Terminal Input #
