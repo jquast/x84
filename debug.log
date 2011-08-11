@@ -6142,3 +6142,1335 @@ sdfkljdf
 [ttyp0]: connection lost: Connection was closed cleanly.
 [ttyp0]: dissasociate terminal from session 17
 [ttyp0]: destroying telnet terminal 91.121.86.85:37129 from session 17
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:56745
+[ttyp0]: start new session on telnet terminal 99.9.114.62:56745
+[session]: begin session 1, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[engine]: importing default/matrix
+[u:]: userland path change /->default/
+[u:]: Set window size: 139x44
+[u:]: Set terminal type: xterm-color
+[u:]: throwing on-connect chatter: d
+[u:]: default/matrix goto ('nua', 'dingo')
+[u:]: exec nua, args: ('dingo',)
+[engine]: importing default/nua
+[engine]: default/nua:init()
+[u:]: default/nua goto ('top', 'dingo')
+[u:]: exec top, args: ('dingo',)
+[engine]: importing default/top
+[u:dingo]: event global broadcast to 0 sessions: dingo logged in, call #1
+[u:dingo]: exec lc, args: (True,)
+[engine]: importing default/lc
+[engine]: default/lc:init()
+[u:dingo]: pop ('lc', True): None
+[u:dingo]: exec chkmsgs, args: ()
+[engine]: importing default/chkmsgs
+[u:dingo]: pop ('chkmsgs',): None
+[u:dingo]: exec lc, args: ()
+[u:dingo]: pop ('lc',): None
+[u:dingo]: exec news, args: ()
+[engine]: importing default/news
+[engine]: default/news:init()
+[telnet]: CONNECT from 87.210.58.179:62200
+[ttyp1]: start new session on telnet terminal 87.210.58.179:62200
+[session]: begin session 2, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[u:]: userland path change /->default/
+[u:]: Set window size: 80x24
+[u:]: Set terminal type: ansi
+[u:]: default/matrix goto ('nua', 'maze')
+[u:]: exec nua, args: ('maze',)
+[u:dingo]: pop ('news',): None
+[u:dingo]: exec ol, args: ()
+[engine]: importing default/ol
+[engine]: default/ol:init()
+[u:dingo]: pop ('ol',): None
+[u:dingo]: default/ol goto ('main',)
+[u:dingo]: exec main, args: ()
+[engine]: importing default/main
+[u:]: default/nua goto ('top', 'maze')
+[u:]: exec top, args: ('maze',)
+[u:maze]: event global broadcast to 1 sessions: maze logged in, call #1
+[u:maze]: exec lc, args: (True,)
+[u:maze]: pop ('lc', True): None
+[u:maze]: exec chkmsgs, args: ()
+[u:maze]: pop ('chkmsgs',): None
+[u:dingo]: exec viewlog, args: ()
+[engine]: importing default/viewlog
+[engine]: default/viewlog:init()
+[u:maze]: default/chkmsgs goto ('main',)
+[u:maze]: exec main, args: ()
+[u:dingo]: pop ('viewlog',): None
+[u:dingo]: exec ueditor, args: ('dingo',)
+[engine]: importing default/ueditor
+[engine]: default/ueditor:init()
+[u:maze]: exec ol, args: ()
+[u:maze]: pop ('ol',): None
+[u:dingo]: pop ('ueditor', 'dingo'): None
+[u:maze]: exec userlist, args: ()
+[engine]: importing default/userlist
+[u:dingo]: exec wfc, args: ()
+[engine]: importing default/wfc
+[u:wfc]: event global broadcast to 1 sessions: wfc logged in, call #1
+[u:wfc]: event global broadcast to 1 sessions: wfc attaches to session 2 owned by maze
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: attaching telnet terminal 99.9.114.62:56745 to session 2
+[u:maze]: pop ('userlist',): None
+[u:maze]: exec wfc, args: ()
+[u:wfc]: event global broadcast to 1 sessions: wfc logged in, call #2
+[u:wfc]: pop ('wfc',): None
+[u:wfc]: exec ol, args: ()
+[u:wfc]: pop ('ol',): None
+[u:wfc]: exec msgwriter, args: ()
+[!!]:  chkmodpath(name=msgwriter, parent=default): filepath not found:
+[!!]:  script relative: default/msgwriter.py
+[!!]:       scriptpath: default/msgwriter.py
+[!!]:       kernelpath: msgwriter.py
+[u:wfc]: raised general exception in ('main',)
+[!!]: File "/home/dingo/x84/engine.py", line 604, in sessionmain
+[!!]:     self.runscript (*self.current_script.pop())
+[!!]: File "/home/dingo/x84/engine.py", line 919, in runscript
+[!!]:     value = f(*args)
+[!!]: File "/home/dingo/x84/default/main.py", line 52, in main
+[!!]:     gosub ('msgwriter')
+[!!]: File "/home/dingo/x84/bbs.py", line 68, in gosub
+[!!]:     return getsession().runscript(*(arg[0],)+arg[1:])
+[!!]: File "/home/dingo/x84/engine.py", line 888, in runscript
+[!!]:     self.script_name, self.script_filepath = chkmodpath (script, self.path)
+[!!]: File "/home/dingo/x84/engine.py", line 336, in chkmodpath
+[!!]:     raise LookupError, 'filepath not found: "%s"' % name
+[!!]: LookupError: filepath not found: "msgwriter"
+[u:wfc]: pop ('main',)
+[u:wfc]: event global broadcast to 1 sessions: wfc disconnected
+[ttyp1]: dissasociate terminal from session 2
+[ttyp1]: destroying telnet terminal 87.210.58.179:62200 from session 2
+[ttyp0]: dissasociate terminal from session 2
+[ttyp1]: connection lost: Connection was closed cleanly.
+[ttyp0]: resuming telnet terminal 99.9.114.62:56745 to session 1
+[ttyp1]: dissasociate terminal from session 2
+[ttyp0]: attaching telnet terminal 99.9.114.62:56745 to session 1
+[ttyp1]: destroying telnet terminal 87.210.58.179:62200 from session 2
+[engine]: deleting sid 2
+[u:wfc]: pop ('wfc',): None
+[u:wfc]: exec wfc, args: ()
+[u:wfc]: event global broadcast to 0 sessions: wfc logged in, call #3
+[u:wfc]: pop ('wfc',): None
+[u:wfc]: exec ueditor, args: ('wfc',)
+[u:wfc]: pop ('ueditor', 'wfc'): None
+[u:wfc]: exec wfc, args: ()
+[u:wfc]: event global broadcast to 0 sessions: wfc logged in, call #4
+[u:wfc]: pop ('wfc',): None
+[u:wfc]: exec ueditor, args: ('wfc',)
+[u:wfc]: pop ('ueditor', 'wfc'): None
+[u:wfc]: exec msgwriter, args: ()
+[!!]:  chkmodpath(name=msgwriter, parent=default): filepath not found:
+[!!]:  script relative: default/msgwriter.py
+[!!]:       scriptpath: default/msgwriter.py
+[!!]:       kernelpath: msgwriter.py
+[u:wfc]: raised general exception in ('main',)
+[!!]: File "/home/dingo/x84/engine.py", line 604, in sessionmain
+[!!]:     self.runscript (*self.current_script.pop())
+[!!]: File "/home/dingo/x84/engine.py", line 919, in runscript
+[!!]:     value = f(*args)
+[!!]: File "/home/dingo/x84/default/main.py", line 52, in main
+[!!]:     gosub ('msgwriter')
+[!!]: File "/home/dingo/x84/bbs.py", line 68, in gosub
+[!!]:     return getsession().runscript(*(arg[0],)+arg[1:])
+[!!]: File "/home/dingo/x84/engine.py", line 888, in runscript
+[!!]:     self.script_name, self.script_filepath = chkmodpath (script, self.path)
+[!!]: File "/home/dingo/x84/engine.py", line 336, in chkmodpath
+[!!]:     raise LookupError, 'filepath not found: "%s"' % name
+[!!]: LookupError: filepath not found: "msgwriter"
+[u:wfc]: pop ('main',)
+[u:wfc]: event global broadcast to 0 sessions: wfc disconnected
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:56745 from session 1
+[engine]: deleting sid 1
+[ttyp0]: connection lost: Connection was closed cleanly.
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:56745 from session 1
+[telnet]: CONNECT from 99.9.114.62:56814
+[ttyp0]: start new session on telnet terminal 99.9.114.62:56814
+[session]: begin session 3, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[u:]: userland path change /->default/
+[u:]: Set window size: 139x44
+[u:]: Set terminal type: xterm-color
+[u:]: default/matrix goto ('top', 'dingo')
+[u:]: exec top, args: ('dingo',)
+[u:dingo]: event global broadcast to 0 sessions: dingo logged in, call #2
+[u:dingo]: exec lc, args: (True,)
+[u:dingo]: pop ('lc', True): None
+[u:dingo]: exec chkmsgs, args: ()
+[u:dingo]: pop ('chkmsgs',): None
+[u:dingo]: default/chkmsgs goto ('main',)
+[u:dingo]: exec main, args: ()
+[u:dingo]: exec msgwriter, args: ()
+[!!]:  chkmodpath(name=msgwriter, parent=default): filepath not found:
+[!!]:  script relative: default/msgwriter.py
+[!!]:       scriptpath: default/msgwriter.py
+[!!]:       kernelpath: msgwriter.py
+[u:dingo]: raised general exception in ('main',)
+[!!]: File "/home/dingo/x84/engine.py", line 604, in sessionmain
+[!!]:     self.runscript (*self.current_script.pop())
+[!!]: File "/home/dingo/x84/engine.py", line 919, in runscript
+[!!]:     value = f(*args)
+[!!]: File "/home/dingo/x84/default/main.py", line 52, in main
+[!!]:     gosub ('msgwriter')
+[!!]: File "/home/dingo/x84/bbs.py", line 68, in gosub
+[!!]:     return getsession().runscript(*(arg[0],)+arg[1:])
+[!!]: File "/home/dingo/x84/engine.py", line 888, in runscript
+[!!]:     self.script_name, self.script_filepath = chkmodpath (script, self.path)
+[!!]: File "/home/dingo/x84/engine.py", line 336, in chkmodpath
+[!!]:     raise LookupError, 'filepath not found: "%s"' % name
+[!!]: LookupError: filepath not found: "msgwriter"
+[u:dingo]: pop ('main',)
+[u:dingo]: event global broadcast to 0 sessions: dingo disconnected
+[ttyp0]: dissasociate terminal from session 3
+[ttyp0]: destroying telnet terminal 99.9.114.62:56814 from session 3
+[engine]: deleting sid 3
+[ttyp0]: connection lost: Connection was closed cleanly.
+[ttyp0]: dissasociate terminal from session 3
+[ttyp0]: destroying telnet terminal 99.9.114.62:56814 from session 3
+[telnet]: CONNECT from 99.9.114.62:56815
+[ttyp0]: start new session on telnet terminal 99.9.114.62:56815
+[session]: begin session 4, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[u:]: userland path change /->default/
+[u:]: Set window size: 139x44
+[u:]: Set terminal type: xterm-color
+[u:]: default/matrix goto ('top', 'dingo')
+[u:]: exec top, args: ('dingo',)
+[u:dingo]: event global broadcast to 0 sessions: dingo logged in, call #3
+[u:dingo]: exec lc, args: (True,)
+[u:dingo]: pop ('lc', True): None
+[u:dingo]: exec chkmsgs, args: ()
+[u:dingo]: pop ('chkmsgs',): None
+[u:dingo]: default/chkmsgs goto ('main',)
+[u:dingo]: exec main, args: ()
+[u:dingo]: exec viewlog, args: ()
+[ttyp0]: connection lost: Connection to the other side was lost in a non-clean fashion: Connection lost.
+[ttyp0]: dissasociate terminal from session 4
+[ttyp0]: destroying telnet terminal 99.9.114.62:56815 from session 4
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57572
+[ttyp0]: connection lost: Connection to the other side was lost in a non-clean fashion: Connection lost.
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57573
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57574
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57575
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57576
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57577
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57578
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57580
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57581
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57581
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57582
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57582
+[u:]: Set window size: 80x23
+[u:]: Set terminal type: xterm
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57583
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57583
+[session]: begin session 1, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[u:]: Set window size: 80x23
+[u:]: Set terminal type: xterm
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57584
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57584
+[session]: begin session 1, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[u:]: raised general exception in ('matrix',)
+[u:]: Set window size: 80x23
+[u:]: Set terminal type: xterm
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57585
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57585
+[session]: begin session 1, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[u:]: raised general exception in ('matrix',)
+[!!]: File "/home/dingo/x84/session.py", line 139, in sessionmain
+[!!]:     self.runscript (*self.current_script.pop())
+[!!]: File "/home/dingo/x84/session.py", line 423, in runscript
+[!!]:     self.script_name, self.script_filepath = chkmodpath (script, self.path)
+[!!]: NameError: global name 'chkmodpath' is not defined
+[u:]: No scripts remain in stack
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57585 from session 1
+[ttyp0]: connection lost: Connection was closed cleanly.
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57585 from session 1
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57586
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57586
+[session]: begin session 1, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[u:]: raised general exception in ('matrix',)
+[!!]: File "/home/dingo/x84/session.py", line 139, in sessionmain
+[!!]:     self.runscript (*self.current_script.pop())
+[!!]: File "/home/dingo/x84/session.py", line 423, in runscript
+[!!]:     self.script_name, self.script_filepath = chkmodpath (script, self.path)
+[!!]: NameError: global name 'chkmodpath' is not defined
+[u:]: No scripts remain in stack
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57586 from session 1
+[ttyp0]: connection lost: Connection was closed cleanly.
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57586 from session 1
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57590
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57590
+[session]: begin session 1, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[u:]: raised general exception in ('matrix',)
+[!!]: File "/home/dingo/x84/session.py", line 139, in sessionmain
+[!!]:     self.runscript (*self.current_script.pop())
+[!!]: File "/home/dingo/x84/session.py", line 423, in runscript
+[!!]:     self.script_name, self.script_filepath = chkmodpath (script, self.path)
+[!!]: NameError: global name 'chkmodpath' is not defined
+[u:]: No scripts remain in stack
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57590 from session 1
+[ttyp0]: connection lost: Connection was closed cleanly.
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57590 from session 1
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57591
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57591
+[session]: begin session 1, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[u:]: raised general exception in ('matrix',)
+[!!]: File "/home/dingo/x84/session.py", line 141, in sessionmain
+[!!]:     self.runscript (*self.current_script.pop())
+[!!]: File "/home/dingo/x84/session.py", line 428, in runscript
+[!!]:     checkscript (self.script_name)
+[!!]: NameError: global name 'checkscript' is not defined
+[u:]: pop ('matrix',)
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57591 from session 1
+[ttyp0]: connection lost: Connection was closed cleanly.
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57591 from session 1
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57594
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57594
+[session]: begin session 1, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[engine]: importing default/matrix
+[u:]: raised general exception in ('matrix',)
+[!!]: File "/home/dingo/x84/session.py", line 141, in sessionmain
+[!!]:     self.runscript (*self.current_script.pop())
+[!!]: File "/home/dingo/x84/session.py", line 449, in runscript
+[!!]:     path_swap = (os.path.dirname(self.script_filepath))
+[!!]: NameError: global name 'os' is not defined
+[u:]: pop ('matrix',)
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57594 from session 1
+[ttyp0]: connection lost: Connection was closed cleanly.
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57594 from session 1
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57595
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57595
+[session]: begin session 1, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[engine]: importing default/matrix
+[u:]: userland path change /->default/
+[u:]: raised general exception in ('matrix',)
+[!!]: File "/home/dingo/x84/session.py", line 141, in sessionmain
+[!!]:     self.runscript (*self.current_script.pop())
+[!!]: File "/home/dingo/x84/session.py", line 455, in runscript
+[!!]:     value = f(*args)
+[!!]: File "/home/dingo/x84/default/matrix.py", line 21, in main
+[!!]:     session = getsession()
+[!!]: File "/home/dingo/x84/bbs.py", line 142, in getsession
+[!!]:     return engine.getsession(sid)
+[!!]: AttributeError: 'module' object has no attribute 'getsession'
+[u:]: pop ('matrix',)
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57595 from session 1
+[ttyp0]: connection lost: Connection was closed cleanly.
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57595 from session 1
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57597
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57597
+[session]: begin session 1, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[engine]: importing default/matrix
+[u:]: userland path change /->default/
+[u:]: raised general exception in ('matrix',)
+[!!]: File "/home/dingo/x84/session.py", line 141, in sessionmain
+[!!]:     self.runscript (*self.current_script.pop())
+[!!]: File "/home/dingo/x84/session.py", line 455, in runscript
+[!!]:     value = f(*args)
+[!!]: File "/home/dingo/x84/default/matrix.py", line 21, in main
+[!!]:     session = getsession()
+[!!]: File "/home/dingo/x84/bbs.py", line 142, in getsession
+[!!]:     return session.getsession(sid)
+[!!]: AttributeError: 'module' object has no attribute 'getsession'
+[u:]: pop ('matrix',)
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57597 from session 1
+[ttyp0]: connection lost: Connection was closed cleanly.
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57597 from session 1
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57598
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57598
+[session]: begin session 1, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[engine]: importing default/matrix
+[u:]: userland path change /->default/
+[u:]: raised general exception in ('matrix',)
+[!!]: File "/home/dingo/x84/session.py", line 141, in sessionmain
+[!!]:     self.runscript (*self.current_script.pop())
+[!!]: File "/home/dingo/x84/session.py", line 455, in runscript
+[!!]:     value = f(*args)
+[!!]: File "/home/dingo/x84/default/matrix.py", line 27, in main
+[!!]:     echo (charset() + linewrap() + cursor_show() + scroll())
+[!!]: File "/home/dingo/x84/bbs.py", line 272, in echo
+[!!]:     write (string)
+[!!]: File "/home/dingo/x84/bbs.py", line 262, in write
+[!!]:     return getsession().write (data)
+[!!]: File "/home/dingo/x84/session.py", line 259, in write
+[!!]:     last_cls = string.rfind(ansi.cls())
+[!!]: NameError: global name 'ansi' is not defined
+[u:]: pop ('matrix',)
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57598 from session 1
+[ttyp0]: connection lost: Connection was closed cleanly.
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57598 from session 1
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57604
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57604
+[session]: begin session 1, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[engine]: importing default/matrix
+[u:]: userland path change /->default/
+[u:]: Set window size: 80x23
+[u:]: Set terminal type: xterm
+[u:]: raised general exception in ('matrix',)
+[!!]: File "/home/dingo/x84/session.py", line 140, in sessionmain
+[!!]:     self.runscript (*self.current_script.pop())
+[!!]: File "/home/dingo/x84/session.py", line 454, in runscript
+[!!]:     value = f(*args)
+[!!]: File "/home/dingo/x84/default/matrix.py", line 104, in main
+[!!]:     i_handle, event, data = readlineevent(max=cfg.max_user, value=i_handle)
+[!!]: File "/home/dingo/x84/bbs.py", line 358, in readlineevent
+[!!]:     event, char = readevent(events, timeout)
+[!!]: File "/home/dingo/x84/bbs.py", line 109, in readevent
+[!!]:     return getsession().readevent(events, timeout)
+[!!]: File "/home/dingo/x84/session.py", line 391, in readevent
+[!!]:     data = self.event_pop(event)
+[!!]: File "/home/dingo/x84/session.py", line 299, in event_pop
+[!!]:     self.buffer[event] = strutils.remove(self.buffer[event], column=0, n=1)
+[!!]: NameError: global name 'strutils' is not defined
+[u:]: pop ('matrix',)
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57604 from session 1
+[ttyp0]: connection lost: Connection was closed cleanly.
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57604 from session 1
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57735
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57735
+[session]: begin session 1, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[engine]: importing default/matrix
+[u:]: userland path change /->default/
+[u:]: Set window size: 80x23
+[u:]: Set terminal type: xterm
+[ttyp0]: connection lost: Connection was closed cleanly.
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57735 from session 1
+[telnet]: CONNECT from 99.9.114.62:57736
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57736
+[session]: begin session 2, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[u:]: userland path change /->default/
+[u:]: Set window size: 80x23
+[u:]: Set terminal type: xterm
+[u:]: raised general exception in ('matrix',)
+[!!]: File "/home/dingo/x84/session.py", line 140, in sessionmain
+[!!]:     self.runscript (*self.current_script.pop())
+[!!]: File "/home/dingo/x84/session.py", line 452, in runscript
+[!!]:     value = f(*args)
+[!!]: File "/home/dingo/x84/default/matrix.py", line 47, in main
+[!!]:     x = getstr(period=1.0)
+[!!]: File "/home/dingo/x84/bbs.py", line 236, in getstr
+[!!]:     k = getch(period)
+[!!]: File "/home/dingo/x84/bbs.py", line 217, in getch
+[!!]:     event, data = readevent(['input'], timeout=timeout)
+[!!]: File "/home/dingo/x84/bbs.py", line 109, in readevent
+[!!]:     return getsession().readevent(events, timeout)
+[!!]: File "/home/dingo/x84/session.py", line 389, in readevent
+[!!]:     data = self.event_pop(event)
+[!!]: File "/home/dingo/x84/session.py", line 298, in event_pop
+[!!]:     return self.buffer.pop(0)
+[!!]: KeyError: 0
+[u:]: pop ('matrix',)
+[ttyp0]: dissasociate terminal from session 2
+[ttyp0]: destroying telnet terminal 99.9.114.62:57736 from session 2
+[ttyp0]: connection lost: Connection was closed cleanly.
+[ttyp0]: dissasociate terminal from session 2
+[ttyp0]: destroying telnet terminal 99.9.114.62:57736 from session 2
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57737
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57737
+[session]: begin session 1, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[engine]: importing default/matrix
+[u:]: userland path change /->default/
+[u:]: Set window size: 80x23
+[u:]: Set terminal type: xterm
+[u:]: raised general exception in ('matrix',)
+[!!]: File "/home/dingo/x84/session.py", line 140, in sessionmain
+[!!]:     self.runscript (*self.current_script.pop())
+[!!]: File "/home/dingo/x84/session.py", line 452, in runscript
+[!!]:     value = f(*args)
+[!!]: File "/home/dingo/x84/default/matrix.py", line 104, in main
+[!!]:     i_handle, event, data = readlineevent(max=cfg.max_user, value=i_handle)
+[!!]: File "/home/dingo/x84/bbs.py", line 358, in readlineevent
+[!!]:     event, char = readevent(events, timeout)
+[!!]: File "/home/dingo/x84/bbs.py", line 109, in readevent
+[!!]:     return getsession().readevent(events, timeout)
+[!!]: File "/home/dingo/x84/session.py", line 389, in readevent
+[!!]:     data = self.event_pop(event)
+[!!]: File "/home/dingo/x84/session.py", line 298, in event_pop
+[!!]:     return self.buffer.pop(0)
+[!!]: KeyError: 0
+[u:]: pop ('matrix',)
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57737 from session 1
+[ttyp0]: connection lost: Connection was closed cleanly.
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57737 from session 1
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57741
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57741
+[session]: begin session 1, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[engine]: importing default/matrix
+[u:]: userland path change /->default/
+[u:]: Set window size: 80x23
+[u:]: Set terminal type: xterm
+[u:]: raised general exception in ('matrix',)
+[!!]: File "/home/dingo/x84/session.py", line 140, in sessionmain
+[!!]:     self.runscript (*self.current_script.pop())
+[!!]: File "/home/dingo/x84/session.py", line 452, in runscript
+[!!]:     value = f(*args)
+[!!]: File "/home/dingo/x84/default/matrix.py", line 104, in main
+[!!]:     i_handle, event, data = readlineevent(max=cfg.max_user, value=i_handle)
+[!!]: File "/home/dingo/x84/bbs.py", line 358, in readlineevent
+[!!]:     event, char = readevent(events, timeout)
+[!!]: File "/home/dingo/x84/bbs.py", line 109, in readevent
+[!!]:     return getsession().readevent(events, timeout)
+[!!]: File "/home/dingo/x84/session.py", line 389, in readevent
+[!!]:     data = self.event_pop(event)
+[!!]: File "/home/dingo/x84/session.py", line 298, in event_pop
+[!!]:     return self.buffer[event].pop(0)
+[!!]: AttributeError: 'str' object has no attribute 'pop'
+[u:]: pop ('matrix',)
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57741 from session 1
+[ttyp0]: connection lost: Connection was closed cleanly.
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57741 from session 1
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57750
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57750
+[session]: begin session 1, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[engine]: importing default/matrix
+[u:]: userland path change /->default/
+[u:]: Set window size: 80x23
+[u:]: Set terminal type: xterm
+[u:]: default/matrix goto ('top', 'dingo')
+[u:]: exec top, args: ('dingo',)
+[engine]: importing default/top
+[u:dingo]: raised general exception in ('top', 'dingo')
+[!!]: File "/home/dingo/x84/session.py", line 140, in sessionmain
+[!!]:     self.runscript (*self.current_script.pop())
+[!!]: File "/home/dingo/x84/session.py", line 454, in runscript
+[!!]:     value = f(*args)
+[!!]: File "/home/dingo/x84/default/top.py", line 57, in main
+[!!]:     loginuser (login_handle)
+[!!]: File "/home/dingo/x84/bbs.py", line 406, in loginuser
+[!!]:     globalevent (handle + ' logged in, call #' + str(u.calls))
+[!!]: File "/home/dingo/x84/bbs.py", line 100, in globalevent
+[!!]:     broadcastevent (event='global', data=data)
+[!!]: File "/home/dingo/x84/session.py", line 523, in broadcastevent
+[!!]:     log.write ('u:'+getsession().handle,
+[!!]: NameError: global name 'getsession' is not defined
+[u:dingo]: pop ('top', 'dingo')
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57750 from session 1
+[ttyp0]: connection lost: Connection was closed cleanly.
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57750 from session 1
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57753
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57753
+[session]: begin session 1, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[engine]: importing default/matrix
+[u:]: userland path change /->default/
+[u:]: Set window size: 80x23
+[u:]: Set terminal type: xterm
+[u:]: default/matrix goto ('top', 'dingo')
+[u:]: exec top, args: ('dingo',)
+[engine]: importing default/top
+[u:dingo]: event global broadcast to 0 sessions: dingo logged in, call #5
+[u:dingo]: raised general exception in ('top', 'dingo')
+[!!]: File "/home/dingo/x84/session.py", line 140, in sessionmain
+[!!]:     self.runscript (*self.current_script.pop())
+[!!]: File "/home/dingo/x84/session.py", line 454, in runscript
+[!!]:     value = f(*args)
+[!!]: File "/home/dingo/x84/default/top.py", line 64, in main
+[!!]:     user = getuser(handle())
+[!!]: File "/home/dingo/x84/bbs.py", line 205, in handle
+[!!]:     return session().handle
+[!!]: TypeError: 'module' object is not callable
+[u:dingo]: pop ('top', 'dingo')
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57753 from session 1
+[ttyp0]: connection lost: Connection was closed cleanly.
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57753 from session 1
+[engine]: importing bbs
+[engine]: importing bbs
+[engine]: importing db
+[engine]: importing session
+[engine]: importing exception
+[engine]: importing userbase
+[engine]: importing msgbase
+[engine]: importing ascii
+[engine]: importing ansi
+[engine]: importing sauce
+[engine]: importing fileutils
+[engine]: importing strutils
+[engine]: importing keys
+[engine]: importing ui/ansiwin
+[engine]: importing ui/pager
+[engine]: importing ui/leftright
+[engine]: importing ui/lightwin
+[engine]: importing ui/editor
+[engine]: bbs:init()
+[telnet]: listening on tcp port 1945
+[finger]: listening on tcp port 1979
+[telnet]: CONNECT from 99.9.114.62:57754
+[ttyp0]: start new session on telnet terminal 99.9.114.62:57754
+[session]: begin session 1, script stack: [('matrix',)]
+[u:]: exec matrix, args: ()
+[engine]: importing default/matrix
+[u:]: userland path change /->default/
+[u:]: Set window size: 80x23
+[u:]: Set terminal type: xterm
+[u:]: default/matrix goto ('top', 'dingo')
+[u:]: exec top, args: ('dingo',)
+[engine]: importing default/top
+[u:dingo]: event global broadcast to 0 sessions: dingo logged in, call #6
+[u:dingo]: exec lc, args: (True,)
+[engine]: importing default/lc
+[engine]: default/lc:init()
+[u:dingo]: pop ('lc', True): None
+[u:dingo]: exec chkmsgs, args: ()
+[engine]: importing default/chkmsgs
+[u:dingo]: pop ('chkmsgs',): None
+[u:dingo]: exec lc, args: ()
+[u:dingo]: pop ('lc',): None
+[u:dingo]: exec news, args: ()
+[engine]: importing default/news
+[engine]: default/news:init()
+[u:dingo]: pop ('news',): None
+[u:dingo]: exec ol, args: ()
+[engine]: importing default/ol
+[engine]: default/ol:init()
+[u:dingo]: pop ('ol',): None
+[u:dingo]: default/ol goto ('main',)
+[u:dingo]: exec main, args: ()
+[engine]: importing default/main
+[u:dingo]: exec logoff, args: ()
+[engine]: importing default/logoff
+[engine]: default/logoff:init()
+[ttyp0]: connection lost: Connection to the other side was lost in a non-clean fashion: Connection lost.
+[ttyp0]: dissasociate terminal from session 1
+[ttyp0]: destroying telnet terminal 99.9.114.62:57754 from session 1
