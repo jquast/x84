@@ -1,0 +1,6 @@
+*.cfgc
+data/system*
+*.log
+*.pyc
+*.swp
+*~
