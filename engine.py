@@ -16,36 +16,15 @@ __version__ = '3.0rc0'
 from twisted.internet import reactor
 from twisted.python import threadable
 
-# python modules
-import threading as threading
-import traceback as traceback
-from StringIO import StringIO
-import exceptions
-import os.path
-import thread
-import string
-import Queue
-import time
-import imp
-import sys
-import os
+import log, logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
-# refactoring... jdq
-# prsv modules
 import db
-import log
-#import ansi
-#import keys
-#import strutils
-#import fileutils
-#import exception
-
 import session
 import scripting
 
-#import terminal
 import telnet
-#import ssh
 import local
 import finger
 
@@ -62,29 +41,26 @@ def main():
   for ttyname in db.cfg.local_ttys:
     term = local.LocalTerminal(ttyname)
     reactor.addReader (term)
-    log.write ('tty%s' % (term.tty,), '%s terminal on %s' \
-      % (term.type, term.info,))
+    logger.info ('[tty%s] type: %r info: %r on LocalTerminal', term.tty, term.type, term.info)
 
   if db.cfg.local_wfc:
     term = local.LocalTerminal(db.cfg.local_wfc, db.cfg.wfcscript)
     reactor.addReader (term)
-    log.write ('tty%s' % (term.tty,), '%s terminal on %s for %s' % \
-      (term.type, term.info, db.cfg.local_wfc,))
+    logger.info ('[tty%s] type: %r info: %r on WFC', term.tty, term.type, term.info)
 
-  # TODO: if /dev/tty isn't attached to any lines, fork as a daemon and exit
+  # TODO: if /dev/tty is not used as a line, then fork as daemon and exit
 
   telnetFactory = telnet.TelnetFactory()
   for port in db.cfg.telnet_ports:
     reactor.listenTCP (port, telnetFactory)
-    log.write ('telnet', 'listening on tcp port %s' % (port,))
+    logger.info ('[telnet:%i] listening tcp', port)
 
   # XXX: We need to inject the sessionlist into the finger factory
   fingerFactory = finger.FingerFactory(session.sessions)
   if db.cfg.finger_port:
     reactor.listenTCP (db.cfg.finger_port, fingerFactory)
-    log.write ('finger', 'listening on tcp port %s' % (db.cfg.finger_port,))
+    logger.info ('[finger:%i] listening tcp', db.cfg.finger_port,)
+
   reactor.run ()
   # the bbs ends here
   db.close ()
-
-
