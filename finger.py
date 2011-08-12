@@ -7,11 +7,13 @@ __author__ = 'Wijnand Modderman <python@tehmaze.com>'
 __copyright__ = ['Copyright (c) 2009 Jeffrey Quast <dingo@1984.ws>',
                  'Copyright (c) 2005 Johannes Lundberg <johannes.lundberg@gmail.com>']
 
-import sys, time, socket
+import sys, time, socket, logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 from twisted.internet.protocol import ServerFactory
 from twisted.protocols import basic
 
-import log
 import msgbase
 import userbase
 
@@ -76,7 +78,7 @@ class FingerProtocol(basic.LineReceiver):
         % (socket.getfqdn(), CRLF, query, CRLF, CRLF)
     address = self.transport.getPeer()
     if not query:
-      log.write ('finger', '%s:%s null query' % (address.host, address.port,))
+      logger.info ('%s:%s null query', address.host, address.port)
       # finger @domain, list all terminal sessions
       response += 'Login    From         TTY Idle      When  Office%s' % (CRLF,)
       for sid, session in self.sessions.iteritems():
@@ -102,15 +104,14 @@ class FingerProtocol(basic.LineReceiver):
       if not user:
         # XXX support ambigous lookup
         response += 'Not found.%s' % (CRLF,)
-        log.write ('finger', '%s:%s query FAILED: %s' \
-          % (address.host, address.port, query))
+        logger.info ('%s:%s query failed (user not found): %s',
+          address.host, address.port, query)
       else:
         response += self.findUser(user) + CRLF
         response += self.findOnline(user) + CRLF
         response += self.findMail(user) + CRLF
         response += self.findPlan(user)
-        log.write ('finger', '%s:%s query OK: %s' \
-          % (address.host, address.port, query))
+        logger.info ('%s:%s query OK: %s', address.host, address.port, query)
     self.transport.write(response + CRLF)
     self.transport.loseConnection()
 

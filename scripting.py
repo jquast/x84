@@ -1,7 +1,9 @@
-import imp,os,time,sys
+import imp,os,time,sys, logging
 
-import log,db
-import fileutils
+import db,fileutils
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 def scriptinit():
   """
@@ -34,7 +36,7 @@ def scriptimport(name, asDependancy, file, filename, desc=('.py','U',imp.PY_SOUR
   @todo: need to cache deps[] variable if script is refreshed, before refresh,
   and if this list changes after refresh, re-populate script.
   """
-  log.write ('engine', 'importing %s' % (name,))
+  logger.debug ('importing %s', name)
   script = imp.load_module(name, file, filename, desc)
   script._name     = name
   script._filename = filename
@@ -55,7 +57,7 @@ def scriptimport(name, asDependancy, file, filename, desc=('.py','U',imp.PY_SOUR
   for tgtscript in [key for key in scriptlist.keys() if key != name]:
     # iterate each target script except for ourselves
     if isDependancyOf(tgtscript, name):
-      log.write (name, 'needs import of %s' % (tgtscript))
+      logger.debug ('%s identified dependency: %s', name, tgtscript)
       populatescript(tgtscript, loadonly_dep=name)
 
 def isDependancyOf(script, dep):
@@ -109,16 +111,15 @@ def populatescript(name, loadonly_dep=None):
     try:
       depname, filepath = chkmodpath(depname, parent=os.path.dirname(name))
     except LookupError:
-      log.write ('!!', 'Failed to locate %s for %s' % depname, name)
+      logger.error ('Failed to locate dependency %s for parent=%s', depname, name)
       continue
 
-    if depname == name:
-      log.write ('!!', '%s depends on itself!' (name))
-      # avoid circular dependencies
+    if depname == name: # avoid circular dependencies
+      logger.error ('%s dependends on itself, ignoring', name)
       continue
     status = checkscript(depname)
     if status == -1:
-      log.write ('!!', 'Failed to load dependency %s for %s' % (depname, name))
+      logger.error ('Failed to load dependency %s for parent=%s', depname, name)
       continue
     source = scriptlist[depname]
     # copy all attributes into another's
@@ -162,11 +163,12 @@ def chkmodpath(name, parent):
       name_g = os.path.join(os.path.join(os.path.curdir, parent), name)
       path_g = name + '.py'
       if not os.path.exists(path_g):
-          log.write ('!!', ' chkmodpath(name=%s, parent=%s): filepath not found:' % (name, parent))
-          log.write ('!!', ' script relative: %s' % path_r)
-          log.write ('!!', '      scriptpath: %s' % path_l)
-          log.write ('!!', '      kernelpath: %s' % path_g)
-          raise LookupError, 'filepath not found: "%s"' % name
+        logger.error (' chkmodpath(name=%s, parent=%s): filepath not found:',
+          name, parent)
+        logger.error (' script relative: %s', path_r)
+        logger.error ('      scriptpath: %s', path_l)
+        logger.error ('      kernelpath: %s', path_g)
+        raise LookupError, 'filepath not found: "%s"' % name
       else:
         return name, path_g
     else:
@@ -185,22 +187,19 @@ def loadscript(name, asDependancy=False):
   sessionpath = fileutils.abspath ()
   name, path = chkmodpath(name, sessionpath)
 
-  if not os.path.abspath(os.path.dirname(path)) in sys.path:
-    #log.write ('engine', 'Prepend to environment path: %s' \
-    #  % os.path.abspath(os.path.dirname(path)))
-    # push target module's directory into front of environment path
-    sys.path.insert (0, os.path.abspath(os.path.dirname(path)))
+  abs_dir = os.path.abspath(os.path.dirname(path))
+  if not abs_dir in sys.path:
+    logger.debug ('insert into sys.path: %s @0', abs_dir) 
+    sys.path.insert (0, abs_dir)
 
-  try:
-    scriptimport (name, asDependancy, *imp.find_module(name.split(os.path.sep)[-1]))
-  except ImportError:
-    log.tb (*sys.exc_info())
-    log.write ('!!', 'Failed to import script at:')
-    log.write ('!!', '     Python path: %s' % name)
-    log.write ('!!', '       File path: %s' % path)
-    log.write ('!!', '    Session path: %s' % sessionpath)
-    log.write ('!!', '  Engine curpath: %s' % os.path.abspath(os.path.curdir))
-    return False
+#  try:
+  scriptimport (name, asDependancy, *imp.find_module(name.split(os.path.sep)[-1]))
+#  except ImportError:
+#    import log
+#    log.tb (*sys.exc_info())
+#    logger.error ('Failed to import script: %s', name)
+#    logger.error ('Filepath: %s', path)
+#    return False
 
   # load in script dependencies, specified by global deps=['module.name']
   populatescript (name)
@@ -208,32 +207,32 @@ def loadscript(name, asDependancy=False):
   init = None
   try:
     init = getattr(scriptlist[name],'init')
-  except AttributeError:
-    pass
+  except AttributeError: pass
 
-  if init:
+  if init is not None:
     # Run init() function of script on import, if available
-    log.write ('engine', '%s:init()' % (name,))
-    init()
+    logger.info ('exec %s.init()', name)
+    init ()
+
   return True
 
 def scriptlastmodified(name):
   path = name.replace('.', os.path.sep) + '.py'
   if not os.path.exists(path):
     path = os.path.join(db.cfg.scriptpath, path)
-  if not os.path.exists(path):
-    log.write ('!!', 'exausted path search for module %s.' % name)
-    return 0
   try:
     return os.path.getmtime (path)
-  except OSError:
-    log.write ('!!', 'failed to retrieve mtime for path %s.' % path)
+  except OSError, e:
+    logger.error ('modtime failed for %s: %s', path, e)
     return 0
 
 def chkglobals():
   """
-  ensure globals and engine pieces are loaded, failing over to swapped
-  copies on failure with a stern warning. (thats the idea, anyway)
+  ensure 'bbs' module, which contains globals (and functions) shared by all bbs
+  clients is loaded in memory. If the modified time of bbs.py is newer than
+  import date, it is reloaded. If the reload fails, then the previous space
+  is reverted as recovery. If it has not been yet loaded, and loading fails,
+  then, and only then, is an exception raised.
   """
 
   if not 'bbs' in scriptlist:
@@ -243,16 +242,16 @@ def chkglobals():
 
   lastmodified = scriptlastmodified('bbs')
   if lastmodified > scriptlist['bbs']._loadtime:
-    log.write ('u:'+sessions.getsession().handle, 'reload bbs.py, modified %s ago.' \
-      % (strutils.asctime(time.time() -lastmodified),))
+    logger.info ("reloading 'bbs' globals module, modified %s ago.",
+      strutils.ascitime(time.time() -lastmodified),)
     try:
       scriptinit ()
-    except:
+    except Exception, e:
       # exception raised because a failure occured loading the new bbs script
-      log.write ('!!', 'bbs.py reload failed')
-      log.tb (*sys.exc_info())
-      log.write ('>>', 'File: "./bbs.py"')
-      log.write ('!!', 'bbs.py reload failed, reverting to swap')
+      logger.error ("reload of bbs.py failed: %s", e)
+      logger.tb (*sys.exc_info())
+      logger.info ('File: "./bbs.py"')
+      logger.warn ('bbs.py reverting to previous state')
       scriptlist['bbs'] = bbs_swap
       return False
   return True
@@ -279,13 +278,12 @@ def checkscript(name, forcereload=False):
   loaded = 0
 
   if not chkglobals ():
-    log.write ('!!', "chckglobals failed, we're on fire!")
-    return -1
+    logger.warn ('checkscript(%s) failed chckglobals(), continuing', name)
 
   try:
     name, path = chkmodpath (name, fileutils.abspath())
   except LookupError:
-    return -1
+    return -1 # errors already logged
 
   if not forcereload and scriptlist.has_key(name) \
   and hasattr(scriptlist[name],'deps'):
@@ -295,18 +293,18 @@ def checkscript(name, forcereload=False):
         continue
       # force reload of this script if any dependencies required refresh
       if checkscript(depname) > 0:
-        #log.write ('engine', "[%s]: checkscript(): script '%s' dependency calls for refresh" % (session.handle, depname))
+        logger.debug ('set forcereload=True, dependency depname=%s refreshed', depname)
         forcereload = True
         loaded += 1
 
   if not forcereload and not scriptlist.has_key(name):
-    #log.write ('engine', "[%s]: checkscript(): script '%s' first load." % (session.handle, name))
+    logger.debug ('%s first load', name)
     forcereload = True
 
   asDependancy = False
   if not forcereload and scriptlastmodified(name) > scriptlist[name]._filedate:
-    log.write ('engine', "checkscript(): script '%s' modified %s ago. refresh." \
-      % (name, strutils.asctime(time.time()-scriptlastmodified(name))))
+    logger.debug ('script %s modified %s ago. refresh', name,
+      strutils.asctime(time.time()-scriptlastmodified(name)))
     forcereload = True
     asDependancy = True
 
@@ -316,5 +314,3 @@ def checkscript(name, forcereload=False):
     loaded += 1
 
   return loaded
-
-

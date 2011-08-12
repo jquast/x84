@@ -1,5 +1,9 @@
-import threading, thread, Queue, StringIO, time, sys, os
-from twisted.internet import reactor
+import threading, thread, Queue, StringIO, time, sys, os, logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+from twisted.internet import reactor # wha!
 import db,log,exception # yech
 import scripting # runscript
 import ansi # cls lol
@@ -130,8 +134,7 @@ class Session:
     """
     self.lastscript = None
     sessions.register (self)
-    log.write('session', 'begin session %i, script stack: %s' \
-      % (self.sid, self.current_script,))
+    logger.info ('Call #%i, script stack: %r', self.sid, self.current_script,)
     tryagain = True
     fallback_script = self.current_script
     while len(self.current_script):
@@ -139,9 +142,9 @@ class Session:
         self.lastscript = self.current_script[-1]
         self.runscript (*self.current_script.pop())
 
-        log.write ('u:'+self.handle, 'crashloop: recovery')
+        logger.warn ('crashloop: recovery')
         if not self.current_script:
-          log.write ('u:'+self.handle, 'falling back to %s' % (fallback_script,))
+          logger.error ('current_script = (fallback_script=%r)', fallback_script)
           self.current_script = fallback_script
       except exception.ScriptChange, sc:
         # change script (goto), no prior script to return from!
@@ -156,15 +159,15 @@ class Session:
       except exception.SilentTermination, e:
         # request for silent termination
         break
-      except:
+      except Exception, e:
         # General exception, an error in script run-time
-        log.write ('u:'+self.handle, 'raised general exception in %s' % (self.lastscript,))
-        log.tb (*sys.exc_info())
+        logger.error ('raised general exception in %s: %s', self.lastscript, e)
+#        log.tb (*sys.exc_info())
         if len(self.current_script):
-          log.write ('u:'+self.handle, 'pop %s' % (self.current_script.pop(),))
+          logger.warn ('continue after current_script.pop(): %s', self.current_script.pop())
           continue
         else:
-          log.write ('u:'+self.handle, 'No scripts remain in stack')
+          logger.error ('no scripts remain in stack')
           break
     #broadcastevent ('global', '%s disconnected' % (self.handle,))
     terminals = [t for t in self.terminals]
@@ -194,12 +197,12 @@ class Session:
     reactor.callInThread (self.sessionmain)
 
   def setWindowSize(self, w, h):
-    log.write ('u:'+self.handle,'Set window size: %sx%s' % (w, h,))
+    logger.info ('window size: (w=%s,h=%s)', w, h)
     self.width, self.height = (w, h)
     self.event_push ('refresh', ((w, h)))
 
   def setTermType(self, TERM):
-    log.write ('u:'+self.handle,'Set terminal type: %s' % (TERM,))
+    logger.info ('terminal type: (TERM=%s)', TERM)
     self.TERM = TERM
 
   def setuser(self, user, recordLogin=True):
@@ -211,13 +214,12 @@ class Session:
 
   def setpath(self, path):
     if self.path != path:
-      log.write ('u:'+self.handle, 'userland path change %s/->%s/' % (self.path, path))
+      logger.info ('userland path change %s/->%s/', self.path, path)
       self.path = path
 
   def detachterminal (self, term):
     " dissasociate terminal from this session "
-    log.write ('tty%s' % (term.tty,), \
-      'dissasociate terminal from session %i' % (self.sid))
+    logger.info ('[tty%s] dissasociate terminal from caller #%i', term.tty, self.sid)
     if term in self.terminals:
       self.terminals.remove (term)
 
@@ -230,13 +232,11 @@ class Session:
     self.terminals.append (term)
     term.spy = spy
     if self.sid == -1:
-      log.write ('tty%s' % (term.tty,),
-        'start new session on %s terminal %s' \
-          % (term.type, term.info))
+      logger.info ('[tty%s] start new session term.(type=%s, info=%s)',
+        term.tty, term.type, term.info)
     else:
-      log.write ('tty%s' % (term.tty,),
-        'attaching %s terminal %s to session %i' \
-        % (term.type, term.info, self.sid))
+      logger.info ('[tty%s] terminal joins session %i: term.(type=%s, info=%s)',
+        term.tty, self.sid, term.type, term.info)
 
     # set parent session of new terminal
     term.xSession = self
@@ -323,8 +323,8 @@ class Session:
         self.eventqueue.put_nowait ((event, object))
         return True
       except Queue.Full:
-        log.write ('!!', 'eventqueue %s full' % event)
-        log.write ('>>', 'flushing for %ss before retry.' % period)
+        logger.error ('eventqueue full!')
+        logger.warn ('flushing %ss before retry.',  period)
         self.flushevent (event, timeout=period)
         continue
       if time.time() -start < timeout:
@@ -415,13 +415,14 @@ class Session:
     if not script:
       script = db.cfg.matrixscript
 
-    log.write ('u:'+self.handle, 'exec %s, args: %s' % (script, args))
+    logger.info ('exec %s, args: %s', script, args)
 
     # break script into an informal and formal path, add
     # to our script stack .current_script, then check the
     # import status of the script and re-load if necessary
     self.script_name, self.script_filepath = scripting.chkmodpath (script, self.path)
     self.current_script.append ((script,) + args)
+
     # XXX check return status?
     scripting.checkscript (self.script_name)
 
@@ -429,18 +430,17 @@ class Session:
     # function, seen here as an attribute of the imported script
     try:
       deps = getattr(scripting.scriptlist[self.script_name], 'main')
-    except AttributeError:
-      log.write (self.script_name, 'main definition not found in %s (%s)' \
-        % (self.script_filepath))
-
-      raise
+    except AttributeError, e:
+      logger.error ('script_name=%s, main definition not found: script_filepath=%s',
+        self.script_name, self.script_path)
+      raise AttributeError, e
     try:
       f = scripting.scriptlist[self.script_name].main
-    except:
-      log.write (self.script_name, 'Error on import of main(), filepath:' \
-        % (self.script_filepath,))
-      log.tb (*sys.exc_info())
-      raise
+    except Exception, e:
+      logger.error ('script_name=%s, main reference error: script_filepath=%s',
+        self.script_name, self.script_path)
+#      log.tb (*sys.exc_info())
+      raise Exception, e
 
     if self.path:
       path_swap = self.path
@@ -455,7 +455,7 @@ class Session:
       # we were gosub()'d here and have returned value. .pop() the current
       # script off the stack and return with the script's return value.
       lastscript = self.current_script.pop()
-      log.write ('u:'+self.handle, "pop %s: %s" % (lastscript, value))
+      logger.info ('%s popped from current_script, value=%s', lastscript, value)
       self.setpath (path_swap) # return to previous path
       return value
 
@@ -465,21 +465,22 @@ class Session:
       # raise exception up to self.sessionmain() with new target
       # script as value of exception, effectively acting as a GOTO
       # statement.
-      log.write ('u:'+self.handle, "%s goto %s" % (self.script_name, e))
-      raise
+      logger.info ('%s GOTO %s', self.script_name, e)
+      raise exception.ScriptChange, e
 
-    except exception.ConnectionClosed:
+    except exception.ConnectionClosed, e:
       # client connection closed, raise up
       type, value, tb = sys.exc_info ()
-      log.write ('u:'+self.handle, "Connection closed: %s" % (value,))
+      logger.info ('Connection closed: %s', value)
       self.setpath (path_swap) # return to previous path
-      raise
+      raise exception.ConnectionClosed, e
 
-    except exception.MyException:
+    except exception.MyException, e:
       # Custom exception
       type, value, tb = sys.exc_info ()
+      logger.info ('MyException ? depricated XXX ? %s', value)
       self.setpath (path_swap) # return to previous path
-      raise
+      raise exception.MyException, e
 
 # XXX WHAaaaa
 
@@ -520,8 +521,7 @@ def broadcastevent (event, data):
   " send event to all other sessions "
   sid = sessions.get_ident()
   sendto = [id for id in sessions.iterkeys() if id != sid]
-  log.write ('u:'+sessions.getsession().handle,
-    'event %s broadcast to %s sessions: %s' \
-      % (event, len(sendto), data,))
+  logger.info ('[%s] broadcast event to %i sessions: %r',
+    sessions.getsession().handle, len(sendto), data)
   for sid in sendto:
     sessions.getsession(sid).event_push (event, data)

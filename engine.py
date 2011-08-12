@@ -20,18 +20,20 @@ import log, logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-import db
-import session
-import scripting
-
-import telnet
-import local
-import finger
-
-def main():
+def main(logHandler=None):
   """
   x84 main entry point. The system begins and ends here.
   """
+  import db, session, scripting, telnet, local, finger
+  if logHandler is not None:
+    for mod in (db, session, scripting, telnet, local, finger):
+      try:
+        getattr(mod,'logger').addHandler (logHandler)
+      except Exception, e:
+        raise Exception, 'could not addHandler %s to module %s: %s' % (logHandler, mod, e)
+        raise Exception, e
+    logger.addHandler (logHandler) # engine
+
   # initialize the database subsystem
   db.openDB ()
 

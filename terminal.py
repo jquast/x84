@@ -7,7 +7,9 @@ __author__ = 'Jeffrey Quast <dingo@1984.ws>'
 __copyright__ = ['Copyright (c) 2009 Jeffrey Quast <dingo@1984.ws>',
                  'Copyright (c) 2005 Johannes Lundberg <johannes.lundberg@gmail.com>']
 
-from time import time as timenow
+import time, logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 from twisted.internet.protocol import Protocol
 from twisted.internet import reactor
@@ -15,7 +17,6 @@ from twisted.internet import reactor
 from ascii import esc
 import session
 import ansi
-import log
 import keys
 import db
 
@@ -70,7 +71,7 @@ class Terminal(object):
   spy = None # set to username if someone is spying
   readOnly = False
   def __init__(self):
-    self.attachtime = timenow()
+    self.attachtime = time.time()
     self.KEY = keys.KeyClass()
     self.resume_sessions = []
 
@@ -134,11 +135,9 @@ class Terminal(object):
         # if we have no resume sessions, tell the user what
         # why they are about to be disconnected.
         if not len(self.resume_sessions):
-          log.write('tty%s' % (self.tty,), \
-            '^D keypress detected, but no resume sessions exist, ignoring')
+          logger.warn ('[tty%s] ^D keypress detected, but no resume sessions exist.', self.tty)
         else:
-          log.write('tty%s' % (self.tty,),
-            '^D keypress detected, destroying terminal')
+          logger.info ('[tty%s] ^D keypress detected, destroying terminal', self.tty)
           self.destroy()
           return # shouldnt be necessary
 
@@ -153,8 +152,7 @@ class Terminal(object):
           break
 
       if not match and data[n:].startswith(esc):
-        log.write('tty%s' % (self.tty,), \
-          'unrecognized keyseq %r' % (repr(data)))
+        logger.warn('[tty%s] unrecognized keyseq %r', self.tty, repr(data))
 
       if not match:
         # copy it as-is to userland
@@ -163,8 +161,7 @@ class Terminal(object):
     if out:
       out = out.translate(transtable)
       if self.readOnly:
-        log.write('tty%s' % (self.tty,), \
-          'keystroke denied for read-only session: %r' % (out))
+        logger.warn('[tty%s] ro session denied keystroke: %r', self.tty, out)
         return
       self.xSession.putevent('input', out)
 
@@ -182,15 +179,13 @@ class Terminal(object):
     if self.resume_sessions:
       callback = session.getsession(self.resume_sessions.pop())
       if callback:
-        log.write('tty%s' % (self.tty,), \
-          'resuming %s terminal %s to session %i' \
-            % (self.type, self.info, callback.sid))
+        logger.info('[tty%s] resuming %s terminal %s to session %i',
+          self.tty, self.type, self.info, callback.sid)
         # and re-attach to prior session (hijacking occured)
         callback.attachterminal (self)
         return
-    log.write('tty%s' % (self.tty,), \
-      'destroying %s terminal %s from session %i' \
-        % (self.type, self.info, self.xSession.sid),)
+    logger.info ('[tty%s] destroying %s terminal %s from session %i',
+      self.tty, self.type, self.info, self.xSession.sid)
     self.close ()
 
   def close(self):
@@ -201,8 +196,7 @@ class Terminal(object):
 
 class RemoteTerminal (Protocol, Terminal):
   def connectionLost (self, reason):
-    log.write('tty%s' % (self.tty,), \
-      'connection lost: %s' % (reason.value,))
+    logger.warn ('[tty%s] connection lost: %s', self.tty, reason.value)
     self.destroy ()
     Protocol.connectionLost (self, reason)
 

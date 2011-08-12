@@ -14,9 +14,11 @@ __author__ = 'Johannes Lundberg'
 __license__ = 'Public Domain'
 __version__ = '$Id: bbs.py,v 1.50 2010/01/02 00:54:26 dingo Exp $'
 
-import time
-from time import time as timenow
-import random
+import time, logging, random
+from time import time as timenow # legacy
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 deps = [ \
   'db', 'session', 'exception', 'userbase', 'msgbase',
@@ -267,7 +269,7 @@ def echo(string, parse=True):
   string, it is converted to one via the str() function.
   """
   if type(string) != type(''):
-    #log.write ('bbs', '%s: non-string value in echo: %r' % (handle(), string))
+    logger.debug ('%s: non-string value in echo: %r', handle(), string)
     string = str(string)
   write (string)
 
@@ -401,7 +403,7 @@ def loginuser(handle):
   """
   u = getuser(handle)
   u.set ('calls', u.calls +1)
-  u.set ('lastcall', timenow())
+  u.set ('lastcall', time.time())
   getsession().setuser (u)
   globalevent (handle + ' logged in, call #' + str(u.calls))
 

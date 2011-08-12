@@ -4,17 +4,15 @@ Copyright (C) 2005 Johannes Lundberg
 $Id: local.py,v 1.9 2010/01/01 09:29:48 dingo Exp $
 """
 
-import fcntl
-import termios
-import signal
-import struct
-import os
 import tty
 from select import select
 import ansi
-import log
+import logging
 
 from terminal import Terminal
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 class LocalTerminal (Terminal):
   active = False
@@ -22,7 +20,7 @@ class LocalTerminal (Terminal):
     self.type = 'local'
     self.init_script = init_script
     if not ttyname:
-      log.write ('terminal','warning: no terminal name defined for LocalTerminal')
+      logger.warn ('no terminal name defined for LocalTerminal')
       ttyname = '/dev/tty'
     self.info = '%s:%s' % (ttyname.split('/')[-1], init_script)
     # open terminal device

@@ -114,7 +114,8 @@ def changedir(curpath, relpath):
     return 'action', newpath
   else:
     # error
-    log.write ('uncomparable paths, newpath='+str(newpath)+' from curpath='+curpath)
+    raise RuntimeError, 'Incomparable paths, newpath=%r, from curpath=%r' \
+      % (newpath, curpath,)
 
 
 def abspath(filename=None):

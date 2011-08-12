@@ -6,6 +6,11 @@ __copyright__ = 'Copyright (C) 2005 Johannes Lundberg'
 __license__ = 'Public Domain'
 __version__ = '$Id'
 
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 # age of unused deleted data in database
 # to purge on init in L{openDB}. theoretically,
 # we could rollback, though there are no functions
