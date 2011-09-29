@@ -212,30 +212,3 @@ def deleteudb(name):
     return
   sys.stdout.write ('[db] deleting user database: %s' % (name,))
   del root[UDB][name]
-
-## XXX insane
-#class Cfg:
-#  """
-#  The Cfg class is a wrapper on the C{root['cfg']} variable, but
-#  the getattr method is overrided, so that if the configuration option
-#  is not available, it is retrieved from the L{default} module variable
-#  of the same name.
-#  """
-#  def __delattr__ (self, key):
-#    try:
-#      del root['cfg'][key]
-#    except:
-#      pass
-#  def __setattr__ (self, key, value):
-#    lock()
-#    root['cfg'][key] = value
-#    commit()
-#    unlock()
-#  def __getattr__ (self, key):
-#    if cfgfile_option.has_key(key):
-#      return cfgfile_option[key]['default']
-#    else:
-#      return root['cfg'][key]
-#
-#" @var cfg: an exported instance of the L{Cfg} class. "
-#cfg = Cfg()
