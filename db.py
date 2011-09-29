@@ -1,12 +1,11 @@
 """
- ZODB Database interface for 'The Progressive' BBS.
+ Database & Configuration for x/84 BBS
 """
-__author__ = 'Johannes Lundberg'
-__copyright__ = 'Copyright (C) 2005 Johannes Lundberg'
-__license__ = 'Public Domain'
-__version__ = '$Id'
+__author__ = 'Johannes Lundberg, Jeffrey Quast'
+__copyright__ = 'Copyright (C) 2011 Johannes Lundberg, Jeffrey Quast'
+__license__ = 'ISC'
 
-import logging
+import logging, ConfigParser, sys, os, threading, BTrees
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -20,54 +19,53 @@ pack_days = 0
 # root key of database for userland scripts
 UDB='udb'
 
-# list of config files to load after main.cfg
-CONFIG_FILES=['userbase.cfg']
+import ZODB, ZODB.FileStorage, transaction, persistent
 
-# we can't use the log module in the database,
-# because its a circular dependency, information
-# is kept to a minimum and sys.stdout is used for
-# messages
-
-from ZODB import DB
-from ZODB.FileStorage import FileStorage
-import ZODB.POSException
-import transaction
-import sys
-from persistent import Persistent
-from threading import Lock
-from BTrees.OOBTree import OOBTree
-
-from persistent.mapping import PersistentMapping
-from persistent.list import PersistentList
-
-def load_cfg(config_files=CONFIG_FILES):
-  # load
-  import imp
-  global cfgfile_option
-  cfgfile_option = {}
-
-  sys.stdout.write('[db] Loading configuration files:\n')
-  if len(sys.argv) > 1:
-    sys.stdout.write ('     using alternate config: %s\n' % (sys.argv[1],))
-    CONFIG_FILES.insert (0,sys.argv[1])
+def load_cfg(cfgFilepath='default.ini'):
+  sys.stdout.write ('[cfg] load %s:' % (cfgFilepath,))
+  # start with default values,
+  cfg = ConfigParser.SafeConfigParser()
+  cfg.add_section('system')
+  cfg.set('system', 'scriptpath', 'default/')
+  cfg.set('system', 'matrixscript', 'matrix')
+  cfg.set('system', 'topscript', 'top')
+  cfg.set('system', 'local_wfc', '')
+  cfg.set('system', 'wfcscript', 'wfc')
+  cfg.set('system', 'local_ttys', '')
+  cfg.set('system', 'telnet_port', '23')
+  cfg.set('system', 'finger_port', '79')
+  cfg.set('system', 'max_sessions', '3')
+  cfg.set('system', 'default_keymap', 'ansi')
+  cfg.set('system', 'detach_keystroke', '\004')
+  cfg.set('system', 'log_file', 'debug.log')
+  cfg.set('system', 'log_level', '2')
+  cfg.set('system', 'log_rotate', '5')
+  cfg.add_section('irc')
+  cfg.set('irc', 'server', 'efnet.xs4all.nl')
+  cfg.set('irc', 'port', '6667')
+  cfg.set('irc', 'channel', '#prsv')
+  cfg.add_section('nua')
+  cfg.set('nua', 'min_user', '3')
+  cfg.set('nua', 'max_user', '11')
+  cfg.set('nua', 'max_pass', '16')
+  cfg.set('nua', 'max_email', '30')
+  cfg.set('nua', 'max_origin', '24')
+  cfg.set('nua', 'invalid_handles', 'bye new logoff quit sysop wfc all none')
+  sys.stdout.write (' defaults loaded, ')
+  if not os.path.exists(cfgFilepath):
+    # write only if not exists;
+    # otherwise just go with it.
+    sys.stdout.write (' %s does not exist; writing.\n' % (cfgFilepath,))
+    fp = open(cfgFilepath, 'wb')
+    cfg.write (fp)
+    fp.close ()
   else:
-    sys.stdout.write ('     using default main.cfg\n')
-    CONFIG_FILES.insert (0,'main.cfg')
+    # that is, read in all the real .ini values (above values are overwrriten)
+    cfg.read (cfgFilepath)
+  return cfg
+  sys.stdout.write ('ok (%i items).\n' % (len(cfg.sections()),))
 
-  for filename in CONFIG_FILES:
-    sys.stdout.write ('     ... %s\n' % (filename,))
-    file, filename, (suffix, mode, type) = \
-      open(filename, 'U'), filename, ('.cfg', 'U', 1)
-    # exceptions may be raised here on syntax errors,
-    # they could be presented more helpfully XXX
-    script = imp.load_module(filename[filename.find('.')],
-      file, filename, (suffix, mode, type))
-    for opt in [o for o in dir(script) if not o.startswith('__')]:
-      v, d = getattr(script, opt)
-      cfgfile_option[opt] = \
-        { 'default': v, 'help': d}
-
-def openDB():
+def openDB(cfgFile='default.ini'):
   """
   Initialize the database. The following global variables are exported:
     - B{database}: zodb file storage-based object database
@@ -81,35 +79,36 @@ def openDB():
   """
 
   global database, db_tm, connection, root, dblock
-  global users, msgs, logfile
+  global users, msgs, logfile, cfg
 
+  # we can't use the log module, as it records entries
+  # to the database, causing a circular dependency,
+  # minimal information is sent to sys.stdout,
+  # think: doom init() load screen.
   sys.stdout.write('[db] loading...\n')
-  database = DB(FileStorage('data/system'))
+  database = ZODB.DB(ZODB.FileStorage.FileStorage('data/system'))
   db_tm = transaction.TransactionManager()
 
   # remove old database revisions over 90 days on open
-  sys.stdout.write ('[db] packing database, days=%i' % (pack_days,))
+  sys.stdout.write ('[db] packing database, days=%i\n' % (pack_days,))
   database.pack (days=pack_days)
 
-  sys.stdout.write ('[db] open database')
+  sys.stdout.write ('[db] open database: ')
   # XXX deprication - zodb now wants a transaction manager
   connection = database.open() #txn_mgr=db_tm)
 
   root = connection.root()
-  for key in ('logfile','user','msgs','cfg'):
+  for key in ('logfile','user','msgs',):
     if not root.has_key(key):
       sys.stdout.write ('[db] primary database %s does not exist, creating\n' % (key,))
-      root[key] = OOBTree()
+      root[key] = BTrees.OOBTree()
   users, msgs, logfile = root['user'], root['msgs'], root['logfile']
   commit ()
-  dblock = Lock()
-  sys.stdout.write ('[db] database server ready\n')
+  dblock = threading.Lock()
+  sys.stdout.write ('ready\n')
 
-  # XXX use alt config as first command argument,
-  # should getopt somewhere else instead
-  if len(sys.argv) > 1:
-    return load_cfg(sys.argv[1])
-  return load_cfg()
+  cfg = load_cfg(cfgFile)
+  return
 
 def commit():
   " Commit pending transactions. "
@@ -182,7 +181,7 @@ def openudb(name):
   L{locker} as a wrapper above any functions that make transactions
   to a udb database.
 
-  Use C{PersistentList} as data type for repositories, and check for
+  Use C{persistent.PersistentList} as data type for repositories, and check for
   existance in the script's init() function::
 
     def init():
@@ -190,19 +189,19 @@ def openudb(name):
        udb = openudb ('new database')
        if not udb.has_key ('my list'):
          lock()
-         udb['my list'] = PersistentList()
+         udb['my list'] = persistent.PersistentList()
          commit ()
          unlock ()
 
-  @return: a database repository instance of type PersistentMapping
+  @return: a database repository instance of type persistent.PersistentMapping
   """
   # Key of the root database to store database records for the userland
   if not root.has_key(UDB):
     sys.stdout.write('[db] creating new master userland database: %s' % (UDB,))
-    root[UDB] = PersistentMapping()
+    root[UDB] = persistent.PersistentMapping()
   if not root[UDB].has_key(name):
     sys.stdout.write('[db] creating new userland database on open: %s' % (name,))
-    root[UDB][name] = PersistentMapping()
+    root[UDB][name] = persistent.PersistentMapping()
   return root[UDB][name]
 
 def deleteudb(name):
@@ -214,29 +213,29 @@ def deleteudb(name):
   sys.stdout.write ('[db] deleting user database: %s' % (name,))
   del root[UDB][name]
 
-# XXX insane
-class Cfg:
-  """
-  The Cfg class is a wrapper on the C{root['cfg']} variable, but
-  the getattr method is overrided, so that if the configuration option
-  is not available, it is retrieved from the L{default} module variable
-  of the same name.
-  """
-  def __delattr__ (self, key):
-    try:
-      del root['cfg'][key]
-    except:
-      pass
-  def __setattr__ (self, key, value):
-    lock()
-    root['cfg'][key] = value
-    commit()
-    unlock()
-  def __getattr__ (self, key):
-    if cfgfile_option.has_key(key):
-      return cfgfile_option[key]['default']
-    else:
-      return root['cfg'][key]
-
-" @var cfg: an exported instance of the L{Cfg} class. "
-cfg = Cfg()
+## XXX insane
+#class Cfg:
+#  """
+#  The Cfg class is a wrapper on the C{root['cfg']} variable, but
+#  the getattr method is overrided, so that if the configuration option
+#  is not available, it is retrieved from the L{default} module variable
+#  of the same name.
+#  """
+#  def __delattr__ (self, key):
+#    try:
+#      del root['cfg'][key]
+#    except:
+#      pass
+#  def __setattr__ (self, key, value):
+#    lock()
+#    root['cfg'][key] = value
+#    commit()
+#    unlock()
+#  def __getattr__ (self, key):
+#    if cfgfile_option.has_key(key):
+#      return cfgfile_option[key]['default']
+#    else:
+#      return root['cfg'][key]
+#
+#" @var cfg: an exported instance of the L{Cfg} class. "
+#cfg = Cfg()

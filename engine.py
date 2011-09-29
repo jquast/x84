@@ -34,35 +34,51 @@ def main(logHandler=None):
         raise Exception, e
     logger.addHandler (logHandler) # engine
 
+
   # initialize the database subsystem
   db.openDB ()
+  scriptpath = db.cfg.get('system','scriptpath')
 
   # Initialize script cache, preload with bbs.py
-  scripting.scriptinit ()
+  scripting.scriptinit (scriptpath)
 
-  for ttyname in db.cfg.local_ttys:
-    term = local.LocalTerminal(ttyname)
-    reactor.addReader (term)
-    logger.info ('[tty%s] type: %r info: %r on LocalTerminal', term.tty, term.type, term.info)
+  local_ttys = db.cfg.get('system', 'local_ttys')
+  if local_ttys:
+    local_ttys = [t.strip() for t in local_ttys.split(',')]
+    for ttyname in local_ttys:
+      term = local.LocalTerminal(ttyname)
+      reactor.addReader (term)
+      logger.info ('[tty%s] type: %r info: %r on LocalTerminal', term.tty, term.type, term.info)
 
-  if db.cfg.local_wfc:
-    term = local.LocalTerminal(db.cfg.local_wfc, db.cfg.wfcscript)
+  local_wfc = db.cfg.get('system', 'local_wfc')
+  print 'x'*10, local_wfc, 'x'*10
+  if local_wfc:
+    wfcscript = db.cfg.get('system', 'wfcscript')
+    assert wfcscript
+    print 'using wfcscript', wfcscript
+    term = local.LocalTerminal(local_wfc, wfcscript)
     reactor.addReader (term)
     logger.info ('[tty%s] type: %r info: %r on WFC', term.tty, term.type, term.info)
 
-  # TODO: if /dev/tty is not used as a line, then fork as daemon and exit
+  # XXX todo: support binding to specific IP's XXX
 
+  telnet_port = db.cfg.get('system', 'telnet_port')
+  assert telnet_port, 'No telnet port defined for listening!'
   telnetFactory = telnet.TelnetFactory()
-  for port in db.cfg.telnet_ports:
-    reactor.listenTCP (port, telnetFactory)
-    logger.info ('[telnet:%i] listening tcp', port)
+  reactor.listenTCP (int(telnet_port), telnetFactory)
+  logger.info ('[telnet:%s] listening tcp', telnet_port)
 
-  # XXX: We need to inject the sessionlist into the finger factory
-  fingerFactory = finger.FingerFactory(session.sessions)
-  if db.cfg.finger_port:
-    reactor.listenTCP (db.cfg.finger_port, fingerFactory)
-    logger.info ('[finger:%i] listening tcp', db.cfg.finger_port,)
+  # XXX: We need to inject the sessionlist into the finger factory (!)@#
 
+  finger_port = db.cfg.get('system', 'finger_port')
+  if finger_port:
+    fingerFactory = finger.FingerFactory(session.sessions)
+    reactor.listenTCP (int(finger_port), fingerFactory)
+    logger.info ('[finger:%s] listening tcp', finger_port,)
+
+  # reactor mainloop. its hard to give up control, we'd like to
+  # take twisted out of the picture soon (...)
   reactor.run ()
+
   # the bbs ends here
   db.close ()

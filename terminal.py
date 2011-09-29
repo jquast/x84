@@ -70,10 +70,13 @@ class Terminal(object):
   tty = '?' # [p-zP-T][0-9a-zA-Z]
   spy = None # set to username if someone is spying
   readOnly = False
+  detatch_keystroke = '\004'
   def __init__(self):
     self.attachtime = time.time()
     self.KEY = keys.KeyClass()
     self.resume_sessions = []
+    self.detach_keystroke = db.cfg.get('system','detach_keystroke')
+
 
   def addsession(self, user=None, scriptname=None):
     " create new session for this terminal and begin "
@@ -116,7 +119,7 @@ class Terminal(object):
     if self.xSession.TERM in CSI_KEYMAP:
       keymap = self.xSession.TERM
     else:
-      keymap = db.cfg.default_keymap
+      keymap = db.cfg.get('system','default_keymap')
 
     skip = 0 # used to skip beyond sequences
     for n, ch in enumerate(data):
@@ -130,7 +133,7 @@ class Terminal(object):
         # of reading the 'refresh' event
         self.xSession.event_push ('refresh', '^L')
 
-      if db.cfg.detach_keystroke and ch == db.cfg.detach_keystroke:
+      if self.detach_keystroke is not None and ch == self.detach_keystroke:
         # the special detach keystroke has been pressed (^D)
         # if we have no resume sessions, tell the user what
         # why they are about to be disconnected.

@@ -9,7 +9,7 @@ __copyright__ = ['Copyright (c) 2007 Jeffrey Quast']
 __license__ = 'ISC'
 
 import time
-import db
+import db, persistent
 
 def addmsg(msg):
   msg.send ()
@@ -86,7 +86,7 @@ def tagged(tag):
     return tm[tag]
   return None
 
-class Msg(db.Persistent):
+class Msg(persistent.Persistent):
   """
   the Msg object is record spec for messages held in the msgbase.
   It contains many default parameters to describe a conversation:

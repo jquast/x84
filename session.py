@@ -82,8 +82,8 @@ class Session:
     and remaining are function arguments passed to main(*args) during the
     runscript() procedure.
 
-    if the first value of .current_script is None, then db.cfg.matrixscript
-    will be used.
+    if the first value of .current_script is None, then
+    db.cfg.get('system','matrixscript') will be used.
 
     use .path to track the filesystem location of current script, so that
     directory helper functions in fileutils.py remain relative.
@@ -119,7 +119,7 @@ class Session:
       'record': []
     }
     self.logintime, self.lastkeypress = time.time(), time.time()
-    self.current_script = [(db.cfg.matrixscript,)]
+    self.current_script = [(db.cfg.get('system','matrixscript'),)]
     if terminal:
       self.attachterminal(terminal)
 
@@ -185,7 +185,7 @@ class Session:
     when the terminal has already handled authentication, such as ssh.
     """
     if not script:
-      script=db.cfg.matrixscript
+      script=db.cfg.get('system','matrixscript')
 
     if not handle:
       # set script path
@@ -413,7 +413,7 @@ class Session:
     """
 
     if not script:
-      script = db.cfg.matrixscript
+      script = db.cfg.get('system','matrixscript')
 
     logger.info ('exec %s, args: %s', script, args)
 

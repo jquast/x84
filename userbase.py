@@ -9,7 +9,7 @@ __copyright__ = ['Copyright (c) 2007 Jeffrey Quast', \
                  'Copyright (C) 2005 Johannes Lundberg']
 __license__ = 'ISC'
 
-import db
+import db, persistent
 import time
 
 def finduser(find):
@@ -77,7 +77,7 @@ def membersofgroup(group):
     return groups[group]
   return None
 
-class User(db.Persistent):
+class User(persistent.Persistent):
   " instance for fresh database record "
   handle = 'undefined'
   calls = 0

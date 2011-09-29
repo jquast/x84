@@ -1,11 +1,15 @@
 import imp,os,time,sys, logging
 
-import db,fileutils
+import fileutils
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+scriptpath=None
 
-def scriptinit():
+def scriptinit(sp):
+  global scriptpath
+  scriptpath = sp
+  assert scriptpath is not None
   """
   Initialize the global scriptlist[], a cache store for run-time imports,
   reloading, dependencies, and sharing. By sharing scripts in this way,
@@ -155,7 +159,7 @@ def chkmodpath(name, parent):
 
   if not os.path.exists(path_r):
     # script-path relative
-    name_l = os.path.join(db.cfg.scriptpath, name)
+    name_l = os.path.join(scriptpath, name)
     path_l = name_l + '.py'
 
     if not os.path.exists(path_l):
@@ -218,8 +222,9 @@ def loadscript(name, asDependancy=False):
 
 def scriptlastmodified(name):
   path = name.replace('.', os.path.sep) + '.py'
+  assert scriptpath is not None
   if not os.path.exists(path):
-    path = os.path.join(db.cfg.scriptpath, path)
+    path = os.path.join(scriptpath, path)
   try:
     return os.path.getmtime (path)
   except OSError, e:
@@ -235,8 +240,9 @@ def chkglobals():
   then, and only then, is an exception raised.
   """
 
+  assert scriptpath is not None
   if not 'bbs' in scriptlist:
-    scriptinit ()
+    scriptinit (scriptpath)
 
   bbs_swap = scriptlist['bbs']
 
@@ -245,7 +251,7 @@ def chkglobals():
     logger.info ("reloading 'bbs' globals module, modified %s ago.",
       strutils.ascitime(time.time() -lastmodified),)
     try:
-      scriptinit ()
+      scriptinit (scriptpath)
     except Exception, e:
       # exception raised because a failure occured loading the new bbs script
       logger.error ("reload of bbs.py failed: %s", e)
