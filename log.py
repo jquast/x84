@@ -31,7 +31,7 @@ class ColoredConsoleHandler(logging.StreamHandler):
 
   def ins_handle(self, r):
     try:
-      r.handle = '%s ' % \
+      r.handle = '%s' % \
         (session.sessions.getsession().handle \
           if hasattr(session.sessions.getsession(), 'handle') \
           and session.sessions.getsession().handle is not None \
