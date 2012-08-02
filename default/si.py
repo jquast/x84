@@ -39,7 +39,7 @@ def init():
     txt += '%s %s\n' % ('.'.join(map(str, sys.version_info[:3])),
                          '-'.join(map(str, sys.version_info[3:])))
   txt += '    Twisted v%s ZODB v%s\n' % (twisted.__version__, ZODB.__version__
-      if hasattr(ZODB.__version__) else '??')
+      if hasattr(ZODB, '__version__') else '??')
   PAK = 'Press any key ... (or +-*)'
   txt += '\n' + ((maxwidth(txt.split('\n'))/2)-(len(PAK)/2))*' ' + PAK
   txt = txt.split('\n')

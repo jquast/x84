@@ -137,11 +137,7 @@ class Session:
     logger.info ('Call #%i, script stack: %r', self.sid, self.current_script,)
     tryagain = True
     fallback_script = self.current_script
-    nfailed_lookups = 0
     while len(self.current_script):
-      if nfailed_lookups > 2:
-        logger.warn ('crashloop: recovery (failed lookups)')
-        break
       try:
         self.lastscript = self.current_script[-1]
         self.runscript (*self.current_script.pop())
@@ -168,7 +164,6 @@ class Session:
       except LookupError, e:
         # a scriptpath or module was not found in lookup,
         # error already emitted.
-        nfailed_lookups +=1
         continue
       except Exception, e:
         #        print self.lastscript + '<'*30

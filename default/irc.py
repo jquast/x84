@@ -105,7 +105,7 @@ def main():
     factory = ClientFactory(session, cfg.get('irc','channel'))
     connect = reactor.connectTCP \
         (cfg.get('irc', 'server'), int(cfg.get('irc','port'),
-          factory)
+          factory))
 
     # colors and formatting
     fx = {
