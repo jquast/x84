@@ -1,47 +1,89 @@
-import copy, logging
-import session # log username, if available
+# built-ins
+import copy
+import logging
 
-# compatibility for old log.write()
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-fmt = '[%(threadName)-13s] %(relativeCreated)5dms %(levelname)s ' \
-      '<%(handle)s> %(filename)s:%(lineno)-4i - %(message)s'
+# locals
+import ansi
+import session
+
+last_line1 = ('','','','','')
+
 class ColoredConsoleHandler(logging.StreamHandler):
-  # http://stackoverflow.com/questions/384076/how-can-i-make-the-python-logging-output-to-be-colored
-  def emit(self, record):
-    myrecord = copy.copy(record)
-    if(myrecord.levelno >= 50): # CRITICAL / FATAL
-      color = '\x1b[35m' # red
-    elif(myrecord.levelno >= 40): # ERROR
-      color = '\x1b[31m' # red
-    elif(myrecord.levelno >= 30): # WARNING
-      color = '\x1b[33m' # yellow
-    else:
-      color=''
-    myrecord.levelname = '%s%-7s%s' % \
-      (color, myrecord.levelname.capitalize(), '\x1b[0m' if color else '')
-    myrecord.handle = sid = None
-    try:
-      myrecord.handle = session.sessions.getsession().handle
-    except KeyError:
-      pass
-    logging.StreamHandler.emit(self, myrecord)
+  fmt_txt = '%(levelname)s%(space)s%(handle)s' \
+    '%(filename)s:%(lineno)s%(space)s%(threadName)s' \
+    '%(linesep)s%(prefix)s%(message)s'
+  def color_levelname (self, r):
+    #r.levelname = r.levelname.strip()
+    r.levelname = '%s%s%s' % \
+      (ansi.color(ansi.LIGHTRED) if r.levelno >= 50 \
+      else ansi.color(*ansi.LIGHTRED) if r.levelno >= 40 \
+      else ansi.color(*ansi.YELLOW) if r.levelno >= 30 \
+      else ansi.color(*ansi.WHITE),
+        r.levelname.title(),
+      ansi.color())
+    return r
 
-def get_stderr(level=None):
-  ch = ColoredConsoleHandler()
-  ch.setFormatter (logging.Formatter (fmt \
-))
+  def modify_threadName(self, r):
+    r.threadName = 'twisted-%s' % (r.threadName.split('-')[-1]) \
+      if 'twisted' in r.threadName \
+        else r.threadName
+    return r
+
+  def ins_handle(self, r):
+    try:
+      r.handle = '%s ' % \
+        (session.sessions.getsession().handle \
+          if hasattr(session.sessions.getsession(), 'handle') \
+          and session.sessions.getsession().handle is not None \
+          else '^_*')
+    except KeyError:
+      r.handle = ''
+    return r
+
+  def skip_repeat_line1(self, r):
+    return r
+#    global last_line1
+#    r.prefix = ''
+#    r.space = ' '
+#    r.linesep = '\n'
+#    # unpack
+#    cmp_levelname, cmp_handle, cmp_filename, cmp_lineno, cmp_threadName \
+#      = copy.copy(last_line1) if last_line1 is not None else ('','','','','',)
+#    last_line1 = (r.levelname, r.handle, r.filename, r.lineno, r.threadName)
+#    # compare
+#    if cmp_levelname == r.levelname and \
+#       cmp_handle == r.handle and \
+#       cmp_threadName == r.threadName and \
+#       cmp_filename == r.filename:
+#         if cmp_lineno == r.levelno:
+#           r.prefix = 'a'
+#         else:
+#           r.prefix = '%sx:z%s ==> ' % (r.filename, r.lineno)
+#         r.levelname=r.handle=r.filename=r.threadName=''
+#         r.prefix = r.linesep = r.space = ''
+#    return r
+
+  def transform(self, src_record):
+   src_record.space = ' '
+   src_record.linesep = '\t'
+   src_record.prefix = ''
+   return \
+     (self.skip_repeat_line1 \
+       (self.color_levelname \
+         (self.ins_handle \
+           (self.modify_threadName \
+             (src_record)))))
+
+  def emit(self, src_record):
+    logging.StreamHandler.emit \
+      (self, self.transform \
+        (copy.copy(src_record)))
+
+def get_stderr(level=logging.INFO):
+  stderr_format = logging.Formatter (ColoredConsoleHandler.fmt_txt)
+  wscons = ColoredConsoleHandler()
+  wscons.setFormatter (stderr_format)
   level = level if level != None else logging.INFO # default
   if level != None:
-    ch.setLevel(level) # default level
-  return ch
-
-def write (channel='', msg=''):
-  if isinstance(msg, list):
-    # XXX use pprint or similar
-    for v in msg:
-      line='[%s]: %s' % (channel if channel else '?', v.strip('\r\n'))
-      logger.info(line)
-  else:
-    line='[%s]: %s' % (channel if channel else '?', str(msg).strip('\r\n'))
-    logger.info(line)
+    wscons.setLevel(level) # default level
+  return wscons

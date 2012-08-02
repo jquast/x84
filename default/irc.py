@@ -20,7 +20,7 @@ deps = ['bbs', 'ui/editor', 'ui/pager']
 def init ():
     global MAX_INPUT, HISTORY
     MAX_INPUT = 200 # character limit for input
-    HISTORY = 200   # limit history in buffer 
+    HISTORY = 200   # limit history in buffer
 
 class Client(irc.IRCClient):
     # no http:// here, servers could se us as spambot
@@ -102,8 +102,10 @@ class ClientFactory(protocol.ClientFactory):
 
 def main():
     session = getsession()
-    factory = ClientFactory(session, db.cfg.irc_channel)
-    connect = reactor.connectTCP(db.cfg.irc_server, db.cfg.irc_port, factory)
+    factory = ClientFactory(session, cfg.get('irc','channel'))
+    connect = reactor.connectTCP \
+        (cfg.get('irc', 'server'), int(cfg.get('irc','port'),
+          factory)
 
     # colors and formatting
     fx = {
@@ -121,7 +123,8 @@ def main():
     # read-only pager for buffer history
     buffer = ParaClass \
       (h=session.height-6, w=session.width-12, y=6, x=6, xpad=0, ypad=1)
-    buffer.add('%s connecting to %s:%d' % (fx['system'], db.cfg.irc_server, db.cfg.irc_port))
+    buffer.add('%s connecting to %s:%d' % (fx['system'],
+      cfg.get('irc','server'), int(cfg.get('irc','port'))))
 
     # editable pager for input
     inputbar = HorizEditor \
@@ -150,8 +153,8 @@ def main():
         if command == 'help':
             # make this a nice overlay some day
             buffer.add('%s available commands:' % (fx['system'],))
-            for item in ['/help', '/me <text>', '/msg <where> <text>', 
-                '/notice <where> <text>', '/nick <nick>', '/topic [<topic>]', 
+            for item in ['/help', '/me <text>', '/msg <where> <text>',
+                '/notice <where> <text>', '/nick <nick>', '/topic [<topic>]',
                 '/quit']:
                 buffer.add('%s %s' % (fx['system'], item))
         elif command == 'me':

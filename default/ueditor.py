@@ -230,7 +230,8 @@ def main(editing_user=None):
       if not delfield: continue
       echo ('\r\n\r\nDeleting field: %s\r\n' % (delfield,))
     elif isSysop and k == 'c':
-      echo ('\r\n\r\nFind user [' + ' '*cfg.max_user + ']' + '\b'*(cfg.max_user+1))
+      echo ('\r\n\r\nFind user [' + ' '*int(cfg.get('nua','max_user')) + ']' +
+          '\b'*(cfg.get('nua','max_user')+1))
       find = finduser(readline(cfg.max_user))
       if find:
         echo ('\r\n\r\nNew user: %s' % (find,))

@@ -1,4 +1,4 @@
-import threading, thread, Queue, StringIO, time, sys, os, logging
+import threading, thread, Queue, StringIO, time, sys, os, logging, traceback
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -137,14 +137,20 @@ class Session:
     logger.info ('Call #%i, script stack: %r', self.sid, self.current_script,)
     tryagain = True
     fallback_script = self.current_script
+    nfailed_lookups = 0
     while len(self.current_script):
+      if nfailed_lookups > 2:
+        logger.warn ('crashloop: recovery (failed lookups)')
+        break
       try:
         self.lastscript = self.current_script[-1]
         self.runscript (*self.current_script.pop())
 
-        logger.warn ('crashloop: recovery')
+        logger.warn ('crashloop: recovery <Session.runscript(%r)>' \
+            % (self.lastscript,))
         if not self.current_script:
-          logger.error ('current_script = (fallback_script=%r)', fallback_script)
+          logger.error ('current_script = <fallback_script: %r>', \
+              fallback_script)
           self.current_script = fallback_script
       except exception.ScriptChange, sc:
         # change script (goto), no prior script to return from!
@@ -159,12 +165,26 @@ class Session:
       except exception.SilentTermination, e:
         # request for silent termination
         break
+      except LookupError, e:
+        # a scriptpath or module was not found in lookup,
+        # error already emitted.
+        nfailed_lookups +=1
+        continue
       except Exception, e:
-        # General exception, an error in script run-time
-        logger.error ('raised general exception in %s: %s', self.lastscript, e)
-#        log.tb (*sys.exc_info())
+        #        print self.lastscript + '<'*30
+        script_name, script_filepath = scripting.chkmodpath \
+            (self.lastscript[0], self.path)
+        t, v, tb= sys.exc_info()
+        for lc,l in enumerate(traceback.format_exception_only(t, v)):
+          if lc == 0:
+            logger.error ("Exception raised in '%s': %s",
+              script_filepath,l.rstrip())
+          else:
+            logger.error (l.rstrip())
+        map(logger.error, [l.rstrip() for l in traceback.format_tb(tb)])
         if len(self.current_script):
-          logger.warn ('continue after current_script.pop(): %s', self.current_script.pop())
+          logger.warn ('continue after current_script.pop(): %s',
+              self.current_script.pop())
           continue
         else:
           logger.error ('no scripts remain in stack')
@@ -197,12 +217,12 @@ class Session:
     reactor.callInThread (self.sessionmain)
 
   def setWindowSize(self, w, h):
-    logger.info ('window size: (w=%s,h=%s)', w, h)
+    logger.debug ('window size: (w=%s,h=%s)', w, h)
     self.width, self.height = (w, h)
     self.event_push ('refresh', ((w, h)))
 
   def setTermType(self, TERM):
-    logger.info ('terminal type: (TERM=%s)', TERM)
+    logger.debug ('terminal type: (TERM=%s)', TERM)
     self.TERM = TERM
 
   def setuser(self, user, recordLogin=True):
@@ -405,7 +425,7 @@ class Session:
 
     return event, data
 
-  def runscript(self, script, *args):
+  def runscript(self, script=None, *args):
     """
       execute module's .main() function with optional *args as arguments.
       if script is None, then the matrixscript is used more or less as a
@@ -413,14 +433,16 @@ class Session:
     """
 
     if not script:
-      script = db.cfg.get('system','matrixscript')
+      script = db.cfg.get('system', 'matrixscript')
 
-    logger.info ('exec %s, args: %s', script, args)
+    logger.info ('runscript(%r, **%r)', script, args)
 
     # break script into an informal and formal path, add
     # to our script stack .current_script, then check the
     # import status of the script and re-load if necessary
-    self.script_name, self.script_filepath = scripting.chkmodpath (script, self.path)
+    self.script_name, self.script_filepath \
+        = scripting.chkmodpath (script, self.path)
+
     self.current_script.append ((script,) + args)
 
     # XXX check return status?
@@ -439,6 +461,7 @@ class Session:
     except Exception, e:
       logger.error ('script_name=%s, main reference error: script_filepath=%s',
         self.script_name, self.script_path)
+      logger.error ("make sure a 'def main():' statement exists in script for execution")
 #      log.tb (*sys.exc_info())
       raise Exception, e
 
@@ -474,6 +497,11 @@ class Session:
       logger.info ('Connection closed: %s', value)
       self.setpath (path_swap) # return to previous path
       raise exception.ConnectionClosed, e
+
+    except exception.SilentTermination, e:
+      # bbs.py:terminate()
+      logger.info ('SilentTermination Exception raised')
+      raise exception.SilentTermination, e
 
     except exception.MyException, e:
       # Custom exception
@@ -525,3 +553,4 @@ def broadcastevent (event, data):
     sessions.getsession().handle, len(sendto), data)
   for sid in sendto:
     sessions.getsession(sid).event_push (event, data)
+

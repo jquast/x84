@@ -22,7 +22,8 @@ UDB='udb'
 import ZODB, ZODB.FileStorage, transaction, persistent
 
 def load_cfg(cfgFilepath='default.ini'):
-  sys.stdout.write ('[cfg] load %s:' % (cfgFilepath,))
+  sys.stdout.write (',load %s...' % (cfgFilepath,))
+  sys.stdout.flush ()
   # start with default values,
   cfg = ConfigParser.SafeConfigParser()
   cfg.add_section('system')
@@ -51,11 +52,12 @@ def load_cfg(cfgFilepath='default.ini'):
   cfg.set('nua', 'max_email', '30')
   cfg.set('nua', 'max_origin', '24')
   cfg.set('nua', 'invalid_handles', 'bye new logoff quit sysop wfc all none')
-  sys.stdout.write (' defaults loaded, ')
+  sys.stdout.write ('ok')
+  sys.stdout.flush ()
   if not os.path.exists(cfgFilepath):
     # write only if not exists;
     # otherwise just go with it.
-    sys.stdout.write (' %s does not exist; writing.\n' % (cfgFilepath,))
+    sys.stdout.write ('- %s does not exist; writing. -' % (cfgFilepath,))
     fp = open(cfgFilepath, 'wb')
     cfg.write (fp)
     fp.close ()
@@ -85,29 +87,32 @@ def openDB(cfgFile='default.ini'):
   # to the database, causing a circular dependency,
   # minimal information is sent to sys.stdout,
   # think: doom init() load screen.
-  sys.stdout.write('[db] loading...\n')
+  sys.stdout.write ('[db: load')
+  sys.stdout.flush ()
   database = ZODB.DB(ZODB.FileStorage.FileStorage('data/system'))
   db_tm = transaction.TransactionManager()
 
   # remove old database revisions over 90 days on open
-  sys.stdout.write ('[db] packing database, days=%i\n' % (pack_days,))
+  sys.stdout.write (',pack(%i)' % (pack_days,))
+  sys.stdout.flush ()
   database.pack (days=pack_days)
 
-  sys.stdout.write ('[db] open database: ')
+  sys.stdout.write (',open')
+  sys.stdout.flush ()
   # XXX deprication - zodb now wants a transaction manager
   connection = database.open() #txn_mgr=db_tm)
 
   root = connection.root()
   for key in ('logfile','user','msgs',):
     if not root.has_key(key):
-      sys.stdout.write ('[db] primary database %s does not exist, creating\n' % (key,))
-      root[key] = BTrees.OOBTree()
+      sys.stdout.write ('\n- DB %s does not exist, creating -' % (key,))
+      root[key] = BTrees.OOBTree.OOBTree()
   users, msgs, logfile = root['user'], root['msgs'], root['logfile']
   commit ()
   dblock = threading.Lock()
-  sys.stdout.write ('ready\n')
 
   cfg = load_cfg(cfgFile)
+  sys.stdout.write (']\n')
   return
 
 def commit():
@@ -198,10 +203,10 @@ def openudb(name):
   # Key of the root database to store database records for the userland
   if not root.has_key(UDB):
     sys.stdout.write('[db] creating new master userland database: %s' % (UDB,))
-    root[UDB] = persistent.PersistentMapping()
+    root[UDB] = persistent.mapping.PersistentMapping()
   if not root[UDB].has_key(name):
     sys.stdout.write('[db] creating new userland database on open: %s' % (name,))
-    root[UDB][name] = persistent.PersistentMapping()
+    root[UDB][name] = persistent.mapping.PersistentMapping()
   return root[UDB][name]
 
 def deleteudb(name):

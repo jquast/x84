@@ -16,7 +16,7 @@ __url__ = 'http://1984.ws'
 
 import re
 deps = ['bbs']
-
+CH_MASK_PASSWD='x'
 def main ():
   session = getsession()
 
@@ -90,18 +90,23 @@ def main ():
     echo ('(Answerback?\005')
     idstr = getstr(period=1.6)
     if idstr:
-      # check for compatible terminal??
+      # check for compatible terminal? lol.
+      # terminal type is just a string for now.
       echo (') %s\r\n' % (idstr,))
       session.setTermType(idstr)
     else:
-      echo (') using default: %s\r\n' % (db.cfg.default_keymap,))
-      session.setTermType(db.cfg.default_keymap)
+      default_keymap = cfg.get('system', 'default_keymap')
+      echo (') using default: %s\r\n' % default_keymap,)
+      session.setTermType (default_keymap)
+
 
   i_handle=''
   while True:
     session.activity = 'logging in'
     echo ('\r\n  user: ')
-    i_handle, event, data = readlineevent(max=cfg.max_user, value=i_handle)
+    max_user = cfg.get('nua', 'max_user')
+
+    i_handle, event, data = readlineevent(max=max_user, value=i_handle)
     if not i_handle:
       continue
     if i_handle.lower() == 'new':
@@ -116,15 +121,16 @@ def main ():
       if ynq.lower() == 'y':
         goto ('nua', i_handle)
       elif ynq.lower() == 'q':
-        gosub ('logoff')
-        refresh ()
+        goto ('logoff')
       else: # 'n' is default
         continue
     i_handle = match
     echo ('\r\n\r\n  pass: ')
-    password, event, data = readlineevent(max=cfg.max_pass, hidden='x')
+    password, event, data = readlineevent \
+        (**dict([('max',    cfg.get('nua', 'max_pass')),
+               ('hidden', CH_MASK_PASSWD)]))
     if authuser(i_handle, password):
-      goto (cfg.topscript, i_handle)
+      goto (cfg.get('system', 'topscript'), i_handle)
     else:
       echo (cl() + color(*LIGHTRED) + 'Login incorrect' + color() + '\r\n')
       readkey (1)

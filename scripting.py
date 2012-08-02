@@ -1,6 +1,6 @@
 import imp,os,time,sys, logging
 
-import fileutils
+import fileutils, strutils
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -193,7 +193,7 @@ def loadscript(name, asDependancy=False):
 
   abs_dir = os.path.abspath(os.path.dirname(path))
   if not abs_dir in sys.path:
-    logger.debug ('insert into sys.path: %s @0', abs_dir) 
+    logger.debug ('insert into sys.path: %s @0', abs_dir)
     sys.path.insert (0, abs_dir)
 
 #  try:

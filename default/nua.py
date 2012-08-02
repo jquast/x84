@@ -29,9 +29,11 @@ def warning(string, x, y, clean=True):
   echo (pos (x, y) + ' '*ansilen(warning_msg) ) # clear
   return inkey # return keypress, if any
 
-def main (user):
-  if user.lower() == 'new':
-    user == ''
+def main (handle):
+  import datetime
+  handle = '' if handle.lower() \
+    in ('new',) \
+      else handle
   location, hint = '', ''
   password, verify, = '', ''
 
@@ -49,26 +51,25 @@ def main (user):
   echo ( pos(40 -(ansilen(getsession().activity)/2), 14) + getsession().activity)
 
   while True:
-    user_ok, origin_ok, pass_ok, email_ok = False, False, False, 0
-
+    user_ok = origin_ok = pass_ok = level = 0
     while not (user_ok):
       echo (pos(*loc_user) + cl() + color() + 'username: ')
-      user = readline (cfg.max_user, user)
-      if not user:
+      handle = readline (cfg.get('nua', 'max_user'), handle)
+      if not handle:
         if warning ('Enter an alias, Press Ctrl+X to cancel', *loc_origin) == chr(24):
           return
-      elif userexist (user):
+      elif userexist (handle):
         warning ('User exists', *loc_origin)
-      elif user == '' or len(user) < cfg.min_user:
-        warning ('Too short! (%i)' % cfg.min_user, *loc_origin)
-      elif user.lower() in cfg.invalid_handles:
+      elif handle == '' or len(handle) < int(cfg.get('nua', 'min_user')):
+        warning ('Too short! (%s)' % cfg.get('nua', 'min_user'), *loc_origin)
+      elif handle.lower() in cfg.get('nua', 'invalid_handles').split():
         warning ('Illegal username', *loc_origin)
       else:
         user_ok = True
 
     while not (origin_ok):
       echo (pos(*loc_origin) + color() + 'origin: ')
-      location = readline (cfg.max_origin, location)
+      location = readline (cfg.get('nua', 'max_origin'), location)
       if location == '':
         if warning ('Enter a location, Press Ctrl+X to cancel', *loc_pass) == chr(24):
           return
@@ -78,7 +79,7 @@ def main (user):
 
     while not (pass_ok):
       echo (pos(*loc_pass) + cl() + color() + 'password: ')
-      password = readline (cfg.max_pass, hidden='x')
+      password = readline (cfg.get('nua', 'max_pass'), hidden='x')
       if len(password) < 4:
         # fail if password too short
         if warning ('too short, Press Ctrl+X to cancel', *loc_email) == chr(24):
@@ -87,7 +88,7 @@ def main (user):
       else:
         # verify
         echo (pos(*loc_pass) + cl() + color() + '   again: ')
-        verify = readline (cfg.max_pass, hidden='z')
+        verify = readline (cfg.get('nua', 'max_pass'), hidden='z')
         if password != verify:
           if warning ('verify must match, Press Ctrl+X to cancel', *loc_email) == chr(24):
             return
@@ -95,28 +96,35 @@ def main (user):
         else:
           break
 
-    while (email_ok < 2):
-      email_ok = 0
+    # this is a joke?
+    while (level < 2):
       # email loop
-      echo (pos(*loc_email) + cl() + color() + 'email address: ')
-      hint = readline (cfg.max_email)
+      echo (pos(*loc_email) + cl() + color() + 'email address [not req.]: ')
+      hint= readline (cfg.get('nua', 'max_email'))
+      # TODO regexp
+      if not len(hint):
+        level = 2
+        break # no e-mail
       for ch in hint:
         # must have @, level 1
         if ch == '@':
-          email_ok = 1
+          level = 1
         # must have '.' following @, level 2
-        if email_ok == 1 and ch == '.':
-          email_ok = 2
-
-      if email_ok == 2:
+        if level == 1 and ch == '.':
+          print 2, 'X'
+          level = 2
+          break
+      if level == 2:
+        print 2
         # email is valid, break out
         break
+      print 'lo'
 
       # allow user to opt-out of e-mail
       if warning ('invalid, Ctrl+O to Opt out', *loc_state) == chr(15):
         # oh yea? make a statement, then
         echo (pos(*loc_state) + cl() + color() + 'make your statement, then: ')
-        hint = readline (cfg.max_email)
+        hint = readline (cfg.get('nua', 'max_email'))
         if not hint:
           # if you don't make a statement, forget you!
           disconnect ()
@@ -126,11 +134,13 @@ def main (user):
     lr = YesNoClass([62,23])
     lr.left ()
     lr.run()
+    # we've gained the following variables:
+    # handle, password, location, hint
     if lr.isleft():
       u = User ()
-      u.handle = user
-      u.password = password
-      u.location = location
-      u.hint = hint
+      u.handle, u.password, u.location, u.hint \
+          = handle, password, location, hint
       u.add ()
-      goto ('top', user)
+      goto ('top', u.handle)
+
+

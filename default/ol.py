@@ -20,16 +20,17 @@ deps = ['bbs','ui/editor']
 def init ():
   global MAX_INPUT, HISTORY, ONCE_PER, udb
   MAX_INPUT = 120 # character limit for input
-  HISTORY = 200   # limit history in buffer 
-  ONCE_PER = 0   # one message per 24 hours, 0 to disable
+  HISTORY = 200   # limit history in buffer
+  ONCE_PER = 1   # one message per 24 hours, 0 to disable
   udb = openudb ('oneliner')
   if not udb.has_key('lines'):
     rebuild_db(udb)
 
 def rebuild_db(udb):
+  import persistent
   " re-create raw oneliners database "
   lock ()
-  udb['lines'] = PersistentList ()
+  udb['lines'] = persistent.list.PersistentList ()
   commit ()
   unlock ()
 
@@ -45,7 +46,8 @@ def main ():
       if n % 3 == 2: c = color(*LIGHTGREEN)
       l = '%s(%s' % (color(*DARKGREY), c)
       r = '%s)%s' % (color(*DARKGREY), color())
-      txt += strpadd(l+name+r, cfg.max_user+2) + text + '\n'
+      # rjust..
+      txt += strpadd(l+name+r, int(cfg.get('nua','max_user'))+2) + text + '\n'
     if txt.endswith('\n'): txt = txt[:-1]
     buffer.update (txt, refresh=True)
     buffer.end (silent=True)
@@ -80,7 +82,7 @@ def main ():
           statusline ('BURNiNG TO rOM, PlEASE WAiT!', color(*LIGHTRED))
           oflush ()
           addline (comment.data().strip())
-          user.set ('lastliner', timenow())
+          getuser(handle()).set ('lastliner', timenow())
           redraw ()
           break
         elif comment.exit:
@@ -94,8 +96,8 @@ def main ():
 
   if ONCE_PER:
     # test for existance of .lastliner
-    if not user.has_key('lastliner'):
-      user.set ('lastliner', 1.0)
+    if not getuser(handle()).has_key('lastliner'):
+      getuser(handle()).set ('lastliner', 1.0)
 
   flushevent ('oneliner_update')
 
@@ -146,10 +148,9 @@ def main ():
           break
         elif choice == LEFT:
           # write something
-          if ONCE_PER and timenow() - user.lastliner < (60*60*ONCE_PER):
+          if ONCE_PER and timenow() - getuser(handle()).lastliner < (60*60*ONCE_PER):
             statusline (bel + 'YOU\'VE AlREADY SAiD ENUff!', color(*LIGHTRED) + color(INVERSE))
             inkey (1.5)
-            statusline ()
             lr.right ()
             continue
           # write something

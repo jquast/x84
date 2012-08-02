@@ -304,6 +304,7 @@ def showfile(filename, bps=0, pause=0.15, cleansauce=True):
 def readline (max, value='', hidden='', paddchar=' ', events=['input'], timeout=None, interactive=False, silent=False):
   value, event, data = readlineevent(max, value, hidden, paddchar, events, timeout, interactive, silent)
   return value
+  # XXX re-definition of built-in 'max' here...
 
 def readlineevent (max,
               value='',
@@ -336,6 +337,7 @@ def readlineevent (max,
     character displayed to overwrite prior column on backspace.
   """
 
+  mx = int(mx)
   # value checking
   if not isinstance(value, str):
     print 'bbs.py: non-string, \'' + repr(value) + '\' passed as value to readlineevent, tossing'
@@ -383,7 +385,7 @@ def readlineevent (max,
       if len(value) > 0:
         value = value [:-1]
         write ('\b' + paddchar + '\b')
-    elif len(value) < max and isprint(ord(char)):
+    elif len(value) < mx and isprint(ord(char)):
       value += char
       if hidden:
         write(hidden)
@@ -407,7 +409,7 @@ def loginuser(handle):
   getsession().setuser (u)
   globalevent (handle + ' logged in, call #' + str(u.calls))
 
-def uniq(seq): 
+def uniq(seq):
   # Dave Kirby, http://www.peterbe.com/plog/uniqifiers-benchmark/uniqifiers_benchmark.py
   seen = set()
   return [x for x in seq if x not in seen and not seen.add(x)]

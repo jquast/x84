@@ -16,35 +16,36 @@ __url__ = 'http://1984.ws'
 
 deps = ['bbs']
 
-def init():
+def main(recordonly=False):
   global udb
   udb = openudb('lc') # open sorted call log
 
-def lc_retrieve():
-  " retrieve window paint data, list of last callers "
-  return '\n'.join([
-    strpadd(user.handle, cfg.max_user +1) + \
-    strpadd(user.location, cfg.max_origin +1) + \
-    strpadd(timeago + ' ago', 12, 'right') + \
-    strpadd('  Calls: %s' % (user.calls), 13) \
-      for timeago, user in \
-        [(asctime(timenow() -lc), getuser(name)) \
-         for lc, name in udb['callers'] if userexist(name)]])
+  def build():
+    " build and return last callers list for display "
+    global udb
+    callers = [(user.lastcall, user.handle) for user in listusers()]
+    callers.sort ()
+    callers.reverse ()
+    lock()
+    udb['callers'] = callers
+    commit()
+    unlock()
 
-def build():
-  " build and return last callers list for display "
-  global udb
-  callers = [(user.lastcall, user.handle) for user in listusers()]
-  callers.sort ()
-  callers.reverse ()
-  lock()
-  udb['callers'] = callers
-  commit()
-  unlock()
 
-def main(recordonly=False):
   if recordonly:
     return build ()
+
+  # how functional,
+  def lc_retrieve():
+    " retrieve window paint data, list of last callers "
+    return '\n'.join([
+      user.handle.ljust   (int(cfg.get('nua','max_user'))+1) + \
+      user.location.ljust (int(cfg.get('nua','max_origin'))+1) + \
+        ('%s ago'%(timeago)).rjust (12) + \
+        ('   Calls: '+str(user.calls)) .ljust (13) \
+                 for timeago, user in \
+                        [(asctime(timenow() -lc), getuser(name)) \
+                         for lc, name in udb['callers'] if userexist(name)]])
 
   session = getsession()
   def refresh():

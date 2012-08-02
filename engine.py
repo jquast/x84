@@ -24,9 +24,9 @@ def main(logHandler=None):
   """
   x84 main entry point. The system begins and ends here.
   """
-  import db, session, scripting, telnet, local, finger
+  import db, session, scripting, telnet, local, finger, terminal
   if logHandler is not None:
-    for mod in (db, session, scripting, telnet, local, finger):
+    for mod in (db, session, scripting, telnet, local, finger, terminal):
       try:
         getattr(mod,'logger').addHandler (logHandler)
       except Exception, e:
@@ -51,7 +51,6 @@ def main(logHandler=None):
       logger.info ('[tty%s] type: %r info: %r on LocalTerminal', term.tty, term.type, term.info)
 
   local_wfc = db.cfg.get('system', 'local_wfc')
-  print 'x'*10, local_wfc, 'x'*10
   if local_wfc:
     wfcscript = db.cfg.get('system', 'wfcscript')
     assert wfcscript
