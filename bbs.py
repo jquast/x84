@@ -337,7 +337,7 @@ def readlineevent (max,
     character displayed to overwrite prior column on backspace.
   """
 
-  mx = int(mx)
+  mx = int(max) # XXX crap, redefined built-in max
   # value checking
   if not isinstance(value, str):
     print 'bbs.py: non-string, \'' + repr(value) + '\' passed as value to readlineevent, tossing'
