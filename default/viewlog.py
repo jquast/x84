@@ -14,11 +14,7 @@ import os, time
 
 deps = ['bbs']
 
-def init():
-  global printbuf
-  printbuf = reload()
-
-def reload():
+def update():
   global lastupdate
   lastupdate = timenow()
   l=[]
@@ -42,6 +38,10 @@ def reload():
     last_d,last_h,last_c=d,h,c
   return l
 
+def init():
+  global printbuf
+  printbuf = update()
+
 def main():
   global printbuf, lastupdate
   session = getsession()
@@ -63,7 +63,7 @@ def main():
       readkey(); return False
     if lastupdate < sorted(db.logfile.keys())[-1] or not pb:
       # refresh the buffer content
-      pb= reload ()
+      pb= update()
 
     if not pager:
       pager = ParaClass(h, w, y, x, xpad=0, ypad=1)

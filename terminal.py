@@ -180,7 +180,7 @@ class Terminal(object):
     self.xSession.detachterminal (self)
 
     if self.resume_sessions:
-      callback = session.getsession(self.resume_sessions.pop())
+      callback = session.sessions.getsession(self.resume_sessions.pop())
       if callback:
         logger.info('[tty%s] resuming %s terminal %s to session %i',
           self.tty, self.type, self.info, callback.sid)

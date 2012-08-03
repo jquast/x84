@@ -20,14 +20,14 @@ import random
 
 def init():
   global txt, width, height
-  art = fopen('art/sysinfo.asc').readlines()
-  txt = ''.join([row for row in art])
+  txt = ''.join(fopen('art/si-footer.asc').readlines())
   txt += '\n\n' \
   ' Authors:\n' \
   '   Johannes Lundberg <johannes.lundberg@gmail.com>\n' \
   '   Jeffrey Quast <dingo@1984.ws>\n' \
   '   Wijnand Modderman <python@tehmaze.com>\n' \
-  '\n Artwork: spidy!food, hellbeard!impure'
+  '\n Artwork: spidy!food, hellbeard!impure\n\n'
+  txt += ''.join(fopen('art/si-header.asc').readlines())
   from engine import __version__ as engine_version
   system, node, release, version, machine, processor = platform.uname()
   txt += '\n\n System: %s %s %s\n' % (system, release, machine)

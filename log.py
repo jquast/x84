@@ -32,10 +32,10 @@ class ColoredConsoleHandler(logging.StreamHandler):
   def ins_handle(self, r):
     try:
       r.handle = '%s' % \
-        (session.sessions.getsession().handle \
+        (session.sessions.getsession().handle + ' ' \
           if hasattr(session.sessions.getsession(), 'handle') \
-          and session.sessions.getsession().handle is not None \
-          else '^_*')
+          and session.sessions.getsession().handle \
+          else '^_* ')
     except KeyError:
       r.handle = ''
     return r

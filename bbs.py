@@ -81,7 +81,7 @@ def sendevent(sid, event, data):
   @param event: tag of event, such as 'input'
   @param data: content of event, such as 'hijacked input'
   """
-  return session.sendevent(sid, event, data)
+  return sendevent(sid, event, data)
 
 def broadcastevent(event, data):
   """
@@ -90,7 +90,7 @@ def broadcastevent(event, data):
   @param event: tag of event, such as 'post'
   @param data: content event, such as ('new post by dingo', msg.number)
   """
-  return session.broadcastevent(event, data)
+  return broadcastevent(event, data)
 
 def globalevent (data):
   """
@@ -141,7 +141,7 @@ def getsession(sid=None):
   return caller's Session instance. If L{sid} is specified, return session
   instance keyed by id L{sid}.
   """
-  return session.sessions.getsession(sid)
+  return sessions.getsession(sid)
 
 def terminate():
   """
@@ -176,8 +176,8 @@ def attachsession(sid, spy=None, killCurrent=False):
   removed. Otherwise, when the target session is removed (such as disconnect),
   the caller is returned to the session prior to attachment.
   """
-  if sid in session.sessions:
-    remote_session = session.getsession(sid)
+  if sid in sessions:
+    remote_session = getsession(sid)
 
     session = getsession()
     for number, term in enumerate(getsession().terminals):
@@ -204,7 +204,7 @@ def attachsession(sid, spy=None, killCurrent=False):
 
 def handle():
   " return handle used by caller's session "
-  return session.sessions.getsession().handle
+  return sessions.getsession().handle
 
 ##              ##
 # Terminal Input #
@@ -252,7 +252,7 @@ def delay(seconds):
   often used for animations.
   """
   getsession().oflush ()
-  session.readevent([], seconds)
+  readevent([], seconds)
 sleep = delay
 
 def oflush():

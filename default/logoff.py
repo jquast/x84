@@ -15,10 +15,12 @@ AUTOMSG_POS=(15,11)
 def init():
   udb = openudb('automsg')
   if not len(udb.keys()):
+    print 'a'
     lock()
     udb[1]=('B. b.','bEhABE YOURSElVES')
     commit()
     unlock()
+    print 'b'
 
 def main():
   session.activity = 'Logging Off!'
