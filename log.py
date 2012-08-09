@@ -11,7 +11,7 @@ last_line1 = ('','','','','')
 class ColoredConsoleHandler(logging.StreamHandler):
   fmt_txt = '%(levelname)s%(space)s%(handle)s' \
     '%(filename)s:%(lineno)s%(space)s%(threadName)s' \
-    '%(linesep)s%(prefix)s%(message)s'
+    '%(sep)s%(prefix)s%(message)s'
   def color_levelname (self, r):
     #r.levelname = r.levelname.strip()
     r.levelname = '%s%s%s' % \
@@ -40,32 +40,25 @@ class ColoredConsoleHandler(logging.StreamHandler):
       r.handle = ''
     return r
 
-  def skip_repeat_line1(self, r):
+  def line_cmp(self, r):
+    return (r.levelname, r.handle, r.filename, r.lineno, r.threadName)
+  def line_blank(self, r):
+    r.space = r.sep = r.levelname = r.handle \
+      = r.filename = r.lineno = r.threadName = ''
     return r
-#    global last_line1
-#    r.prefix = ''
-#    r.space = ' '
-#    r.linesep = '\n'
-#    # unpack
-#    cmp_levelname, cmp_handle, cmp_filename, cmp_lineno, cmp_threadName \
-#      = copy.copy(last_line1) if last_line1 is not None else ('','','','','',)
-#    last_line1 = (r.levelname, r.handle, r.filename, r.lineno, r.threadName)
-#    # compare
-#    if cmp_levelname == r.levelname and \
-#       cmp_handle == r.handle and \
-#       cmp_threadName == r.threadName and \
-#       cmp_filename == r.filename:
-#         if cmp_lineno == r.levelno:
-#           r.prefix = 'a'
-#         else:
-#           r.prefix = '%sx:z%s ==> ' % (r.filename, r.lineno)
-#         r.levelname=r.handle=r.filename=r.threadName=''
-#         r.prefix = r.linesep = r.space = ''
-#    return r
+
+  def skip_repeat_line1(self, r):
+    global last_line1
+    cur_line1 = self.line_cmp(r)
+    if cur_line1 == last_line1:
+      # avoid repeating unnecessarily,
+      r = self.line_blank(r)
+    last_line1 = cur_line1
+    return r
 
   def transform(self, src_record):
    src_record.space = ' '
-   src_record.linesep = '\t'
+   src_record.sep = ' - '
    src_record.prefix = ''
    return \
      (self.skip_repeat_line1 \

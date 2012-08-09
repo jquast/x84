@@ -4,7 +4,9 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 from twisted.internet import reactor # wha!
-import db,log,exception # yech
+import db
+import log
+import exception # yech
 import scripting # runscript
 import ansi # cls lol
 
@@ -51,6 +53,25 @@ class SessionRegistry(dict):
     self.lock.acquire()
     del self[sid]
     self.lock.release ()
+
+  def destroysessions(self):
+    " destroy all sessions "
+    for sid, session in self.iteritems():
+      session.event_push ('connectionclosed', 'destroysessions()')
+
+  def sendevent(self, sid, event, data):
+    " send an event do a session "
+    self.getsession(sid).event_push (event, data)
+
+  def broadcastevent (self, event, data):
+    " send event to all other sessions "
+    sid = self.get_ident()
+    s = self.getsession(sid)
+    sendto = [tgt_sid for tgt_sid in self.iterkeys() if tgt_sid != sid]
+    logger.info ('[%s] broadcast event to %i sessions: %r',
+      s.handle, len(sendto), data)
+    for tgt_sid in sendto:
+      self.getsession(tgt_sid).event_push (event, data)
 
 class Session:
   def __init__ (self, terminal=None):
@@ -148,9 +169,11 @@ class Session:
           logger.error ('current_script = <fallback_script: %r>', \
               fallback_script)
           self.current_script = fallback_script
-      except exception.ScriptChange, sc:
+      except exception.ScriptChange, e:
         # change script (goto), no prior script to return from!
-        self.current_script = [sc.value]
+        logger.info ('ScriptChange %s; %s' % (e, self.current_script,))
+        self.current_script = [e[0] + tuple(e[1:])]
+        logger.info ('ScriptChanged %s' % (self.current_script,))
         continue
       except exception.Disconnect, e:
         # disconnect
@@ -163,10 +186,9 @@ class Session:
         break
       except LookupError, e:
         # a scriptpath or module was not found in lookup,
-        # error already emitted.
+        logger.error ('LookupError: %s' % (e,))
         continue
       except Exception, e:
-        #        print self.lastscript + '<'*30
         script_name, script_filepath = scripting.chkmodpath \
             (self.lastscript[0], self.path)
         t, v, tb= sys.exc_info()
@@ -184,7 +206,7 @@ class Session:
         else:
           logger.error ('no scripts remain in stack')
           break
-    #broadcastevent ('global', '%s disconnected' % (self.handle,))
+    logger.info ('disconnected.')
     terminals = [t for t in self.terminals]
     for t in terminals:
       t.destroy ()
@@ -200,7 +222,7 @@ class Session:
     when the terminal has already handled authentication, such as ssh.
     """
     if not script:
-      script=db.cfg.get('system','matrixscript')
+      script = db.cfg.get('system', 'matrixscript')
 
     if not handle:
       # set script path
@@ -226,6 +248,9 @@ class Session:
     self.handle = user.handle
     if recordLogin:
       self.logintime = time.time()
+
+  def getpath(self):
+    return self.path
 
   def setpath(self, path):
     if self.path != path:
@@ -443,29 +468,20 @@ class Session:
     # XXX check return status?
     scripting.checkscript (self.script_name)
 
-    # the script, after being loaded, should contain a 'main'
-    # function, seen here as an attribute of the imported script
-    try:
-      deps = getattr(scripting.scriptlist[self.script_name], 'main')
-    except AttributeError, e:
-      logger.error ('script_name=%s, main definition not found: script_filepath=%s',
-        self.script_name, self.script_path)
-      raise AttributeError, e
-    try:
-      f = scripting.scriptlist[self.script_name].main
-    except Exception, e:
-      logger.error ('script_name=%s, main reference error: script_filepath=%s',
-        self.script_name, self.script_path)
-      logger.error ("make sure a 'def main():' statement exists in script for execution")
-#      log.tb (*sys.exc_info())
-      raise Exception, e
+    if not hasattr(scripting.scriptlist[self.script_name], 'main'):
+      raise LookupError, \
+          'main definition not found in %(script_name)s' % (self,)
+    if not hasattr(scripting.scriptlist[self.script_name].main, '__call__'):
+      raise LookupError, \
+          'main definition not of type callable in %(script_name)s' % (self,)
+    f = scripting.scriptlist[self.script_name].main
 
-    if self.path:
-      path_swap = self.path
-    else:
-      path_swap = (os.path.dirname(self.script_filepath))
-
-    self.setpath (os.path.dirname(self.script_filepath))
+    # which script 'path' should we revert to after script execution?
+    # answer: our current one, or this scripts' path if we haven't
+    # got a current one.
+    current_path = os.path.dirname(self.script_filepath)
+    prev_path = self.getpath() if self.getpath() else current_path
+    self.setpath (current_path)
 
     value = None
     try:
@@ -474,7 +490,7 @@ class Session:
       # script off the stack and return with the script's return value.
       lastscript = self.current_script.pop()
       logger.info ('%s popped from current_script, value=%s', lastscript, value)
-      self.setpath (path_swap) # return to previous path
+      self.setpath (prev_path) # return to previous path
       return value
 
     except exception.ScriptChange, e:
@@ -490,7 +506,7 @@ class Session:
       # client connection closed, raise up
       type, value, tb = sys.exc_info ()
       logger.info ('Connection closed: %s', value)
-      self.setpath (path_swap) # return to previous path
+      self.setpath (prev_path) # return to previous path
       raise exception.ConnectionClosed, e
 
     except exception.SilentTermination, e:
@@ -498,15 +514,15 @@ class Session:
       logger.info ('SilentTermination Exception raised')
       raise exception.SilentTermination, e
 
-    except exception.MyException, e:
-      # Custom exception
-      type, value, tb = sys.exc_info ()
-      logger.info ('MyException ? depricated XXX ? %s', value)
-      self.setpath (path_swap) # return to previous path
-      raise exception.MyException, e
+#    #except exception.MyException, e:
+#    #  # Custom exception
+#    #  type, value, tb = sys.exc_info ()
+#    #  logger.info ("MyException raised, value='%s'", value)
+#    #  self.setpath (prev_path) # return to previous path
+#    #  raise exception.MyException, e
+#
 
 # XXX WHAaaaa
-
 sessions = SessionRegistry()
 
 #class CurrentSession:
@@ -531,21 +547,4 @@ sessions = SessionRegistry()
 #
 #user = CurrentUser()
 
-def destroysessions():
-  " destroy all sessions "
-  for sid, session in sessions.iteritems():
-    session.event_push ('connectionclosed', 'destroysessions()')
-
-def sendevent(sid, event, data):
-  " send an event do a session "
-  sessions.getsession(sid).event_push (event, data)
-
-def broadcastevent (event, data):
-  " send event to all other sessions "
-  sid = sessions.get_ident()
-  sendto = [id for id in sessions.iterkeys() if id != sid]
-  logger.info ('[%s] broadcast event to %i sessions: %r',
-    sessions.getsession().handle, len(sendto), data)
-  for sid in sendto:
-    sessions.getsession(sid).event_push (event, data)
 

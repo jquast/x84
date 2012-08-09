@@ -6,6 +6,11 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 scriptpath=None
 
+# TODO:
+# Change scriptlist to class Scripts(dict)
+# and all functions here become methods of,
+# much like sessions.py
+
 def scriptinit(sp):
   global scriptpath
   scriptpath = sp
@@ -196,28 +201,18 @@ def loadscript(name, asDependancy=False):
     logger.debug ('insert into sys.path: %s @0', abs_dir)
     sys.path.insert (0, abs_dir)
 
-#  try:
-  scriptimport (name, asDependancy, *imp.find_module(name.split(os.path.sep)[-1]))
-#  except ImportError:
-#    import log
-#    log.tb (*sys.exc_info())
-#    logger.error ('Failed to import script: %s', name)
-#    logger.error ('Filepath: %s', path)
-#    return False
+  scriptimport (name, asDependancy, \
+      *imp.find_module(os.path.split(name)[-1]))
 
-  # load in script dependencies, specified by global deps=['module.name']
+  # load in script dependencies, ('deps' list)
   populatescript (name)
 
-  init = None
-  try:
-    init = getattr(scriptlist[name],'init')
-  except AttributeError: pass
-
+  # Run init() function if available
+  init = None if not hasattr(scriptlist[name], 'init') \
+                else getattr(scriptlist[name], 'init')
   if init is not None:
-    # Run init() function of script on import, if available
-    logger.info ('exec %s.init()', name)
+    logger.debug ('exec %s.init()' % (name,))
     init ()
-
   return True
 
 def scriptlastmodified(name):

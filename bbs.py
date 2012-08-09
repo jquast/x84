@@ -50,10 +50,9 @@ def goto(*arg):
   of target script.
 
   @note: If target script fails, there is no return and the session
-    is terminated. This function should be used for only this very
-    purpose, such as after a sucessfull login.
+    is terminated.
   """
-  raise ScriptChange((arg[0],)+arg[1:])
+  raise ScriptChange(arg)
 
 def gosub(*arg):
   """
@@ -67,7 +66,8 @@ def gosub(*arg):
   main() when complete. Exceptions are also raised upwards, and
   can be trapped.
   """
-  return getsession().runscript(*(arg[0],)+arg[1:])
+  return sessions.getsession().runscript \
+    (*(arg[0],)+arg[1:])
 
 ##      ##
 # Events #
@@ -90,7 +90,7 @@ def broadcastevent(event, data):
   @param event: tag of event, such as 'post'
   @param data: content event, such as ('new post by dingo', msg.number)
   """
-  return broadcastevent(event, data)
+  return sessions.broadcastevent(event, data)
 
 def globalevent (data):
   """
@@ -99,7 +99,7 @@ def globalevent (data):
   @param data: content event, such as "dingo posted message, 'Re: linux sucks'"
   """
   # TODO: also store into db
-  broadcastevent (event='global', data=data)
+  sessions.broadcastevent ('global', data)
 
 def readevent(events=['input'], timeout=None):
   """
@@ -108,7 +108,7 @@ def readevent(events=['input'], timeout=None):
   paramater is specified, and no events of tag L{events} are in the eventqueue,
   (None, None) is returned.
   """
-  return getsession().readevent(events, timeout)
+  return sessions.getsession().readevent(events, timeout)
 
 def globalevents (timeout=-1):
   """
@@ -124,13 +124,13 @@ def flushevent(event='input', timeout=-1):
   """
   Remove all events tagged as L{event} from session eventqueue.
   """
-  return getsession().flushevent(event, timeout)
+  return sessions.getsession().flushevent(event, timeout)
 
 def flushevents(events=['input'], timeout=-1):
   """
   Remove all events tagged as L{event} from session eventqueue.
   """
-  return [getsession().flushevent(event, timeout) for event in events]
+  return [sessions.getsession().flushevent(event, timeout) for event in events]
 
 ##        ##
 # Sessions #
@@ -164,6 +164,7 @@ def sessionlist():
   return sessions.values()
 
 def attachsession(sid, spy=None, killCurrent=False):
+  # XXX TODO: move into Session class
   """
   All terminals attached to Caller's session are set detached, and reattached
   to the target session specified by L{sid}. If no session exists by that
@@ -176,30 +177,29 @@ def attachsession(sid, spy=None, killCurrent=False):
   removed. Otherwise, when the target session is removed (such as disconnect),
   the caller is returned to the session prior to attachment.
   """
-  if sid in sessions:
-    remote_session = getsession(sid)
-
-    session = getsession()
-    for number, term in enumerate(getsession().terminals):
-      msg = '%s attaches to session %s owned by %s' \
-        % (session.handle, remote_session.sid,
-           remote_session.handle and remote_session.handle or '[ unauthenticated ]')
-      globalevent (msg)
-
-      if not killCurrent:
-        # save session to resume to, when this terminal is destroyed
-        term.resume_sessions.append (session.sid)
-
-      # detach current terminal from local session
-      session.detachterminal (term)
-
-      # attach terminal to remote session
-      remote_session.attachterminal (term, spy)
-
-    if killCurrent:
-      terminate ()
-  else:
+  if not sid in sessions:
     return False
+  remote_session = sessions.getsession(sid)
+
+  session = sessions.getsession()
+  for number, term in enumerate(sessions.getsession().terminals):
+    msg = '%s attaches to session %s owned by %s' \
+      % (session.handle, remote_session.sid,
+         remote_session.handle and remote_session.handle or '[ unauthenticated ]')
+    globalevent (msg)
+
+    if not killCurrent:
+      # save session to resume to, when this terminal is destroyed
+      term.resume_sessions.append (session.sid)
+
+    # detach current terminal from local session
+    session.detachterminal (term)
+
+    # attach terminal to remote session
+    remote_session.attachterminal (term, spy)
+
+  if killCurrent:
+    terminate ()
   return True
 
 def handle():
@@ -251,17 +251,17 @@ def delay(seconds):
   return until the number of seconds specified by L{seconds} has passed,
   often used for animations.
   """
-  getsession().oflush ()
+  sessions.getsession().oflush ()
   readevent([], seconds)
 sleep = delay
 
 def oflush():
   " flush all data waiting in session output buffer "
-  return getsession().oflush ()
+  return sessions.getsession().oflush ()
 
 def write(data):
   " write data to session output buffer "
-  return getsession().write (data)
+  return sessions.getsession().write (data)
 
 def echo(string, parse=True):
   """
@@ -406,8 +406,8 @@ def loginuser(handle):
   u = getuser(handle)
   u.set ('calls', u.calls +1)
   u.set ('lastcall', time.time())
-  getsession().setuser (u)
-  globalevent (handle + ' logged in, call #' + str(u.calls))
+  sessions.getsession().setuser (u)
+  globalevent ('%s logged in, call #%i' % (handle, u.calls,))
 
 def uniq(seq):
   # Dave Kirby, http://www.peterbe.com/plog/uniqifiers-benchmark/uniqifiers_benchmark.py

@@ -4,23 +4,22 @@ Copyright (C) 2005 Johannes Lundberg.
 $Id: exception.py,v 1.4 2008/06/08 22:17:15 dingo Exp $
 """
 
-class MyException (Exception):
-  def __init__ (self, value):
-   self.value = value
-  def __str__ (self):
-   return str(self.value)
-
-class Disconnect (MyException):
+class Disconnect(Exception):
   "Raised when the bbs closes a connection"
+  pass
 
-class ConnectionClosed (MyException):
+class ConnectionClosed (Exception):
   "Raised when the client closes connection"
+  pass
 
-class SilentTermination (MyException):
+class SilentTermination (Exception):
   "Raised to silently terminate a session"
+  pass
 
-class ScriptChange (MyException):
+class ScriptChange (Exception):
   "Raised whenever a script wants to travel&exchange itself to another"
+  pass
 
-class ScriptError (MyException):
+class ScriptError (Exception):
   "Raised by runscript when there is an error running the script"
+  pass
