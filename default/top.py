@@ -62,11 +62,9 @@ def main(login_handle):
       terminate () # ! endpoint
     echo ('\r\ninvalid choice,\r\n')
 
-  echo (';login')
   # setuid
   loginuser (login_handle)
 
-  echo (';activity')
   getsession().activity = 'Intro screen'
   getsession().persistent = True
 
@@ -80,7 +78,10 @@ def main(login_handle):
   if not lastupdate or time.time() -lastupdate > 20:
     gosub('lc', True)
 
+  getsession().activity = 'Intro screen'
   gosub('chkmsgs')
+
+  getsession().activity = 'Intro screen'
   echo ('\r\n\r\nQuick login? [yn] ')
   while True:
     k = readkey()
