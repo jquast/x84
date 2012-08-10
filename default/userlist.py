@@ -2,6 +2,7 @@ deps = ['bbs']
 
 def main():
   session = getsession()
+  getsession().activity = 'user list'
 
   def getusers(hg='-', xpad=2):
     fx = (color(*DARKGREY), color(*LIGHTRED), color(*DARKGREY), color())
