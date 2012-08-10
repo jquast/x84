@@ -13,7 +13,7 @@ deps = ['bbs']
 def main():
   def refresh():
     " refresh main menu screen "
-    session.activity = 'Main Menu'
+    getsession().activity = 'Main Menu'
     echo (color() + cursor_show() + cls() +'\n')
     showfile ('art/main_alt.asc')
     echo ('\r\n\r\n > ')
