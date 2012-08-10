@@ -161,29 +161,24 @@ def chkmodpath(name, parent):
   # as-is (path/X.py)
   name_r = os.path.join(parent, name)
   path_r = name_r + '.py'
-
-  if not os.path.exists(path_r):
-    # script-path relative
-    name_l = os.path.join(scriptpath, name)
-    path_l = name_l + '.py'
-
-    if not os.path.exists(path_l):
-      # kernel-path relative (./path/name.py)
-      name_g = os.path.join(os.path.join(os.path.curdir, parent), name)
-      path_g = name + '.py'
-      if not os.path.exists(path_g):
-        logger.error (' chkmodpath(name=%s, parent=%s): filepath not found:',
-          name, parent)
-        logger.error (' script relative: %s', path_r)
-        logger.error ('      scriptpath: %s', path_l)
-        logger.error ('      kernelpath: %s', path_g)
-        raise LookupError, 'filepath not found: "%s"' % name
-      else:
-        return name, path_g
-    else:
-      return name_l, path_l
-  else:
+  if os.path.exists(path_r):
     return name_r, path_r
+
+  # script-path relative
+  name_l = os.path.join(scriptpath, name)
+  path_l = name_l + '.py'
+  if os.path.exists(path_l):
+    return name_l, path_l
+
+  # kernel-path relative (./path/name.py)
+  name_g = os.path.join(os.path.join(os.path.curdir, parent), name)
+  path_g = name + '.py'
+  if os.path.exists(path_g):
+    return name, path_g
+
+  raise LookupError, \
+      'filepath not found: "%s" (parent=%s), tried: %s' \
+      % (name, parent, ', '.join(set((path_r, path_l, path_g,))),)
 
 def loadscript(name, asDependancy=False):
   """
