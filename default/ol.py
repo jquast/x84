@@ -104,7 +104,7 @@ def main ():
   forceRefresh = True
 
   while True:
-    session.activity = 'Reading 1liners'
+    getsession().activity = 'Reading 1liners'
 
     if forceRefresh:
       echo (cls() + color() + cursor_hide())
