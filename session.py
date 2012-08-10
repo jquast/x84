@@ -191,9 +191,11 @@ class Session:
         logger.error ("LookupError rasied in '%s': %s" \
             % (script_filepath, e,))
         if len(self.current_script):
-          logger.warn ('continue after current_script.pop(): %s',
-              self.current_script.pop())
-        continue
+          throw_out = self.current_script.pop()
+          logger.info ('continue after current_script.pop(): %s', throw_out)
+          continue
+        logger.error ('no scripts remain in stack')
+        break
       except Exception, e:
         script_name, script_filepath = scripting.chkmodpath \
             (self.lastscript[0], self.path)
