@@ -20,26 +20,24 @@ import random
 
 def init():
   global txt, width, height
-  txt = ''.join(fopen('art/si-footer.asc').readlines())
-  txt += '\n\n' \
+  txt = fopen('art/si-footer.asc').read()
+  txt += \
   ' Authors:\n' \
   '   Johannes Lundberg <johannes.lundberg@gmail.com>\n' \
   '   Jeffrey Quast <dingo@1984.ws>\n' \
   '   Wijnand Modderman <python@tehmaze.com>\n' \
-  '\n Artwork: spidy!food, hellbeard!impure\n\n'
-  txt += ''.join(fopen('art/si-header.asc').readlines())
+  ' Artwork: spidy!food, hellbeard!impure\n'
+  txt += fopen('art/si-header.asc').read()
   from engine import __version__ as engine_version
   system, node, release, version, machine, processor = platform.uname()
-  txt += '\n\n System: %s %s %s\n' % (system, release, machine)
-  txt += '\n Software:\n    X/84 cvs: %s\n    python ' % (engine_version)
+  txt += ' System: %s %s %s\n' % (system, release, machine)
+  txt += ' Software:\n    X/84 cvs: %s; python ' % (engine_version)
   if hasattr(platform, 'python_implementation'): # 2.6+ (for real men)
     txt += '%s %s\n' % (platform.python_implementation(),
                          platform.python_version())
   else:
     txt += '%s %s\n' % ('.'.join(map(str, sys.version_info[:3])),
                          '-'.join(map(str, sys.version_info[3:])))
-  txt += '    Twisted v%s ZODB v%s\n' % (twisted.__version__, ZODB.__version__
-      if hasattr(ZODB, '__version__') else '??')
   PAK = 'Press any key ... (or +-*)'
   txt += '\n' + ((maxwidth(txt.split('\n'))/2)-(len(PAK)/2))*' ' + PAK
   txt = txt.split('\n')
@@ -48,7 +46,7 @@ def init():
 def main ():
   def refresh ():
     session = getsession()
-    session.activity = 'System Info Screen'
+    getsession().activity = 'System Info Screen'
     echo(cls() + color() + cursor_hide ())
     if getsession().width < width+3:
       echo (color(*LIGHTRED) + 'your screen is too thin! (%s/%s)\r\n' \
@@ -76,7 +74,7 @@ def main ():
   txt_x, txt_y = refresh ()
   stars = {}
   melting = {}
-  numStars = 20
+  numStars = (getsession().width * getsession().height)*.02
   plusStar = False
   t=.08
   tMIN, tMAX, tSTEP =0.02, 2.0, .02
@@ -106,13 +104,16 @@ def main ():
     elif c == '/': char = '-'
     elif c == '-': char = '\\'
     x += wind[0]; y += wind[1]
-    new = ''
-    if x < 1: x = float(getsession().width); new +='y'
-    elif x > getsession().width: x = 1.0; new +='y'
-    if y < 1: y = float(getsession().height); new += 'x'
-    elif y > getsession().height: y = 1.0; new += 'x'
-    if 'x' in new: x = float(random.choice(range(getsession().width)))
-    if 'y' in new: y = float(random.choice(range(getsession().height)))
+    if x < 1 or x > getsession().width:
+      x = 1.0 if x > getsession().width \
+          else float(getsession().width)
+      y = float(random.choice \
+          (range(getsession().height)))
+    if y < 1 or y > getsession().height:
+      y = 1.0 if y > getsession().height \
+          else float(getsession().height)
+      x = float(random.choice \
+          (range(getsession().width)))
     return char, x, y
 
   def erase(s):
@@ -152,7 +153,7 @@ def main ():
         plusStar = False
       else:
         break
-    melt()
+    melt ()
     for starKey, starVal in stars.items():
       erase (starKey)
       stars[starKey] = iterStar(*starVal)
