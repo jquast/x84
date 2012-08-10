@@ -14,16 +14,17 @@ import telnetlib
 def main(host, port=None):
   port = port and port or 23
   session = getsession()
-  session.activity = 'telneting to %s' % (host,)
+  getsession().activity = 'telneting to %s' % (host,)
   telnet = telnetlib.Telnet()
   echo (cls())
-  echo ('\r\nTrying %s...' % (host,))
+  echo ('\r\nTrying %s... ' % (host,))
+  oflush ()
   try:
     telnet.open (host, port)
   except:
     type, value, tb = sys.exc_info ()
-    echo ('\r\n%s%s' % (color(*LIGHTRED), value))
-    echo ('\r\n%s%s' % (color(), 'press any key'))
+    echo ('%s%s' % (color(*LIGHTRED), value))
+    echo ('\r\n\r\n%s%s' % (color(), 'press any key'))
     readkey()
     return
   echo ('\r\nConnected to %s.' % (host,))
