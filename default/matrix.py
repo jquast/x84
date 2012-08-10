@@ -46,7 +46,7 @@ def main ():
     # communicates have had enough time to occur.
     x = getstr(period=1.0)
     if x:
-      log.write ('u:'+handle(), 'throwing on-connect chatter: %s' %(x,))
+      logger.info ('u:'+handle(), 'throwing on-connect chatter: %s' %(x,))
 
   # for the most part, terminal size is asked for and negotiated using
   # the telnet protocol. However, if this neogitation fails, or doesn't
@@ -86,7 +86,7 @@ def main ():
   if session.TERM and session.TERM != 'unknown':
     echo (session.TERM+ '\r\n')
   else:
-    log.write ('u:'+handle(), 'requesting answerback sequence')
+    logger.info ('u:'+handle(), 'requesting answerback sequence')
     echo ('(Answerback?\005')
     idstr = getstr(period=1.6)
     if idstr:
@@ -102,7 +102,7 @@ def main ():
 
   i_handle=''
   while True:
-    session.activity = 'logging in'
+    getsession().activity = 'logging in'
     echo ('\r\n  user: ')
     max_user = cfg.get('nua', 'max_user')
 
