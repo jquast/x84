@@ -6,7 +6,7 @@ import logging
 import ansi
 import session
 
-last_line1 = ('','','','','')
+last_line1 = ('','','','','','')
 
 class ColoredConsoleHandler(logging.StreamHandler):
   fmt_txt = '%(levelname)s%(space)s%(handle)s' \
@@ -35,13 +35,13 @@ class ColoredConsoleHandler(logging.StreamHandler):
         (session.sessions.getsession().handle + ' ' \
           if hasattr(session.sessions.getsession(), 'handle') \
           and session.sessions.getsession().handle \
-          else '^_* ')
+          else '')
     except KeyError:
       r.handle = ''
     return r
 
   def line_cmp(self, r):
-    return (r.levelname, r.handle, r.filename, r.lineno, r.threadName)
+    return (r.levelname, r.levelname, r.handle, r.filename, r.lineno, r.threadName)
   def line_blank(self, r):
     r.colon = r.space = r.sep = r.levelname = r.handle \
       = r.filename = r.lineno = r.threadName = ''
@@ -50,7 +50,7 @@ class ColoredConsoleHandler(logging.StreamHandler):
   def skip_repeat_line1(self, r):
     global last_line1
     cur_line1 = self.line_cmp(r)
-    if cur_line1 == last_line1:
+    if cur_line1 == last_line1 and last_line1[0].lower() == 'error':
       # avoid repeating unnecessarily,
       r = self.line_blank(r)
     last_line1 = cur_line1
