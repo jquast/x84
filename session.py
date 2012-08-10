@@ -68,8 +68,7 @@ class SessionRegistry(dict):
     sid = self.get_ident()
     s = self.getsession(sid)
     sendto = [tgt_sid for tgt_sid in self.iterkeys() if tgt_sid != sid]
-    logger.info ('[%s] broadcast event to %i sessions: %r',
-      s.handle, len(sendto), data)
+    logger.debug ('broadcast event to %i sessions: %r', len(sendto), data)
     for tgt_sid in sendto:
       self.getsession(tgt_sid).event_push (event, data)
 
@@ -155,10 +154,10 @@ class Session:
     """
     self.lastscript = None
     sessions.register (self)
-    logger.info ('Call #%i, script stack: %r', self.sid, self.current_script,)
+    logger.debug ('Call #%i, script stack: %r', self.sid, self.current_script,)
     tryagain = True
     fallback_script = self.current_script
-    while len(self.current_script):
+    while len(self.current_script) > 0:
       try:
         self.lastscript = self.current_script[-1]
         self.runscript (*self.current_script.pop())
@@ -170,32 +169,30 @@ class Session:
               fallback_script)
           self.current_script = fallback_script
       except exception.ScriptChange, e:
-        # change script (goto), no prior script to return from!
-        logger.info ('ScriptChange %s; %s' % (e, self.current_script,))
+        logger.info ('ScriptChange: %s' % (e,))
         self.current_script = [e[0] + tuple(e[1:])]
-        logger.info ('ScriptChanged %s' % (self.current_script,))
-        continue
       except exception.Disconnect, e:
-        # disconnect
+        logger.info ('User disconnected: %s' % (e,))
         break
       except exception.ConnectionClosed, e:
-        # closed connection
+        logger.info ('Connection Closed: %s' % (e,))
         break
       except exception.SilentTermination, e:
-        # request for silent termination
+        logger.debug ('Silent Termination: %s' % (e,))
         break
-      except LookupError, e:
+      # Cannot find or execute script.
+      except exception.ScriptError, e:
         script_name, script_filepath = scripting.chkmodpath \
             (self.lastscript[0], self.path)
          # a scriptpath or module was not found in lookup,
-        logger.error ("LookupError rasied in '%s': %s" \
+        logger.error ("ScriptError rasied in '%s': %s" \
             % (script_filepath, e,))
-        if len(self.current_script):
-          throw_out = self.current_script.pop()
-          logger.info ('continue after current_script.pop(): %s', throw_out)
-          continue
-        logger.error ('no scripts remain in stack')
-        break
+        if not len(self.current_script):
+          logger.error ('no scripts remain in stack')
+          break
+        throw_out = self.current_script.pop()
+        logger.info ('continue after current_script.pop(): %s', throw_out)
+      # Pokemon exception
       except Exception, e:
         script_name, script_filepath = scripting.chkmodpath \
             (self.lastscript[0], self.path)
@@ -206,12 +203,13 @@ class Session:
             'Exception raised in "'      if lc == 0 else '',
             '%s": ' % (script_filepath,) if lc == 0 else '',
             l.rstrip(),))
-        if len(self.current_script):
-          logger.warn ('continue after current_script.pop(): %s',
-              self.current_script.pop())
-          continue
-        logger.error ('no scripts remain in stack')
-        break
+        if not len(self.current_script):
+          logger.error ('no scripts remain in stack')
+          break
+        throw_out = self.current_script.pop()
+        logger.info ('continue after current_script.pop(): %s', throw_out)
+    if len(self.current_script) == 0:
+      logger.error ('no scripts remain')
     logger.info ('disconnected.')
     terminals = [t for t in self.terminals]
     for t in terminals:
@@ -263,7 +261,7 @@ class Session:
 
   def setpath(self, path):
     if self.path != path:
-      logger.info ('userland path change %s/->%s/', self.path, path)
+      logger.debug ('userland path change %s/->%s/', self.path, path)
       self.path = path
 
   def detachterminal (self, term):
@@ -280,12 +278,8 @@ class Session:
     """
     self.terminals.append (term)
     term.spy = spy
-    if self.sid == -1:
-      logger.info ('[tty%s] start new session term.(type=%s, info=%s)',
-        term.tty, term.type, term.info)
-    else:
-      logger.info ('[tty%s] terminal joins session %i: term.(type=%s, info=%s)',
-        term.tty, self.sid, term.type, term.info)
+    logger.info ('attachterminal tty=%s type=%s info=%s spy=%s)',
+      term.tty, term.type, term.info, term.spy)
 
     # set parent session of new terminal
     term.xSession = self
@@ -435,7 +429,7 @@ class Session:
 
       # when an event has just been buffered that is of an event specified
       # in the events=[] list, immediately pop the first column of data stored
-      # in the buffer and return. For instance, a single keystroke for event 'input'
+      # in the buffer and return. For instance, a single keystroke
       if event in events:
         data = self.event_pop(event)
         return (event, data)
@@ -466,23 +460,28 @@ class Session:
 
     logger.info ('runscript(%r, **%r)', script, args)
 
+    self.current_script.append ((script,) + args)
+
     # break script into an informal and formal path, add
     # to our script stack .current_script, then check the
     # import status of the script and re-load if necessary
-    self.script_name, self.script_filepath \
-        = scripting.chkmodpath (script, self.path)
-
-    self.current_script.append ((script,) + args)
+    try:
+      self.script_name, self.script_filepath \
+          = scripting.chkmodpath (script, self.path)
+    except LookupError, e:
+      raise exception.ScriptError, e
 
     # XXX check return status?
     scripting.checkscript (self.script_name)
 
     if not hasattr(scripting.scriptlist[self.script_name], 'main'):
-      raise LookupError, \
-          'main definition not found in %(script_name)s' % (self,)
+      raise exception.ScriptError \
+          ('main definition not found in %(script_name)s' \
+            % (self,))
     if not hasattr(scripting.scriptlist[self.script_name].main, '__call__'):
-      raise LookupError, \
-          'main definition not of type callable in %(script_name)s' % (self,)
+      raise exception.ScriptError \
+          ('main definition not of type callable in %(script_name)s' \
+            % (self,))
     f = scripting.scriptlist[self.script_name].main
 
     # which script 'path' should we revert to after script execution?
@@ -492,68 +491,13 @@ class Session:
     prev_path = self.getpath() if self.getpath() else current_path
     self.setpath (current_path)
 
-    value = None
-    try:
-      value = f(*args)
-      # we were gosub()'d here and have returned value. .pop() the current
-      # script off the stack and return with the script's return value.
-      lastscript = self.current_script.pop()
-      logger.info ('%s popped from current_script, value=%s', lastscript, value)
-      self.setpath (prev_path) # return to previous path
-      return value
-
-    except exception.ScriptChange, e:
-      # bbs.goto() exception
-      #
-      # raise exception up to self.sessionmain() with new target
-      # script as value of exception, effectively acting as a GOTO
-      # statement.
-      logger.info ('%s GOTO %s', self.script_name, e)
-      raise exception.ScriptChange, e
-
-    except exception.ConnectionClosed, e:
-      # client connection closed, raise up
-      type, value, tb = sys.exc_info ()
-      logger.info ('Connection closed: %s', value)
-      self.setpath (prev_path) # return to previous path
-      raise exception.ConnectionClosed, e
-
-    except exception.SilentTermination, e:
-      # bbs.py:terminate()
-      logger.info ('SilentTermination Exception raised')
-      raise exception.SilentTermination, e
-
-#    #except exception.MyException, e:
-#    #  # Custom exception
-#    #  type, value, tb = sys.exc_info ()
-#    #  logger.info ("MyException raised, value='%s'", value)
-#    #  self.setpath (prev_path) # return to previous path
-#    #  raise exception.MyException, e
-#
+    value = f(*args)
+    # we were gosub()'d here and have returned value. .pop() the current
+    # script off the stack and return with the script's return value.
+    lastscript = self.current_script.pop()
+    logger.debug ('%s popped from current_script, value=%s', lastscript, value)
+    self.setpath (prev_path) # return to previous path
+    return value
 
 # XXX WHAaaaa
 sessions = SessionRegistry()
-
-#class CurrentSession:
-#  " Return caller's session"
-#  def __call__ (self):
-#    return sessions.getsession()
-#  def __setattr__ (self, key, value):
-#    setattr (sessions.getsession(), key, value)
-#  def __getattr__ (self, key):
-#    return getattr (sessions.getsession(), key)
-#
-#session = CurrentSession()
-#
-#class CurrentUser:
-#  " Return caller's session.user"
-#  def __call__ ():
-#    return session.user
-#  def __setattr__ (self, key, value):
-#    setattr(session.user, key, value)
-#  def __getattr__ (self, key):
-#    return getattr (session.user, key)
-#
-#user = CurrentUser()
-
-
