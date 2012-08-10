@@ -24,7 +24,7 @@ def init():
     print 'b'
 
 def main():
-  session.activity = 'Logging Off!'
+  getsession().activity = 'Logging Off!'
   dirty=True
   while True:
     if dirty:
