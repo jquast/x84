@@ -10,7 +10,7 @@ last_line1 = ('','','','','')
 
 class ColoredConsoleHandler(logging.StreamHandler):
   fmt_txt = '%(levelname)s%(space)s%(handle)s' \
-    '%(filename)s:%(lineno)s%(space)s%(threadName)s' \
+    '%(filename)s%(colon)s%(lineno)s%(space)s%(threadName)s' \
     '%(sep)s%(prefix)s%(message)s'
   def color_levelname (self, r):
     #r.levelname = r.levelname.strip()
@@ -43,7 +43,7 @@ class ColoredConsoleHandler(logging.StreamHandler):
   def line_cmp(self, r):
     return (r.levelname, r.handle, r.filename, r.lineno, r.threadName)
   def line_blank(self, r):
-    r.space = r.sep = r.levelname = r.handle \
+    r.colon = r.space = r.sep = r.levelname = r.handle \
       = r.filename = r.lineno = r.threadName = ''
     return r
 
@@ -57,6 +57,7 @@ class ColoredConsoleHandler(logging.StreamHandler):
     return r
 
   def transform(self, src_record):
+   src_record.colon = ':'
    src_record.space = ' '
    src_record.sep = ' - '
    src_record.prefix = ''
