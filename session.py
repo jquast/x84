@@ -185,27 +185,31 @@ class Session:
         # request for silent termination
         break
       except LookupError, e:
-        # a scriptpath or module was not found in lookup,
-        logger.error ('LookupError: %s' % (e,))
+        script_name, script_filepath = scripting.chkmodpath \
+            (self.lastscript[0], self.path)
+         # a scriptpath or module was not found in lookup,
+        logger.error ("LookupError rasied in '%s': %s" \
+            % (script_filepath, e,))
+        if len(self.current_script):
+          logger.warn ('continue after current_script.pop(): %s',
+              self.current_script.pop())
         continue
       except Exception, e:
         script_name, script_filepath = scripting.chkmodpath \
             (self.lastscript[0], self.path)
         t, v, tb= sys.exc_info()
-        for lc,l in enumerate(traceback.format_exception_only(t, v)):
-          if lc == 0:
-            logger.error ("Exception raised in '%s': %s",
-              script_filepath,l.rstrip())
-          else:
-            logger.error (l.rstrip())
         map(logger.error, [l.rstrip() for l in traceback.format_tb(tb)])
+        for lc,l in enumerate(traceback.format_exception_only(t, v)):
+          logger.error ('%s%s%s' % (
+            'Exception raised in "'      if lc == 0 else '',
+            '%s": ' % (script_filepath,) if lc == 0 else '',
+            l.rstrip(),))
         if len(self.current_script):
           logger.warn ('continue after current_script.pop(): %s',
               self.current_script.pop())
           continue
-        else:
-          logger.error ('no scripts remain in stack')
-          break
+        logger.error ('no scripts remain in stack')
+        break
     logger.info ('disconnected.')
     terminals = [t for t in self.terminals]
     for t in terminals:
@@ -248,6 +252,9 @@ class Session:
     self.handle = user.handle
     if recordLogin:
       self.logintime = time.time()
+
+  def getuser(self):
+    return self.user
 
   def getpath(self):
     return self.path
