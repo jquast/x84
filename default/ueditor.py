@@ -142,7 +142,7 @@ def main(editing_user=None):
   session = getsession()
   isSysop = 'sysop' in getuser(session.handle).groups
 
-  session.activity = 'user editor: handle'
+  getsession().activity = 'user editor: handle'
   echo (cls() + color() + cursor_show())
   showfile ('art/ueditor.asc')
   echo ('\r\n')
@@ -231,8 +231,8 @@ def main(editing_user=None):
       echo ('\r\n\r\nDeleting field: %s\r\n' % (delfield,))
     elif isSysop and k == 'c':
       echo ('\r\n\r\nFind user [' + ' '*int(cfg.get('nua','max_user')) + ']' +
-          '\b'*(cfg.get('nua','max_user')+1))
-      find = finduser(readline(cfg.max_user))
+          '\b'*(int(cfg.get('nua','max_user'))+1))
+      find = finduser(readline(int(cfg.get('nua','max_user'))))
       if find:
         echo ('\r\n\r\nNew user: %s' % (find,))
         editing_user = find
