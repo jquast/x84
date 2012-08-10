@@ -36,7 +36,7 @@ def main():
   session = getsession()
 
   def refresh(pager, lastupdate):
-    session.activity = 'Reading News'
+    getsession().activity = 'Reading News'
     y=7
     w=80
     x=1
