@@ -10,11 +10,11 @@ __url__ = 'http://1984.ws'
 deps = ['bbs']
 
 def main():
-  udb = openudb('bbslist')
-  session.activity = 'BBS Lister'
+  getsession().activity = 'BBS Lister'
   dirty=True
   lightbar=False
   bbslist=[]
+  udb = openudb('bbslist')
 
   bbsname=host=port=software=sysop=ratings=comments=None
   while True:
@@ -30,16 +30,21 @@ def main():
         lightbar = LightClass (y=10, x=2, w=76, h=14, xpad=1, ypad=1)
         lightbar.byindex = lightbar.interactive = lightbar.partial = True
       lightbar.lowlight()
-      bbslist = sorted(openudb('bbslist')['boards'])
-      sys.stderr.write('%r\n' % (bbslist,))
+      udb = openudb('bbslist')
+      if not len(udb.keys()):
+        udb['1984'] = ['1984.ws', '23', 'x/84',
+             'dingo', (('biG bROthER', 5),),
+             (('biG bROthER', 'a very loyal board to the cause'),),]
+      bbslist = sorted(udb.items())
       echo (color() + lightbar.pos(3,0))
-      echo ('%-27s %-15s %-18s %s' \
+      echo ('%-27s %-16s %-18s %s' \
         % ('- BBS Name', 'Software', '+o', 'rating -'))
       lightbar.update \
-        (['    %-25s %-15s %-18s %-4s %-3i' \
-          % (bbsname, software, sysop, calcRating(ratings), len(comments)) \
-              for bbsname, host, port, software, sysop,
-                ratings, comments in bbslist])
+        (['    %-25s %-16s %-18s %-4s %-3i' \
+          % (r_bbsname, r_software, r_sysop, calcRating(r_ratings),
+                       len(r_comments)) \
+              for r_bbsname, (r_host, r_port, r_software, r_sysop,
+                r_ratings, r_comments) in bbslist])
       title = color() + '- %sa%sdd %sc%somment %sr%sate ' \
         '%si%snfo %st%selnet %sd%selete %sq%suit -' \
         % (color(*LIGHTBLUE), color(), color(*LIGHTBLUE), color(), \
@@ -47,7 +52,8 @@ def main():
            color(*LIGHTBLUE), color(), color(*LIGHTBLUE), color(), \
            color(*LIGHTBLUE), color())
       lightbar.title(title, align='bottom')
-      bbsname, host, port, software, sysop, ratings, comments \
+      lightbar.title(title, align='top')
+      bbsname, (host, port, software, sysop, ratings, comments) \
         = bbslist[lightbar.selection]
     event, data = readevent(['input','refresh'])
     if event == 'refresh':
@@ -55,7 +61,7 @@ def main():
       continue
     if event == 'input' and data.lower() not in 'acritdq':
       lightbar.run (key=data)
-      bbsname, host, port, software, sysop, ratings, comments \
+      bbsname, (host, port, software, sysop, ratings, comments) \
         = bbslist[lightbar.selection]
     elif event == 'input':
       if data.lower() == 'a': # add new bbs entry
@@ -86,22 +92,16 @@ def main():
         echo (lightbar.pos(2, 8) + color())
         echo ('BBS Software: ')
         echo (color(BLUE)+color(INVERSE))
-        echo (' '*15 + '\b'*15)
-        software = readline(15)
+        echo (' '*16 + '\b'*16)
+        software = readline(16)
         echo (lightbar.pos(2, 10) + color())
         echo ('sysop name: ')
         echo (color(BLUE)+color(INVERSE))
         echo (' '*18 + '\b'*18)
         sysop = readline(18)
-        udb = openudb('bbslist')
-        bbslist = [(r_bbsname, r_host, r_port, r_software,
-          r_sysop, r_ratings, r_comments) \
-            for r_bbsname, r_host, r_port, r_software,
-              r_sysop, r_ratings, r_comments, \
-                in udb['boards']] \
-          + [(bbsname, host, port, software, sysop, [], [])]
+        # XXX dupe entries allowed
         lock()
-        udb['boards'] = bbslist
+        udb [bbsname] = (host, port, software, sysop, [], [])
         commit()
         unlock()
 
@@ -112,8 +112,9 @@ def main():
         echo ('comment: ')
         echo (color(BLUE)+color(INVERSE))
         echo (' '*65 + '\b'*65)
-        new_comment = readline(70).strip()
-        if not new_comment: continue
+        new_comment = readline(65).strip()
+        if not new_comment:
+          continue
         echo (lightbar.pos(2, 8) + color())
         if handle() in [u for u,c in comments]:
           echo ('change your comment for %s? [yn]' % (bbsname,))
@@ -125,16 +126,8 @@ def main():
         new_comments = \
           [(u,c) for u,c in comments if u != handle()] \
           + [(handle(), new_comment)]
-        udb = openudb('bbslist')
-        bbslist = [(r_bbsname, r_host, r_port, r_software,
-          r_sysop, r_ratings, r_comments) \
-            for r_bbsname, r_host, r_port, r_software,
-              r_sysop, r_ratings, r_comments \
-                in udb['boards'] \
-                  if r_bbsname != bbsname] \
-          + [(bbsname, host, port, software, sysop, ratings, new_comments)]
         lock()
-        udb['boards'] = bbslist
+        udb[bbsname] = (host, port, software, sysop, ratings, new_comments)
         commit()
         unlock()
 
@@ -161,16 +154,8 @@ def main():
         new_rating = \
           [(u,r) for u, r in ratings if u != handle()] \
           + [(handle(), rate)]
-        udb = openudb('bbslist')
-        bbslist = [(r_bbsname, r_host, r_port, r_software,
-          r_sysop, r_ratings, r_comments) \
-            for r_bbsname, r_host, r_port, r_software,
-              r_sysop, r_ratings, r_comments, \
-                in udb['boards'] \
-                  if r_bbsname != bbsname] \
-          + [(bbsname, host, port, software, sysop, new_rating, comments)]
         lock()
-        udb['boards'] = bbslist
+        udb[bbsname] = (host, port, software, sysop, new_rating, comments)
         commit()
         unlock()
 
@@ -179,19 +164,42 @@ def main():
         lightbar.clear ()
         gosub('telnet', host, port)
 
-      elif bbsname and data.lower() == 'd': # delete record
+      elif bbsname and data.lower() == 'd' \
+      and 'sysop' in getsession().getuser().groups: # delete record
         dirty=True
-        udb = openudb('bbslist')
-        bbslist = [(r_bbsname, r_host, r_port, r_software,
-          r_sysop, r_ratings, r_comments) \
-            for r_bbsname, r_host, r_port, r_software,
-              r_sysop, r_ratings, r_comments \
-                in udb['boards'] \
-                  if r_bbsname != bbsname]
         lock()
-        udb['boards'] = bbslist
+        del udb[bbsname]
         commit()
         unlock()
+      elif bbsname and data.lower() == 'i':
+        dirty = True
+        p = ParaClass (y=10, x=2, w=76, h=14, xpad=1, ypad=1)
+        p.lowlight ()
+        cr = ''
+        for nick, comment in comments:
+          rating = None
+          for r_nick, rating in ratings:
+            if r_nick == nick:
+              break
+            rating = None
+          cr += '%s%s%s%s\n  %s\n' % \
+              (color(*LIGHTBLUE), nick, color(),
+                  ' %s%s%s:' % (color(*LIGHTRED),'*'*rating,color())
+                  if rating else ':',
+               comment)
+        p.update ('%saddress: telnet://%s%s\nsysop: %s\n' \
+                   '%ssoftware:%s\n%s%s' \
+                   % (color(), host,
+                     ':%s' % (port,) if port != 23 else '',
+                     sysop,
+                     'number of ratings: %i\n' % (len(ratings)) \
+                         if ratings else '',
+                     software, '\n' if comments else '', cr ))
+        p.title ('<return/spacebar> return to list', align='top')
+        k = readkey()
+        if k in (' ',KEY.ENTER,KEY.ESCAPE):
+          continue
+        p.run (k)
 
       elif data.lower() == 'q':
         break
