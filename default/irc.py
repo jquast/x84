@@ -102,10 +102,11 @@ class ClientFactory(protocol.ClientFactory):
 
 def main():
     session = getsession()
+    getsession().activity = 'irc'
     factory = ClientFactory(session, cfg.get('irc','channel'))
     connect = reactor.connectTCP \
-        (cfg.get('irc', 'server'), int(cfg.get('irc','port'),
-          factory))
+        (cfg.get('irc', 'server'), int(cfg.get('irc','port')),
+          factory)
 
     # colors and formatting
     fx = {
