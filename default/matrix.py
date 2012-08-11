@@ -12,7 +12,7 @@ __author__ = 'Jeffrey Quast <dingo@1984.ws>'
 __copyright__ = ['Copyright (c) 2009 Jeffrey Quast',
                  'Copyright (c) 2005 Johannes Lundberg']
 __license__ = 'ISC'
-__url__ = 'http://1984.ws'
+__url__ = 'https://github.com/jquast/x84'
 
 import re
 deps = ['bbs']
@@ -37,6 +37,7 @@ def main ():
     echo ('\r\n\r\n')
 
   refresh()
+
   if not (session.height and session.width) \
   or (session.TERM== 'unknown'):
     # Delay for 1 second, telnet NAWS and TERMTYPE communications occur
@@ -46,7 +47,7 @@ def main ():
     # communicates have had enough time to occur.
     x = getstr(period=1.0)
     if x:
-      logger.info ('u:'+handle(), 'throwing on-connect chatter: %s' %(x,))
+      logger.info ('throwing on-connect chatter: %s' % (x,))
 
   # for the most part, terminal size is asked for and negotiated using
   # the telnet protocol. However, if this neogitation fails, or doesn't
@@ -80,19 +81,19 @@ def main ():
           break
 
   echo ('%sx%s\r\n' % (session.width, session.height))
-  echo ("SYStEM MAitENANCE!\r\n\r\n")
 
   echo ('Terminal type: ')
   if session.TERM and session.TERM != 'unknown':
     echo (session.TERM+ '\r\n')
   else:
-    logger.info ('u:'+handle(), 'requesting answerback sequence')
+    logger.info ('requesting answerback sequence')
     echo ('(Answerback?\005')
     idstr = getstr(period=1.6)
     if idstr:
       # check for compatible terminal? lol.
       # terminal type is just a string for now.
       echo (') %s\r\n' % (idstr,))
+      logger.info ('got: ' % (idstr,))
       session.setTermType(idstr)
     else:
       default_keymap = cfg.get('system', 'default_keymap')
