@@ -9,7 +9,7 @@ class Disconnect(Exception):
   pass
 
 class ConnectionClosed (Exception):
-  "Raised when the client closes connection"
+  "Raised when the socket closes connection"
   pass
 
 class SilentTermination (Exception):
