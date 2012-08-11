@@ -1,19 +1,24 @@
 # built-ins
 import copy
 import logging
+import datetime
+import db
 
 # locals
 import ansi
 import session
 
 last_line1 = ('','','','','','')
+MAX_SIZE=10000 # N records to store (as openudb('eventlog'))
+MAX_STEP=100 # cut N lines every buffer trim
 
 class ColoredConsoleHandler(logging.StreamHandler):
+  el = None
   fmt_txt = '%(levelname)s%(space)s%(handle)s' \
     '%(filename)s%(colon)s%(lineno)s%(space)s%(threadName)s' \
     '%(sep)s%(prefix)s%(message)s'
+
   def color_levelname (self, r):
-    #r.levelname = r.levelname.strip()
     r.levelname = '%s%s%s' % \
       (ansi.color(ansi.LIGHTRED) if r.levelno >= 50 \
       else ansi.color(*ansi.LIGHTRED) if r.levelno >= 40 \
@@ -42,6 +47,7 @@ class ColoredConsoleHandler(logging.StreamHandler):
 
   def line_cmp(self, r):
     return (r.levelname, r.levelname, r.handle, r.filename, r.lineno, r.threadName)
+
   def line_blank(self, r):
     r.colon = r.space = r.sep = r.levelname = r.handle \
       = r.filename = r.lineno = r.threadName = ''
@@ -50,7 +56,8 @@ class ColoredConsoleHandler(logging.StreamHandler):
   def skip_repeat_line1(self, r):
     global last_line1
     cur_line1 = self.line_cmp(r)
-    if cur_line1 == last_line1 and last_line1[0].lower() == 'error':
+    if cur_line1 == last_line1 \
+    and last_line1[0].lower().strip() == 'error':
       # avoid repeating unnecessarily,
       r = self.line_blank(r)
     last_line1 = cur_line1
@@ -62,16 +69,29 @@ class ColoredConsoleHandler(logging.StreamHandler):
    src_record.sep = ' - '
    src_record.prefix = ''
    return \
-     (self.skip_repeat_line1 \
-       (self.color_levelname \
+     (self.color_levelname \
+       (self.skip_repeat_line1 \
          (self.ins_handle \
            (self.modify_threadName \
              (src_record)))))
 
   def emit(self, src_record):
+    if self.el is None:
+      self.el = db.openudb('eventlog')
+    if len(self.el) > MAX_SIZE:
+      largedb = copy.copy(self.el)
+      for k in sorted(largedb.keys())[:-(MAX_SIZE-MAX_STEP)]:
+        del self.el[k]
+    dst_record = self.transform \
+        (copy.copy(src_record))
+    self.el.__setitem__ \
+        (datetime.datetime.now(), \
+        '%s %s %s:%s %s %s' % \
+          (dst_record.levelname, dst_record.handle,
+           dst_record.filename, dst_record.lineno,
+           dst_record.threadName, dst_record.getMessage(),))
     logging.StreamHandler.emit \
-      (self, self.transform \
-        (copy.copy(src_record)))
+      (self, dst_record)
 
 def get_stderr(level=logging.INFO):
   stderr_format = logging.Formatter (ColoredConsoleHandler.fmt_txt)
