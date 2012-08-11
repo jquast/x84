@@ -12,7 +12,7 @@ def rebuild_db():
   global udb
   udb = openudb('mastermind')
   lock ()
-  udb['scores'] = PersistentMapping ()
+  udb['scores'] = dict ()
   udb['scores']['noset'] = [(0, 1, 9, 8, 4, 'biG BROthER')]
   unlock ()
   commit ()
@@ -59,39 +59,39 @@ def get_code():
   # return random old game, any old game will do
   return random.choice(udb['scores'].keys())
 
-def pincode (set):
+def pincode (pset):
   " return combination of pin codes "
-  return [lb.selection for lb in set]
+  return [lb.selection for lb in pset]
 
 def create_pins():
   " return array of lightbar objects that represent pin codes "
-  set = []
+  pset = []
   def setcolor(x, c):
     themeOverlay = {'colors': {'highlight': c, 'ghostlight': c, 'lowlight': c}}
     x.setTheme (themeOverlay)
   h, w, y = 3, 9, 1
   for n in range(0, length):
     x = (w*n)+7
-    set.append (LightClass(h, w, y, x))
-    set[n].update (choices)
-    setcolor(set[n], colorof(set[n].selection))
-    set[n].refresh ()
-    set[n].interactive = True
-    set[n].partial = True
+    pset.append (LightClass(h, w, y, x))
+    pset[n].update (choices)
+    setcolor(pset[n], colorof(pset[n].selection))
+    pset[n].refresh ()
+    pset[n].interactive = True
+    pset[n].partial = True
 
-  return set
+  return pset
 
-def shift_pinset(set):
+def shift_pinset(pset):
   " shift pins down "
   def setcolor(x, c):
     themeOverlay = {'colors': {'highlight': c, 'ghostlight': c, 'lowlight': c}}
     x.setTheme (themeOverlay)
   for n in range(0, length):
-    set[n].y += 2
-    setcolor(set[n], colorof(set[n].selection))
-    set[n].refresh ()
+    pset[n].y += 2
+    setcolor(pset[n], colorof(pset[n].selection))
+    pset[n].refresh ()
 
-def pick_lock(set, lock):
+def pick_lock(pset, lock):
   " interactive user UI for lock picking "
   # read key in last else
   key = None
@@ -99,31 +99,31 @@ def pick_lock(set, lock):
   def setcolor(x, c):
     themeOverlay = {'colors': {'highlight': c, 'ghostlight': c, 'lowlight': c}}
     x.setTheme (themeOverlay)
-  setcolor(set[lock], colorof(set[lock].selection))
-  set[lock].highlight ()
+  setcolor(pset[lock], colorof(pset[lock].selection))
+  pset[lock].highlight ()
 
   while True:
     if key in ['q','\030']:
       return -1, None
     elif key in [KEY.LEFT,'h'] and lock > 0:
-      set[lock].noborder ()
+      pset[lock].noborder ()
       lock -=1
-      setcolor(set[lock], colorof(set[lock].selection))
-      set[lock].highlight ()
-    elif key in [KEY.RIGHT,'l'] and lock < len(set) -1:
-      set[lock].noborder ()
+      setcolor(pset[lock], colorof(pset[lock].selection))
+      pset[lock].highlight ()
+    elif key in [KEY.RIGHT,'l'] and lock < len(pset) -1:
+      pset[lock].noborder ()
       lock +=1
-      setcolor(set[lock], colorof(set[lock].selection))
-      set[lock].highlight ()
+      setcolor(pset[lock], colorof(pset[lock].selection))
+      pset[lock].highlight ()
     elif key == KEY.ENTER:
-      set[lock].noborder ()
-      return lock, set
+      pset[lock].noborder ()
+      return lock, pset
     else:
-      set[lock].run ()
-      key = set[lock].lastkey
-      if set[lock].moved:
-        setcolor(set[lock], colorof(set[lock].selection))
-        set[lock].refresh ()
+      pset[lock].run ()
+      key = pset[lock].lastkey
+      if pset[lock].moved:
+        setcolor(pset[lock], colorof(pset[lock].selection))
+        pset[lock].refresh ()
         echo (color())
       continue
     # last action was movement, read key in next else
@@ -163,12 +163,12 @@ def pattern(tumblers, gears):
   return color(*BRIGHTGREY) + 'o '*tumblers \
        + color(*BRIGHTRED)  + '* '*gears
 
-def attempt_breakin (set, answer):
+def attempt_breakin (pset, answer):
   " set UI for breakin attempt, return True if sucessful"
-  tumblers, gears = check_match(pincode(set), answer)
+  tumblers, gears = check_match(pincode(pset), answer)
 
   # set pegs
-  echo (pos(set[len(set)-1].x +9, set[len(set)-1].y +1))
+  echo (pos(pset[len(pset)-1].x +9, pset[len(pset)-1].y +1))
   echo (pattern(tumblers, gears))
 
   # nethack style message
@@ -260,12 +260,12 @@ def disp_scores(boardcode, myscore):
     echo (handle)
     sleep (0.25)
 
-    echo (pos(5+cfg.max_user+2, 6+row))
+    echo (pos(5+int(cfg.get('nua','max_user'))+2, 6+row))
     echo (color(*DARKGREY))
     echo (str(int(score)))
     sleep (0.25)
 
-    echo (pos(5+cfg.max_user+2, 6+row))
+    echo (pos(5+int(cfg.get('nua','max_user'))+2, 6+row))
     if not row: echo (color(*WHITE))
     else: echo (color(GREY, NORMAL))
     echo (strpadd(str(int(score)),5,'left'))
@@ -273,7 +273,7 @@ def disp_scores(boardcode, myscore):
 
     if not row: echo (color(*LIGHTRED))
     else: echo (str(color(GREY, NORMAL)))
-    echo (pos(5+cfg.max_user+7, 6+row))
+    echo (pos(5+int(cfg.get('nua','max_user'))+7, 6+row))
     echo (strpadd(str(turns),4,'right'))
     echo (color(*DARKGREY) + ' turns in ')
     if not row: echo (color(*LIGHTRED) + strpadd(asctime(time),7,'right'))
@@ -321,25 +321,25 @@ def main():
 
   while True:
     echo (cls() + cursor_hide())
-    set, answer = create_pins(), get_code()
+    pset, answer = create_pins(), get_code()
     turns, position, broke_code = 0, 0, False
     start = timenow()
     while turns < tries:
       # advance turn
-      position, set = pick_lock(set, position)
+      position, pset = pick_lock(pset, position)
       if position == -1:
         # early exit
         break
-      if attempt_breakin (set, answer):
+      if attempt_breakin (pset, answer):
         echo (color() + pos(65, 22) + 'You win!')
         broke_code = True
         break
       turns += 1
 
       # move pinset combination downward
-      shift_pinset (set)
+      shift_pinset (pset)
 
-    tumblers, gears = check_match(pincode(set), answer)
+    tumblers, gears = check_match(pincode(pset), answer)
     myscore = set_score \
       (answer, turns, timenow() -start, tumblers, gears)
 
