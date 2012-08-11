@@ -123,13 +123,13 @@ def main():
 
     # read-only pager for buffer history
     buffer = ParaClass \
-      (h=session.height-6, w=session.width-12, y=6, x=6, xpad=0, ypad=1)
+      (h=session.height-6, w=session.width-2, y=6, x=6, xpad=0, ypad=1)
     buffer.add('%s connecting to %s:%d' % (fx['system'],
       cfg.get('irc','server'), int(cfg.get('irc','port'))))
 
     # editable pager for input
     inputbar = HorizEditor \
-      (w=session.width-10, y=session.height-1, x=5, xpad=1, max=MAX_INPUT)
+      (w=session.width-2, y=session.height-1, x=5, xpad=1, max=MAX_INPUT)
     inputbar.partial = inputbar.edit = inputbar.interactive = True
 
     def refresh ():

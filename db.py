@@ -5,10 +5,11 @@ __author__ = 'Johannes Lundberg, Jeffrey Quast'
 __copyright__ = 'Copyright (C) 2011 Johannes Lundberg, Jeffrey Quast'
 __license__ = 'ISC'
 
-import logging, ConfigParser, sys, os, threading, BTrees
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+import ConfigParser
+import threading
+import BTrees
+import sys
+import os
 
 # age of unused deleted data in database
 # to purge on init in L{openDB}. theoretically,
@@ -19,7 +20,10 @@ pack_days = 0
 # root key of database for userland scripts
 UDB='udb'
 
-import ZODB, ZODB.FileStorage, transaction, persistent
+import ZODB
+import ZODB.FileStorage
+import transaction
+import persistent
 
 def load_cfg(cfgFilepath='default.ini'):
   sys.stdout.write (',load %s...' % (cfgFilepath,))

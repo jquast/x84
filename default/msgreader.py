@@ -7,7 +7,7 @@ def main(msgs):
     print handle() + ' msgreader: called with msgs=None'
     return
 
-  session.activity = 'Reading messages'
+  getsession().activity = 'Reading messages'
 
   TOP=6
   ch=getsession().height-9
