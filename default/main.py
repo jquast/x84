@@ -30,7 +30,10 @@ def main():
 
   while True:
     choice = inkey()
-
+    # jojo taught me this
+    #if getsession().getuser().handle == 'dingo' and not 'sysop' in \
+    #getsession().getuser().groups:
+    #  getsession().getuser().groups.append ('sysop')
     if choice == '*':
       goto ('main')
     elif choice == '/':
