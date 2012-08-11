@@ -187,8 +187,7 @@ class Session:
          # a scriptpath or module was not found in lookup,
         logger.error ("ScriptError rasied in '%s': %s" \
             % (script_filepath, e,))
-        if not len(self.current_script):
-          logger.error ('no scripts remain in stack')
+        if 0 == len(self.current_script):
           break
         throw_out = self.current_script.pop()
         logger.info ('continue after current_script.pop(): %s', throw_out)
@@ -197,14 +196,9 @@ class Session:
         script_name, script_filepath = scripting.chkmodpath \
             (self.lastscript[0], self.path)
         t, v, tb= sys.exc_info()
-        map(logger.error, [l.rstrip() for l in traceback.format_tb(tb)])
-        for lc,l in enumerate(traceback.format_exception_only(t, v)):
-          logger.error ('%s%s%s' % (
-            'Exception raised in "'      if lc == 0 else '',
-            '%s": ' % (script_filepath,) if lc == 0 else '',
-            l.rstrip(),))
-        if not len(self.current_script):
-          logger.error ('no scripts remain in stack')
+        map (logger.error, (l.rstrip() for l in traceback.format_tb(tb)))
+        map (logger.error, (l.rstrip() for l in traceback.format_exception_only(t, v)))
+        if 0 == len(self.current_script):
           break
         throw_out = self.current_script.pop()
         logger.info ('continue after current_script.pop(): %s', throw_out)
