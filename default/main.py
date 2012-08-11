@@ -49,7 +49,7 @@ def main():
       gosub ('chkmsgs')
       pak ()
     elif choice.lower() == 'w':
-      gosub ('msgwriter')
+      gosub ('weather')
       refresh ()
     elif choice.lower() == 'r':
       gosub ('msgreader', listprivatemsgs(handle()) + listpublicmsgs())
@@ -75,7 +75,7 @@ def main():
     elif choice == 'E':
       gosub ('test.editor')
     elif choice == 'x':
-      gosub ('wo')
+      gosub ('wfc')
       refresh ()
     elif choice == 'u':
       gosub ('ueditor', getsession().handle)
@@ -98,5 +98,7 @@ def main():
     elif choice.lower() == 'g':
       gosub ('logoff')
       refresh ()
+    elif choice == '*':
+      goto ('main')
     else:
       echo (bel)
