@@ -41,7 +41,7 @@ def main():
       m.tags = ['test']
       m.send ()
     elif choice.lower () == 'c':
-      gosub ('wfc')
+      gosub ('wfc', getsession().getuser().handle)
       refresh ()
     elif choice.lower() == 'f':
       sorry ()
