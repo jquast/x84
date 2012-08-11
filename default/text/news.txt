@@ -1,61 +1,12 @@
-== [ news from dingo @ 1984 ] ==
-[08 May 10]
+== [ bROAdCAST tRANSMiSSiON fROM biG bROthER ] ==
 
-An extraordinary amount of time has been spent maturing the session engines.  With the new improvements, a dependency system will calculate the need to refresh scripts very carefully. Everything but engine.py and its dependencies can now be modified on the fly. This should allow for the rapid development I've been wanting to do for some time now. I especially would like to thank jojo for his efforts into this new architecture.
+9/10/12 - fOR iMMEdiAtE diStRibUtiON
 
-Developer documentation is now being made available at:
-  http://1984.ws/bbs
+Citzens,
 
-A new snapshot was made available at
-  http://1984.ws/bbs/snapshots
+As you all know, this week celebrates the glorious revolution from the IBM-PC DOS runtime of 1997. The software standards comittee has taken another byte out of crime today in remembernce and instituted action code article 78837 serial 11b: source code availability on github. Per committee recommendation r7A it is your duty to inform yourself of the hypertext URL:
 
-Installation instructions (including OSX) available at:
-  http://1984.ws/bbs/doc/readme.1st  
+   https://github.com/jquast/x84
 
-[07 Jan 07]
+Remember, open source can open sores.
 
-We now have the skeleton for a message system. More UI to come to allow groups, tagging, moderators, etc. Anyone should be able to have their own message base under this new system.
-
-Improved 'w'hos online quite a bit. Non-sysops can try many of the new functions out by logging in a second time: hi-jacking, killing, and disconnecting other sessions :)
-
-Also 'W'eather now supports non-US locations! Try it!
-
-[09 Sept 07]
-After a long haitus, we're back online, in sweden no less. Thanks for PRQ!
-cvs repository is back up, as is cvsweb.
-
-[22 Apr 07]
-A big thanks to jojo for providing us with a copy of PRSV beta 1. I had a lot of fun working with his last BBS codebase, and this one is much better.
-
-I've been rewriting userland and adding a collage of utilities and libraries that have been in my own tree, such as a lightbar class, a pager class, and various ansi and windowing code. This tree is available at:
-
-  http://1984.ws/cgi-bin/cvsweb
-
-== [ news from jojo @ bloodisland ] ==
-
-[24 Jun 05] - PRSVBETA.001
-General
-+ Now works with, and requires, Python 2.4.
-Engine:
-= Fixed bug causing the default config value to always be used.
-= readline() no longer bails when called with a nonempty string.
-= Fixed a stupid bug in the input filter \r\n -> \n conversion.  You can can now use Windows/DOS-based telnet clients/terminals.
-+ Big rewrite and restructuring of session/client code.
-+ Multiple clients can now be attached to a single session, enabling spy-on-user and screen-like session-resuming.
-+ Major speed improvements.
-Msg:
-+ Started coding. Area creation and message posting is done (read to come).
-
-Example setup:
-+ Added a simple benchmark script.
-+ Oneliner now updates live when other users write lines.
-+ Who's on autoupdates so you can now monitor other users.
-
-[18 Oct 04] - PRSVBETA.000
-* The first beta of the new system is released.
-
-Understand that this is a beta version and is unsupported. This release is intended for sysops and script developers so that they can start to develop.  Also, the script engine is not yet stable so you will most probably have to change your import-statements in your scripts for the next version.
-
-Please don't open your BBS with this version.
-
-EOF@!zzzzz...
