@@ -26,7 +26,7 @@ def main(logHandler=None):
   """
   import db, session, scripting, telnet, local, finger, terminal
   if logHandler is not None:
-    for mod in (db, session, scripting, telnet, local, finger, terminal):
+    for mod in (session, scripting, telnet, local, finger, terminal):
       try:
         getattr(mod,'logger').addHandler (logHandler)
       except Exception, e:
