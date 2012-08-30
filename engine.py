@@ -19,10 +19,8 @@ import logging
 import os
 
 import log
-logger = logging.getLogger(__name__)
-#logger = multiprocessing.get_logger()#__name__)
+logger = multiprocessing.get_logger()
 logger.setLevel(logging.DEBUG)
-logger.warning('doomed')
 
 def main(logHandler=None):
   """
@@ -33,6 +31,7 @@ def main(logHandler=None):
   terminal.logger.addHandler (logHandler)
   session.logger.addHandler (logHandler)
   miniboa.telnet.logger.addHandler (logHandler)
+  logger.addHandler (logHandler)
 
   # initialize the database subsystem
   db.openDB ()
