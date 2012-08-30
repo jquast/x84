@@ -115,6 +115,7 @@ class FingerProtocol(basic.LineReceiver):
     self.transport.write(response + CRLF)
     self.transport.loseConnection()
 
+  @staticmethod
   def humantime(s):
     s = int(s)
     if s <= 60:
@@ -128,8 +129,6 @@ class FingerProtocol(basic.LineReceiver):
       return '%3sd' % (str(s // 86400),)
     else:
       return 'INF.'
-
-  humantime = staticmethod(humantime)
 
 class FingerFactory(ServerFactory):
   def __init__(self, sessions):
