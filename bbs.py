@@ -376,12 +376,12 @@ def readlineevent (max,
       # always return none. Remember, return
       # value == None for exit, and
       return (None, 'input', data)
-    elif char == KEY.ENTER:
+    elif char == '\n':
       # value == "" for carriage return
       # on empty input
-      return (value, 'input', KEY.ENTER)
+      return (value, 'input', '\n')
 
-    elif char == KEY.BACKSPACE:
+    elif char == '\b':
       if len(value) > 0:
         value = value [:-1]
         write ('\b' + paddchar + '\b')
