@@ -12,9 +12,6 @@ scriptpath=None
 # much like sessions.py
 
 def scriptinit(sp):
-  global scriptpath
-  scriptpath = sp
-  assert scriptpath is not None
   """
   Initialize the global scriptlist[], a cache store for run-time imports,
   reloading, dependencies, and sharing. By sharing scripts in this way,
@@ -22,6 +19,9 @@ def scriptinit(sp):
   It is recommended, however, to use the database subsystem to share large
   data segments, and the event subsystem to communicate across threads.
   """
+  global scriptpath
+  scriptpath = sp
+  assert scriptpath is not None
   global scriptlist
   # Scripts and modules cache
   scriptlist = {}
