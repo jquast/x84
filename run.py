@@ -11,8 +11,13 @@ __author__ = 'Jeffrey Quast <dingo@1984.ws>'
 __copyright__ = 'Copyright (C) 2011 Jeffrey Quast <dingo@1984.ws>',
 
 if __name__ == '__main__':
-  log_level = logging.DEBUG if '-d' in sys.argv else logging.INFO
   sys.stdout.write ('x/84 bbs ')
+  import engine
+  import log
+  log_level = logging.INFO
+  logOut = log.get_stderr(level=log_level)
+  if '-v' in sys.argv:
+    sys.argv.remove('-v')
+    log_level = logging.DEBUG
   sys.stdout.flush()
-  import log, engine
-  engine.main(logHandler=log.get_stderr(level=log_level))
+  engine.main(logHandler=logOut)
