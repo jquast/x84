@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 30
+/svn/!svn/ver/43/trunk/miniboa
+END
+error.py
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/svn/!svn/ver/35/trunk/miniboa/error.py
+END
+telnet.py
+K 25
+svn:wc:ra_dav:version-url
+V 40
+/svn/!svn/ver/35/trunk/miniboa/telnet.py
+END
+async.py
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/svn/!svn/ver/43/trunk/miniboa/async.py
+END
+xterm.py
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/svn/!svn/ver/41/trunk/miniboa/xterm.py
+END
+__init__.py
+K 25
+svn:wc:ra_dav:version-url
+V 42
+/svn/!svn/ver/35/trunk/miniboa/__init__.py
+END
