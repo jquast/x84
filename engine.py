@@ -12,28 +12,27 @@ __version__ = '3.0rc0'
 # version 2, PRSV, 2008 johannes, 2010 jeff
 # version 3, x84, 2011 jeff
 
-# 3rd party modules (dependencies)
-from twisted.internet import reactor
-from twisted.python import threadable
+import threading
+import multiprocessing
+import Queue
+import logging
+import os
 
-import log, logging
+import log
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+#logger = multiprocessing.get_logger()#__name__)
+logger.setLevel(logging.DEBUG)
+logger.warning('doomed')
 
 def main(logHandler=None):
   """
   x84 main entry point. The system begins and ends here.
   """
-  import db, session, scripting, telnet, local, finger, terminal
-  if logHandler is not None:
-    for mod in (session, scripting, telnet, local, finger, terminal):
-      try:
-        getattr(mod,'logger').addHandler (logHandler)
-      except Exception, e:
-        raise Exception, 'could not addHandler %s to module %s: %s' % (logHandler, mod, e)
-        raise Exception, e
-    logger.addHandler (logHandler) # engine
-
+  import db, scripting, terminal, session, miniboa
+  scripting.logger.addHandler (logHandler)
+  terminal.logger.addHandler (logHandler)
+  session.logger.addHandler (logHandler)
+  miniboa.telnet.logger.addHandler (logHandler)
 
   # initialize the database subsystem
   db.openDB ()
@@ -42,42 +41,35 @@ def main(logHandler=None):
   # Initialize script cache, preload with bbs.py
   scripting.scriptinit (scriptpath)
 
-  local_ttys = db.cfg.get('system', 'local_ttys')
-  if local_ttys:
-    local_ttys = [t.strip() for t in local_ttys.split(',')]
-    for ttyname in local_ttys:
-      term = local.LocalTerminal(ttyname)
-      reactor.addReader (term)
-      logger.info ('[tty%s] type: %r info: %r on LocalTerminal', term.tty, term.type, term.info)
+  telnet_port = int(db.cfg.get('system', 'telnet_port'))
+  telnet_addr = db.cfg.get('system', 'telnet_addr')
 
-  local_wfc = db.cfg.get('system', 'local_wfc')
-  if local_wfc:
-    wfcscript = db.cfg.get('system', 'wfcscript')
-    assert wfcscript
-    print 'using wfcscript', wfcscript
-    term = local.LocalTerminal(local_wfc, wfcscript)
-    reactor.addReader (term)
-    logger.info ('[tty%s] type: %r info: %r on WFC', term.tty, term.type, term.info)
+  server = miniboa.TelnetServer \
+      (port=telnet_port, address='0.0.0.0',
+       on_connect=terminal.on_connect,
+       on_disconnect=terminal.on_disconnect,
+       timeout=0.01)
 
-  # XXX todo: support binding to specific IP's XXX
-
-  telnet_port = db.cfg.get('system', 'telnet_port')
-  assert telnet_port, 'No telnet port defined for listening!'
-  telnetFactory = telnet.TelnetFactory()
-  reactor.listenTCP (int(telnet_port), telnetFactory)
   logger.info ('[telnet:%s] listening tcp', telnet_port)
-
-  # XXX: We need to inject the sessionlist into the finger factory (!)@#
-
-  finger_port = db.cfg.get('system', 'finger_port')
-  if finger_port:
-    fingerFactory = finger.FingerFactory(session.sessions)
-    reactor.listenTCP (int(finger_port), fingerFactory)
-    logger.info ('[finger:%s] listening tcp', finger_port,)
-
-  # reactor mainloop. its hard to give up control, we'd like to
-  # take twisted out of the picture soon (...)
-  reactor.run ()
+  eof_errors = list()
+  while True:
+    event = server.poll()
+    for client, pipe in terminal.CHANNELS:
+      # poll for keyboard input, send to session channel monitor
+      if client.input_ready:
+        inp = client.get_input()
+        pipe.send (('input', inp))
+      if pipe.poll():
+        try:
+          event, data = pipe.recv()
+          assert event in ('output',), \
+              'Unhandled event: %s' % (event,)
+          if event == 'output':
+            client.send (data)
+        except EOFError:
+          eof_errors.append ((client, pipe))
+    while 0 != len(eof_errors):
+      terminal.CHANNELS.remove (eof_errors.pop())
 
   # the bbs ends here
   db.close ()
