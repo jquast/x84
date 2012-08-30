@@ -76,20 +76,32 @@ class ColoredConsoleHandler(logging.StreamHandler):
              (src_record)))))
 
   def emit(self, src_record):
+    # XXX hook in an event log database ... dont like this
     if self.el is None:
-      self.el = db.openudb('eventlog')
-    if len(self.el) > MAX_SIZE:
+      try:
+        self.el = db.openudb('eventlog')
+      except NameError, e:
+        pass
+
+    # trim database
+    if self.el is not None and len(self.el) > MAX_SIZE:
       largedb = copy.copy(self.el)
       for k in sorted(largedb.keys())[:-(MAX_SIZE-MAX_STEP)]:
         del self.el[k]
+
     dst_record = self.transform \
         (copy.copy(src_record))
-    self.el.__setitem__ \
-        (datetime.datetime.now(), \
-        '%s %s %s:%s %s %s' % \
-          (dst_record.levelname, dst_record.handle,
-           dst_record.filename, dst_record.lineno,
-           dst_record.threadName, dst_record.getMessage(),))
+
+    # write db record
+    if self.el is not None:
+      self.el.__setitem__ \
+          (datetime.datetime.now(), \
+          '%s %s %s:%s %s %s' % \
+            (dst_record.levelname, dst_record.handle,
+             dst_record.filename, dst_record.lineno,
+             dst_record.threadName, dst_record.getMessage(),))
+
+    # emit to console
     logging.StreamHandler.emit \
       (self, dst_record)
 
