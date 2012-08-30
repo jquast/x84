@@ -28,12 +28,6 @@ class ColoredConsoleHandler(logging.StreamHandler):
       ansi.color())
     return r
 
-  def modify_threadName(self, r):
-    r.threadName = 'twisted-%s' % (r.threadName.split('-')[-1]) \
-      if 'twisted' in r.threadName \
-        else r.threadName
-    return r
-
   def ins_handle(self, r):
     try:
       r.handle = '%s' % \
@@ -72,7 +66,6 @@ class ColoredConsoleHandler(logging.StreamHandler):
      (self.color_levelname \
        (self.skip_repeat_line1 \
          (self.ins_handle \
-           (self.modify_threadName \
              (src_record)))))
 
   def emit(self, src_record):
