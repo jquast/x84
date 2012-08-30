@@ -1,9 +1,17 @@
-import threading, thread, Queue, StringIO, time, sys, os, logging, traceback
+import threading
+import thread
+import Queue
+import StringIO
+import time
+import sys
+import os
+import logging
+import traceback
+import multiprocessing
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-from twisted.internet import reactor # wha!
 import db
 import log
 import exception # yech
@@ -122,6 +130,7 @@ class Session:
     self.path = ''
     # wether or not our session dies when last terminal closes
     self.persistent = False
+    # XXX MOVE TERM & width down to .getterminal().height/etc
     # for input keymap handling in Terminal::handleinput(),
     # change with .setTermType
     self.TERM = 'unknown'
@@ -143,7 +152,7 @@ class Session:
     if terminal:
       self.attachterminal(terminal)
 
-  def sessionmain(self):
+  def sessionmain(self, init_script):
     """
     The main script execution loop for a session handles the
     movement of the client users throughout userland via calls to
@@ -153,6 +162,7 @@ class Session:
     calls runscript(), via engine.getsession().runscript()
     """
     self.lastscript = None
+    self.current_script = [(init_script,)]
     sessions.register (self)
     logger.debug ('Call #%i, script stack: %r', self.sid, self.current_script,)
     tryagain = True
@@ -210,35 +220,29 @@ class Session:
       t.destroy ()
     sessions.unregister()
 
-  def start (self, handle=None, script=None):
+  def start (self, pipe):
     """
     Called from Terminal::addsession(), this begins the script execution
     loop for the session via a call to the global sessionmain() function.
-
-    When handle is passed, the default matrix script is bypassed, jumping
-    directly to topscript (passing handle as first argument). This occurs
-    when the terminal has already handled authentication, such as ssh.
     """
-    if not script:
-      script = db.cfg.get('system', 'matrixscript')
+    global logger
+    #logger = multiprocessing.get_logger()
+    class MonitorChannel(threading.Thread):
+      def __init__(self, channel, func):
+        self.channel = channel
+        self.func = func
+        threading.Thread.__init__ (self)
+      def run(self):
+        while True:
+          event, data = self.channel.recv()
+          self.func (event, data)
+          if event == 'close':
+            return
+    t = MonitorChannel (pipe, self.event_push)
+    t.start ()
+    logger.error ("HI from sub-process")
 
-    if not handle:
-      # set script path
-      self.current_script = [(script, )]
-    else:
-      # set script stack to include handle as argument
-      self.current_script = [(script, handle)]
-
-    reactor.callInThread (self.sessionmain)
-
-  def setWindowSize(self, w, h):
-    logger.debug ('window size: (w=%s,h=%s)', w, h)
-    self.width, self.height = (w, h)
-    self.event_push ('refresh', ((w, h)))
-
-  def setTermType(self, TERM):
-    logger.debug ('terminal type: (TERM=%s)', TERM)
-    self.TERM = TERM
+    self.sessionmain (db.cfg.get('system', 'matrixscript'))
 
   def setuser(self, user, recordLogin=True):
     " set session's user object "
@@ -258,9 +262,13 @@ class Session:
       logger.debug ('userland path change %s/->%s/', self.path, path)
       self.path = path
 
+  def getterminal(self):
+    " return leading terminal of this session "
+    return self.terminals[0]
+
   def detachterminal (self, term):
     " dissasociate terminal from this session "
-    logger.info ('[tty%s] dissasociate terminal from caller #%i', term.tty, self.sid)
+    logger.info ('dissasociate terminal from caller #%i', self.sid)
     if term in self.terminals:
       self.terminals.remove (term)
 
@@ -272,16 +280,16 @@ class Session:
     """
     self.terminals.append (term)
     term.spy = spy
-    logger.info ('attachterminal tty=%s type=%s info=%s spy=%s)',
-      term.tty, term.type, term.info, term.spy)
+    logger.debug('attachterminal')
 
     # set parent session of new terminal
-    term.xSession = self
+    term.session = self
     term.attachtime = time.time()
 
     # write resume buffer to hijacker's terminal output,
     # contents are screen playback since last cls()
-    term.write (self.buffer['resume'].getvalue())
+    resume = self.buffer['resume'].getvalue()
+    term.stream.write (resume)
 
   def write (self, string):
     """
@@ -307,7 +315,7 @@ class Session:
     " write buffered output to socket and return number of characters written. "
     output = self.buffer['output'].getvalue()
     if output:
-      [term.write (output) for term in self.terminals]
+      [term.stream.write (output) for term in self.terminals]
     self.buffer['output'].close()
     self.buffer['output'] = StringIO.StringIO()
     return output
@@ -347,25 +355,12 @@ class Session:
         self.buffer[event] = []
       self.buffer[event].append (object)
 
-  def event_push (self, event, object, timeout=10, period=1):
+  def event_push (self, event, data, timeout=10, period=1):
+    """ store data specified into top (front) of the event buffer specified by
+        'event'.
     """
-    store data specified as 'object' into top (front) of the event buffer
-    specified by event=. for small queues, specify the timeout= in seconds
-    until retries, intervaled by value of period=, have been exausted for a
-    full queue.
-    """
-    start = time.time()
-    while True:
-      try:
-        self.eventqueue.put_nowait ((event, object))
-        return True
-      except Queue.Full:
-        logger.error ('eventqueue full!')
-        logger.warn ('flushing %ss before retry.',  period)
-        self.flushevent (event, timeout=period)
-        continue
-      if time.time() -start < timeout:
-        return False
+    self.eventqueue.put_nowait ((event, data))
+
   putevent = event_push
 
   def readevent (self, events, timeout=None):
