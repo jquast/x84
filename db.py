@@ -206,10 +206,10 @@ def openudb(name):
   """
   # Key of the root database to store database records for the userland
   if not root.has_key(UDB):
-    sys.stdout.write('[db] creating new master userland database: %s' % (UDB,))
+    sys.stdout.write('[db] creating new master userland database: %s\n' % (UDB,))
     root[UDB] = persistent.mapping.PersistentMapping()
   if not root[UDB].has_key(name):
-    sys.stdout.write('[db] creating new userland database on open: %s' % (name,))
+    sys.stdout.write('[db] creating new userland database on open: %s\n' % (name,))
     root[UDB][name] = persistent.mapping.PersistentMapping()
   return root[UDB][name]
 
