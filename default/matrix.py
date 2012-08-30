@@ -17,89 +17,24 @@ __url__ = 'https://github.com/jquast/x84'
 import re
 deps = ['bbs']
 CH_MASK_PASSWD='x'
+wait_negotiation=1.0
 def main ():
-  session = getsession()
-
-  # enable high-bit art for PC-DOS vga fonts,
-  # enable line wrapping at right margin,
-  # display cursor,
-  # enable scrolling,
-  echo (charset() + linewrap() + cursor_show() + scroll())
+  terminal = getsession().getterminal()
 
   def refresh():
     # display software version, copyright, and banner
-    echo (cls() + color())
-    echo ('X/84, PRSV branch: %s license, see %s for source' % (__license__, __url__))
-    for c in __copyright__:
-      echo ('\r\n  %s' % (c))
-    echo ('\r\n\r\n')
-    showfile('art/1984.asc')
-    echo ('\r\n\r\n')
+    with terminal.location():
+      echo (terminal.move (0,0) + terminal.clear_eos)
+      echo ('X/84, PRSV branch: %s license, see %s for source' \
+          % (__license__, __url__))
+      for c in __copyright__:
+        echo ('\r\n  %s' % (c))
+      echo ('\r\n\r\n')
+      showfile('art/1984.asc')
+      echo ('\r\n\r\n')
+      echo (terminal.normal_cursor)
 
-  refresh()
-
-  if not (session.height and session.width) \
-  or (session.TERM== 'unknown'):
-    # Delay for 1 second, telnet NAWS and TERMTYPE communications occur
-    # after the session is created, so that the results are communicated
-    # up through the session layer. However, this means the matrix script
-    # is running simultaneously. Lets give it a second to ensure those
-    # communicates have had enough time to occur.
-    x = getstr(period=1.0)
-    if x:
-      logger.info ('throwing on-connect chatter: %s' % (x,))
-
-  # for the most part, terminal size is asked for and negotiated using
-  # the telnet protocol. However, if this neogitation fails, or doesn't
-  # happen because we're via ssh or another protocol, we try it here
-
-  echo ('Terminal size: ')
-  if not (session.height and session.width):
-    # we can try to detect the window size using ansi sequences. This is done
-    # by moving the cursor to 999,999 and querying the client for their
-    # position. We do this in the standard vt100 way first, then try for sun
-    # clients.
-
-    termdetections = ( \
-      ('vt100', (CSI + '6n'), '\033' + r"\[(\d+);(\d+)R"),
-      ('sun', (CSI + '18t'), '\033' + r"\[8;(\d+);(\d+)t"))
-
-    for TERM, query_seq, response_pattern in termdetections:
-      # save cursor position, enable scrolling
-      echo (cursor_save() + pos(999,999) + query_seq)
-      response = getstr(period=1.6)
-      echo (cursor_restore())
-      if response:
-        pattern = re.compile(response_pattern)
-        match = pattern.search(response)
-        if match:
-          session.setTermType(TERM)
-          h, w = match.groups()
-          try:
-            session.setWindowSize(int(w),int(h))
-          except ValueError: pass
-          break
-
-  echo ('%sx%s\r\n' % (session.width, session.height))
-
-  echo ('Terminal type: ')
-  if session.TERM and session.TERM != 'unknown':
-    echo (session.TERM+ '\r\n')
-  else:
-    logger.info ('requesting answerback sequence')
-    echo ('(Answerback?\005')
-    idstr = getstr(period=1.6)
-    if idstr:
-      # check for compatible terminal? lol.
-      # terminal type is just a string for now.
-      echo (') %s\r\n' % (idstr,))
-      logger.info ('got: ' % (idstr,))
-      session.setTermType(idstr)
-    else:
-      default_keymap = cfg.get('system', 'default_keymap')
-      echo (') using default: %s\r\n' % default_keymap,)
-      session.setTermType (default_keymap)
-
+  echo ('%sx%s\r\n' % (terminal.width, terminal.height))
 
   i_handle=''
   while True:
