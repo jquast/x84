@@ -66,7 +66,7 @@ class ColoredConsoleHandler(logging.StreamHandler):
      (self.color_levelname \
        (self.skip_repeat_line1 \
          (self.ins_handle \
-             (src_record)))))
+             (src_record))))
 
   def emit(self, src_record):
     # XXX hook in an event log database ... dont like this
