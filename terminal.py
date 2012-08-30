@@ -1,226 +1,283 @@
+# -*- coding: iso-8859-1 -*-
 """
 Terminal interface module for X/84 BBS, http://1984.ws
 $Id: terminal.py,v 1.32 2010/01/02 02:09:40 dingo Exp $
 """
 __license__ = 'ISC'
 __author__ = 'Jeffrey Quast <dingo@1984.ws>'
-__copyright__ = ['Copyright (c) 2009 Jeffrey Quast <dingo@1984.ws>',
-                 'Copyright (c) 2005 Johannes Lundberg <johannes.lundberg@gmail.com>']
 
-import time, logging
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+# channel is of format (client, pipe)
+CHANNELS = []
+PROCS = []
 
-from twisted.internet.protocol import Protocol
-from twisted.internet import reactor
+# threads are used for connect negotiation
+import threading
 
-from ascii import esc
+# each new terminal and session is a forked process
+import multiprocessing
+import string
+import time
+import logging
+import os
+import re
+
+import blessings
+
 import session
-import ansi
-import keys
 import db
 
-# a simple list of allocated TTY's
-TID = []
+logger = multiprocessing.get_logger()#__name__)
+logger.setLevel (logging.DEBUG)
 
-from re import compile as REGEX
-# Keymap for CSI Sequences for popular terminal emulators.
-# the 'ansi' keymap tries to please many types of terminals
-CSI_KEYMAP= { \
-  'linux': { \
-    'INSERT': REGEX(esc + r"\[2~"),      'ALTDEL': REGEX(esc + r"\[3~"),
-    'PGUP':   REGEX(esc + r"\[5~"),      'PGDOWN': REGEX(esc + r"\[6~"),
-    'HOME':   REGEX(esc + r"\[1~"),      'END':    REGEX(esc + r"\[4~"),
-    'UP':     REGEX(esc + r"\[A~?"),      'DOWN':   REGEX(esc + r"\[B~?"),
-    'RIGHT':  REGEX(esc + r"\[C~?"),      'LEFT':   REGEX(esc + r"\[D~?"),
-  }, \
-  'vt100': { \
-    'FIND':   REGEX(esc + r"\[1~"),      'INSERT': REGEX(esc + r"\[2~"),
-    'ALTDEL': REGEX(esc + r"\[3~"),      'SELECT': REGEX(esc + r"\[4~"),
-    'PGUP':   REGEX(esc + r"\[5~"),      'PGDOWN': REGEX(esc + r"\[6~"),
-    'HOME':   REGEX(esc + r"\[7~"),      'END':    REGEX(esc + r"\[8~"),
-    'UP':     REGEX(esc + r"\[A"),       'DOWN':   REGEX(esc + r"\[B"),
-    'RIGHT':  REGEX(esc + r"\[C"),       'LEFT':   REGEX(esc + r"\[D") \
-}, \
- 'ansi': { \
-  'F1':    REGEX(esc + r"(OP|\[11~)"),'F2':     REGEX(esc + r"(OQ|\[12~)"),
-  'F3':    REGEX(esc + r"(OR|\[13~)"),'F4':     REGEX(esc + r"(OS|\[14~)"),
-  'F5':    REGEX(esc + r"(Ot|\[15~)"),'F6':     REGEX(esc + r"\[17~"),
-  'F7':    REGEX(esc + r"\[18~"),     'F8':     REGEX(esc + r"\[19~"),
-  'F9':    REGEX(esc + r"\[20~"),     'F10':    REGEX(esc + r"\[21~"),
-  'F11':   REGEX(esc + r"\[23~"),     'F12':    REGEX(esc + r"\[24~"),
-  'FIND':  REGEX(esc + r"\[1~"),      'INSERT': REGEX(esc + r"\[(2~|@)"),
-  'ALTDEL':REGEX(esc + r"\[3~"),      'SELECT': REGEX(esc + r"\[4~"),
-  'PGUP':  REGEX(esc + r"\[(5~|V)"),  'PGDOWN': REGEX(esc + r"\[(6~|U)"),
-  'HOME':  REGEX(esc + r"\[(7~|H)"),  'END':    REGEX(esc + r"\[(8~|[FK])"),
-  'UP':    REGEX(esc + r"\[O?A"),     'DOWN':   REGEX(esc + r"\[O?B"),
-  'RIGHT': REGEX(esc + r"\[O?C"),     'LEFT':   REGEX(esc + r"\[O?D")
- }
-}
+def start_process(channel, termtype, rows, columns):
+  channel.send (('output', 'process %d started\r\n' % (os.getpid(),),))
+  new_session = session.Session \
+      (terminal=BlessedIPCTerminal (channel, termtype, rows, columns))
+  new_session.start (channel)
 
-# newline, backspace/delete issue (127->^H), # and international
-# assistant: windows codepage 1252 -> dos codepage 850
-from string import maketrans
-transtable = maketrans ( \
-  '\r' '\x7F' '\xE5' '\xE4' '\xF6' '\xC5' '\xC4' '\xD6',
-  '\n' '\x08' '\x86' '\x84' '\x94' '\x8F' '\x8E' '\x99')
+# want: callback mechanism within miniboa/telnet.py for NAWS
+class BlessedIPCTerminal(blessings.Terminal):
+  def __init__(self, ipc_channel, terminal_type, rows, columns):
+    # patch in a .rows and .columns static property.
+    # this property updated by engine.py poll routine (?)
+    self.rows, self.columns = rows, columns
+    self.kind = terminal_type
+    class IPCStream(object):
+      def __init__(self, channel):
+        self.channel = channel
+      def write(self, data):
+        self.channel.send (('output', data))
+      def fileno(self):
+        return self.channel.fileno()
+      def close(self):
+        return self.channel.close ()
 
-class Terminal(object):
-  xSession = None
-  tty = '?' # [p-zP-T][0-9a-zA-Z]
-  spy = None # set to username if someone is spying
-  readOnly = False
-  detatch_keystroke = '\004'
-  def __init__(self):
-    self.attachtime = time.time()
-    self.KEY = keys.KeyClass()
-    self.resume_sessions = []
-    self.detach_keystroke = db.cfg.get('system','detach_keystroke')
+    blessings.Terminal.__init__ (self, kind=terminal_type,
+        stream=IPCStream(ipc_channel), force_styling=True)
 
+  @property
+  def terminal_type(self):
+    return self.kind
 
-  def addsession(self, user=None, scriptname=None):
-    " create new session for this terminal and begin "
-    def find_tty():
-      def ch_range(a='a',b='z'):
-        return ''.join([chr(z) for z in range(ord(a),ord(b)+1)])
-      for a in ch_range('p','z')+ch_range('P','T'):
-        for b in ch_range('0','9')+ch_range('a','z')+ch_range('A','Z'):
-          self.tty='%s%s' % (a,b,)
-          if not self.tty in TID:
-            TID.insert (0,self.tty)
-            return
+  def _height_and_width(self):
+    # override termios window size unpacking
+    """Return a tuple of (terminal height, terminal width)."""
+    return self.rows, self.columns
 
-    # for now, we fake a tty device from an internal list of fictional ones.
-    # this system not use real pseudo terminals, it implements its own.
-    # It is helpful to have meaningful names for terminals.
-    find_tty()
+def on_disconnect(client):
+  logger.info ('Disconnected from telnet client %s:%s',
+      client.address, client.port)
+  return
 
-    # XXX we need to track terminal<->session more closely,
-    # but a thread spawned inside session.start() prevents us
-    # from farming this information without introducing
-    # thread race conditions
-    self.xSession = session.Session(self)
-    self.xSession.start (handle=user, script=scriptname)
+def on_connect(client):
+  logger.info ('Connection from telnet client %s:%s',
+      client.address, client.port)
+  t = ConnectTelnetTerminal(client)
+  t.start ()
 
-  def handleinput(self, data):
+class ConnectTelnetTerminal (threading.Thread):
+  """
+  This thread spawns long enough to
+    1. set socket and telnet options
+    2. ask about terminal type and size
+    3. spawn and register a sub-process
+    4. create & register IPC pipes,
+    5. initialize a curses-capable terminal (blessings)
+    6. start and register a new session
+  """
+  TIME_WAIT = 1.0
+  TIME_PAUSE = 0.5
+  TIME_POLL  = 0.05
+  TTYPE_UNDETECTED = 'unknown client'
+  # see 'xresize' from X11
+  WINSIZE_TRICK= ( \
+        ('vt100', ('\x1b[6n'), re.compile('\033' + r"\[(\d+);(\d+)R")),
+        ('sun', ('\x1b[18t'), re.compile('\033' + r"\[8;(\d+);(\d+)t")))
+
+  def __init__(self, client):
+    threading.Thread.__init__(self)
+    self.client = client
+
+  def spawn_session(self):
+    """ Our last action as enacting thread is to create a sub-process.
+        In previous incarnations, this software was multi-threaded.
+        The mixing in of curses.setupterm() now requires a unique process space.
+
+        Its just as well. This avoids the GIL and forces all IPC data to be
+        communicated via IPC instead of shared variables or memory regions.
     """
-    receive keyboard input, translate into keycodes, and place
-    result into the sessions 'input' event queue. The complexity
-    of buffering and timing input is not done here, so if a
-    multi-byte sequence causes this method to be called more
-    than once to complete a pattern, we will not be able to parse it.
-    """
-    # translate keycodes through input filter
-    out = ''
 
-    # use user-defined keymap if we have an input
-    # filter that matches it. otherwise, use the
-    # system-wide default
-    if self.xSession.TERM in CSI_KEYMAP:
-      keymap = self.xSession.TERM
+    parent_conn, child_conn = multiprocessing.Pipe()
+    p = multiprocessing.Process \
+        (target=start_process,
+           args=(child_conn, self.client.terminal_type,
+        self.client.rows, self.client.columns))
+    p.start ()
+    CHANNELS.append ((self.client, parent_conn,))
+    PROCS.append (p)
+
+  def run(self):
+    """ The purpose of this thread is to negotiate the environment with the
+    remote client as best as possible before spawning the user session, which
+    begins using terminal capabilities and sockets configured here. """
+    import socket
+    from miniboa.telnet import SGA, ECHO, NAWS, TTYPE, SEND, LINEMO
+
+    # set non-blocking input
+    self.client.sock.setblocking (0)
+
+    # use tcp keepalive
+    self.client.sock.setsockopt (socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+
+    enabledRemote = self.client._check_remote_option
+    enabledLocal = self.client._check_local_option
+    timeleft = lambda t: time.time() -t < self.TIME_WAIT
+
+    self.client._iac_dont(LINEMO)
+    self.client._iac_wont(LINEMO)
+    self.client._note_reply_pending(LINEMO, True)
+
+    # supress go-ahead
+    if not (enabledRemote(SGA) is True and enabledLocal(SGA) is True):
+      self.client.send('request-do-sga\r\n')
+      self.client.request_do_sga ()
+      self.client.socket_send() # push
+      t = time.time()
+      while not (enabledRemote(SGA) is True and enabledLocal(SGA) is True):
+          time.sleep (self.TIME_POLL)
+          if not timeleft(t):
+            break
+      if (enabledRemote(SGA) is True and enabledLocal(SGA) is True):
+        self.client.send ('sga enabled (negotiated)\r\n')
+      else:
+        self.client.send ('failed: supress go-ahead\r\n')
     else:
-      keymap = db.cfg.get('system','default_keymap')
+      self.client.send('sga enabled\r\n')
 
-    skip = 0 # used to skip beyond sequences
-    for n, ch in enumerate(data):
-      if skip and skip > n:
-        continue
+#DEBUG
+    self.client.send('you: %s, me: %s\r\n' \
+        % (enabledRemote(SGA), enabledLocal(SGA)))
+#
 
-      if ch == '\014':
-        # send refresh screen event because (^L) was pressed,
-        # however, continue sending on to user script, some
-        # scripts may chose to process this keystroke instead
-        # of reading the 'refresh' event
-        self.xSession.event_push ('refresh', '^L')
-
-      if self.detach_keystroke is not None and ch == self.detach_keystroke:
-        # the special detach keystroke has been pressed (^D)
-        # if we have no resume sessions, tell the user what
-        # why they are about to be disconnected.
-        if not len(self.resume_sessions):
-          logger.warn ('[tty%s] ^D keypress detected, but no resume sessions exist.', self.tty)
-        else:
-          logger.info ('[tty%s] ^D keypress detected, destroying terminal', self.tty)
-          self.destroy()
-          return # shouldnt be necessary
-
-      # try to match the regular expression patterns for the
-      # input terminal we use here and translate them to helpful
-      # keycodes that can be used as KEY.PGUP etc.
-      for kname, pattern in CSI_KEYMAP[keymap].items():
-        match = pattern.match(data[n:])
-        if match:
-          out += self.KEY[kname]
-          skip = n+match.end()
+    # will echo
+    if self.client.telnet_echo is False:
+      self.client.send('request-will-echo\r\n')
+      self.client.request_will_echo ()
+      self.client.socket_send() # push
+      t = time.time()
+      while self.client.telnet_echo is False:
+        time.sleep (self.TIME_POLL)
+        if not timeleft(t):
           break
+      if self.client.telnet_echo:
+        self.client.send ('echo enabled (negotiated)\r\n')
+    else:
+      self.client.send ('echo enabled\r\n')
+    self.client.socket_send() # push
 
-      if not match and data[n:].startswith(esc):
-        logger.warn('[tty%s] unrecognized keyseq %r', self.tty, repr(data))
+    # negotiate about window size
+    if None in (self.client.columns, self.client.rows,):
+      self.client.send('request-naws\r\n')
+      self.client.request_naws ()
+      self.client.socket_send() # push
+      t = time.time()
+      while None in (self.client.columns, self.client.rows,):
+        time.sleep (self.TIME_POLL)
+        if not timeleft(t):
+          break
+      if None in (self.client.columns, self.client.rows,):
+        self.client.send ('failed: negotiate about window size\r\n')
+      else:
+        self.client.send ('window size determined (negotiated)\r\n')
+    else:
+      self.client.send ('window size determined (unsolicited)\r\n')
 
-      if not match:
-        # copy it as-is to userland
-        out += ch
+    # send to client --> pos(999,999)
+    # send to client --> report cursor position
+    # read from client <-- window size
+    if None in (self.client.columns, self.client.rows,):
+      self.client.send ('store-cursor')
+      self.client.send ('\x1b[s')
+      for kind, query_seq, response_pattern in self.WINSIZE_TRICK:
+        self.client.send ('\r\n                -- move-to corner' \
+            '& query for %s' % (kind,))
+        self.client.send ('\x1b[999;999H')
+        self.client.send (query_seq)
+        inp=''
+        t = time.time()
+        while self.client.idle() < TIME_PAUSE:
+          time.sleep (self.TIME_POLL)
+          if not timeleft(t):
+            break
+        inp = self.client.get_input()
+        match = response_pattern.search (inp)
+        if match:
+          self.client.rows, self.client.columns = match.groups()
+          break
+        self.client.send ('\x1b[r')
+        self.client.send ('cursor restored --')
+    self.client.columns, self.client.rows = \
+        80 if self.client.columns is None   \
+          else self.client.columns,         \
+        24 if self.client.rows is None      \
+          else self.client.rows
+    self.client.send ('window size: %dx%d\r\n' \
+        % (self.client.columns, self.client.rows,))
+    self.client.socket_send() # push
 
-    if out:
-      out = out.translate(transtable)
-      if self.readOnly:
-        logger.warn('[tty%s] ro session denied keystroke: %r', self.tty, out)
-        return
-      self.xSession.putevent('input', out)
+    # Try #1 -- we need this to work best
+    if self.client.terminal_type == self.TTYPE_UNDETECTED:
+      self.client.send ('request-terminal-type\r\n')
+      self.client.request_terminal_type ()
+      self.client.request_negotiation (TTYPE, SEND)
+      self.client.socket_send() # push
+      t = time.time()
+      while self.client.terminal_type == self.TTYPE_UNDETECTED:
+        if not timeleft(t):
+          break
+        time.sleep (self.TIME_POLL)
+      if self.client.terminal_type == self.TTYPE_UNDETECTED:
+        self.client.send ('failed: terminal type not determined.\r\n')
+      else:
+        self.client.send ('terminal type determined (negotiated)\r\n')
+    else:
+      self.client.send ('terminal type determined (unsolicited)\r\n')
+    self.client.socket_send() # push
 
-  def destroy(self):
-    """
-      destroy a terminal, re-attaching to stored resume session if
-      available- This occurs when a hijacked terminal is destroyed,
-      we need to provide hijacker with a session to reattach to, this
-      is done using .attachterminal (self)
-    """
+    # Try #2 - ... this is bullshit
+    if self.client.terminal_type == self.TTYPE_UNDETECTED:
+      self.client.send('request answerback sequence\r\n')
+      self.client.request_wont_echo ()
+      self.client.socket_send () # push
+      self.client.clear_input () # flush input
+      self.client.send ('\005')  # send request termtype
+      self.client.socket_send () # push
+      t= time.time()
+      while not self.client.input_ready:
+        time.sleep (self.TIME_POLL)
+        if not timeleft(t):
+          break
+      inp=''
+      if self.client.input_ready:
+        t = time.time()
+        while self.client.idle() < TIME_PAUSE:
+          time.sleep (self.TIME_POLL)
+          if not timeleft(t):
+            break
+        inp = self.client.get_input()
+        self.client.terminal_type = inp.strip()
+        self.client.send ('answerback reply receieved\r\n')
+      else:
+        self.client.send ('failed: answerback reply not receieved\r\n')
+      self.client.request_will_echo ()
 
-    # remove terminal from current session
-    self.xSession.detachterminal (self)
+    self.client.terminal_type = 'vt220' \
+        if self.client.terminal_type is self.TTYPE_UNDETECTED \
+        else self.client.terminal_type
+    self.client.send ('terminal type: %s\r\n' % (self.client.terminal_type,))
+    self.client.socket_send () # push
+    self.spawn_session()
 
-    if self.resume_sessions:
-      callback = session.sessions.getsession(self.resume_sessions.pop())
-      if callback:
-        logger.info('[tty%s] resuming %s terminal %s to session %i',
-          self.tty, self.type, self.info, callback.sid)
-        # and re-attach to prior session (hijacking occured)
-        callback.attachterminal (self)
-        return
-    logger.info ('[tty%s] destroying %s terminal %s from session %i',
-      self.tty, self.type, self.info, self.xSession.sid)
-    self.close ()
+    logger.info ('thread complete')
+    return # end of thread
 
-  def close(self):
-    try:
-      TID.remove(self.tty)
-    except ValueError:
-      pass
-
-class RemoteTerminal (Protocol, Terminal):
-  def connectionLost (self, reason):
-    logger.warn ('[tty%s] connection lost: %s', self.tty, reason.value)
-    self.destroy ()
-    Protocol.connectionLost (self, reason)
-
-  def connectionMade (self):
-    """
-    Create new session. This method should be derived to tailor
-    terminal initialization for the appropriately derived terminal
-    type or network service. Make sure to call self.addsession()!
-    """
-    # BEGIN client session!
-    self.addsession ()
-
-  def dataReceived (self, data):
-    " process data recieved from terminal"
-    self.handleinput (data)
-
-  def write (self, data):
-    " write data to terminal "
-    reactor.callFromThread (self.transport.write, data)
-
-  def close (self):
-    " close terminal "
-    reactor.callFromThread (self.transport.loseConnection)
-    Terminal.close (self)
