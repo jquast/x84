@@ -34,8 +34,6 @@ def main ():
       echo ('\r\n\r\n')
       echo (terminal.normal_cursor)
 
-  echo ('%sx%s\r\n' % (terminal.width, terminal.height))
-
   i_handle=''
   while True:
     getsession().activity = 'logging in'
