@@ -345,8 +345,9 @@ class TelnetClient(object):
         Non-printable filtering currently disabled because it did not play
         well with extended character sets.
         """
-        if self.telnet_echo:
-          self.send (byte)
+        # XXX we handle it ..
+        #if self.telnet_echo:
+        #  self.send (byte)
         self.recv_buffer += byte
 
 #    def _echo_byte(self, byte):
