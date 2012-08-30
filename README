@@ -4,9 +4,10 @@
 
 This software is written in Python. It requires Python to run.
 
-Telnet and ssh features are provided through the python twisted framework.
+pre-requsite 3rd party:
 
-ZODB is necessary for datastorage.
+pip install blessings
+#pip install xmodem
 
 Requirements
 =============
@@ -15,6 +16,7 @@ The system requires:
    Python 2.6
    ZODB 3
    Twisted framework
+   blessings (pip install blessings)
 
 ZODB can be installed independantly from source, using ZODB3-3.4.2.tgz or newer.
 
