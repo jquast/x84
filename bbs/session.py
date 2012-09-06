@@ -202,7 +202,8 @@ class Session(object):
       self.buffer[event] = list()
     if event == 'input':
       # process multi-byte sequences into keycodes / keystrokes
-      map(self.buffer[event].append, self.getterminal().trans_input(data))
+      for keystroke in self.getterminal().trans_input(data):
+        self.buffer[event].append (keystroke)
     else:
       self.buffer[event].append (data)
 
@@ -222,20 +223,20 @@ class Session(object):
     elif event == 'newmail':
     status (bel + 'new mail has arrived!')
     """
-
     self.oflush ()
 
     # no matter the timeout, if data is available in
     # the buffer, immediately pop data
     for event in events:
       if event in self.buffer and 0 != len(self.buffer[event]):
-        return (event, self.event_pop(event))
+        data = self.event_pop(event)
+        return (event, data)
 
     t = time.time()
     event, data = None, None
     timeleft = lambda t: \
         float('inf') if timeout is None \
-        else timeout -time.time() -t
+        else timeout - (time.time() -t)
     waitfor = timeleft(t)
     while waitfor > 0:
       if self.pipe.poll (None if waitfor == float('inf') else waitfor):
