@@ -1,8 +1,8 @@
+#!/usr/bin/env python2.6
 """
 Scripting and session engine
 """
 __author__ = 'Jeffrey Quast <dingo@1984.ws>'
-__copyright__ = 'Copyright (C) 2011 Jeffrey Quast'
 __license__ = 'ISC'
 __maintainer__ = 'Jeffrey Quast'
 __email__ = 'dingo@1984.ws'
@@ -12,45 +12,42 @@ __version__ = '3.0rc0'
 # version 2, PRSV, 2008 johannes, 2010 jeff
 # version 3, x84, 2011 jeff
 
-import threading
-import multiprocessing
-import Queue
-import logging
-import os
+import bbs.ini
 
-import log
-logger = multiprocessing.get_logger()
-logger.setLevel(logging.DEBUG)
-
-def main(logHandler=None):
+def main (logger, logHandler, cfgFile='default.ini'):
   """
   x84 main entry point. The system begins and ends here.
   """
-  import db, scripting, terminal, session, miniboa
-  scripting.logger.addHandler (logHandler)
+  import terminal
   terminal.logger.addHandler (logHandler)
-  session.logger.addHandler (logHandler)
-  miniboa.telnet.logger.addHandler (logHandler)
   logger.addHandler (logHandler)
 
-  # initialize the database subsystem
-  db.openDB ()
-  scriptpath = db.cfg.get('system','scriptpath')
+  import bbs.session
+  bbs.session.logger.addHandler (logHandler)
+  logger.addHandler (logHandler)
 
-  # Initialize script cache, preload with bbs.py
-  scripting.scriptinit (scriptpath)
+  # load .ini file
+  bbs.ini.init (cfgFile)
 
-  telnet_port = int(db.cfg.get('system', 'telnet_port'))
-  telnet_addr = db.cfg.get('system', 'telnet_addr')
+  # initialize scripting subsystem
+  import bbs.scripting
+  bbs.scripting.init (bbs.ini.cfg.get('system', 'scriptpath'))
 
-  server = miniboa.TelnetServer \
-      (port=telnet_port, address='0.0.0.0',
+  # initialize telnet server
+  import telnet
+  telnet_port = int(bbs.ini.cfg.get('system', 'telnet_port'))
+  telnet_addr = bbs.ini.cfg.get('system', 'telnet_addr')
+
+  server = telnet.TelnetServer \
+      (port=telnet_port, address=telnet_addr,
        on_connect=terminal.on_connect,
        on_disconnect=terminal.on_disconnect,
        timeout=0.01)
 
   logger.info ('[telnet:%s] listening tcp', telnet_port)
-  eof_errors = list()
+
+  # main event loop
+  eof_pipes = set()
   while True:
     event = server.poll()
     for client, pipe in terminal.CHANNELS:
@@ -58,17 +55,44 @@ def main(logHandler=None):
       if client.input_ready:
         inp = client.get_input()
         pipe.send (('input', inp))
+
+      # poll for events received on child process pipe
       if pipe.poll():
         try:
           event, data = pipe.recv()
-          assert event in ('output',), \
-              'Unhandled event: %s' % (event,)
           if event == 'output':
             client.send (data)
+          elif event == 'global':
+            for (c,p) in terminal.CHANNELS:
+              if c != client:
+                c.send (('global', data))
+          elif event.startswith ('db-'):
+            t = db.DBHandler(pipe, event, data)
+            t.start ()
+          else:
+            assert 0, 'Unhandled event: %s (data=%s)' % (event,)
         except EOFError:
-          eof_errors.append ((client, pipe))
-    while 0 != len(eof_errors):
-      terminal.CHANNELS.remove (eof_errors.pop())
+          eof_pipes.add ((client, pipe))
+    while 0 != len(eof_pipes):
+      terminal.CHANNELS.remove (eof_pipes.pop())
 
-  # the bbs ends here
-  db.close ()
+
+if __name__ == '__main__':
+  import sys
+  import logging
+  import log
+  logger = logging.getLogger(__name__)
+  logger.setLevel(logging.DEBUG)
+  sys.stdout.write ('x/84 bbs ')
+  log_level = logging.INFO
+  cfgFile = 'default.ini'
+  if '-v' in sys.argv:
+    sys.argv.remove('-v')
+    log_level = logging.DEBUG
+  if '-cfg' in sys.argv:
+    cfgFile = sys.argv[sys.argv.index('-cfg')+1]
+    sys.argv.remove(cfgFile)
+    sys.argv.remove('-cfg')
+  logHandler = log.get_stderr(level=log_level)
+  sys.stdout.flush()
+  main (logger, logHandler, cfgFile)
