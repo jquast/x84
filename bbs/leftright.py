@@ -5,10 +5,10 @@ __copyright__ = "Copyright (c) 2008 Jeffrey Quast"
 __version__ = "$Id: leftright.py,v 1.3 2009/05/31 16:12:05 dingo Exp $"
 __license__ = "ISC"
 
-#from bbs import echo, getch
+from output import echo
+from input import getch
 from ansi import *
 import curses
-#deps = ['keys']
 
 LEFT, RIGHT = 1, 2
 
