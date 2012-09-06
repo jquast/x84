@@ -15,17 +15,14 @@ __url__ = 'http://1984.ws'
 
 
 def main(recordonly=False):
-  global udb
-  udb = db.openudb('lc') # open sorted call log
+  udb = DBProxy('lastcallers')
 
   def build():
     " build and return last callers list for display "
-    global udb
-    callers = [(user.lastcall, user.handle) for user in userbase.listusers()]
+    callers = [(u.lastcall, u.handle) for u in listusers()]
     callers.sort ()
     callers.reverse ()
     udb['callers'] = callers
-
 
   if recordonly:
     return build ()
@@ -39,8 +36,8 @@ def main(recordonly=False):
         ('%s ago'%(timeago)).rjust (12) + \
         ('   Calls: '+str(user.calls)) .ljust (13) \
                  for timeago, user in \
-                        [(strutils.asctime(time.time() -lc), userbase.getuser(name)) \
-                         for lc, name in udb['callers'] if userbase.userexist(name)]])
+                        [(strutils.asctime(time.time() -lc), getuser(name)) \
+                         for lc, name in udb['callers'] if userexist(name)]])
 
   session = getsession()
   terminal = getsession().getterminal()
