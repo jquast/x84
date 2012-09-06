@@ -15,27 +15,25 @@ import threading
 
 # each new terminal and session is a forked process
 import multiprocessing
-import string
 import time
 import logging
 import os
 import re
-
 import blessings
 
-import session
-import db
-
-logger = multiprocessing.get_logger()#__name__)
+logger = multiprocessing.get_logger()
 logger.setLevel (logging.DEBUG)
 
 def start_process(channel, termtype, rows, columns):
+  import bbs.session
+  global logger
   channel.send (('output', 'process %d started\r\n' % (os.getpid(),),))
-  new_session = session.Session \
-      (terminal=BlessedIPCTerminal (channel, termtype, rows, columns))
-  new_session.start (channel)
+  new_session = bbs.session.Session \
+      (terminal=BlessedIPCTerminal (channel, termtype, rows, columns),
+       pipe=channel)
+  return new_session.run ()
 
-# want: callback mechanism within miniboa/telnet.py for NAWS
+# want: callback mechanism within telnet.py for NAWS
 class BlessedIPCTerminal(blessings.Terminal):
   def __init__(self, ipc_channel, terminal_type, rows, columns):
     # patch in a .rows and .columns static property.
@@ -54,6 +52,51 @@ class BlessedIPCTerminal(blessings.Terminal):
 
     blessings.Terminal.__init__ (self, kind=terminal_type,
         stream=IPCStream(ipc_channel), force_styling=True)
+    import curses
+    import curses.has_key
+
+    # after setupterm(), use the curses.has_key._capability_names
+    # dictionary to find the terminal descriptions for special keys.
+    # if any value is returned, store in self.keymap with the value
+    # of the curses keycode. curses keycodes are numeric values
+    # above 256.
+    self.keymap = dict()
+    for keycode, cap in curses.has_key._capability_names.iteritems():
+      v = curses.tigetstr(cap)
+      if v is not None:
+        self.keymap[v] = keycode
+
+    # finally, make all curses keycodes available as attributes to
+    # blessings terminal instances, for comparison.
+    for attr in [a for a in dir(curses) if a.startswith('KEY_')]:
+      setattr(self, attr , getattr(curses, attr))
+
+  def trans_input(self, data):
+    while len(data):
+      match=False
+      for keyseq, keycode in self.keymap.iteritems():
+        if data.startswith(keyseq):
+          data = data[len(keyseq):]
+          yield keycode
+          match=True
+          break
+      if match == False:
+        if data[0] == '\000':
+          pass
+        if data[0] == '\r':
+          yield self.KEY_ENTER
+        else:
+          yield data[0]
+        data = data[1:]
+
+  def keyname(self, keycode):
+    for attr in sorted([k for k in dir(self) if k.startswith('KEY_')]):
+      if keycode == getattr(self, attr):
+        return attr
+
+  def has_key(self, ch):
+    import curses.has_key
+    return curses.has_key.has_key (ch)
 
   @property
   def terminal_type(self):
@@ -121,7 +164,7 @@ class ConnectTelnetTerminal (threading.Thread):
     remote client as best as possible before spawning the user session, which
     begins using terminal capabilities and sockets configured here. """
     import socket
-    from miniboa.telnet import SGA, ECHO, NAWS, TTYPE, SEND, LINEMO
+    from telnet import SGA, ECHO, NAWS, TTYPE, SEND, LINEMO
 
     # set non-blocking input
     self.client.sock.setblocking (0)
@@ -153,11 +196,6 @@ class ConnectTelnetTerminal (threading.Thread):
         self.client.send ('failed: supress go-ahead\r\n')
     else:
       self.client.send('sga enabled\r\n')
-
-#DEBUG
-    self.client.send('you: %s, me: %s\r\n' \
-        % (enabledRemote(SGA), enabledLocal(SGA)))
-#
 
     # will echo
     if self.client.telnet_echo is False:
@@ -205,7 +243,7 @@ class ConnectTelnetTerminal (threading.Thread):
         self.client.send (query_seq)
         inp=''
         t = time.time()
-        while self.client.idle() < TIME_PAUSE:
+        while self.client.idle() < self.TIME_PAUSE:
           time.sleep (self.TIME_POLL)
           if not timeleft(t):
             break
@@ -229,7 +267,6 @@ class ConnectTelnetTerminal (threading.Thread):
     if self.client.terminal_type == self.TTYPE_UNDETECTED:
       self.client.send ('request-terminal-type\r\n')
       self.client.request_terminal_type ()
-      self.client.request_negotiation (TTYPE, SEND)
       self.client.socket_send() # push
       t = time.time()
       while self.client.terminal_type == self.TTYPE_UNDETECTED:
@@ -260,7 +297,7 @@ class ConnectTelnetTerminal (threading.Thread):
       inp=''
       if self.client.input_ready:
         t = time.time()
-        while self.client.idle() < TIME_PAUSE:
+        while self.client.idle() < self.TIME_PAUSE:
           time.sleep (self.TIME_POLL)
           if not timeleft(t):
             break
@@ -272,7 +309,7 @@ class ConnectTelnetTerminal (threading.Thread):
       self.client.request_will_echo ()
 
     self.client.terminal_type = 'vt220' \
-        if self.client.terminal_type is self.TTYPE_UNDETECTED \
+        if self.client.terminal_type == self.TTYPE_UNDETECTED \
         else self.client.terminal_type
     self.client.send ('terminal type: %s\r\n' % (self.client.terminal_type,))
     self.client.socket_send () # push
@@ -280,4 +317,3 @@ class ConnectTelnetTerminal (threading.Thread):
 
     logger.info ('thread complete')
     return # end of thread
-
