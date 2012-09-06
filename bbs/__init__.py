@@ -6,6 +6,7 @@ import msgbase
 from ansi import pos
 # end XXX cut/transform XXX
 import ini
+from userbase import User, getuser, finduser, userexist, authuser, getuser, listusers
 from session import getsession
 from fileutils import abspath, fopen, ropen
 from output import echo, oflush, delay
@@ -18,6 +19,13 @@ from pager import ParaClass
 from sauce import SAUCE
 
 __all__ = [
+    'User',
+    'getuser',
+    'finduser',
+    'userexist',
+    'authuser',
+    'getuser',
+    'listusers',
     'ini',
     'AnsiWindow',
     'HorizEditor',
@@ -48,7 +56,6 @@ __all__ = [
     'readline',
     'readlineevent',
     'msgbase',
-    'userbase',
     'SAUCE',
 ]
 
@@ -97,14 +104,11 @@ def flushevents(events = ['input'], timeout = -1):
     return [flushevent(e, timeout) for e in events]
 
 
-#def loginuser(handle):
-#    import time as time
-#    u = userbase.getuser(handle)
-#    u.set('calls', u.calls + 1)
-#    u.set('lastcall', time.time())
-#    getsession().setuser(u)
-#    broadcastevent('login', handle)
-#
+def loginuser(handle):
+    import time as time
+    u = userbase.getuser(handle)
+    u.calls += 1
+    u.lastcall = time.time()
 
 def showfile(filename, bps=0, pause=0.1, cleansauce=True):
     import strutils as strutils
