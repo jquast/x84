@@ -90,7 +90,7 @@ class BlessedIPCTerminal(blessings.Terminal):
         elif data[0] == '\r':
           yield self.KEY_ENTER # ?
         else:
-          yield data[0]
+          yield data[0].decode('utf-8') if type(data[0]) is str else data[0]
         # slice character from *data
         print 'slice!'
         data = data[1:]
