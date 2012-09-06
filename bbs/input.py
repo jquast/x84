@@ -2,7 +2,7 @@ from session import getsession
 import ascii
 from output import echo
 
-def getch(timeout = None):
+def getch(timeout=None):
     (event, data) = getsession().read_event(events=['input'], timeout=timeout)
     return data
 
