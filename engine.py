@@ -13,6 +13,7 @@ __version__ = '3.0rc0'
 # version 3, x84, 2011 jeff
 
 import bbs.ini
+import db
 
 def main (logger, logHandler, cfgFile='default.ini'):
   """
