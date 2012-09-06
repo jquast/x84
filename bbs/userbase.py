@@ -1,4 +1,4 @@
-from session import getsession
+from session import getsession, logger
 from dbproxy import DBProxy
 
 db = DBProxy('userbase')
@@ -87,7 +87,7 @@ class User(object):
     return self._handle
   @handle.setter
   def handle(self, value):
-    assert type(value) is unicode
+    assert type(value) is unicode and len(value) > 0
     self._handle = value
 
   @property
@@ -158,8 +158,8 @@ class User(object):
     return hasattr(db[self.handle], key)
 
   def add(self):
-    if not len(listusers(allUsers=True)) and not 'sysop' in self.groups:
-      logger.warn ('first new user becomes sysop %(handle)s.', self)
+    if 0 == len(listusers()) and not 'sysop' in self.groups:
+      logger.warn ('first new user becomes sysop: %s', self.handle)
       self.groups = list(('sysop',))
     db[self.handle] = self
 
