@@ -130,9 +130,9 @@ def main (handle):
         break
 
       # allow user to opt-out of e-mail
-      echo (terminal.location (*loc_state))
+      echo (terminal.move (*loc_state))
       inkey = warning('invalid, Ctrl+O to Opt out')
-      echo (terminal.location (*loc_state))
+      echo (terminal.move (*loc_state))
       if inkey == chr(15):
         echo (terminal.clear_eol + terminal.normal)
         echo ('make your statement, then: ')
@@ -152,6 +152,7 @@ def main (handle):
       # we've gained the following variables:
       # handle, password, location, hint
       u = userbase.User \
-          (handle=handle, password=password, location=location, hint=hint)
+          (handle=handle, password=password, location=location,
+              hint=unicode(hint))
       u.add ()
       goto ('top', u.handle)
