@@ -13,7 +13,7 @@ __license__ = "ISC"
 import curses
 from input import getch
 from output import echo
-from strutils import ansilen chkseq seqc
+from strutils import ansilen, chkseq, seqc
 from ansi import color
 from ansiwin import InteractiveAnsiWindow
 
