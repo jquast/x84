@@ -5,7 +5,6 @@ class DBProxy(object):
     self.schema = schema
 
   def __proxy__(self, method, *args):
-    print '->proxy', method, repr(args)
     event = 'db-%s' % (self.schema,)
     getsession().send_event(event, (method, args,))
     event, data = getsession().read_event((event,))
