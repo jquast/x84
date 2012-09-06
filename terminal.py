@@ -1,96 +1,103 @@
 # -*- coding: iso-8859-1 -*-
-"""
-Terminal interface module for X/84 BBS, http://1984.ws
-$Id: terminal.py,v 1.32 2010/01/02 02:09:40 dingo Exp $
-"""
-__license__ = 'ISC'
-__author__ = 'Jeffrey Quast <dingo@1984.ws>'
-
-# channel is of format (client, pipe)
-CHANNELS = []
-PROCS = []
-
-# threads are used for connect negotiation
-import threading
-
-# each new terminal and session is a forked process
 import multiprocessing
+import threading
 import time
-import logging
-import os
 import re
 import blessings
 
-logger = multiprocessing.get_logger()
-logger.setLevel (logging.DEBUG)
+# global list of (TelnetClient, multiprocessing.Pipe,)
+CHANNELS = []
+# global list of multiprocessing.Process
+PROCS = []
 
-def start_process(channel, termtype, rows, columns):
+logger = multiprocessing.get_logger()
+
+def start_process(child_conn, termtype, rows, columns):
   import bbs.session
-  global logger
-  channel.send (('output', 'process %d started\r\n' % (os.getpid(),),))
-  new_session = bbs.session.Session \
-      (terminal=BlessedIPCTerminal (channel, termtype, rows, columns),
-       pipe=channel)
+  stream = IPCStream(child_conn)
+  term = BlessedIPCTerminal (stream, termtype, rows, columns)
+  new_session = bbs.session.Session (terminal=term, pipe=child_conn)
   return new_session.run ()
 
-# want: callback mechanism within telnet.py for NAWS
+class IPCStream(object):
+  """
+  connect blessings 'stream' to 'child' multiprocessing.Pipe
+  only write(), fileno(), and close() are called by blessings.
+  """
+  def __init__(self, channel):
+    self.channel = channel
+  def write(self, data):
+    self.channel.send (('output', data))
+  def fileno(self):
+    return self.channel.fileno()
+  def close(self):
+    return self.channel.close ()
+
 class BlessedIPCTerminal(blessings.Terminal):
-  def __init__(self, ipc_channel, terminal_type, rows, columns):
+  """
+    Extend the blessings interface to manage keycode input.
+
+    trans_input() is a generator that, given a sequence of terminal input as
+    a character buffer, yields each keystroke as-is or as a keycode, which
+    is an integer value above 255, and can be compared to KEY_* attributes
+    of the class, such as KEY_ENTER -- or can be named to a string using the
+    class keyname() method.
+
+    Furthermore, .rows and .columns no longer queries using termios routines.
+    They must be managed by another procedure. Instances of this class
+    are stored in the global CHANNELS
+  """
+  def __init__(self, stream, terminal_type, rows, columns):
     # patch in a .rows and .columns static property.
     # this property updated by engine.py poll routine (?)
     self.rows, self.columns = rows, columns
     self.kind = terminal_type
-    class IPCStream(object):
-      def __init__(self, channel):
-        self.channel = channel
-      def write(self, data):
-        self.channel.send (('output', data))
-      def fileno(self):
-        return self.channel.fileno()
-      def close(self):
-        return self.channel.close ()
-
-    blessings.Terminal.__init__ (self, kind=terminal_type,
-        stream=IPCStream(ipc_channel), force_styling=True)
-    import curses
-    import curses.has_key
+    blessings.Terminal.__init__ (self,
+        kind=terminal_type, stream=stream, force_styling=True)
 
     # after setupterm(), use the curses.has_key._capability_names
-    # dictionary to find the terminal descriptions for special keys.
-    # if any value is returned, store in self.keymap with the value
-    # of the curses keycode. curses keycodes are numeric values
-    # above 256.
-    self.keymap = dict()
-    for keycode, cap in curses.has_key._capability_names.iteritems():
+    # dictionary to find the terminal descriptions for keycodes.
+    # if any value is returned, store in self._keymap with (sequence,
+    # keycode) as (key, value). curses keycodes are numeric values
+    # above 256, and can be matched, fe. as curses.KEY_ENTER
+    import curses
+    import curses.has_key
+    self._keymap = dict()
+    for (keycode, cap) in curses.has_key._capability_names.iteritems():
       v = curses.tigetstr(cap)
       if v is not None:
-        self.keymap[v] = keycode
+        self._keymap[v] = keycode
 
-    # finally, make all curses keycodes available as attributes to
-    # blessings terminal instances, for comparison.
-    for attr in [a for a in dir(curses) if a.startswith('KEY_')]:
+    # copy curses KEY_* attributes
+    for attr in (a for a in dir(curses) if a.startswith('KEY_')):
       setattr(self, attr , getattr(curses, attr))
 
   def trans_input(self, data):
+    """Yield single keystroke for each character or multibyte input sequence."""
     while len(data):
       match=False
-      for keyseq, keycode in self.keymap.iteritems():
+      for keyseq, keycode in self._keymap.iteritems():
         if data.startswith(keyseq):
-          data = data[len(keyseq):]
+          # slice keyseq from *data
           yield keycode
+          data = data[len(keyseq):]
           match=True
           break
       if match == False:
-        if data[0] == '\000':
-          pass
-        if data[0] == '\r':
-          yield self.KEY_ENTER
+        if data[0] == '\x00':
+          print 'skip nul'
+          pass # telnet negotiation
+        elif data[0] == '\r':
+          yield self.KEY_ENTER # ?
         else:
           yield data[0]
+        # slice character from *data
+        print 'slice!'
         data = data[1:]
 
   def keyname(self, keycode):
-    for attr in sorted([k for k in dir(self) if k.startswith('KEY_')]):
+    """Return any matching keycode name for a given keycode."""
+    for attr in (k for k in dir(self) if k.startswith('KEY_')):
       if keycode == getattr(self, attr):
         return attr
 
@@ -103,16 +110,19 @@ class BlessedIPCTerminal(blessings.Terminal):
     return self.kind
 
   def _height_and_width(self):
-    # override termios window size unpacking
     """Return a tuple of (terminal height, terminal width)."""
     return self.rows, self.columns
 
 def on_disconnect(client):
+  import copy
   logger.info ('Disconnected from telnet client %s:%s',
       client.address, client.port)
-  return
+  for tgt_client, pipe in copy.copy(CHANNELS):
+    if client == tgt_client:
+      CHANNELS.remove ((client, pipe,))
 
 def on_connect(client):
+  """Spawn a ConnectTelnetTerminal() thread for each new connection."""
   logger.info ('Connection from telnet client %s:%s',
       client.address, client.port)
   t = ConnectTelnetTerminal(client)
@@ -123,25 +133,22 @@ class ConnectTelnetTerminal (threading.Thread):
   This thread spawns long enough to
     1. set socket and telnet options
     2. ask about terminal type and size
-    3. spawn and register a sub-process
-    4. create & register IPC pipes,
-    5. initialize a curses-capable terminal (blessings)
-    6. start and register a new session
+    3. start a new session (as a sub-process)
   """
   TIME_WAIT = 1.0
   TIME_PAUSE = 0.5
   TIME_POLL  = 0.05
   TTYPE_UNDETECTED = 'unknown client'
-  # see 'xresize' from X11
-  WINSIZE_TRICK= ( \
+  WINSIZE_TRICK= (
         ('vt100', ('\x1b[6n'), re.compile('\033' + r"\[(\d+);(\d+)R")),
-        ('sun', ('\x1b[18t'), re.compile('\033' + r"\[8;(\d+);(\d+)t")))
+        ('sun', ('\x1b[18t'), re.compile('\033' + r"\[8;(\d+);(\d+)t"))
+  ) # see: xresize.c from X11.org
 
   def __init__(self, client):
-    threading.Thread.__init__(self)
     self.client = client
+    threading.Thread.__init__(self)
 
-  def spawn_session(self):
+  def _spawn_session(self):
     """ Our last action as enacting thread is to create a sub-process.
         In previous incarnations, this software was multi-threaded.
         The mixing in of curses.setupterm() now requires a unique process space.
@@ -149,7 +156,8 @@ class ConnectTelnetTerminal (threading.Thread):
         Its just as well. This avoids the GIL and forces all IPC data to be
         communicated via IPC instead of shared variables or memory regions.
     """
-
+    global CHANNELS
+    global PROCS
     parent_conn, child_conn = multiprocessing.Pipe()
     p = multiprocessing.Process \
         (target=start_process,
@@ -160,27 +168,34 @@ class ConnectTelnetTerminal (threading.Thread):
     PROCS.append (p)
 
   def run(self):
-    """ The purpose of this thread is to negotiate the environment with the
-    remote client as best as possible before spawning the user session, which
-    begins using terminal capabilities and sockets configured here. """
+    """Negotiate and inquire about terminal type, telnet options,
+    window size, and tcp socket options before spawning a new session."""
+    self._set_socket_opts ()
+    self._no_linemode ()
+    self._try_sga ()
+    self._try_echo ()
+    self._try_naws ()
+    self._try_ttype ()
+    self._spawn_session ()
+
+  def _set_socket_opts(self):
+    """Set socket non-blocking and enable TCP KeepAlive"""
     import socket
-    from telnet import SGA, ECHO, NAWS, TTYPE, SEND, LINEMO
-
-    # set non-blocking input
     self.client.sock.setblocking (0)
-
-    # use tcp keepalive
     self.client.sock.setsockopt (socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
 
-    enabledRemote = self.client._check_remote_option
-    enabledLocal = self.client._check_local_option
-    timeleft = lambda t: time.time() -t < self.TIME_WAIT
-
+  def _no_linemode (self):
+    """Negotiate line mode (LINEMO) telnet option (off)."""
+    from telnet import LINEMO
     self.client._iac_dont(LINEMO)
     self.client._iac_wont(LINEMO)
     self.client._note_reply_pending(LINEMO, True)
 
-    # supress go-ahead
+  def _try_sga(self):
+    """Negotiate supress go-ahead (SGA) telnet option (on)."""
+    from telnet import SGA
+    enabledRemote = self.client._check_remote_option
+    enabledLocal = self.client._check_local_option
     if not (enabledRemote(SGA) is True and enabledLocal(SGA) is True):
       self.client.send('request-do-sga\r\n')
       self.client.request_do_sga ()
@@ -188,7 +203,7 @@ class ConnectTelnetTerminal (threading.Thread):
       t = time.time()
       while not (enabledRemote(SGA) is True and enabledLocal(SGA) is True):
           time.sleep (self.TIME_POLL)
-          if not timeleft(t):
+          if not self._timeleft(t):
             break
       if (enabledRemote(SGA) is True and enabledLocal(SGA) is True):
         self.client.send ('sga enabled (negotiated)\r\n')
@@ -197,7 +212,8 @@ class ConnectTelnetTerminal (threading.Thread):
     else:
       self.client.send('sga enabled\r\n')
 
-    # will echo
+  def _try_echo(self):
+    """Negotiate echo (ECHO) telnet option (on)."""
     if self.client.telnet_echo is False:
       self.client.send('request-will-echo\r\n')
       self.client.request_will_echo ()
@@ -205,7 +221,7 @@ class ConnectTelnetTerminal (threading.Thread):
       t = time.time()
       while self.client.telnet_echo is False:
         time.sleep (self.TIME_POLL)
-        if not timeleft(t):
+        if not self._timeleft(t):
           break
       if self.client.telnet_echo:
         self.client.send ('echo enabled (negotiated)\r\n')
@@ -213,7 +229,8 @@ class ConnectTelnetTerminal (threading.Thread):
       self.client.send ('echo enabled\r\n')
     self.client.socket_send() # push
 
-    # negotiate about window size
+  def _try_naws(self):
+    """Negotiate about window size (NAWS) telnet option (on)."""
     if None in (self.client.columns, self.client.rows,):
       self.client.send('request-naws\r\n')
       self.client.request_naws ()
@@ -221,7 +238,7 @@ class ConnectTelnetTerminal (threading.Thread):
       t = time.time()
       while None in (self.client.columns, self.client.rows,):
         time.sleep (self.TIME_POLL)
-        if not timeleft(t):
+        if not self._timeleft(t):
           break
       if None in (self.client.columns, self.client.rows,):
         self.client.send ('failed: negotiate about window size\r\n')
@@ -241,11 +258,12 @@ class ConnectTelnetTerminal (threading.Thread):
             '& query for %s' % (kind,))
         self.client.send ('\x1b[999;999H')
         self.client.send (query_seq)
+        self.client.socket_send() # push
         inp=''
         t = time.time()
         while self.client.idle() < self.TIME_PAUSE:
           time.sleep (self.TIME_POLL)
-          if not timeleft(t):
+          if not self._timeleft(t):
             break
         inp = self.client.get_input()
         match = response_pattern.search (inp)
@@ -254,6 +272,8 @@ class ConnectTelnetTerminal (threading.Thread):
           break
         self.client.send ('\x1b[r')
         self.client.send ('cursor restored --')
+
+    # set to 80x24 if not detected
     self.client.columns, self.client.rows = \
         80 if self.client.columns is None   \
           else self.client.columns,         \
@@ -263,14 +283,15 @@ class ConnectTelnetTerminal (threading.Thread):
         % (self.client.columns, self.client.rows,))
     self.client.socket_send() # push
 
-    # Try #1 -- we need this to work best
+  def _try_ttype(self):
+    """Negotiate terminal type (TTYPE) telnet option (on)."""
     if self.client.terminal_type == self.TTYPE_UNDETECTED:
       self.client.send ('request-terminal-type\r\n')
       self.client.request_terminal_type ()
       self.client.socket_send() # push
       t = time.time()
       while self.client.terminal_type == self.TTYPE_UNDETECTED:
-        if not timeleft(t):
+        if not self._timeleft(t):
           break
         time.sleep (self.TIME_POLL)
       if self.client.terminal_type == self.TTYPE_UNDETECTED:
@@ -292,14 +313,14 @@ class ConnectTelnetTerminal (threading.Thread):
       t= time.time()
       while not self.client.input_ready:
         time.sleep (self.TIME_POLL)
-        if not timeleft(t):
+        if not self._timeleft(t):
           break
       inp=''
       if self.client.input_ready:
         t = time.time()
         while self.client.idle() < self.TIME_PAUSE:
           time.sleep (self.TIME_POLL)
-          if not timeleft(t):
+          if not self._timeleft(t):
             break
         inp = self.client.get_input()
         self.client.terminal_type = inp.strip()
@@ -308,12 +329,12 @@ class ConnectTelnetTerminal (threading.Thread):
         self.client.send ('failed: answerback reply not receieved\r\n')
       self.client.request_will_echo ()
 
+    # set to vt220 if undetected
     self.client.terminal_type = 'vt220' \
         if self.client.terminal_type == self.TTYPE_UNDETECTED \
         else self.client.terminal_type
     self.client.send ('terminal type: %s\r\n' % (self.client.terminal_type,))
     self.client.socket_send () # push
-    self.spawn_session()
 
-    logger.info ('thread complete')
-    return # end of thread
+  def _timeleft(self, t):
+    return bool(time.time() -t < self.TIME_WAIT)
