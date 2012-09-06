@@ -55,7 +55,7 @@ def main (handle):
         inkey = warning('Enter an alias, Press Ctrl+X to cancel')
         if inkey == chr(24):
           return
-      elif userbase.userexist (handle):
+      elif userexist (handle):
         warning ('User exists')
       elif handle == '' or len(handle) < int(ini.cfg.get('nua', 'min_user')):
         warning ('Too short! (%s)' % ini.cfg.get('nua', 'min_user'))
@@ -151,7 +151,7 @@ def main (handle):
     if lr.isleft():
       # we've gained the following variables:
       # handle, password, location, hint
-      u = userbase.User \
+      u = User \
           (handle=handle, password=password, location=location,
               hint=unicode(hint))
       u.add ()
