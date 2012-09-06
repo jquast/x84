@@ -19,25 +19,25 @@ deps = ['bbs']
 CH_MASK_PASSWD='x'
 wait_negotiation=1.0
 def main ():
-  terminal = getsession().getterminal()
+  terminal = getterminal()
 
   def refresh():
     # display software version, copyright, and banner
-    with terminal.location():
-      #echo (terminal.move (0,0) + terminal.clear_eos)
-      echo ('X/84, PRSV branch: %s license, see %s for source' \
-          % (__license__, __url__))
-      for c in __copyright__:
-        echo ('\r\n  %s' % (c))
-      echo ('\r\n\r\n')
-      showfile('art/1984.asc')
-      echo ('\r\n\r\n')
-      echo (terminal.normal_cursor)
-      # DEBUG
-      echo ('keyseq, keycode\r\n')
-      for keyseq, keycode in terminal.keymap.iteritems():
-        echo ('%14r %s\r\n' % (keyseq, terminal.keyname(keycode)))
-      # END DEBUG
+    echo (terminal.move (0,0) + terminal.clear)
+    echo ('X/84, PRSV branch: %s license, see %s for source' \
+        % (__license__, __url__))
+    for c in __copyright__:
+      echo ('\r\n  %s' % (c))
+    echo ('\r\n\r\n')
+    showfile('art/1984.asc')
+    echo ('\r\n\r\n')
+    echo (terminal.normal_cursor)
+    # DEBUG
+    echo ('keyseq, keycode: ')
+    for keyseq, keycode in terminal._keymap.iteritems():
+      echo ('%r %s; ' % (keyseq, terminal.keyname(keycode)))
+    echo ('\r\n')
+    # END DEBUG
 
   refresh ()
   i_handle=''
@@ -58,11 +58,13 @@ def main ():
     if not match:
       echo ('\r\n\r\n  --> Create new account? [ynq]   <--' + '\b'*5)
       ynq = getch()
-      if ynq.lower() == 'y':
+      if str(ynq).lower() == 'y':
         goto ('nua', i_handle)
-      elif ynq.lower() == 'q':
+      elif str(ynq).lower() == 'q' \
+      or ynq == terminal.KEY_EXIT:
         goto ('logoff')
       else: # 'n' is default
+        print 'x', repr(ynq)
         continue
     i_handle = match
     echo ('\r\n\r\n  pass: ')
