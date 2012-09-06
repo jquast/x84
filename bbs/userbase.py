@@ -26,7 +26,7 @@ def authuser(handle, try_pass):
   u= getuser(h)
   if u is None:
     return None
-  return u['password'] is not None and try_pass == u.password
+  return u.password is not None and try_pass == u.password
 
 def getuser(handle):
   " Return User object instance, retrieved by handle. "
