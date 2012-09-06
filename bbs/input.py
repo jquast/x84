@@ -29,7 +29,6 @@ def readlineevent(width, value = '', hidden = '', paddchar = ' ', events = [
       return (value, event, data)
 
     data = None
-    print repr(char)
     if char == term.KEY_EXIT:
       return (None, 'input', data)
 
