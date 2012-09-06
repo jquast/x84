@@ -51,12 +51,12 @@ def main ():
     if getsession().width < width+3:
       echo (color(*LIGHTRED) + 'your screen is too thin! (%s/%s)\r\n' \
         'press any key...' % (getsession().width, width+5))
-      readkey ()
+      getch ()
       return
     if getsession().height < height:
       echo (color(*LIGHTRED) + 'your screen is too short! (%s/%s)\r\n' \
         'press any key...' % (getsession().height, height))
-      readkey ()
+      getch ()
       return
     x = (session.width /2) -(width /2)
     y = (session.height /2) -(height /2)

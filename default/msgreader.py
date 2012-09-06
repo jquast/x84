@@ -109,7 +109,7 @@ def main(msgs):
     refresh ()
     while True:
       # TODO: poll for new messages
-      k = readkey()
+      k = getch()
       if bitclear:
         status ()
         bitclear = False

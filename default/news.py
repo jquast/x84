@@ -25,35 +25,36 @@ def init():
   NEWS_PATH='text/news.txt'
   global news_content, lastupdate
   try:
-    news_content = fopen(NEWS_PATH).read()
+    news_content = fileutils.fopen(NEWS_PATH).read()
   except IOError:
     news_content = '%s not found -- no news :)\n' % (NEWS_PATH,)
-  lastupdate = os.path.getmtime(abspath('text/news.txt'))
+  lastupdate = os.path.getmtime(fileutils.abspath('text/news.txt'))
 
 
 def main():
   global news_content, lastupdate
   session = getsession()
+  terminal = getsession().getterminal()
 
   def refresh(pager, lastupdate):
     getsession().activity = 'Reading News'
     y=7
     w=80
     x=1
-    h=session.height-y
+    h=terminal.rows-y
     echo (color() + cls() + pos())
     if h < 5:
       echo (color(*LIGHTRED) + 'screen height must be at least %i, ' \
-            'but is %i.' % (y+5, session.height))
+            'but is %i.' % (y+5, terminal.rows))
       echo (color() + '\r\n\r\nPress any key...')
-      readkey(); return False
+      getch(); return False
     if w < 80:
       echo (color(*LIGHTRED) + 'screen width must be at least %i, ' \
-            'but is %i.' % (80, session.width))
+            'but is %i.' % (80, terminal.columns))
       echo (color() + '\r\n\r\nPress any key...')
-      readkey(); return False
+      getch(); return False
 
-    if lastupdate < os.path.getmtime(abspath('text/news.txt')):
+    if lastupdate < os.path.getmtime(fileutils.abspath('text/news.txt')):
       # refresh the news text file
       init ()
       if pager:
@@ -71,7 +72,7 @@ def main():
     pager.refresh ()
     pager.lowlight ()
     pager.title ('up/down/(q)uit', align='bottom')
-    art = fopen('art/news.asc').readlines()
+    art = fileutils.fopen('art/news.asc').readlines()
     # overlay art above pager border
     for row, txt in enumerate(art):
       n = 0

@@ -14,7 +14,7 @@ AUTOMSG_POS=(15,11)
 PROMPT_POS =(15,13)
 
 def init():
-  udb = openudb('automsg')
+  udb = db.openudb('automsg')
   if not len(udb.keys()):
     print 'a'
     lock()
@@ -35,15 +35,15 @@ def main():
       except IOError:
         echo ('click...\r\n')
       echo (ansi.pos(*AUTOMSG_POS) + cl() + color() + 'RX')
-      nick, msg = openudb('automsg').values()[-1]
+      nick, msg = db.openudb('automsg').values()[-1]
       echo ('\b \b\b \b')
       echo ('%s%*s says: %s%s%s' % (
-        color(*WHITE), int(cfg.get('nua','max_user'))+1, nick,
+        color(*WHITE), int(db.cfg.get('nua','max_user'))+1, nick,
         color(*DARKGREY), msg, color()))
       echo (ansi.pos(AUTOMSG_POS[0], AUTOMSG_POS[1]+2) + ansi.cursor_show())
       echo ('s:AY SOMEthiNg; g:Et thE fUCk Off !\b')
 
-    k = readkey()
+    k = getch()
     if k in 'gG':
       echo ( cls() + \
       'Try some of these other fine boards!\r\n\r\n' \
@@ -62,7 +62,7 @@ def main():
       '  graveyardbbs.kicks-ass.net The Graveyard\r\n' \
       '  +o The Reaper              renegade bbs\r\n\r\n' \
       )
-      readkey (2)
+      getch (2)
       echo ('CLICK!')
       disconnect ()
       break
@@ -74,7 +74,7 @@ def main():
       echo (ansi.pos(AUTOMSG_POS[0]+10+2, AUTOMSG_POS[1]))
       nmsg = readline(AUTOMSG_LENGTH)
       if nmsg.strip():
-        udb = openudb('automsg')
+        udb = db.openudb('automsg')
         idx = udb.keys()[-1]+1
         lock()
         udb[idx] = (handle() if handle() else 'anonymous', nmsg)

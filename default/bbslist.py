@@ -14,7 +14,7 @@ def main():
   dirty=True
   lightbar=False
   bbslist=[]
-  udb = openudb('bbslist')
+  udb = db.openudb('bbslist')
 
   bbsname=host=port=software=sysop=ratings=comments=None
   while True:
@@ -30,7 +30,7 @@ def main():
         lightbar = LightClass (y=10, x=2, w=76, h=14, xpad=1, ypad=1)
         lightbar.byindex = lightbar.interactive = lightbar.partial = True
       lightbar.lowlight()
-      udb = openudb('bbslist')
+      udb = db.openudb('bbslist')
       if not len(udb.keys()):
         udb['1984'] = ['1984.ws', '23', 'x/84',
              'dingo', (('biG bROthER', 5),),
@@ -120,7 +120,7 @@ def main():
           echo ('change your comment for %s? [yn]' % (bbsname,))
         else:
           echo ('add comment for %s? [yn] ' % (bbsname,))
-        yn=readkey()
+        yn=getch()
         if yn.lower() != 'y':
           continue
         new_comments = \
@@ -138,7 +138,7 @@ def main():
         echo ('rate bbs [1-4]: ')
         echo (color(BLUE)+color(INVERSE))
         echo (' '*1 + '\b'*1)
-        rate = readkey()
+        rate = getch()
         if not rate.isdigit(): continue
         try: rate = int(rate)
         except ValueError: continue
@@ -148,7 +148,7 @@ def main():
             % (bbsname, rate,))
         else:
           echo ('rate %s with %i stars? [yn] ' % (bbsname, rate,))
-        yn=readkey()
+        yn=getch()
         if yn.lower() != 'y':
           continue
         new_rating = \
@@ -196,7 +196,7 @@ def main():
                          if ratings else '',
                      software, '\n' if comments else '', cr ))
         p.title ('<return/spacebar> return to list', align='top')
-        k = readkey()
+        k = getch()
         if k in (' ',KEY.ENTER,KEY.ESCAPE):
           continue
         p.run (k)

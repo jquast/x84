@@ -25,13 +25,13 @@ def main(host, port=None):
     type, value, tb = sys.exc_info ()
     echo ('%s%s' % (color(*LIGHTRED), value))
     echo ('\r\n\r\n%s%s' % (color(), 'press any key'))
-    readkey()
+    getch ()
     return
   echo ('\r\nConnected to %s.' % (host,))
   echo ("\r\nEscape character is '^].'")
-  readkey (1)
+  getch (1)
   while True:
-    ch = readkey (timeout=0.01)
+    ch = getch (timeout=0.01)
     try:
       echo (telnet.read_very_eager())
       if ch == '\035':
@@ -46,4 +46,4 @@ def main(host, port=None):
       echo ('\r\n%s%s' % (cl()+color(*LIGHTRED), value))
       break
   echo ('\r\n%s%s' % (cl()+color(), 'press any key'))
-  readkey ()
+  getch ()

@@ -8,17 +8,17 @@ def main():
     fx = (color(*DARKGREY), color(*LIGHTRED), color(*DARKGREY), color())
     header = \
       hg*(xpad-2) + \
-      strpadd('%s[%shandle%s]%s' % fx, int(cfg.get('nua','max_user'))+1, ch=hg) + \
-      strpadd('%s[%slocation%s]%s' % fx, int(cfg.get('nua','max_origin'))+1, ch=hg) + \
+      strpadd('%s[%shandle%s]%s' % fx, int(db.cfg.get('nua','max_user'))+1, ch=hg) + \
+      strpadd('%s[%slocation%s]%s' % fx, int(db.cfg.get('nua','max_origin'))+1, ch=hg) + \
       strpadd('%s[%scalls%s]%s' % fx, 8, 'left', ch=hg) + \
       strpadd('%s[%sposts%s]%s' % fx, 8, 'left', ch=hg) + \
       strpadd('%s[%slast call%s]%s' % fx, 12, 'left', ch=hg)
     users = [ \
-      strpadd(u.handle, int(cfg.get('nua','max_user'))+1) + \
-      strpadd(u.location, int(cfg.get('nua','max_origin'))+1) + \
+      strpadd(u.handle, int(db.cfg.get('nua','max_user'))+1) + \
+      strpadd(u.location, int(db.cfg.get('nua','max_origin'))+1) + \
       strpadd(str(u.calls), 8, 'left') + \
       strpadd(str(u.numPosts()), 8, 'left') + \
-      strpadd(asctime(timenow() - u.lastcall) + ' ago', 12, 'left') \
+      strpadd(asctime(time.time() - u.lastcall) + ' ago', 12, 'left') \
         for u in listusers()]
     return header, users
 
@@ -27,7 +27,7 @@ def main():
     if session.height < 15 or session.width < 70:
       echo (color(*LIGHTRED) + 'Screen size too small to display user list' \
             + color() + '\r\n\r\npress any key...')
-      readkey()
+      getch ()
       return False
     art = fopen('art/userlist.asc',  'r').readlines()
     # lowlight userlist

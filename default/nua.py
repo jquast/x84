@@ -25,7 +25,7 @@ def warning(string, x, y, clean=True):
     + color() + string[-split_loc:] \
     + color(BLACK, BRIGHT) + '! '
   echo ( cl() + pos (x, y) + warning_msg )
-  inkey = readkeyto ( float( len( string)) /cpsec) # pause
+  inkey = getch ( float( len( string)) /cpsec) # pause
   echo (pos (x, y) + ' '*ansilen(warning_msg) ) # clear
   return inkey # return keypress, if any
 
@@ -54,22 +54,22 @@ def main (handle):
     user_ok = origin_ok = pass_ok = level = 0
     while not (user_ok):
       echo (pos(*loc_user) + cl() + color() + 'username: ')
-      handle = readline (cfg.get('nua', 'max_user'), handle)
+      handle = readline (int(db.cfg.get('nua', 'max_user'), handle))
       if not handle:
         if warning ('Enter an alias, Press Ctrl+X to cancel', *loc_origin) == chr(24):
           return
-      elif userexist (handle):
+      elif userbase.userexist (handle):
         warning ('User exists', *loc_origin)
-      elif handle == '' or len(handle) < int(cfg.get('nua', 'min_user')):
-        warning ('Too short! (%s)' % cfg.get('nua', 'min_user'), *loc_origin)
-      elif handle.lower() in cfg.get('nua', 'invalid_handles').split():
+      elif handle == '' or len(handle) < int(db.cfg.get('nua', 'min_user')):
+        warning ('Too short! (%s)' % db.cfg.get('nua', 'min_user'), *loc_origin)
+      elif handle.lower() in db.cfg.get('nua', 'invalid_handles').split():
         warning ('Illegal username', *loc_origin)
       else:
         user_ok = True
 
     while not (origin_ok):
       echo (pos(*loc_origin) + color() + 'origin: ')
-      location = readline (cfg.get('nua', 'max_origin'), location)
+      location = readline (int(db.cfg.get('nua', 'max_origin'), location))
       if location == '':
         if warning ('Enter a location, Press Ctrl+X to cancel', *loc_pass) == chr(24):
           return
@@ -79,7 +79,7 @@ def main (handle):
 
     while not (pass_ok):
       echo (pos(*loc_pass) + cl() + color() + 'password: ')
-      password = readline (cfg.get('nua', 'max_pass'), hidden='x')
+      password = readline (int(db.cfg.get('nua', 'max_pass'), hidden='x'))
       if len(password) < 4:
         # fail if password too short
         if warning ('too short, Press Ctrl+X to cancel', *loc_email) == chr(24):
@@ -88,7 +88,7 @@ def main (handle):
       else:
         # verify
         echo (pos(*loc_pass) + cl() + color() + '   again: ')
-        verify = readline (cfg.get('nua', 'max_pass'), hidden='z')
+        verify = readline (int(db.cfg.get('nua', 'max_pass'), hidden='z'))
         if password != verify:
           if warning ('verify must match, Press Ctrl+X to cancel', *loc_email) == chr(24):
             return
@@ -100,7 +100,7 @@ def main (handle):
     while (level < 2):
       # email loop
       echo (pos(*loc_email) + cl() + color() + 'email address [not req.]: ')
-      hint= readline (cfg.get('nua', 'max_email'))
+      hint= readline (int(db.cfg.get('nua', 'max_email')))
       # TODO regexp
       if not len(hint):
         level = 2
@@ -124,7 +124,7 @@ def main (handle):
       if warning ('invalid, Ctrl+O to Opt out', *loc_state) == chr(15):
         # oh yea? make a statement, then
         echo (pos(*loc_state) + cl() + color() + 'make your statement, then: ')
-        hint = readline (cfg.get('nua', 'max_email'))
+        hint = readline (int(db.cfg.get('nua', 'max_email')))
         if not hint:
           # if you don't make a statement, forget you!
           disconnect ()
@@ -137,7 +137,7 @@ def main (handle):
     # we've gained the following variables:
     # handle, password, location, hint
     if lr.isleft():
-      u = User ()
+      u = userbase.User ()
       u.handle, u.password, u.location, u.hint \
           = handle, password, location, hint
       u.add ()

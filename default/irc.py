@@ -103,9 +103,9 @@ class ClientFactory(protocol.ClientFactory):
 def main():
     session = getsession()
     getsession().activity = 'irc'
-    factory = ClientFactory(session, cfg.get('irc','channel'))
+    factory = ClientFactory(session, db.cfg.get('irc','channel'))
     connect = reactor.connectTCP \
-        (cfg.get('irc', 'server'), int(cfg.get('irc','port')),
+        (db.cfg.get('irc', 'server'), int(db.cfg.get('irc','port')),
           factory)
 
     # colors and formatting
@@ -125,7 +125,7 @@ def main():
     buffer = ParaClass \
       (h=session.height-6, w=session.width-2, y=6, x=6, xpad=0, ypad=1)
     buffer.add('%s connecting to %s:%d' % (fx['system'],
-      cfg.get('irc','server'), int(cfg.get('irc','port'))))
+      db.cfg.get('irc','server'), int(db.cfg.get('irc','port'))))
 
     # editable pager for input
     inputbar = HorizEditor \

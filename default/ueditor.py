@@ -113,7 +113,7 @@ def main(editing_user=None):
     echo ('\r\nOld value is: %r' % (getuser(handle).get(field),))
     echo ('\r\nNew value is: %r' % (newValue,))
     echo ('\r\n\r\n save? [%sn%s] ' % (color(*LIGHTGREEN), color()))
-    k = readkey()
+    k = getch()
     if k.lower() == 'y':
       getuser(handle).set(field, newValue)
       return True
@@ -177,7 +177,7 @@ def main(editing_user=None):
     echo (color() + '\r\n\r\n')
     echo (session.activity)
     echo (color(*DARKGREY) + ' --' +  color(*LIGHTRED) + '> ' + color())
-    k = readkey()
+    k = getch()
     echo ('\r\n')
     if k in ['h','?']:
       help()
@@ -221,7 +221,7 @@ def main(editing_user=None):
         continue
       echo ('\r\nNew value is: %r' % (newValue,))
       echo ('\r\n\r\n save? [%sn%s] ' % (color(*LIGHTGREEN), color()))
-      k = readkey()
+      k = getch()
       if k.lower() == 'y':
         getuser(editing_user).set(field, newValue)
         echo ('\r\n %s*%s Saved' % (color(*LIGHTGREEN), color()))
@@ -230,9 +230,9 @@ def main(editing_user=None):
       if not delfield: continue
       echo ('\r\n\r\nDeleting field: %s\r\n' % (delfield,))
     elif isSysop and k == 'c':
-      echo ('\r\n\r\nFind user [' + ' '*int(cfg.get('nua','max_user')) + ']' +
-          '\b'*(int(cfg.get('nua','max_user'))+1))
-      find = finduser(readline(int(cfg.get('nua','max_user'))))
+      echo ('\r\n\r\nFind user [' + ' '*int(db.cfg.get('nua','max_user')) + ']' +
+          '\b'*(int(db.cfg.get('nua','max_user'))+1))
+      find = finduser(readline(int(db.cfg.get('nua','max_user'))))
       if find:
         echo ('\r\n\r\nNew user: %s' % (find,))
         editing_user = find

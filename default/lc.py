@@ -14,22 +14,17 @@ __license__ = 'ISC'
 __url__ = 'http://1984.ws'
 
 
-deps = ['bbs']
-
 def main(recordonly=False):
   global udb
-  udb = openudb('lc') # open sorted call log
+  udb = db.openudb('lc') # open sorted call log
 
   def build():
     " build and return last callers list for display "
     global udb
-    callers = [(user.lastcall, user.handle) for user in listusers()]
+    callers = [(user.lastcall, user.handle) for user in userbase.listusers()]
     callers.sort ()
     callers.reverse ()
-    lock()
     udb['callers'] = callers
-    commit()
-    unlock()
 
 
   if recordonly:
@@ -39,38 +34,43 @@ def main(recordonly=False):
   def lc_retrieve():
     " retrieve window paint data, list of last callers "
     return '\n'.join([
-      user.handle.ljust   (int(cfg.get('nua','max_user'))+1) + \
-      user.location.ljust (int(cfg.get('nua','max_origin'))+1) + \
+      user.handle.ljust   (int(db.cfg.get('nua','max_user'))+1) + \
+      user.location.ljust (int(db.cfg.get('nua','max_origin'))+1) + \
         ('%s ago'%(timeago)).rjust (12) + \
         ('   Calls: '+str(user.calls)) .ljust (13) \
                  for timeago, user in \
-                        [(asctime(timenow() -lc), getuser(name)) \
-                         for lc, name in udb['callers'] if userexist(name)]])
+                        [(strutils.asctime(time.time() -lc), userbase.getuser(name)) \
+                         for lc, name in udb['callers'] if userbase.userexist(name)]])
 
   session = getsession()
+  terminal = getsession().getterminal()
   def refresh():
     session.activity = 'Viewing Last Callers'
     y=14
-    h=session.height -y+1
+    h=terminal.rows -y+1
     w=67
     x=(80-w)/2 # ansi is centered for 80-wide
-    echo (color() + cls())
+    echo (terminal.clear + terminal.color)
     if h < 5:
-      echo (color(*LIGHTRED) + 'Screen size too small to display last callers' \
-            + color() + '\r\n\r\npress any key...')
-      readkey()
+      echo (terminal.bright_green + 'Screen size too small to display last callers' \
+            + terminal.normal + '\r\n\r\npress any key...')
+      getch()
       return False
     pager = ParaClass(h, w, y, (80-w)/2-2, xpad=2, ypad=1)
-    pager.colors['inactive'] = color(RED)
+    pager.colors['inactive'] = terminal.red
     pager.partial = True
     pager.lowlight ()
     echo (pos())
     showfile ('art/lc.ans')
     data = lc_retrieve()
     if len(data) < h:
-      footer='%s-%s (q)uit %s-%s'%(color(*DARKGREY),color(),color(*DARKGREY),color())
-    else: footer='%s-%s up%s/%sdown%s/%s(q)uit %s-%s' % (color(*DARKGREY),color(),
-      color(*LIGHTRED),color(),color(*LIGHTRED),color(),color(*DARKGREY),color())
+      footer='%s-%s (q)uit %s-%s' % (terminal.bright_gray,
+          terminal.normal, terminal.bright_grey, terminal.normal)
+    else:
+      footer='%s-%s up%s/%sdown%s/%s(q)uit %s-%s' % (terminal.bright_gray,
+          terminal.normal, terminal.bright_red, terminal.normal,
+          terminal.bright_red, terminal.normal, terminal.bright_gray,
+          terminal.normal)
     pager.title (footer, 'bottom')
     pager.update (data)
     pager.interactive = True

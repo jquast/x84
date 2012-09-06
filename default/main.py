@@ -11,25 +11,26 @@ __url__ = 'http://1984.ws'
 deps = ['bbs']
 
 def main():
+  term = getterminal()
   def refresh():
     " refresh main menu screen "
     getsession().activity = 'Main Menu'
-    echo (color() + cursor_show() + cls() +'\n')
+    echo (''.join((term.normal, term.normal_cursor, term.clear, '\rn')))
     showfile ('art/main_alt.asc')
     echo ('\r\n\r\n > ')
   def sorry():
     echo ('\r\n\r\n  ' + color(*LIGHTRED) + 'Sorry')
-    readkey (1)
+    getch (1)
     refresh ()
   def pak():
     echo ('\r\n\r\n  ' + color() + 'Press any key...')
-    readkey ()
+    getch ()
     refresh ()
 
   refresh ()
 
   while True:
-    choice = inkey()
+    choice = getch()
     # jojo taught me this
     #if getsession().getuser().handle == 'dingo' and not 'sysop' in \
     #getsession().getuser().groups:
@@ -47,6 +48,9 @@ def main():
       gosub ('wfc', getsession().getuser().handle)
       refresh ()
     elif choice.lower() == 'f':
+      gosub ('xfer')
+      refresh ()
+      pak ()
       sorry ()
     elif choice.lower() == 'n':
       gosub ('chkmsgs')

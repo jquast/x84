@@ -8,7 +8,8 @@ __copyright__ = ['Copyright (c) 2009 Jeffrey Quast']
 __license__ = 'ISC'
 __url__ = 'http://1984.ws'
 
-deps = ['bbs']
+import time
+#deps = ['bbs']
 
 def main(login_handle='wfc'):
   # we use a special 'wfc' user for the
@@ -35,7 +36,7 @@ def main(login_handle='wfc'):
   if user.has_key('blank timeout'):
     blank = user.get('blank timeout')
   else: blank = 1800
-  lastfresh = timenow()
+  lastfresh = time.time()
   session = getsession()
   isSysop = 'sysop' in user.groups
 
@@ -87,8 +88,8 @@ def main(login_handle='wfc'):
       echo (color(BLUE)+color(INVERSE)+'   SYSTEM   ')
       keys.update ('Last call: X X ago\n')
 
-    d= time.strftime('%D', localtime(timenow()))
-    t= time.strftime('%r', localtime(timenow())).replace(' ','').replace('M','').lower()
+    d= time.strftime('%D', localtime(time.time()))
+    t= time.strftime('%r', localtime(time.time())).replace(' ','').replace('M','').lower()
     echo (color() + ansi.pos(13,4) + d \
                   + ansi.pos(13,5) + t)
     return clist, info
@@ -111,7 +112,7 @@ def main(login_handle='wfc'):
       for n, t in enumerate(s.terminals):
         termdata += '\n %i:' % n
         if t.attachtime:
-          termdata += ' attached %s ago' % asctime(timenow()- t.attachtime)
+          termdata += ' attached %s ago' % asctime(time.time()- t.attachtime)
         if t.spy:
           termdata += ' (%s spying)' % t.spy
         termdata += '\n'
@@ -122,7 +123,7 @@ def main(login_handle='wfc'):
     return \
         'Activity: %s\n' % (s.activity,) \
       + 'Idle: %s, ' % (idle,) \
-      + 'Logged in %s ago\n' % (asctime(timenow() - s.logintime),) \
+      + 'Logged in %s ago\n' % (asctime(time.time() - s.logintime),) \
       + '%s\n' % (userdata,) \
       + '%s\n' % (groups,) \
       + termdata
@@ -169,7 +170,7 @@ def main(login_handle='wfc'):
         continue
       if data == ' ':
         info.update (describe(sessions[clist.selection]))
-        lastfresh = timenow()
+        lastfresh = time.time()
         continue
 
       remote = sessions[clist.selection]
@@ -198,7 +199,7 @@ def main(login_handle='wfc'):
         else:
           echo (color() + clear() + getsession(remote.sid).buffer['resume'].getvalue())
           echo (color() + attr(SBLINK) + '\npress any key')
-          readkey ()
+          getch ()
           dirty=True
         continue
 
@@ -229,7 +230,7 @@ def main(login_handle='wfc'):
         continue
 
       elif remote and data == 'L' and isSysop:
-        gosub (db.cfg.matrixscript)
+        gosub (db.cfg.get('system', 'matrixscript'))
         dirty = True
         continue
 
@@ -244,7 +245,7 @@ def main(login_handle='wfc'):
         echo (info.pos(1,2) + 'Set refresh delay in seconds')
         echo (info.pos(1,3) + 'or 0 to disable (%sfloat%s): %s' \
           % (color(*LIGHTBLUE), color(*DARKGREY), color(*WHITE)))
-        ndelay = readline (max=4, value=str(delay))
+        ndelay = readline (width =4, value=str(delay))
         try:
           delay = float(ndelay)
           user.set('screen delay', delay)
@@ -253,7 +254,7 @@ def main(login_handle='wfc'):
         echo (info.pos(1,5) + 'Set screen blank timeout in seconds')
         echo (info.pos(1,6) + 'or 0 to disable (%sint%s): %s' \
           % (color(*LIGHTBLUE), color(*DARKGREY), color(*WHITE)))
-        nblank = readline (max=8, value=str(blank))
+        nblank = readline (width =8, value=str(blank))
         try:
           blank = int(nblank)
           user.set('blank timeout', blank)
@@ -266,8 +267,8 @@ def main(login_handle='wfc'):
       if clist.exit:
         break
 
-    if clist.moved or (delay and timenow() -lastfresh > delay):
+    if clist.moved or (delay and time.time() -lastfresh > delay):
       info.update (describe(sessions[clist.selection]))
-      lastfresh = timenow()
+      lastfresh = time.time()
       clist.moved = False
       continue

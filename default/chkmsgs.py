@@ -2,16 +2,18 @@ deps = ['bbs']
 
 def main():
   getsession().activity = 'Checking for new messages'
-  user = getuser(getsession().handle)
+  user = userbase.getuser(getsession().handle)
+  term = getsession().getterminal()
 
-  echo (cls() + color())
+  print repr(term.clear), repr(term.color)
+  echo (term.clear + term.color)
   showfile ('art/msgs.asc')
 
   # check for new private messages
   echo ('\r\n\r\n  Checking for private messages... '); oflush()
 
   # privmsgs returns message record numbers only
-  privmsgs = listprivatemsgs(recipient=user.handle)
+  privmsgs = msgbase.listprivatemsgs(recipient=user.handle)
   newmsgs = [msg for msg in privmsgs if not getmsg(msg).read]
 
   echo ('%s messages, %s new\r\n' % (len(privmsgs), len(newmsgs)))
@@ -20,7 +22,7 @@ def main():
     echo ('\r\n  --> Read new private messages? [yna]   <--' + '\b'*5)
     echo (color())
     while True:
-      k = readkey()
+      k = getch()
       if k.lower() == 'y':
         savescreen = getsession().buffer['resume'].getvalue()
         gosub('msgreader', [msg for msg in newmsgs])
@@ -37,7 +39,7 @@ def main():
   # check for new public messages
   echo ('\r\n\r\n  Checking for public messages...'); oflush()
 
-  pubmsgs = listpublicmsgs()
+  pubmsgs = msgbase.listpublicmsgs()
   newmsgs = [msg for msg in pubmsgs if not getsession().handle in getmsg(msg).read]
 
   echo ('%s messages, %s new\r\n' % (len(pubmsgs), len(newmsgs)))
@@ -46,7 +48,7 @@ def main():
     echo ('\r\nRead new public messages? [yna] ')
     echo (color())
     while True:
-      k = readkey()
+      k = getch()
       if k.lower() == 'y':
         savescreen = getsession().buffer['resume'].getvalue()
         gosub('msgreader', [msg for msg in newmsgs])

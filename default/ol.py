@@ -15,14 +15,14 @@ __copyright__ = ['Copyright (c) 2008, 2009 Jeffrey Quast']
 __license__ = 'ISC'
 __url__ = 'http://1984.ws'
 
-deps = ['bbs','ui/editor']
+deps = ['bbs'] #,'ui/editor']
 
 def init ():
   global MAX_INPUT, HISTORY, ONCE_PER, udb
   MAX_INPUT = 120 # character limit for input
   HISTORY = 200   # limit history in buffer
   ONCE_PER = 1   # one message per 24 hours, 0 to disable
-  udb = openudb ('oneliner')
+  udb = db.openudb ('oneliner')
   if not udb.has_key('lines'):
     rebuild_db(udb)
 
@@ -47,7 +47,7 @@ def main ():
       l = '%s(%s' % (color(*DARKGREY), c)
       r = '%s)%s' % (color(*DARKGREY), color())
       # rjust..
-      txt += strpadd(l+name+r, int(cfg.get('nua','max_user'))+2) + text + '\n'
+      txt += strpadd(l+name+r, int(db.cfg.get('nua','max_user'))+2) + text + '\n'
     if txt.endswith('\n'): txt = txt[:-1]
     buffer.update (txt, refresh=True)
     buffer.end (silent=True)
@@ -64,7 +64,7 @@ def main ():
   def statusline (text='SAY SUMthiNG?', c=''):
     " display text in status line "
     w = 33
-    echo (pos((session.width/2)-(w/2), session.height-3))
+    echo (pos((terminal.columns/2)-(w/2), terminal.rows-3))
     echo ('%s%s%s' % (color(), c, strpadd(text, w, align='center', ch=' ')))
 
   def saysomething():
@@ -82,7 +82,7 @@ def main ():
           statusline ('BURNiNG TO rOM, PlEASE WAiT!', color(*LIGHTRED))
           oflush ()
           addline (comment.data().strip())
-          getuser(handle()).set ('lastliner', timenow())
+          userbase.getuser(handle()).set ('lastliner', timenow())
           redraw ()
           break
         elif comment.exit:
@@ -96,34 +96,36 @@ def main ():
 
   if ONCE_PER:
     # test for existance of .lastliner
-    if not getuser(handle()).has_key('lastliner'):
-      getuser(handle()).set ('lastliner', 1.0)
+    if not userbase.getuser(handle()).has_key('lastliner'):
+      userbase.getuser(handle()).set ('lastliner', 1.0)
 
   flushevent ('oneliner_update')
 
   forceRefresh = True
 
+  terminal = getsession().getterminal()
   while True:
     getsession().activity = 'Reading 1liners'
 
     if forceRefresh:
       echo (cls() + color() + cursor_hide())
-      if session.width < 78 or session.height < 20:
+      if terminal.columns < 78 or terminal.rows < 20:
         echo (color(*LIGHTRED) + 'Screen size too small to display oneliners' \
               + color() + '\r\n\r\npress any key...')
-        readkey()
+        getch ()
         return False
-      art = fopen('art/wall.ans').readlines()
-      mw = maxanswidth(art)
-      x = (getsession().width/2)- (mw/2)
+      art = fileutils.fopen('art/wall.ans').readlines()
+      mw = strutils.maxanswidth(art)
+      print terminal.columns, mw
+      x = (terminal.columns /2)- (mw/2)
 
-      lr = YesNoClass([x+mw-17, session.height-3])
+      lr = YesNoClass([x+mw-17, terminal.rows-3])
       lr.interactive = True
       lr.highlight = color(GREEN)+color(INVERSE)
 
-      buffer = ParaClass(session.height-11, session.width-20, 8, 10, xpad=0, ypad=1)
+      buffer = ParaClass(terminal.rows-11, terminal.columns-20, 8, 10, xpad=0, ypad=1)
       buffer.interactive = True
-      comment = HorizEditor(w=mw, y=session.height-2, x=x, xpad=1, max=MAX_INPUT)
+      comment = HorizEditor(w=mw, y=terminal.rows-2, x=x, xpad=1, max=MAX_INPUT)
       comment.colors['active'] = color(BLUE)
       comment.partial = True
       comment.interactive = True
@@ -141,32 +143,32 @@ def main ():
     elif event == 'input':
       if data in ['\030','q']:
         break
-      if data in [KEY.ENTER,KEY.LEFT,KEY.RIGHT,'y','n','Y','N','h','l','H','L']:
+      if data in [terminal.KEY_ENTER,terminal.KEY_LEFT,terminal.KEY_RIGHT,'y','n','Y','N','h','l','H','L']:
         choice = lr.run (key=data)
-        if choice == RIGHT:
+        if choice == terminal.KEY_RIGHT:
           # exit
           break
-        elif choice == LEFT:
+        elif choice == terminal.KEY_LEFT:
           # write something
-          if ONCE_PER and timenow() - getuser(handle()).lastliner < (60*60*ONCE_PER):
+          if ONCE_PER and timenow() - userbase.getuser(handle()).lastliner < (60*60*ONCE_PER):
             statusline (bel + 'YOU\'VE AlREADY SAiD ENUff!', color(*LIGHTRED) + color(INVERSE))
-            inkey (1.5)
+            getch (1.5)
             lr.right ()
             continue
           # write something
           saysomething ()
       elif str(data).lower() == '\003':
         # sysop can clear history
-        u = getuser(handle())
+        u = userbase.getuser(handle())
         if not 'sysop' in u.groups:
           continue
         lr.right ()
         statusline (color(RED) + 'ERaSE HiSTORY ?!', color(RED) + color(INVERSE))
         lr.interactive = False
         choice = lr.run (key=data)
-        if choice == LEFT:
+        if choice == terminal.KEY_LEFT:
           statusline ('ThE MiNiSTRY Of TRUTh hONORS YOU', color(*WHITE))
-          inkey (1.6)
+          getch (1.6)
           rebuild_db (udb)
           redraw ()
         statusline ()

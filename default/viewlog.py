@@ -19,7 +19,7 @@ def update():
   lastupdate = datetime.datetime.now()
   l=[]
   last_d=last_h=last_c=None
-  records = sorted(openudb('eventlog').items ()) # so wrong.
+  records = sorted(db.openudb('eventlog').items ()) # so wrong.
   for t, msg in records:
     d=t.strftime('%b %d')
     h=t.strftime('%H:%M:%S')
@@ -39,7 +39,7 @@ def init():
 
 def main():
   global printbuf, lastupdate
-  eventlog = openudb('eventlog')
+  eventlog = db.openudb('eventlog')
 
   def refresh(pager=None, pb=None):
     # transform the log buffer into a printable form
@@ -50,12 +50,12 @@ def main():
       echo (color(*LIGHTRED) + 'screen height must be at least %i, ' \
             'but is %i.' % (20, getsession().height))
       echo (color() + '\r\n\r\nPress any key...')
-      readkey(); return False
+      getch (); return False
     if w < 40:
       echo (color(*LIGHTRED) + 'screen width must be at least %i, ' \
             'but is %i.' % (40, getsession().width))
       echo (color() + '\r\n\r\nPress any key...')
-      readkey(); return False
+      getch (); return False
     if not pb or lastupdate < sorted(eventlog.keys())[-1]:
       # refresh the buffer content
       pb= update()
