@@ -8,27 +8,22 @@ __copyright__ = ['Copyright (c) 2006, 2007, 2008, 2009 Jeffrey Quast']
 __license__ = 'ISC'
 __url__ = 'http://1984.ws'
 
-# hard imports, anything dervied here
-# must have system restarted when changed
-from bbs import echo, readkey
-from ansi import color, pos, attr
-from ansiwin import InteractiveAnsiWindow
-from keys import KEY
+from output import echo
+from input import getch
+import ansiwin
+import ansi
+import curses
 import log
 
-# soft imports, anything derived from
-# these may be changed
-deps= ['strutils', 'ansi']
-
-class LightClass (InteractiveAnsiWindow):
+class LightClass (ansiwin.InteractiveAnsiWindow):
   KMAP = { \
-    'home':  ['y', KEY.HOME],
-    'end':   ['n', KEY.END],
-    'pgup':  ['h', KEY.PGUP],
-    'pgdown':['l', KEY.PGDOWN],
-    'up':    ['k', KEY.UP],
-    'down':  ['j', KEY.DOWN],
-    'quit':  ['q', KEY.ESCAPE, '\030'] \
+    'home':  ['y', curses.KEY_HOME],
+    'end':   ['n', curses.KEY_END],
+    'pgup':  ['h', curses.KEY_PPAGE],
+    'pgdown':['l', curses.KEY_NPAGE],
+    'up':    ['k', curses.KEY_UP],
+    'down':  ['j', curses.KEY_DOWN],
+    'quit':  ['q', curses.KEY_EXIT] \
   }
 
   alignment='left'
@@ -48,7 +43,7 @@ class LightClass (InteractiveAnsiWindow):
   moved = True
 
   def __init__(self, h, w, y, x, xpad=0, ypad=0):
-    InteractiveAnsiWindow.__init__ (self, h, w, y, x)
+    ansiwin.InteractiveAnsiWindow.__init__ (self, h, w, y, x)
 
     self.content = []
     self.lastkey = ' '
@@ -92,7 +87,7 @@ class LightClass (InteractiveAnsiWindow):
 
   def resize(self, h=-1, w=-1, y=-1, x=-1, refresh=True):
     " Adjust visible bottom "
-    InteractiveAnsiWindow.resize (self, h, w, y, x)
+    ansiwin.InteractiveAnsiWindow.resize (self, h, w, y, x)
     # Drawing
     self.visibleWidth, self.visibleHeight = self.w-2, self.h-1 # margins
 
@@ -111,8 +106,16 @@ class LightClass (InteractiveAnsiWindow):
     self.oitem, self.oshift = self.item, self.oshift
     if entry >= len(self.content):
       raise ValueError, "entry out of bounds in display_entry. entry=%s len(list)=%s" % (entry, len(self.content))
-    echo (strpadd(self.content[entry], paddlen=self.visibleWidth, align=self.alignment))
-    echo (color())
+    def align(s, n):
+      if self.alignment == 'left':
+        return s.ljust(n)
+      elif self.alignment == 'right':
+        return s.rjust(n)
+      elif self.alignment == 'center':
+        return s.center(n)
+      assert 0, 'invalid alignment: %(alignment)s' % self
+    echo (align(self.content[entry], self.visibleWidth))
+    echo (ansi.color())
 
   def refresh (self):
     """ display all viewable items in lightbar object.
@@ -304,7 +307,7 @@ class LightClass (InteractiveAnsiWindow):
       # check for and refresh before reading key
       chkrefresh ()
       if not key or not self.interactive:
-        key = readkey(timeout)
+        key = getch(timeout)
         if key == None:
           self.timeout = True
         else:
@@ -315,7 +318,7 @@ class LightClass (InteractiveAnsiWindow):
 
       self.setselection()
       # returns
-      if key in [KEY.ENTER]:
+      if key in [curses.KEY_ENTER]:
         return self.selection
       elif self.exit:
         return False

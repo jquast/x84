@@ -1,155 +1,180 @@
-"""
- Message base for 'The Progressive' BBS.
- Copyright (c) 2007 Jeffrey Quast
- $Id: userbase.py,v 1.28 2010/01/02 00:39:33 dingo Exp $
-"""
-__author__ = 'Jeffrey Quast <dingo@1984.ws>'
-__contributors__ = []
-__copyright__ = ['Copyright (c) 2007 Jeffrey Quast', \
-                 'Copyright (C) 2005 Johannes Lundberg']
-__license__ = 'ISC'
+from session import getsession
+from dbproxy import DBProxy
 
-import db, persistent
-import time
+db = DBProxy('userbase')
 
-def finduser(find):
-  " return proper case for handles matched case insensitively "
-  for handle in db.users.keys():
-    if handle and handle.lower()==find.lower():
-      # return match
-      return handle
-  # return null (fail)
-  return None
+# XXX Begin Compatibility
+# XXX Rename / Cut
+def finduser(handle):
+  " Given handle, discover and return database key, matched case-insensitive "
+  for k in db.keys():
+    if k.lower() == handle.lower():
+      return k
 
 def userexist(handle):
   " return True if user exists "
-  return db.users.has_key(handle)
+  return db.has_key(handle)
 
 def authuser(handle, try_pass):
   """
-    Return True if user by key of handle exists, has a password, and
-    that password matches the try_pass argument. Setting the password
-    to None effectively disables authentication of an account.
+    Return True if user by key of handle exists, has a password, the
+    password matches the try_pass argument, and password is not None.
   """
-  h=finduser(handle)
-  return h and db.users[h].password \
-    and try_pass == db.users[h].password
+  h= finduser(handle)
+  if h is None:
+    return None
+  u= getuser(h)
+  if u is None:
+    return None
+  return u['password'] is not None and try_pass == u.password
 
 def getuser(handle):
-  " return user record, retrieved by handle, return None if not found "
-  if db.users.has_key(handle):
-    return db.users[handle]
-  return None
+  " Return User object instance, retrieved by handle. "
+  return db[handle]
 
-def listusers(allUsers=False):
+def listusers():
   """
-  return list of user record instances by iterating over all handle keys,
+  Return list of user record instances by iterating over all handle keys,
   users without a password are discluded unless allUsers is set to True.
   """
-  return [db.users[h] for h in db.users.keys() if allUsers or db.users[h].password]
+  return db.values ()
 
 def listgroups():
-  " return list of all groups on active accounts "
-  groups = []
+  " Return list of all groups on active accounts. "
+  groups = set()
   for user in listusers():
-    for group in user.groups:
-      if group not in groups:
-        groups.append (group)
+    map(groups.add, user.groups)
   return groups
 
 def groupmembers():
-  " return dict of groups containing list of members "
-  groups = {}
-  for group in listgroups():
-    groups[group] = []
-  for user in listusers():
-##IF 0 (transitionary)
-#    if user.__dict__.has_key('groups'):
-##ENDIF
-      for group in user.groups:
-        groups[group].append (user.handle)
-  return groups
+  " return dict of groups containing list of members. "
+  return dict([(grp, [u for u in db.values() if grp in u.groups])
+    for grp in listgroups()])
 
 def membersofgroup(group):
-  " return list of users found in group by name "
-  groups = groupmembers()
-  if groups.has_key(group):
-    return groups[group]
-  return None
+  " return list of users found in group by name. "
+  return groupmembers()[group]
+# XXX Rename
+# XXX Begin Compatibility
 
-class User(persistent.Persistent):
-  " instance for fresh database record "
-  handle = 'undefined'
-  calls = 0
-  lastcall = 0
-  groups = []
-  location = ''
-  hint = ''
-  saved = False
-  postrefs = []
-  pubkey = None
-  password = None
-  plan = ''
+class User(object):
+  _handle = None
+  _calls = 0
+  _lastcall = 0
+  _groups = []
+  _location = ''
+  _hint = ''
+  _saved = False
+  _postrefs = []
+  _password = None
+  _plan = ''
 
-  def __init__ (self):
-    self.creationtime = time.time()
+  @property
+  def calls(self):
+    return self._calls
+  @calls.setter
+  def calls(self, value):
+    assert type(value) is int
+    self._calls = value
 
-  @db.locker
+  @property
+  def handle(self):
+    return self._handle
+  @handle.setter
+  def handle(self, value):
+    assert type(value) is unicode
+    self._handle = value
+
+  @property
+  def lastcall(self):
+    return self._lastcall
+  @lastcall.setter
+  def lastcall(self, value):
+    assert type(value) is float
+    self._lastcall = value
+
+  @property
+  def groups(self):
+    return self._groups
+  @groups.setter
+  def groups(self, value):
+    assert type(value) is list
+    self._groups = value
+
+  @property
+  def location(self):
+    return self._location
+  @location.setter
+  def location(self, value):
+    assert type(value) is unicode
+    self._location = value
+
+  @property
+  def hint(self):
+    return self._hint
+  @hint.setter
+  def hint(self, value):
+    assert type(value) is unicode
+    self._hint = value
+
+  @property
+  def postrefs(self):
+    return self._postrefs
+  @postrefs.setter
+  def postrefs(self, value):
+    assert type(value) is list
+    self._postrefs = value
+
+  @property
+  def password(self):
+    return self._password
+  @password.setter
+  def password(self, value):
+    assert type(value) is unicode
+    self._password = value
+
+  @property
+  def plan(self):
+    return self._plan
+  @plan.setter
+  def plan(self, value):
+    assert type(value) is unicode
+    self._plan = value
+
+# XXX Compatibility
+# XXX Rename / Cut
   def set (self, key, value):
-    db.users[self.handle].__setattr__ (key, value)
+    db[self.handle].__setattr__ (key, value)
 
   def get(self, key):
-    return db.users[self.handle].__dict__[key]
+    return db[self.handle].__getattr__(key)
 
   def has_key(self, key):
-    return db.users[self.handle].__dict__.has_key(key)
+    return hasattr(db[self.handle], key)
 
-  def keys(self):
-    return db.users[self.handle].__dict__.keys()
-
-  @db.locker
   def add(self):
-    " commit this User instance as new record in the database."
-    # First new user is added to sysop group.
     if not len(listusers(allUsers=True)) and not 'sysop' in self.groups:
-      print 'userbase: first new user', self.handle, 'becomes sysop.'
-      self.groups.append ('sysop')
-    if db.users.has_key(self.handle):
-      print "userbase.py: obliterating old user record for '" + self.handle + "'!"
-    db.users[self.handle] = self
+      logger.warn ('first new user becomes sysop %(handle)s.', self)
+      self.groups = list(('sysop',))
+    db[self.handle] = self
 
-  @db.locker
   def delete(self):
-    " delete a user from the database "
-    del db.users[self.handle]
+    del db[self.handle]
 
-  @db.locker
   def addgroup (self, group):
-    " place user in a group (string), return False if user is already in group"
-    if not group in db.users[self.handle].groups:
-      db.users[self.handle].groups.append (group)
-      return True
-
-  @db.locker
+    db[self.handle].groups = [g for g in db[self.handle].groups if g != group] \
+        + [group,]
   def delgroup (self, group):
-    " remove user from group, return False if user was not in group "
-    if group in self.groups:
-      db.users[self.handle].groups.remove (group)
-      return True
+    db[self.handle].groups = [g for g in db[self.handle].groups if g != group]
 
   def posts(self):
-    " return list of message indicies user has posted "
-    return self.postrefs
+    return self._postrefs
 
   def numPosts(self):
-    " return number of messages user has posted "
-    return len(self.postrefs)
+    return len(self._postrefs)
 
-  @db.locker
   def post(self, msg_index):
-    " register a post by user "
-    if not type(msg_index) == type(int):
-      raise ValueError, "msg_index must be an integer msg.number"
-    self.postrefs.append (msg_index)
-
-
+    assert type(msg_index) is int
+    db[self.handle].postrefs = list((msg_index,) + db[self.handle].postrefs)
+# XXX End compatibility
+# XXX Rename / Cut

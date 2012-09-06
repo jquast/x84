@@ -26,7 +26,7 @@ setup(name         = 'X84',
                                         'default/art/*.ans',
                                         'default/art/*.asc'],
       },
-      requires     = ['blessings'],
+      requires     = ['blessings', 'sauce', 'sqlitedict', 'xmodem'],
       scripts      = ['x84'],
 )
 

@@ -1,5 +1,4 @@
-*.cfgc
-data/system*
+data/*.sqlite3
 *.log
 *.pyc
 *.swp

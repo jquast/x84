@@ -10,11 +10,12 @@ __author__ = "Jeffrey Quast <dingo@1984.ws>"
 __copyright__ = "Copyright (c) 2006, 2007, 2009 Jeffrey Quast <dingo@1984.ws>"
 __license__ = "ISC"
 
-from bbs import echo, readkey
-from keys import KEY
+import curses
+from input import getch
+from output import echo
+from strutils import ansilen chkseq seqc
+from ansi import color
 from ansiwin import InteractiveAnsiWindow
-
-deps = ['strutils','ansi']
 
 class ParaClass(InteractiveAnsiWindow):
   # represents the visible width and height, which may be smaller than the
@@ -43,13 +44,13 @@ class ParaClass(InteractiveAnsiWindow):
     'refresh': ['\014'],
     'goto':    ['G'],
     'gotopct': ['%'],
-    'exit':    [KEY.ESCAPE, 'q', '\030'],
-    'up':      [KEY.UP,'k'],
-    'down':    [KEY.DOWN,'j'],
-    'end':     [KEY.END, 'L'],
-    'home':    [KEY.HOME, 'H'],
-    'pgup':    [KEY.PGUP, KEY.LEFT, 'h', 'K'],
-    'pgdown':  [KEY.PGDOWN, KEY.RIGHT, 'l', 'J', ' '] \
+    'exit':    [curses.KEY_EXIT, 'q'],
+    'up':      [curses.KEY_UP, 'k'],
+    'down':    [curses.KEY_DOWN, 'j'],
+    'end':     [curses.KEY_END, 'L'],
+    'home':    [curses.KEY_HOME, 'H'],
+    'pgup':    [curses.KEY_PPAGE, curses.KEY_LEFT, 'h', 'K'],
+    'pgdown':  [curses.KEY_NPAGE, curses.KEY_RIGHT, 'l', 'J', ' '] \
   }
 
   debug = False
@@ -193,7 +194,8 @@ class ParaClass(InteractiveAnsiWindow):
     if row == -1:
       row = self.row
     dataline = self.getRow(row)
-    self.writeString(dataline +self.glyphs['erase']*(self.visibleWidth-ansilen(dataline)), 0, row)
+    self.writeString(dataline
+        +self.glyphs['erase']*(self.visibleWidth-ansilen(dataline)), 0, row)
 
   def data(self):
     """ @return: Data in content buffer as one string, each row joined by newline """
@@ -460,14 +462,7 @@ class ParaClass(InteractiveAnsiWindow):
     """
     if self.debug and key == '\003':
       print self.data()
-    elif key.isdigit():
-      # buffer up digits, 10j moves down 10 lines
-      if self.numAction == -1:
-        self.numAction = int(key)
-      else:
-        self.numAction = int(str(self.numAction)+key)
-      return
-    elif key in self.KMAP['refresh']: self.refresh ()
+    if   key in self.KMAP['refresh']: self.refresh ()
     elif key in self.KMAP['goto']:    self.goto    (self.numAction)
     elif key in self.KMAP['gotopct']: self.gotopct (self.numAction)
     elif key in self.KMAP['up']:      self.up      (self.numAction)
@@ -496,7 +491,7 @@ class ParaClass(InteractiveAnsiWindow):
         self.refresh ()
         self.fixate ()
       if not key:
-        key = readkey (timeout)
+        key = getch (timeout)
         self.timeout = (not key) # Boolean: True if we timed out
       self.lastkey = key
       self.process_keystroke (key)

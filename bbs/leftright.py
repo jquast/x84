@@ -5,9 +5,10 @@ __copyright__ = "Copyright (c) 2008 Jeffrey Quast"
 __version__ = "$Id: leftright.py,v 1.3 2009/05/31 16:12:05 dingo Exp $"
 __license__ = "ISC"
 
-from bbs import echo, readkey
+#from bbs import echo, getch
 from ansi import *
-deps = ['keys']
+import curses
+#deps = ['keys']
 
 LEFT, RIGHT = 1, 2
 
@@ -125,7 +126,7 @@ class LeftRightClass:
 
       # read from input
       if not key:
-        key = readkey(timeout)
+        key = getch(timeout)
         s.lastkey = key
         if key == None:
           s.timeout = True
@@ -133,18 +134,18 @@ class LeftRightClass:
       # act on key
       if key in ['\t', ' ']:
         s.flip()
-      elif key in ['h', KEY.LEFT]:
+      elif key in ['h', curses.KEY_LEFT]:
         s.left ()
-      elif key in ['l', KEY.RIGHT]:
+      elif key in ['l', curses.KEY_RIGHT]:
         s.right ()
-      elif key in ['q', KEY.ESCAPE,'\030']:
+      elif key in ['q', curses.KEY_EXIT]:
         s.exit = True
-      elif key in [KEY.ENTER, 'y', 'n']:
+      elif key in [curses.KEY_ENTER, 'y', 'n']:
         # yes is on left side
-        if key == 'y' or (key == KEY.ENTER and s.isleft()):
+        if key == 'y' or (key == curses.KEY_ENTER and s.isleft()):
           s.left ()
         # and no on right
-        elif key == 'n' or (key == KEY.ENTER and s.isright()):
+        elif key == 'n' or (key == curses.KEY_ENTER and s.isright()):
           s.right ()
         return s.state # selection was made
       if s.interactive or s.exit:

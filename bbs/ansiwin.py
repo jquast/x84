@@ -7,7 +7,7 @@ __version__ = "$Id: ansiwin.py,v 1.2 2009/05/31 16:11:26 dingo Exp $ #"
 from ascii import bel
 import ansi
 import types
-from bbs import echo
+from output import echo
 from strutils import ansilen
 
 class AnsiWindow():
