@@ -1,9 +1,0 @@
-#!/usr/local/bin/python2.5
-# EASY-INSTALL-ENTRY-SCRIPT: 'ZODB3==3.10.0b3','console_scripts','zeopasswd'
-__requires__ = 'ZODB3==3.10.0b3'
-import sys
-from pkg_resources import load_entry_point
-
-sys.exit(
-   load_entry_point('ZODB3==3.10.0b3', 'console_scripts', 'zeopasswd')()
-)
