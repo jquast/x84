@@ -3,32 +3,30 @@
  This script is called after sucessfull login.
 """
 
-deps = ['bbs']
-lastupdate = 0
-
 def main(login_handle):
+  import time
   # setuid
-  loginuser (login_handle)
+  user = getuser(login_handle)
+  user.calls += 1
+  user.lastcall = time.time()
 
-  getsession().activity = 'Intro screen'
-  getsession().persistent = True
+  session = getsession()
+  session.activity = 'Intro screen'
 
   # retrieve user record (for settings)
-  user = getsession().getuser()
-  term = getsession().getterminal()
+  term = getterminal()
 
-  # rebuild 'last callers' log after each login
-  if not lastupdate or time.time() -lastupdate > 20:
-    gosub('lc', True)
+  # rebuild last caller db
+  gosub('lc', True)
+  session.activity = 'Intro screen'
 
-  getsession().activity = 'Intro screen'
   gosub('chkmsgs')
+  session.activity = 'Intro screen'
 
-  getsession().activity = 'Intro screen'
   echo ('\r\n\r\nQuick login? [yn] ')
   while True:
     k = getch()
-    if isinstance(k, str):
+    if type(k) is str:
       if k.lower() == 'y':
         goto ('main')
       elif k.lower() == 'n':
@@ -36,12 +34,15 @@ def main(login_handle):
 
   # last callers
   gosub('lc')
+  session.activity = 'Intro screen'
 
   # news
   gosub('news')
+  session.activity = 'Intro screen'
 
   # one liners
   gosub('ol')
+  session.activity = 'Intro screen'
 
   # jump to main
   goto('main')
