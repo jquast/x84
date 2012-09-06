@@ -3,16 +3,16 @@
 
 import userbase
 import msgbase
-import ini
 from ansi import pos
 # end XXX cut/transform XXX
+import ini
 from session import getsession
 from fileutils import abspath, fopen, ropen
 from output import echo, oflush, delay
 from input import getch, readline, readlineevent
 from ansiwin import AnsiWindow
 from editor import HorizEditor
-from leftright import LeftRightClass
+from leftright import LeftRightClass, YesNoClass, PrevNextClass
 from lightwin import LightClass
 from pager import ParaClass
 from sauce import SAUCE
@@ -22,6 +22,8 @@ __all__ = [
     'AnsiWindow',
     'HorizEditor',
     'LeftRightClass',
+    'YesNoClass',
+    'PrevNextClass',
     'LightClass',
     'ParaClass',
     'disconnect',
