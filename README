@@ -2,64 +2,20 @@
 # Copyright (C) 2005 Johannes Lundberg
 #           (C) 2007 Jeffrey Quast
 
-This software is written in Python. It requires Python to run.
+This software is written in Python. It requires Python 2.6+ to run.
 
 pre-requsite 3rd party:
 
+pip install sqlitedict
 pip install blessings
-#pip install xmodem
-
-Requirements
-=============
-
-The system requires:
-   Python 2.6
-   ZODB 3
-   Twisted framework
-   blessings (pip install blessings)
-
-ZODB can be installed independantly from source, using ZODB3-3.4.2.tgz or newer.
-
-Only the telnet portion of the twisted framework is required.
-
-The ssh portion of twisted, twisted-conch, is optional.
-
-OpenBSD
-========
-
- The following packages from ports are required:
-   py-twisted-conch
-   py-zopeinterface
-   py-openssl
-   py-crypto
-
-NetBSD
-=======
-
- The following packages from pkgsrc are required:
-   py-twisted
-   py-amkCrypto
-   py-ZopeInterface
-   ZODB3
-
-Debian
-=======
-
- For lenny, the following packages are required:
-   python
-   python-dev
-   python-twisted-core
-   python-setuptools
-   python-twisted-conch
+pip install xmodem
 
 Getting Started
 ================
 
-To start the system, execute run.py 
+To start the system, execute engine.py 
 
-+ [telnet] Listening on port 1945
-
-Change the telnet and ssh port using default.ini
+Change the telnet port using default.ini
 
 Telnet to the described port.
 
