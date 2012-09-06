@@ -135,7 +135,7 @@ class TelnetServer(object):
           except exception.ConnectionClosed, e:
             logger.info ('%s connection closed%s.'
                 % (self.clients[sock_fileno].addrport(),
-                  ': %s' % (e,) if e else ''))
+                  ': %s' % (e,) if len(str(e))!=0 else ''))
             self.clients[sock_fileno].deactivate()
 
         ## Process sockets with data to send
