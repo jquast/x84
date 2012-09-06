@@ -2,8 +2,8 @@ deps = ['bbs']
 
 def main():
   getsession().activity = 'Checking for new messages'
-  user = userbase.getuser(getsession().handle)
-  term = getsession().getterminal()
+  user = getuser(getsession().handle)
+  term = getterminal()
 
   print repr(term.clear), repr(term.color)
   echo (term.clear + term.color)
