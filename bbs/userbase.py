@@ -68,6 +68,11 @@ class User(object):
   _postrefs = []
   _password = None
   _plan = ''
+  def __init__(self, handle, password, location='', hint=''):
+    self.handle = handle
+    self.password = password
+    self.location = location
+    self.hint = hint
 
   @property
   def calls(self):
