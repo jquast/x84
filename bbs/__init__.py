@@ -6,7 +6,8 @@ import msgbase
 from ansi import pos
 # end XXX cut/transform XXX
 import ini
-from userbase import User, getuser, finduser, userexist, authuser, getuser, listusers
+from dbproxy import DBProxy
+from userbase import User, getuser, finduser, userexist, authuser, listusers
 from session import getsession
 from fileutils import abspath, fopen, ropen
 from output import echo, oflush, delay
@@ -19,8 +20,8 @@ from pager import ParaClass
 from sauce import SAUCE
 
 __all__ = [
+    'DBProxy',
     'User',
-    'getuser',
     'finduser',
     'userexist',
     'authuser',
@@ -109,6 +110,7 @@ def loginuser(handle):
     u = userbase.getuser(handle)
     u.calls += 1
     u.lastcall = time.time()
+
 
 def showfile(filename, bps=0, pause=0.1, cleansauce=True):
     import strutils as strutils
