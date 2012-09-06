@@ -1,106 +1,118 @@
 """
  New user account script for X/84, http://1984.ws
- $Id: nua.py,v 1.6 2010/01/02 01:03:10 dingo Exp $
 
  Simply create a new User() instance and set the most minimum values,
  handle and password, then call the .add() method to commit this record.
-
 """
-__author__ = 'Jeffrey Quast <dingo@1984.ws>'
-__copyright__ = ['Copyright (c) 2009 Jeffrey Quast']
-__license__ = 'ISC'
-__url__ = 'http://1984.ws'
 
-deps = ['bbs']
-
-def init():
-  pass # nothing to initialize
-
-def warning(string, x, y, clean=True):
-  " Display warning to user with a dynamic pause "
-  cpsec =  13.0   # characters per second to pause for, sleep(len(string)/cps)
-  split_loc = 3   # characters from right to split for two-tone shading
-  warning_msg = \
-    attr(NORMAL) + color(RED) + string[:-split_loc] \
-    + color() + string[-split_loc:] \
-    + color(BLACK, BRIGHT) + '! '
-  echo ( cl() + pos (x, y) + warning_msg )
-  inkey = getch ( float( len( string)) /cpsec) # pause
-  echo (pos (x, y) + ' '*ansilen(warning_msg) ) # clear
-  return inkey # return keypress, if any
+# input area (y, x)
+loc_user   = (12, 20)
+loc_origin = (14, 20)
+loc_pass   = (16, 20)
+loc_email  = (18, 20)
+loc_state  = (20, 10)
+loc_prompt = (23, 35)
+# grr, (x, y) ?
+loc_yesno  = (62, 23) #23, 62)
 
 def main (handle):
-  import datetime
-  handle = '' if handle.lower() \
-    in ('new',) \
-      else handle
+  if handle.lower() in ('new',):
+    handle = ''
   location, hint = '', ''
   password, verify, = '', ''
+  session = getsession()
+  terminal = getterminal()
 
-  # input area (x, y)
-  loc_user   = (20, 16)
-  loc_origin = (20, 17)
-  loc_pass   = (20, 18)
-  loc_email  = (20, 19)
-  loc_state  = (10, 20)
-  loc_prompt = (35, 22)
+  def warning(msg):
+    " Display warning to user with a dynamic pause "
+    cpsec =  13.0
+    min_sec = 3
+    split_loc = 3
+    warning_msg = ''.join((
+        terminal.clear_eol,
+        terminal.normal, terminal.red, msg[:-split_loc],
+        terminal.normal, msg[-split_loc:],
+        terminal.bright_black, '!'))
+    echo (warning_msg)
+    inkey = getch(max(min_sec,float(len(msg))/cpsec))
+    echo (terminal.clear_bol)
+    return inkey
 
-  getsession().activity = 'New User Application'
-  echo (cls() + color() + pos(1, 1))
+  session.activity = 'New User Application'
+  echo (terminal.clear + terminal.normal)
   showfile ('art/newuser.asc')
-  echo ( pos(40 -(ansilen(getsession().activity)/2), 14) + getsession().activity)
+  echo ( 'New User Application'.center (terminal.width-1) + '\r\n')
 
   while True:
     user_ok = origin_ok = pass_ok = level = 0
     while not (user_ok):
-      echo (pos(*loc_user) + cl() + color() + 'username: ')
-      handle = readline (int(db.cfg.get('nua', 'max_user'), handle))
+      echo (terminal.move (*loc_user))
+      echo (terminal.clear_eol + terminal.normal)
+      echo ('username: ')
+      handle = readline (int(ini.cfg.get('nua', 'max_user')), handle)
+      echo (terminal.move (*loc_user))
       if not handle:
-        if warning ('Enter an alias, Press Ctrl+X to cancel', *loc_origin) == chr(24):
+        inkey = warning('Enter an alias, Press Ctrl+X to cancel')
+        if inkey == chr(24):
           return
       elif userbase.userexist (handle):
-        warning ('User exists', *loc_origin)
-      elif handle == '' or len(handle) < int(db.cfg.get('nua', 'min_user')):
-        warning ('Too short! (%s)' % db.cfg.get('nua', 'min_user'), *loc_origin)
-      elif handle.lower() in db.cfg.get('nua', 'invalid_handles').split():
-        warning ('Illegal username', *loc_origin)
+        warning ('User exists')
+      elif handle == '' or len(handle) < int(ini.cfg.get('nua', 'min_user')):
+        warning ('Too short! (%s)' % ini.cfg.get('nua', 'min_user'))
+      elif handle.lower() in ini.cfg.get('nua', 'invalid_handles').split():
+        warning ('Illegal username')
       else:
         user_ok = True
 
     while not (origin_ok):
-      echo (pos(*loc_origin) + color() + 'origin: ')
-      location = readline (int(db.cfg.get('nua', 'max_origin'), location))
+      echo (terminal.move (*loc_origin))
+      echo (terminal.clear_eol + terminal.normal)
+      echo ('origin: ')
+      location = readline (int(ini.cfg.get('nua', 'max_origin')), location)
+      echo (terminal.move (*loc_origin))
       if location == '':
-        if warning ('Enter a location, Press Ctrl+X to cancel', *loc_pass) == chr(24):
+        inkey = warning('Enter a location, Press Ctrl+X to cancel')
+        if inkey == chr(24):
           return
-        echo (cl())
+        echo (terminal.clear_eol)
       else:
         origin_ok = True
 
     while not (pass_ok):
-      echo (pos(*loc_pass) + cl() + color() + 'password: ')
-      password = readline (int(db.cfg.get('nua', 'max_pass'), hidden='x'))
+      echo (terminal.move(*loc_pass))
+      echo (terminal.clear_eol + terminal.normal)
+      echo ('password: ')
+      password = readline (int(ini.cfg.get('nua', 'max_pass')), hidden='x')
+      echo (terminal.move(*loc_pass))
       if len(password) < 4:
         # fail if password too short
-        if warning ('too short, Press Ctrl+X to cancel', *loc_email) == chr(24):
+        echo (terminal.move (*loc_email))
+        inkey = warning('too short, Press Ctrl+X to cancel')
+        if inkey == chr(24):
           return
-        echo (cl())
+        echo (terminal.clear_eol)
       else:
         # verify
-        echo (pos(*loc_pass) + cl() + color() + '   again: ')
-        verify = readline (int(db.cfg.get('nua', 'max_pass'), hidden='z'))
+        echo (terminal.clear_eol + terminal.normal)
+        echo ('   again: ')
+        verify = readline (int(ini.cfg.get('nua', 'max_pass')), hidden='z')
+        echo (terminal.move(*loc_pass))
         if password != verify:
-          if warning ('verify must match, Press Ctrl+X to cancel', *loc_email) == chr(24):
+          inkey = warning ('verify must match, Press Ctrl+X to cancel')
+          if inkey  == chr(24):
             return
-          echo (cl())
+          echo (terminal.clear_eol)
         else:
           break
 
     # this is a joke?
     while (level < 2):
+      echo (terminal.move(*loc_email))
       # email loop
-      echo (pos(*loc_email) + cl() + color() + 'email address [not req.]: ')
-      hint= readline (int(db.cfg.get('nua', 'max_email')))
+      echo (terminal.clear_eol + terminal.normal)
+      echo ('e-mail (optional): ')
+      hint= readline (int(ini.cfg.get('nua', 'max_email')))
+      echo (terminal.move(*loc_email))
       # TODO regexp
       if not len(hint):
         level = 2
@@ -111,36 +123,35 @@ def main (handle):
           level = 1
         # must have '.' following @, level 2
         if level == 1 and ch == '.':
-          print 2, 'X'
           level = 2
           break
       if level == 2:
-        print 2
         # email is valid, break out
         break
-      print 'lo'
 
       # allow user to opt-out of e-mail
-      if warning ('invalid, Ctrl+O to Opt out', *loc_state) == chr(15):
-        # oh yea? make a statement, then
-        echo (pos(*loc_state) + cl() + color() + 'make your statement, then: ')
-        hint = readline (int(db.cfg.get('nua', 'max_email')))
+      echo (terminal.location (*loc_state))
+      inkey = warning('invalid, Ctrl+O to Opt out')
+      echo (terminal.location (*loc_state))
+      if inkey == chr(15):
+        echo (terminal.clear_eol + terminal.normal)
+        echo ('make your statement, then: ')
+        hint = readline (int(ini.cfg.get('nua', 'max_email')))
         if not hint:
-          # if you don't make a statement, forget you!
-          disconnect ()
+          return
         break
 
-    echo (pos(35, 23) + cl() + color() + 'Everything cool?')
-    lr = YesNoClass([62,23])
+    echo (terminal.move (*loc_prompt))
+    echo (terminal.clear_eol + terminal.normal)
+    echo ('Everything cool?')
+
+    lr = YesNoClass(loc_yesno)
     lr.left ()
     lr.run()
-    # we've gained the following variables:
-    # handle, password, location, hint
     if lr.isleft():
-      u = userbase.User ()
-      u.handle, u.password, u.location, u.hint \
-          = handle, password, location, hint
+      # we've gained the following variables:
+      # handle, password, location, hint
+      u = userbase.User \
+          (handle=handle, password=password, location=location, hint=hint)
       u.add ()
       goto ('top', u.handle)
-
-
