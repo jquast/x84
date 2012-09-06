@@ -1,5 +1,7 @@
 import threading
+import traceback
 import os
+import sys
 import sqlitedict
 import bbs.ini
 
@@ -34,8 +36,12 @@ class DBHandler(threading.Thread):
     LOCK.release ()
     assert hasattr(db, self.cmd), \
         "'%(cmd)s' not a valid method of <type 'dict'>" % self
-    if 0 == len(self.args):
-      result = getattr(db, self.cmd) ()
-    else:
-      result = getattr(db, self.cmd) (*self.args)
-    self.pipe.send ((self.event, result,))
+    try:
+      if 0 == len(self.args):
+        result = getattr(db, self.cmd) ()
+      else:
+        result = getattr(db, self.cmd) (*self.args)
+      self.pipe.send ((self.event, result,))
+    except:
+      t, v, tb= sys.exc_info()
+      self.pipe.send (('exception', (t, v, traceback.format_tb(tb),)))
