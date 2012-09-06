@@ -34,7 +34,6 @@ class DBHandler(threading.Thread):
     LOCK.release ()
     assert hasattr(db, self.cmd), \
         "'%(cmd)s' not a valid method of <type 'dict'>" % self
-    print self.cmd, self.args
     if 0 == len(self.args):
       result = getattr(db, self.cmd) ()
     else:
