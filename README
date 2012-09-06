@@ -9,6 +9,7 @@ pre-requsite 3rd party:
 pip install sqlitedict
 pip install blessings
 pip install xmodem
+pip install sauce
 
 Getting Started
 ================
