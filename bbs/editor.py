@@ -9,9 +9,9 @@ __author__ = "Jeffrey Quast <dingo@1984.ws>"
 __copyright__ = "Copyright (c) 2006, 2007, 2009 Jeffrey Quast <dingo@1984.ws>"
 __license__ = "ISC"
 
-from bbs import echo, readkey
-from keys import KEY
+#from bbs import echo, getch
 from ansi import color
+import curses
 from ansiwin import InteractiveAnsiWindow
 
 class HorizEditor(InteractiveAnsiWindow):
@@ -32,10 +32,10 @@ class HorizEditor(InteractiveAnsiWindow):
   shiftPercent = 35
 
   KMAP = { \
-    'refresh': ['\014'],
-    'erase':   [KEY.BACKSPACE, KEY.DELETE],
-    'enter':   [KEY.ENTER],
-    'exit':    [KEY.ESCAPE, '\030']
+    'refresh': [curses.KEY_REFRESH],
+    'erase':   [curses.KEY_BACKSPACE],
+    'enter':   [curses.KEY_ENTER],
+    'exit':    [curses.KEY_EXIT]
   }
 
   def __init__(self, w, y, x, xpad=0, max=0):
@@ -161,7 +161,7 @@ class HorizEditor(InteractiveAnsiWindow):
         self.refresh ()
         self.fixate ()
       if not key:
-        key = readkey (timeout)
+        key = getch (timeout)
         self.timeout = (not key) # Boolean: True if we timed out
       self.lastkey = key
       self.process_keystroke (key)
