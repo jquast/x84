@@ -78,7 +78,7 @@ def disconnect():
 
 def goto(*arg):
     import exception
-    raise exception.ScriptChange(arg)
+    raise exception.Goto(arg)
 
 
 def gosub(*arg):

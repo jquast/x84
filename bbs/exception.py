@@ -16,7 +16,7 @@ class SilentTermination (Exception):
   "Raised to silently terminate a session"
   pass
 
-class ScriptChange (Exception):
+class Goto (Exception):
   "Raised whenever a script wants to travel&exchange itself to another"
   pass
 
