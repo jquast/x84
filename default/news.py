@@ -1,38 +1,14 @@
 """
  News reader module for X/84, http://1984.ws
- $Id: news.py,v 1.6 2009/05/25 20:46:25 dingo Exp $
-
- This modulde demonstrates use of a pager window.
-
+ This script demonstrates use of a pager window.
 """
-__author__ = 'Jeffrey Quast <dingo@1984.ws>'
-__copyright__ = ['Copyright (c) 2009 Jeffrey Quast',
-                 'Copyright (c) 2005 Johannes Lundberg']
-__license__ = 'ISC'
-__url__ = 'http://1984.ws'
 
-
-__author__ = 'Jeffrey Quast <dingo@1984.ws>'
-__contributors__ = []
-__copyright__ = ['Copyright (c) 2009 Jeffrey Quast']
-__license__ = 'ISC'
-
-import os
-
-deps = ['bbs']
-
-def init():
-  NEWS_PATH='text/news.txt'
-  global news_content, lastupdate
+def main():
   try:
     news_content = fileutils.fopen(NEWS_PATH).read()
   except IOError:
     news_content = '%s not found -- no news :)\n' % (NEWS_PATH,)
-  lastupdate = os.path.getmtime(fileutils.abspath('text/news.txt'))
 
-
-def main():
-  global news_content, lastupdate
   session = getsession()
   terminal = getsession().getterminal()
 
@@ -42,23 +18,17 @@ def main():
     w=80
     x=1
     h=terminal.rows-y
-    echo (color() + cls() + pos())
+    echo (terminal.move (0,0) + terminal.clear)
     if h < 5:
-      echo (color(*LIGHTRED) + 'screen height must be at least %i, ' \
+      echo (terminal.bold_red + 'screen height must be at least %i, ' \
             'but is %i.' % (y+5, terminal.rows))
-      echo (color() + '\r\n\r\nPress any key...')
+      echo (terminal.normal + '\r\n\r\nPress any key...')
       getch(); return False
     if w < 80:
-      echo (color(*LIGHTRED) + 'screen width must be at least %i, ' \
+      echo (terminal.bold_red + 'screen width must be at least %i, ' \
             'but is %i.' % (80, terminal.columns))
-      echo (color() + '\r\n\r\nPress any key...')
+      echo (terminal.normal + '\r\n\r\nPress any key...')
       getch(); return False
-
-    if lastupdate < os.path.getmtime(fileutils.abspath('text/news.txt')):
-      # refresh the news text file
-      init ()
-      if pager:
-        pager.update (news_content, refresh=False)
 
     if not pager:
       pager = ParaClass(h, w, y, x, xpad=2, ypad=1)
