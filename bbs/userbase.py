@@ -68,7 +68,7 @@ class User(object):
   _postrefs = []
   _password = None
   _plan = ''
-  def __init__(self, handle, password, location='', hint=''):
+  def __init__(self, handle='anonymous', password=u'', location=u'', hint=u''):
     self.handle = handle
     self.password = password
     self.location = location
