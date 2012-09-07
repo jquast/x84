@@ -17,7 +17,8 @@ def start_process(child_conn, termtype, rows, columns):
   stream = IPCStream(child_conn)
   term = BlessedIPCTerminal (stream, termtype, rows, columns)
   new_session = bbs.session.Session (terminal=term, pipe=child_conn)
-  return new_session.run ()
+  new_session.run ()
+  logger.info ('%s end process' % (new_session.pid,))
 
 class IPCStream(object):
   """
@@ -72,28 +73,46 @@ class BlessedIPCTerminal(blessings.Terminal):
     for attr in (a for a in dir(curses) if a.startswith('KEY_')):
       setattr(self, attr , getattr(curses, attr))
 
-  def trans_input(self, data):
+  def trans_input(self, data, encoding='iso8859-1'):
     """Yield single keystroke for each character or multibyte input sequence."""
+    assert type(data) in (str, unicode,)
     while len(data):
-      match=False
+      match = False
       for keyseq, keycode in self._keymap.iteritems():
         if data.startswith(keyseq):
           # slice keyseq from *data
           yield keycode
           data = data[len(keyseq):]
-          match=True
+          match = True
           break
-      if match == False:
-        if data[0] == '\x00':
-          print 'skip nul'
-          pass # telnet negotiation
+
+      if match is False:
+        if data[0:2] == '\r\x00':
+          # a bare carriage return character (CR, ASCII 13) to be followed by a
+          # NULL (ASCII 0) character, that distinguish the telnet protocol from
+          # raw TCP sessions.
+          data = data[2:] # skip past \x00
+          yield self.KEY_ENTER
+          continue
+
         elif data[0] == '\r':
-          yield self.KEY_ENTER # ?
-        else:
-          yield data[0].decode('utf-8') if type(data[0]) is str else data[0]
-        # slice character from *data
-        print 'slice!'
-        data = data[1:]
+          data = data[1:]
+          yield self.KEY_ENTER
+          continue
+
+        elif type(data) in (bytes,str):
+          # decode bytestrings to unicode, then return first glyph
+          unicodes = data.decode (encoding)
+          yield unicodes [0]
+          data = unicodes[1:]
+          continue
+
+        elif type(data) is unicode:
+          yield data[0]
+          data = data[1:]
+          continue
+
+        assert 0, 'invalid datatype for trans_input: %r' % (data,)
 
   def keyname(self, keycode):
     """Return any matching keycode name for a given keycode."""
