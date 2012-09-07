@@ -29,7 +29,7 @@ class DBHandler(threading.Thread):
     global DATABASES
     LOCK.acquire()
     if not self.schema in DATABASES:
-      dbpath = os.path.join(bbs.ini.cfg.get('system','sqlite_folder'),
+      dbpath = os.path.join(bbs.ini.cfg.get('database','sqlite_folder'),
           '%s.sqlite3' % (self.schema,),)
       DATABASES[self.schema] = sqlitedict.SqliteDict(dbpath, autocommit=True)
     db = DATABASES[self.schema]
