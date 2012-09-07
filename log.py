@@ -2,9 +2,9 @@
 import copy
 import logging
 import datetime
-#import bbs.db
 
-from bbs.session import getsession
+#from bbs.dbproxy import DBProxy
+#from bbs.session import getsession
 
 last_line1 = ('','','','','','')
 MAX_SIZE=10000 # N records to store (as openudb('eventlog'))
@@ -12,9 +12,10 @@ MAX_STEP=100 # cut N lines every buffer trim
 
 class ColoredConsoleHandler(logging.StreamHandler):
   el = None
-  fmt_txt = '%(levelname)s%(space)s%(handle)s' \
-    '%(filename)s%(colon)s%(lineno)s%(space)s%(threadName)s' \
-    '%(sep)s%(prefix)s%(message)s'
+  fmt_txt = '%(levelname)s' \
+      '%(space)s%(filename)s%(colon)s%(lineno)s' \
+      '%(space)s%(threadName)s' \
+        '%(sep)s%(prefix)s%(message)s'
 
   def color_levelname (self, r):
     return r
@@ -27,20 +28,20 @@ class ColoredConsoleHandler(logging.StreamHandler):
     #  ansi.color())
     #return r
 
-  def ins_handle(self, r):
-    try:
-      r.handle = '%s' % (getsession().handle + ' ' \
-          if hasattr(getsession(), 'handle') and getsession().handle \
-          else '')
-    except KeyError:
-      r.handle = ''
-    return r
+  #def ins_handle(self, r):
+  #  try:
+  #    r.handle = '%s' % (getsession().handle + ' ' \
+  #        if hasattr(getsession(), 'handle') and getsession().handle \
+  #        else '')
+  #  except KeyError:
+  #    r.handle = ''
+  #  return r
 
   def line_cmp(self, r):
-    return (r.levelname, r.levelname, r.handle, r.filename, r.lineno, r.threadName)
+    return (r.levelname, r.levelname, r.filename, r.lineno, r.threadName)
 
   def line_blank(self, r):
-    r.colon = r.space = r.sep = r.levelname = r.handle \
+    r.colon = r.space = r.sep = r.levelname \
       = r.filename = r.lineno = r.threadName = ''
     return r
 
@@ -62,8 +63,7 @@ class ColoredConsoleHandler(logging.StreamHandler):
    return \
      (self.color_levelname \
        (self.skip_repeat_line1 \
-         (self.ins_handle \
-             (src_record))))
+             (src_record)))
 
   def emit(self, src_record):
     # XXX hook in an event log database ... dont like this
