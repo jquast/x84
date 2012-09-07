@@ -1,27 +1,25 @@
-# The Progressive - Highly customizable BBS system.
-# Copyright (C) 2005 Johannes Lundberg
-#           (C) 2007 Jeffrey Quast
+# Copyright (C) 2004 Johannes Lundberg
+#           (C) 2012 Jeffrey Quast
 
-This software is written in Python. It requires Python 2.6+ to run.
+This software requires Python 2.6+ to run.
 
 pre-requsite 3rd party:
 
-pip install sqlitedict
-pip install blessings
-pip install xmodem
-pip install sauce
+	pip install sqlitedict
+	pip install blessings
+	pip install xmodem
+	pip install sauce
 
 Getting Started
 ================
 
-To start the system, execute engine.py 
+To start the system, execute command 
 
-Change the telnet port using default.ini
+	python2.6 engine.py 
 
-Telnet to the described port.
+Telnet to the port described in default.ini
 
 Support
 ========
 
 An irc channel, #prsv on efnet, is available for development discussion.
-
