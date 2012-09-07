@@ -61,14 +61,11 @@ __all__ = [
 ]
 
 def getterminal():
-    return getsession().getterminal()
+    return getsession().terminal
+
 
 def gethandle():
     return getsession().handle
-
-
-def getterminal():
-    return getsession().getterminal()
 
 
 def disconnect():
