@@ -9,7 +9,8 @@ __copyright__ = ['Copyright (c) 2007 Jeffrey Quast']
 __license__ = 'ISC'
 
 import time
-#import db, persistent
+from dbproxy import DBProxy
+db = DBProxy('msgbase')
 
 def addmsg(msg):
   msg.send ()
@@ -18,21 +19,21 @@ sendmsg = addmsg
 
 def getmsg(number):
   " Retrieve message by number "
-  if db.msgs.has_key(number):
-    return db.msgs[number]
+  if db.has_key(number):
+    return db[number]
 
 def msgexist(number):
   " return True if message exists "
-  return db.msgs.has_key(number)
+  return db.has_key(number)
 
 def listmsgs(removedeleted=True):
   " return all message records in the database "
   mlist = []
-  for number in db.msgs.keys():
-    if not db.msgs[number].deleted:
-      mlist.append (db.msgs[number])
+  for number in db.keys():
+    if not db[number].deleted:
+      mlist.append (db[number])
     elif not removedeleted:
-      mlist.append (db.msgs[number])
+      mlist.append (db[number])
   return mlist
 
 def listpublicmsgs(tags=None):
@@ -148,15 +149,12 @@ class Msg(dict):
     elif not draft:
       self.draft = False
 
-    db.lock ()
-    if db.msgs.keys():
-      self.number = max(db.msgs.keys()) +1
+    if db.keys():
+      self.number = max(db.keys()) +1
     else:
       print 'first new system message'
       self.number = 0
-    db.msgs[self.number] = self
-    db.commit ()
-    db.unlock ()
+    db[self.number] = self
 
   def set(self, key, value):
     " set key, value of msg record "
@@ -165,11 +163,8 @@ class Msg(dict):
 
   def delete(self, force=False, killer=None):
     " delete message from the database "
-    if force and db.msgs.has_key(self.number):
-      db.lock ()
-      del db.msgs[self.number]
-      db.commit ()
-      db.unlock ()
+    if force and db.has_key(self.number):
+      del db[self.number]
     else:
       if killer:
         self.set('deleted', killer)
