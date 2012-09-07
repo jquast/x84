@@ -25,8 +25,9 @@ class Session(object):
   """
   _script_stack is a list of script modules for tracking active script location
   during consecutive gosub() calls. When this script is exausted, the session
-  ends. On instantiation, the value is set to the 'matrixscript'.ini option.
-  When run() is called, _script_stack begins execution.
+  ends. On instantiation, the value is set to the 'script' option of subsection
+  'matrix' in the settings ini file. When run() is called, _script_stack begins
+  execution.
 
   _buffer is a dict keyed by event names, containing lists of data buffered
   from the IPC pipe of the parrent process during calls to read_event() that
@@ -48,8 +49,8 @@ class Session(object):
   def __init__ (self, terminal=None, pipe=None):
     self.pipe = pipe
     self.terminal = terminal
-    self._script_stack = list(((ini.cfg.get('system','matrixscript'),),))
-    self._encoding = ini.cfg.get('system', 'encoding')
+    self._script_stack = list(((ini.cfg.get('matrix','script'),),))
+    self._encoding = ini.cfg.get('session', 'default_encoding')
     self._buffer = dict()
 
 
@@ -61,7 +62,7 @@ class Session(object):
   @activity.setter
   def activity(self, value):
     if self._activity != value:
-      logger.info ('%s/%s setactivity %s', self.pid, self.user, value)
+      logger.info ('%s/%s setactivity %s', self.pid, self.handle, value)
       self._activity = value
 
 
@@ -94,8 +95,8 @@ class Session(object):
   @cwd.setter
   def cwd(self, value):
     if self._cwd != value:
-      logger.info ('%s/%s setcwd %s',
-          self.pid, self.user, value)
+      logger.debug ('%s/%s setcwd %s',
+          self.pid, self.handle, value)
       self._cwd = value
 
 
@@ -107,7 +108,7 @@ class Session(object):
   @encoding.setter
   def encoding(self, value):
     logger.info ('%s/%s setencoding %s',
-        self.pid, self.user, value)
+        self.pid, self.handle, value)
     self._encoding = value
 
 
@@ -131,7 +132,8 @@ class Session(object):
     assert mySession is None, 'run() cannot be called twice'
     mySession = self
     fallback_stack = copy.copy(self._script_stack)
-    logger.setLevel (getattr(logging, ini.cfg.get('session','log_level').upper()))
+    #log_level = getattr(logging, ini.cfg.get('session','log_level').upper())
+    #logger.setLevel (log_level)
     while len(self._script_stack) > 0:
       logger.debug ('%s/%s script_stack: %s',
           self.pid, self.handle, self._script_stack)
@@ -163,9 +165,11 @@ class Session(object):
       except Exception, e:
         # Pokemon exception
         t, v, tb= sys.exc_info()
-        map (logger.error, (l.rstrip() for l in itertools.chain \
-            (traceback.format_tb(tb), \
-             traceback.format_exception_only(t, v))))
+        map (logger.error, (l.rstrip() \
+            for l in itertools.chain \
+              (traceback.format_tb(tb), \
+               ('%s/%s %s' % (self.pid, self.handle, fe)
+                 for fe in traceback.format_exception_only(t, v)))))
       if 0 != len(self._script_stack):
         # recover from a general exception or script error
         toss = self._script_stack.pop()
@@ -205,11 +209,11 @@ class Session(object):
     """
     if not self._buffer.has_key(event):
       self._buffer[event] = list()
-      logger.info ('%s %s new event buffer, %s.',
+      logger.debug ('%s/%s new event buffer, %s.',
           self.pid, self.handle, event,)
     if event != 'input':
       self._buffer[event].insert (0, data)
-      logger.debug ('%s %s event buffered, (%s,%s).',
+      logger.debug ('%s/%s event buffered, (%s,%s).',
           self.pid, self.handle, event, data,)
       return
     elif event == 'input':
@@ -250,6 +254,12 @@ class Session(object):
     while waitfor > 0:
       if self.pipe.poll (None if waitfor == float('inf') else waitfor):
         event, data = self.pipe.recv()
+
+        if event == 'exception':
+          (t, v, tb) = data
+          map (logger.error, (l.rstrip() for l in tb))
+          logger.error ('local traceback follows')
+          raise t, v
 
         if event == 'connectionclosed':
           raise exception.ConnectionClosed (data)
@@ -315,7 +325,7 @@ class Session(object):
   # XXX kill
   def getterminal(self):
     import warnings
-    warnings.warn ('use terminal attribute instead', DeprecationWarning)
+    warnings.warn ('use terminal attribute instead', DeprecationWarning, 2)
     return self.terminal
 
 
