@@ -39,9 +39,11 @@ def main ():
       continue
     if i_handle.lower() == 'new':
       goto ('nua', '')
-    elif i_handle in ['exit', 'logoff', 'bye', 'quit']:
+    elif i_handle in ini.cfg.get('matrix', 'byecmds').split():
       gosub ('logoff')
       refresh()
+    elif i_handle.lower() == 'anonymous':
+      goto (ini.cfg.get('matrix', 'topscript'), 'anonymous')
     match = finduser(i_handle)
     if not match:
       echo ('\r\n\r\n  --> Create new account? [ynq]   <--' + '\b'*5)
@@ -59,7 +61,7 @@ def main ():
     password, event, data = readlineevent \
         (width=int(ini.cfg.get('nua', 'max_pass')), hidden=CH_MASK_PASSWD)
     if authuser(i_handle, password):
-      goto (ini.cfg.get('system', 'topscript'), i_handle)
+      goto (ini.cfg.get('matrix', 'topscript'), i_handle)
     else:
       echo (terminal.clear_bol + terminal.bright_red)
       echo ('Login incorrect')
