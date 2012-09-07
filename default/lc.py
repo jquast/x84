@@ -1,100 +1,80 @@
-"""
- Last Callers script for X/84 BBS, http://1984.ws
- $Id: lc.py,v 1.8 2009/05/31 16:12:29 dingo Exp $
-
- This script displays all users of the BBS, and the last time
- they have called in descending order. When True is passed as
- the first argument, only the call log is built.
-"""
-
-__author__ = 'Jeffrey Quast <dingo@1984.ws>'
-__copyright__ = ['Copyright (c) 2009 Jeffrey Quast',
-                 'Copyright (c) 2005 Johannes Lundberg']
-__license__ = 'ISC'
-__url__ = 'http://1984.ws'
-
+""" Last Callers script for X/84 BBS, http://1984.ws """
+import time
 
 def main(recordonly=False):
-  udb = DBProxy('lastcallers')
-
+  db = DBProxy('lastcallers')
   def build():
     " build and return last callers list for display "
-    callers = [(u.lastcall, u.handle) for u in listusers()]
-    callers.sort ()
-    callers.reverse ()
-    udb['callers'] = callers
+    for u in listusers():
+      db[u.handle] = u.lastcall
 
   if recordonly:
     return build ()
 
-  # how functional,
+  padd_handle = 1+ int(ini.cfg.get('nua','max_user'))
+  padd_origin = 1+ int(ini.cfg.get('nua','max_origin'))
+  padd_timeago = 12
+  padd_ncalls = 13
   def lc_retrieve():
     " retrieve window paint data, list of last callers "
-    return '\n'.join([
-      user.handle.ljust   (int(db.cfg.get('nua','max_user'))+1) + \
-      user.location.ljust (int(db.cfg.get('nua','max_origin'))+1) + \
-        ('%s ago'%(timeago)).rjust (12) + \
-        ('   Calls: '+str(user.calls)) .ljust (13) \
-                 for timeago, user in \
-                        [(strutils.asctime(time.time() -lc), getuser(name)) \
-                         for lc, name in udb['callers'] if userexist(name)]])
+    return '\n'.join((
+      name.ljust (padd_handle) \
+          + u.location.ljust (padd_origin) \
+          + ('%s ago' % (timeago,)).rjust (padd_timeago) \
+          + ('   Calls: %s' % (u.calls,)).ljust (padd_ncalls) \
+          for timeago, u in [(asctime(time.time() -lc), getuser(name)) \
+            for lc, name in sorted([(v,k) \
+              for (k,v) in db.items() if userexist(k)])]))
 
   session = getsession()
-  terminal = getsession().getterminal()
-  def refresh():
-    session.activity = 'Viewing Last Callers'
+  session.activity = 'Viewing Last Callers'
+  term = getsession().terminal
+  def refresh_highdef():
     y=14
-    h=terminal.rows -y+1
+    h=term.height -y+1
     w=67
     x=(80-w)/2 # ansi is centered for 80-wide
-    echo (terminal.clear + terminal.color)
+    echo (term.clear + term.normal)
     if h < 5:
-      echo (terminal.bright_green + 'Screen size too small to display last callers' \
-            + terminal.normal + '\r\n\r\npress any key...')
+      echo (term.bold_green + 'Screen size too small to display last callers' \
+            + term.normal + '\r\n\r\npress any key...')
       getch()
       return False
-    pager = ParaClass(h, w, y, (80-w)/2-2, xpad=2, ypad=1)
-    pager.colors['inactive'] = terminal.red
-    pager.partial = True
-    pager.lowlight ()
-    echo (pos())
+    p= ParaClass(h, w, y, (80-w)/2-2, xpad=2, ypad=1)
+    p.colors['inactive'] = term.red
+    p.partial = True
+    p.lowlight ()
+    echo (term.move(0,0))
     showfile ('art/lc.ans')
     data = lc_retrieve()
     if len(data) < h:
-      footer='%s-%s (q)uit %s-%s' % (terminal.bright_gray,
-          terminal.normal, terminal.bright_grey, terminal.normal)
+      footer='%s-%s (q)uit %s-%s' % (term.bold_white,
+          term.normal, term.bold_white, term.normal)
     else:
-      footer='%s-%s up%s/%sdown%s/%s(q)uit %s-%s' % (terminal.bright_gray,
-          terminal.normal, terminal.bright_red, terminal.normal,
-          terminal.bright_red, terminal.normal, terminal.bright_gray,
-          terminal.normal)
-    pager.title (footer, 'bottom')
-    pager.update (data)
-    pager.interactive = True
-    return pager
+      footer='%s-%s up%s/%sdown%s/%s(q)uit %s-%s' % (term.bold_white,
+          term.normal, term.bold_red, term.normal,
+          term.bold_red, term.normal, term.bold_white,
+          term.normal)
+    p.title (footer, 'bottom')
+    p.update (data)
+    p.interactive = True
+    return p
 
-  # refresh on first loop
-  forceRefresh=True
+  if not term.number_of_colors:
+    # TODO: scrolling, polling for new logins while waiting for return key..
+    echo (lc_retrieve)
+    return
 
-  while True:
-    if forceRefresh:
-      pager = refresh()
-      if not pager:
-        return
-      forceRefresh = False
-      flushevents (['refresh','login','input'])
-
+  pager = refresh_highdef()
+  while pager.exit is False:
     event, data = readevent(['input', 'refresh', 'login'], timeout=None)
-
     if event in ['refresh', 'login']:
       # in the event of a window refresh (or screen resize),
       # or another user logging in, refresh the screen
-      forceRefresh=True
-      continue
-
+      pager = refresh_highdef ()
+      if pager is False:
+        return # resized to window that is too small ..
+      flushevents (['refresh', 'login', 'input'])
     elif event == 'input':
       # update display dataset and run
       pager.run (data)
-
-    if pager.exit:
-      return # exit
