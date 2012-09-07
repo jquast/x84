@@ -1,5 +1,5 @@
 from session import getsession
-import ascii
+from curses.ascii import BEL, isprint
 from output import echo
 
 def getch(timeout=None):
@@ -13,7 +13,7 @@ def readline(width, value = '', hidden = '', paddchar = ' ', events = [
 
 def readlineevent(width, value = '', hidden = '', paddchar = ' ', events = [
     'input'], timeout = None, interactive = False, silent = False):
-  term = getsession().getterminal()
+  term = getsession().terminal
 
   if not hidden and value:
     echo (value)
@@ -38,12 +38,12 @@ def readlineevent(width, value = '', hidden = '', paddchar = ' ', events = [
     elif char == term.KEY_BACKSPACE:
       if len(value) > 0:
         value = value [:-1]
-        echo (ascii.bs + paddchar + ascii.bs)
+        echo ('\b' + paddchar + '\b')
 
     elif isinstance(char, int):
       pass # unhandled keycode ...
 
-    elif len(value) < width and ascii.isprint(ord(char)):
+    elif len(value) < width and isprint(ord(char)):
       value += char
       if hidden:
         echo (hidden)
@@ -51,7 +51,7 @@ def readlineevent(width, value = '', hidden = '', paddchar = ' ', events = [
         echo (char)
 
     elif not silent:
-      echo (ascii.bel)
+      echo (BEL)
     if interactive:
       return (value, 'input', None)
 
