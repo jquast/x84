@@ -6,6 +6,7 @@ import msgbase
 from ansi import pos
 # end XXX cut/transform XXX
 import ini
+from strutils import chompn, asctime, ansilen, chkseq, seqc
 from dbproxy import DBProxy
 from userbase import User, getuser, finduser, userexist, authuser, listusers
 from session import getsession
@@ -20,6 +21,11 @@ from pager import ParaClass
 from sauce import SAUCE
 
 __all__ = [
+    'chompn',
+    'asctime',
+    'ansilen',
+    'chkseq',
+    'seqc',
     'DBProxy',
     'User',
     'finduser',
@@ -110,7 +116,6 @@ def loginuser(handle):
 
 
 def showfile(filename, bps=0, pause=0.1, cleansauce=True):
-    import strutils as strutils
     if '*' in filename or '?' in filename:
         fobj = ropen(filename, 'rb')
     else:
@@ -118,9 +123,9 @@ def showfile(filename, bps=0, pause=0.1, cleansauce=True):
     if cleansauce:
         data = str(SAUCE(fobj))
     else:
-        data = strutils.chompn(fobj.read())
+        data = chompn(fobj.read())
     if not bps:
-        echo(strutils.chompn(data))
+        echo(chompn(data))
     else:
         cps = bps / 8
         cpp = cps * pause
