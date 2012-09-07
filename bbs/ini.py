@@ -16,7 +16,6 @@ def init(cfgFilepath='default.ini'):
   cfg = ConfigParser.SafeConfigParser()
   cfg.add_section('system')
   # TODO: prompt user about encoding during setup
-  cfg.set('system', 'encoding', 'iso8859-1')
   cfg.set('system', 'scriptpath', 'default/')
   cfg.set('system', 'wfcscript', 'wfc')
   cfg.set('system', 'telnet_addr', '127.0.0.1')
@@ -28,7 +27,8 @@ def init(cfgFilepath='default.ini'):
   cfg.add_section('database')
   cfg.set('database', 'sqlite_folder', 'data/')
   cfg.add_section('session')
-  cfg.set('session', 'log_level', 'info')
+  cfg.set('session', 'log_level', 'debug')
+  cfg.set('session', 'default_encoding', 'iso8859-1')
   cfg.add_section('irc')
   cfg.set('irc', 'server', 'efnet.xs4all.nl')
   cfg.set('irc', 'port', '6667')
