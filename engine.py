@@ -2,23 +2,30 @@
 """
 Scripting and session engine
 """
-__author__ = 'Jeffrey Quast <dingo@1984.ws>'
 __license__ = 'ISC'
-__maintainer__ = 'Jeffrey Quast'
+__maintainer__ = 'Jeff Quast'
 __email__ = 'dingo@1984.ws'
 __status__ = 'Alpha'
-__version__ = '3.0rc0'
-# version 1, unnamed? 2001 johannes, 2003 jeff
-# version 2, PRSV, 2008 johannes, 2010 jeff
-# version 3, x84, 2011 jeff
+__version__ = '1.0rc1'
+# iteration #1, pybbs? 2001 jojo, dingo contributing
+# iteration #2, The Progressive (PRSV), 2004 jojo, dingo & maze contributing
+#               twisted for networking, zodb for database, ssh support ...
+# Copyright (C) 2004 Johannes Lundberg
+# This archive can be redistributed, unmodified or modified, in whatever
+# ways that may please you.
+#
+# THIS IS FREE SOFTWARE. USE AT YOUR OWN RISK. NO WARRANTY.
 
-import bbs.ini
+# this is iteration #3, x/84, 2010-2012 dingo
 import db
 
+import sys
+import traceback
 def main (logger, logHandler, cfgFile='default.ini'):
   """
   x84 main entry point. The system begins and ends here.
   """
+  import bbs.ini
   import terminal
   terminal.logger.addHandler (logHandler)
   logger.addHandler (logHandler)
@@ -73,17 +80,19 @@ def main (logger, logHandler, cfgFile='default.ini'):
           else:
             assert 0, 'Unhandled event: %s (data=%s)' % (event,)
         except EOFError:
+          print 'EOF!'
           eof_pipes.add ((client, pipe))
     while 0 != len(eof_pipes):
       terminal.CHANNELS.remove (eof_pipes.pop())
 
 
 if __name__ == '__main__':
+  # TODO: Proper getopts
   import sys
   import logging
   import log
   logger = logging.getLogger(__name__)
-  logger.setLevel(logging.DEBUG)
+  logger.setLevel(logging.INFO)
   sys.stdout.write ('x/84 bbs ')
   log_level = logging.INFO
   cfgFile = 'default.ini'
