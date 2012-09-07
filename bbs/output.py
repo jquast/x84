@@ -8,4 +8,4 @@ def echo(data):
 
 def oflush():
   import warnings
-  warnings.warn('oflush() is deprecated', DeprecationWarning)
+  warnings.warn('oflush() is deprecated', DeprecationWarning, 2)
