@@ -205,7 +205,7 @@ class ParaClass(InteractiveAnsiWindow):
     """ Refresh window.
         @var startRow: Refresh only from this visible row on
     """
-    echo (color())
+    echo (self.terminal.normal)
     row = 0
     for row, line in enumerate(self.content[self.top : self.top +self.visibleHeight]):
       if row < startRow:
