@@ -7,12 +7,8 @@ class DBProxy(object):
   def __proxy__(self, method, *args):
     event = 'db-%s' % (self.schema,)
     getsession().send_event(event, (method, args,))
-    event, data = getsession().read_event((event,'exception',))
-    if event != 'exception':
-      return data
-    t,v,tb = data
-    print 'exception:', t,v
-    raise t, v
+    event, data = getsession().read_event((event,))
+    return data
 
   def __cmp__(self, *args):
     return self.__proxy__ ('__cmp__', *args)
