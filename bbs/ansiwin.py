@@ -2,7 +2,6 @@
 #from curses import ACS_VLINE, ACS_HLINE
 #                   ACS_ULCORNER, ACS_URCORNER,
 #                   ACS_BLCORNER, ACS_BRCORNER
-from curses.ascii import BEL
 from session import getsession
 from output import echo
 from strutils import ansilen
@@ -82,7 +81,7 @@ class AnsiWindow:
       echo (self.terminal.normal)
 
   def noborder(self):
-    self.border (glyphs=self.emptyGlyph, color=ansi.color())
+    self.border (glyphs=self.emptyGlyph, color=self.terminal.normal)
 
   def highlight(self):
     self.border (color=self.colors['active'])
@@ -161,7 +160,7 @@ class InteractiveAnsiWindow(AnsiWindow):
   def bell(self, msg):
     # TODO: print msg at status line
     if not self.silent:
-      echo (BEL)
+      echo ('\a')
     if self.debug:
       print msg
     return False
