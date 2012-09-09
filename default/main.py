@@ -19,11 +19,11 @@ def main():
     showfile ('art/main_alt.asc')
     echo ('\r\n\r\n > ')
   def sorry():
-    echo ('\r\n\r\n  ' + color(*LIGHTRED) + 'Sorry')
+    echo ('\r\n\r\n  ' + term.bright_red + 'Sorry')
     getch (1)
     refresh ()
   def pak():
-    echo ('\r\n\r\n  ' + color() + 'Press any key...')
+    echo ('\r\n\r\n  ' + term.normal + 'Press any key...')
     getch ()
     refresh ()
 
@@ -35,77 +35,79 @@ def main():
     #if getsession().getuser().handle == 'dingo' and not 'sysop' in \
     #getsession().getuser().groups:
     #  getsession().getuser().groups.append ('sysop')
-    if choice == '*':
+    if str(choice) == '*':
       goto ('main')
-    elif choice == '/':
-      m = Msg(handle())
-      m.recipient = handle()
-      m.subject = 'test!'
-      m.body = 'test'
-      m.tags = ['test']
-      m.send ()
-    elif choice.lower () == 'c':
-      gosub ('wfc', getsession().getuser().handle)
+    #elif str(choice) == '/':
+    #  m = Msg(handle())
+    #  m.recipient = handle()
+    #  m.subject = 'test!'
+    #  m.body = 'test'
+    #  m.tags = ['test']
+    #  m.send ()
+    elif str(choice).lower () == 'c':
+      gosub ('wfc')
+      #, getsession().getuser().handle)
       refresh ()
-    elif choice.lower() == 'f':
+    elif str(choice).lower() == 'f':
       gosub ('xfer')
       refresh ()
       pak ()
       sorry ()
-    elif choice.lower() == 'n':
+    elif str(choice).lower() == 'n':
       gosub ('chkmsgs')
       pak ()
-    elif choice.lower() == 'w':
+    elif str(choice).lower() == 'w':
       gosub ('weather')
       refresh ()
-    elif choice.lower() == 'r':
+    elif str(choice).lower() == 'r':
       gosub ('msgreader', listprivatemsgs(handle()) + listpublicmsgs())
       refresh ()
-    elif choice == 'b':
+    elif str(choice) == 'b':
       gosub ('bbslist')
       refresh ()
-    elif choice == 'k':
+    elif str(choice) == 'k':
       gosub ('userlist')
       refresh ()
-    elif choice == 'l':
+    elif str(choice) == 'l':
       gosub ('lc')
       refresh ()
-    elif choice == 'o':
+    elif str(choice) == 'o':
       gosub ('ol')
       refresh ()
-    elif choice == 'i':
+    elif str(choice) == 'i':
       gosub ('irc')
       refresh ()
-    elif choice == 'e':
+    elif str(choice) == 'e':
       gosub ('viewlog')
       refresh()
-    elif choice == 'E':
+    elif str(choice) == 'E':
       gosub ('test.editor')
-    elif choice == 'x':
+    elif str(choice) == 'x':
       gosub ('wfc')
       refresh ()
-    elif choice == 'u':
-      gosub ('ueditor', getsession().handle)
+    elif str(choice) == 'u':
+      gosub ('ueditor')
+      #, getsession().handle)
       refresh ()
-    elif choice == 's':
+    elif str(choice) == 's':
       gosub ('si')
       refresh ()
-    elif choice == 't':
+    elif str(choice) == 't':
       gosub ('games/tetris')
       refresh ()
-    elif choice == 'm':
+    elif str(choice) == 'm':
       gosub('games/mastermind')
       refresh()
-    elif choice == 'z':
+    elif str(choice) == 'z':
       gosub('news')
       refresh()
-    elif choice.lower() == 'v':
+    elif str(choice).lower() == 'v':
       gosub ('imgviewer')
       refresh ()
-    elif choice.lower() == 'g':
+    elif str(choice).lower() == 'g':
       gosub ('logoff')
       refresh ()
-    elif choice == '*':
+    elif str(choice) == '*':
       goto ('main')
     else:
-      echo (bel)
+      echo ('\a') # bel
