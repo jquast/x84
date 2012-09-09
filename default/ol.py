@@ -1,77 +1,57 @@
 """
-Oneliners for X/84 BBS, http://1984.ws
-$Id: ol.py,v 1.6 2009/06/01 14:03:32 dingo Exp $
-
-This script demonstrates database storage and state broadcasting.
-
-Features:
- - dynamic screen height resizing
- - scroll up/down through history
- - limit one message per 24 hours
- - new one-liners instantly display while viewing
+oneliners for X/84 BBS, uses http://bbs-scene.org API. http://1984.ws
 """
-__author__ = 'Jeffrey Quast <dingo@1984.ws>'
-__copyright__ = ['Copyright (c) 2008, 2009 Jeffrey Quast']
-__license__ = 'ISC'
-__url__ = 'http://1984.ws'
 
-deps = ['bbs'] #,'ui/editor']
-
-def init ():
-  global MAX_INPUT, HISTORY, ONCE_PER, udb
-  MAX_INPUT = 120 # character limit for input
-  HISTORY = 200   # limit history in buffer
-  ONCE_PER = 1   # one message per 24 hours, 0 to disable
-  udb = db.openudb ('oneliner')
-  if not udb.has_key('lines'):
-    rebuild_db(udb)
-
-def rebuild_db(udb):
-  import persistent
-  " re-create raw oneliners database "
-  lock ()
-  udb['lines'] = persistent.list.PersistentList ()
-  commit ()
-  unlock ()
+import time
+import threading
+import Queue
+from xml.etree.ElementTree import XML
+import requests
 
 def main ():
   session = getsession()
-  buffer, comment = None, None
+  term = session.terminal
+  user = session.user
+  MAX_INPUT = 80 # character limit for input
+  HISTORY = 50   # limit history in buffer window
+  SNUFF_TIME = 1*60*60*24   # one message per 24 hours, 0 to disable
+  snuff_msg = 'YOU\'VE AlREADY SAiD ENUff!\a'
+  say_msg = 'SAY WhAT? CTRl-X TO CANCEl'
+  save_msg = 'BURNiNG TO rOM, PlEASE WAiT!'
+  erase_msg = 'ERaSE HiSTORY ?!'
+  erased_msg = 'ThE MiNiSTRY Of TRUTh hONORS YOU'
+  udb = DBProxy('oneliner')
+  chk_yesno = (term.KEY_ENTER, term.KEY_LEFT, term.KEY_RIGHT,
+      'y', 'n', 'Y', 'N', 'h', 'l', 'H', 'L',)
+  window, comment = None, None
 
   def redraw ():
-    txt = ''
-    for n, (name, text) in enumerate(udb['lines'][-HISTORY:]):
-      if n % 3 == 0: c = color(*WHITE)
-      if n % 3 == 1: c = color(*LIGHTBLUE)
-      if n % 3 == 2: c = color(*LIGHTGREEN)
-      l = '%s(%s' % (color(*DARKGREY), c)
-      r = '%s)%s' % (color(*DARKGREY), color())
-      # rjust..
-      txt += strpadd(l+name+r, int(db.cfg.get('nua','max_user'))+2) + text + '\n'
-    if txt.endswith('\n'): txt = txt[:-1]
-    buffer.update (txt, refresh=True)
-    buffer.end (silent=True)
+    output = ''
+    for n, ol in sorted(udb.items())[-HISTORY:]:
+      n = int(n)
+      if n%3 == 0: c = term.bold_white
+      elif n%3 == 1: c = term.bold_green
+      else: c = term.bold_blue
+      l = '%s(%s' % (term.bold_white, c)
+      m = '%s/%s' % (term.white + term.reverse, term.normal)
+      r = '%s)%s' % (term.bold_white, term.normal)
+      output += (l + ol['alias'] + m + ol['bbsname'] + r +': ') .rjust (20)
+      output += str(ol['oneliner']) + '\n'
+    output = output.rstrip()
+    window.update (output, refresh=True, scrollToBottom=True)
 
-  def addline(line):
-    if not line.strip():
-      return
-    lock ()
-    udb['lines'].append ([handle(), line])
-    commit ()
-    unlock ()
-    redraw ()
 
   def statusline (text='SAY SUMthiNG?', c=''):
     " display text in status line "
     w = 33
-    echo (pos((terminal.columns/2)-(w/2), terminal.rows-3))
-    echo ('%s%s%s' % (color(), c, strpadd(text, w, align='center', ch=' ')))
+    echo (term.move(term.height-3, (term.width/2)-(w/2)))
+    echo (''.join((term.normal, c, text.center(w)),))
 
   def saysomething():
-    statusline ('SAY WhAT? CTRl-X TO CANCEl', color(GREEN))
+    comment.lowlight ()
+    statusline (say_msg, term.cyan_inverse)
     comment.update ('')
-    comment.highlight ()
-    echo (color() + cursor_show())
+    echo (term.normal)
     comment.fixate ()
     while True:
       session.activity = 'Blabbering'
@@ -79,106 +59,153 @@ def main ():
       if event == 'input':
         comment.run (key=data)
         if comment.enter:
-          statusline ('BURNiNG TO rOM, PlEASE WAiT!', color(*LIGHTRED))
-          oflush ()
+          statusline (save_msg, term.bright_green)
           addline (comment.data().strip())
-          userbase.getuser(handle()).set ('lastliner', timenow())
+          session.user.set ('lastliner', time.time())
           redraw ()
           break
         elif comment.exit:
           break
       elif event == 'oneliner_update':
         redraw ()
-    echo (color() + cursor_hide())
+    echo (term.normal)
     comment.noborder ()
     comment.update ()
     statusline ()
+    user.set ('lastliner', time.time())
 
-  if ONCE_PER:
-    # test for existance of .lastliner
-    if not userbase.getuser(handle()).has_key('lastliner'):
-      userbase.getuser(handle()).set ('lastliner', 1.0)
+  def addline(msg):
+    udb[max([int(k) for k in udb.keys()] or [0])+1] = {
+        'oneliner': msg,
+        'alias': session.handle,
+        'bbsname': ini.cfg.get('system', 'bbsname'),
+        'timestamp': time.strftime('%Y-%m-%d %H:%M:%s'),
+    }
+
+  class FetchUpdates(threading.Thread):
+    def __init__(self, queue, lock):
+      self.queue = queue
+      self.lock = lock
+      threading.Thread.__init__ (self)
+    def run(self):
+      r = requests.get \
+          ('http://bbs-scene.org/api/onelinerz?limit=%d' % (HISTORY,),
+            auth=(ini.cfg.get('bbs-scene','user'),
+                  ini.cfg.get('bbs-scene','pass')))
+      if 200 != r.status_code:
+        echo (term.move (0,0) + term.clear + term.normal)
+        echo ('%sonelinerz offline (status_code=%d): \r\n\r\n' \
+            '%s%s%s\r\n\r\npress any key...' % (term.bold_red, r.status_code,
+              term.normal, r.content, term.bold_red))
+        getch ()
+        return
+      self.lock.acquire ()
+      for node in XML(r.content).findall('node'):
+        key = node.find('id').text
+        self.queue.put ((key, dict([ (k, node.find(k).text) \
+              for k in ('oneliner','alias','bbsname','timestamp',) ])))
+      self.lock.release ()
 
   flushevent ('oneliner_update')
-
   forceRefresh = True
+  q = Queue.Queue()
+  if ini.cfg.has_section('bbs-scene'):
+    l = threading.Lock()
+    t = FetchUpdates(q, l)
+    t.start ()
+  session.activity = 'Reading bbs-scene.org one-liners'
 
-  terminal = getsession().getterminal()
   while True:
-    getsession().activity = 'Reading 1liners'
+    if not q.empty():
+      matches = 0
+      l.acquire ()
+      while True:
+        try:
+          key, value = q.get(block=False)
+        except Queue.Empty:
+          break
+        if not udb.has_key(key):
+          udb[key] = value
+          matches += 1
+      l.release ()
+      if matches > 0:
+        print 'ol:', matches, 'new updates'
+        redraw ()
+      else:
+        print 'ol: no new bbs-scene.org'
 
     if forceRefresh:
-      echo (cls() + color() + cursor_hide())
-      if terminal.columns < 78 or terminal.rows < 20:
-        echo (color(*LIGHTRED) + 'Screen size too small to display oneliners' \
-              + color() + '\r\n\r\npress any key...')
+      echo (term.move (0,0) + term.clear + term.normal)
+      if term.width < 78 or term.height < 20:
+        echo (term.bold_red + 'Screen size too small to display oneliners' \
+              + term.normal + '\r\n\r\npress any key...')
         getch ()
         return False
-      art = fileutils.fopen('art/wall.ans').readlines()
-      mw = strutils.maxanswidth(art)
-      print terminal.columns, mw
-      x = (terminal.columns /2)- (mw/2)
+      art = fopen('art/wall.ans').readlines()
+      mw = min(maxanswidth(art), term.width -6)
+      x = max(3, (term.width/2) - (maxanswidth(art)/2) -2)
 
-      lr = YesNoClass([x+mw-17, terminal.rows-3])
-      lr.interactive = True
-      lr.highlight = color(GREEN)+color(INVERSE)
+      yn = YesNoClass([x+mw-17, term.height-4])
+      yn.interactive = True
+      yn.highlight = term.green_reverse
 
-      buffer = ParaClass(terminal.rows-11, terminal.columns-20, 8, 10, xpad=0, ypad=1)
-      buffer.interactive = True
-      comment = HorizEditor(w=mw, y=terminal.rows-2, x=x, xpad=1, max=MAX_INPUT)
-      comment.colors['active'] = color(BLUE)
+      window= ParaClass(term.height-12, term.width-20,
+          y=8, x=10, xpad=0, ypad=1)
+      window.interactive = True
+      comment = HorizEditor(w=mw, y=term.height-3,
+          x=x, xpad=1, max=MAX_INPUT)
       comment.partial = True
       comment.interactive = True
-      echo (''.join([pos(x, y+1) + line for y, line in enumerate(art)]))
+      echo (''.join([term.move(y+1, x) + line.decode('iso8859-1') for y, line in enumerate(art)]))
 
       statusline ()
       redraw ()
-      lr.refresh ()
+      yn.refresh ()
       forceRefresh=False
 
-    event, data = readevent (['input', 'oneliner_update', 'refresh'])
+    event, data = readevent (['input', 'oneliner_update', 'refresh'], timeout=1)
+
     if event == 'refresh':
       forceRefresh=True
       continue
+
     elif event == 'input':
       if data in ['\030','q']:
         break
-      if data in [terminal.KEY_ENTER,terminal.KEY_LEFT,terminal.KEY_RIGHT,'y','n','Y','N','h','l','H','L']:
-        choice = lr.run (key=data)
-        if choice == terminal.KEY_RIGHT:
+      if data in chk_yesno:
+        choice = yn.run (key=data)
+        if choice == yn.NO:
           # exit
           break
-        elif choice == terminal.KEY_LEFT:
-          # write something
-          if ONCE_PER and timenow() - userbase.getuser(handle()).lastliner < (60*60*ONCE_PER):
-            statusline (bel + 'YOU\'VE AlREADY SAiD ENUff!', color(*LIGHTRED) + color(INVERSE))
+        elif choice == yn.YES:
+          lastliner = user.get('lastliner', time.time() -SNUFF_TIME)
+          if time.time() -lastliner < SNUFF_TIME:
+            statusline (snuff_msg, term.red_reverse)
             getch (1.5)
-            lr.right ()
+            yn.right ()
             continue
           # write something
           saysomething ()
       elif str(data).lower() == '\003':
         # sysop can clear history
-        u = userbase.getuser(handle())
-        if not 'sysop' in u.groups:
+        if not 'sysop' in session.user.groups:
           continue
-        lr.right ()
-        statusline (color(RED) + 'ERaSE HiSTORY ?!', color(RED) + color(INVERSE))
-        lr.interactive = False
-        choice = lr.run (key=data)
-        if choice == terminal.KEY_LEFT:
-          statusline ('ThE MiNiSTRY Of TRUTh hONORS YOU', color(*WHITE))
+        yn.right ()
+        statusline (erase_msg, term.red_reverse)
+        yn.interactive = False
+        choice = yn.run (key=data)
+        if choice == term.KEY_LEFT:
+          statusline (erased_msg, term.bright_white)
           getch (1.6)
-          rebuild_db (udb)
+          udb.clear ()
           redraw ()
         statusline ()
-        lr.interactive = True
+        yn.interactive = True
       elif data == 'q':
         break
       else:
         # send as movement key to pager window
-        buffer.run (key=data, timeout=None)
-    elif event == 'oneliner_update':
-      redraw ()
-  echo (cursor_show() + color())
+        print data
+        window.run (key=data, timeout=None)
+  echo (term.normal)
   return
