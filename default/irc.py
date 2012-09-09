@@ -15,12 +15,8 @@ from twisted.words.protocols import irc
 from twisted.internet import reactor, protocol
 import os
 
-deps = ['bbs', 'ui/editor', 'ui/pager']
-
-def init ():
-    global MAX_INPUT, HISTORY
-    MAX_INPUT = 200 # character limit for input
-    HISTORY = 200   # limit history in buffer
+MAX_INPUT = 200 # character limit for input
+HISTORY = 200   # limit history in buffer
 
 class Client(irc.IRCClient):
     # no http:// here, servers could se us as spambot
@@ -103,9 +99,9 @@ class ClientFactory(protocol.ClientFactory):
 def main():
     session = getsession()
     getsession().activity = 'irc'
-    factory = ClientFactory(session, db.cfg.get('irc','channel'))
+    factory = ClientFactory(session, ini.cfg.get('irc','channel'))
     connect = reactor.connectTCP \
-        (db.cfg.get('irc', 'server'), int(db.cfg.get('irc','port')),
+        (ini.cfg.get('irc', 'server'), int(ini.cfg.get('irc','port')),
           factory)
 
     # colors and formatting
@@ -125,7 +121,7 @@ def main():
     buffer = ParaClass \
       (h=session.height-6, w=session.width-2, y=6, x=6, xpad=0, ypad=1)
     buffer.add('%s connecting to %s:%d' % (fx['system'],
-      db.cfg.get('irc','server'), int(db.cfg.get('irc','port'))))
+      ini.cfg.get('irc','server'), int(ini.cfg.get('irc','port'))))
 
     # editable pager for input
     inputbar = HorizEditor \
