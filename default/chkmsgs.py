@@ -4,7 +4,7 @@ def main():
   session.activity = 'Checking for new messages'
   term = session.terminal
 
-  echo (term.clear + term.color)
+  echo (term.move(0,0) + term.clear + term.normal)
   showfile ('art/msgs.asc')
 
   # check for new private messages
