@@ -21,6 +21,169 @@ To start the system, execute command
 
 Telnet to the port described in default.ini
 
+PuTTy as a client, windows
+==========================
+
+From http://nethack.wikia.com/wiki/ibmgraphics,
+
+  On the PuTTY Configuration window (this appears when you first start PuTTY),
+select "Translation" under the "Window" configuration in the pane on the left.
+Then, in the pulldown menu marked "Received data assumed to be in which
+character set", select "cp437". You can then log in to the server as usual.
+You may also change this setting and then 'save' the session. The characater
+set (as well as other display settings, e.g., the color blue) will be used in
+your session from the on.
+
+SyncTerm as a client,
+=====================
+
+http://syncterm.bbsdev.net/
+
+xterm, urxvt, uxterm
+====================
+  (cat<<EOF
+xterm*termName: xterm-color
+xterm*reverseVideo:     false
+xterm*boldMode:         false
+xterm*eightBitInput:    true
+xterm*metaSendsEscape:  true
+xterm*scrollBar:        false
+xterm*renderFont:       false
+!menu attributes,
+xterm*fontMenu.Label: VT Fonts for cp437 and iso-8859-1
+xterm*fontMenu*menuLabel.font: -ibm-courier-medium-r-*-*-17-*-*-*-*-*-iso8859-1
+xterm*fontMenu*font: -ibm-courier-medium-r-*-*-17-*-*-*-*-*-iso8859-1
+xterm*fontMenu.menuLabel.foreground: cyan
+!  Default'
+xterm*font: -dosemu-vga-*-*-*-*-17-*-*-*-p-*-ibm-cp437
+xterm*fontMenu*fontdefault*Label: 17px ibm-cp437 (dosemu)
+!  Unreadable'
+xterm*font1: -xos4-terminus-*-*-*-*-12-*-*-*-c-*-ibm-cp437
+xterm*fontMenu*font1*Label: 12px ibm-cp437 (terminus)
+!  Tiny'
+xterm*font2: -schumacher-clean-medium-*-*-*-12-*-*-*-*-*-iso8859-1
+xterm*fontMenu*font2*Label: 12px iso-8859-1 (schumacher)
+!  Small'
+xterm*font3: -xos4-terminus-*-*-*-*-14-*-*-*-*-*-iso8859-1
+xterm*fontMenu*font3*Label: 14px iso-8859-1 (terminus)
+!alternative #1 (+)
+!xterm*font3: -misc-fixed-medium-r-*-*-15-*-*-*-*-*-iso8859-1
+!xterm*fontMenu*font3*Label: 15px iso-8859-1 (fixed)
+!  Medium'
+xterm*font4: -ibm-courier-medium-r-*-*-17-*-*-*-*-*-iso8859-1
+xterm*fontMenu*font4*Label: 17px iso-8859-1 (fixed)
+!alternative #1 (+)
+!xterm.vt100.font4: -xos4-terminus-*-*-*-*-24-*-*-*-*-*-iso8859-1
+!xterm*fontMenu*font4*Label: 24px iso-8859-1 (terminus)
+!  Large'
+xterm*font5: -dosemu-vga-*-*-*-*-17-*-*-*-p-*-ibm-cp437
+xterm*fontMenu*font5*Label: 17px ibm cp437 (dosemu)
+!alternative #1 (+)
+!xterm.vt100.font5: -xos4-terminus-*-*-*-*-20-*-*-*-c-*-ibm-cp437
+!xterm*fontMenu*font5*Label: 20px ibm cp437 (terminus)
+!alternative #3
+!xterm*font5: -xos4-terminus-*-*-*-*-16-*-*-*-c-*-ibm-cp437
+!xterm*fontMenu*font5*Label: 16px ibm cp437 (terminus)
+!  Huge'
+xterm*font6: -dosemu-vga-*-*-*-*-*-24-*-*-*-c-*-ibm-cp437
+xterm*fontMenu*font6*Label: 24px ibm cp437 (dosemu)
+!alternative #1 (+)
+!xterm*font6: -dosemu-vga-*-*-*-*-*-19-*-*-*-c-*-ibm-cp437
+!xterm*fontMenu*font6*Label: 19px ibm cp437 (dosemu)
+xterm*foreground: rgb:a8/a8/a8
+xterm*background: rgb:00/00/00
+xterm*color0: rgb:00/00/00
+xterm*color1: rgb:a8/00/00
+xterm*color2: rgb:00/a8/00
+xterm*color3: rgb:a8/54/00
+xterm*color4: rgb:00/00/a8
+xterm*color5: rgb:a8/00/a8
+xterm*color6: rgb:00/a8/a8
+xterm*color7: rgb:a8/a8/a8
+xterm*color8: rgb:54/54/54
+xterm*color9: rgb:fc/54/54
+xterm*color10: rgb:54/fc/54
+xterm*color11: rgb:fc/fc/54
+xterm*color12: rgb:54/54/fc
+xterm*color13: rgb:fc/54/fc
+xterm*color14: rgb:54/fc/fc
+xterm*color15: rgb:fc/fc/fc
+EOF
+) > ~/.XResources
+  xrdb -load ~/.XResources
+
+dosemu vga font
+===============
+for encodings: cp437, cp866
+
+  ftp -o /dev/stdout 'http://sourceforge.net/projects/dosemu/files/dosemu/1.4.0/dosemu-1.4.0.tgz/download' | gunzip -c | tar -xvf - 'dosemu-1.4.0/etc/*.bdf'
+  for bdf in dosemu-1.4.0/etc/*.bdf; do
+    bdftopcf $bdf | gzip > $(echo $bdf|sed 's/bdf$/pcf.gz/g')
+  done 
+
+  openbsd,
+  ========
+
+    sudo cp dosemu-1.4.0/etc/*.pcf.gz /usr/X11R6/lib/X11/fonts/misc/
+    sudo mkfontdir /usr/X11R6/lib/X11/fonts/misc/
+
+  debian,
+  =======
+    sudo cp dosemu-1.4.0/etc/*.pcf.gz /usr/share/fonts/X11/misc
+    sudo mkfontdir /usr/share/fonts/X11/misc
+
+  xset fp rehash
+  xlsfonts | grep vga
+
+
+terminus X11 font from debian
+==================
+for encodings:
+  microsoft-cp1251, iso8859-1, iso8859-2,
+  iso8859-5, iso8859-7, iso8859-9, iso8859-13,
+  iso8859-15, iso8859-16, koi8-r, koi8-u,
+  paratype-pt154, iso10646-1, ibm-cp437,
+  ibm-cp850, ibm-cp852, ibm-cp855, ibm-cp860,
+  ibm-cp863, ibm-cp865, ibm-cp866
+
+     debian
+     ======
+
+  sudo apt-get install xfonts-terminus xfonts-terminus-dos
+  sudo mkfontdir /usr/share/fonts/X11/misc
+  xset fp rehash
+  xlsfonts | grep cp437
+
+     non-debian
+     ==========
+
+  mirror=http://mirrors.kernel.org/debian/pool
+
+  cd /tmp
+  ftp "$mirror/main/x/xfonts-terminus/xfonts-terminus_4.35-1_all.deb"
+  ar x xfonts-terminus_4.35-1_all.deb
+  tar -xzvf data.tar.gz ./usr/share/fonts/X11/misc 
+
+  ftp "$mirror/main/x/xfonts-terminus/xfonts-terminus-dos_4.35-1_all.deb"
+  ar x xfonts-terminus-dos_4.35-1_all.deb
+  tar -xzvf data.tar.gz ./usr/share/fonts/X11/misc 
+
+  sudo cp ./usr/share/fonts/X11/misc/*.gz /usr/X11R6/lib/X11/fonts/misc/
+
+  rm -f control.tar.gz data.tar.gz xfonts-terminus_4.35-1_all.deb xfonts-terminus-dos_4.35-1_all.deb
+  sudo mkfontdir /usr/X11R6/lib/X11/fonts/misc/
+  xset fp rehash
+  xlsfonts | grep cp437
+
+
+
+#From http://dmr.ath.cx/misc/cp437/,
+#
+#  wget -O /dev/stdout 'http://dmr.ath.cx/misc/cp437/fonts.tar.bz2' \
+#  | bunzip2 -c | tar -C ~/.fonts -xf -
+#  cd ~/.fonts/cp437
+
+
 Support
 ========
 
