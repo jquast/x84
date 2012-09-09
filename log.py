@@ -14,7 +14,7 @@ class ColoredConsoleHandler(logging.StreamHandler):
   el = None
   fmt_txt = '%(levelname)s' \
       '%(space)s%(filename)s%(colon)s%(lineno)s' \
-      '%(space)s%(threadName)s' \
+      '%(space)s%(processName)s' \
         '%(sep)s%(prefix)s%(message)s'
 
   def color_levelname (self, r):
