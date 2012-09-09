@@ -73,7 +73,7 @@ class Session(object):
   @activity.setter
   def activity(self, value):
     if self._activity != value:
-      logger.info ('%s/%s setactivity %s', self.pid, self.handle, value)
+      logger.info ('%s setactivity %s', self.handle, value)
       self._activity = value
 
 
@@ -125,8 +125,7 @@ class Session(object):
   @cwd.setter
   def cwd(self, value):
     if self._cwd != value:
-      logger.debug ('%s/%s setcwd %s',
-          self.pid, self.handle, value)
+      logger.debug ('%s setcwd %s', self.handle, value)
       self._cwd = value
 
 
@@ -137,8 +136,7 @@ class Session(object):
 
   @encoding.setter
   def encoding(self, value):
-    logger.info ('%s/%s setencoding %s',
-        self.pid, self.handle, value)
+    logger.info ('%s setencoding %s', self.handle, value)
     self._encoding = value
 
 
@@ -309,8 +307,7 @@ class Session(object):
   def runscript(self, script, *args):
     """Execute script's .main() callable with optional *args."""
     import bbs
-    logger.info ('%s/%s runscript %r.',
-        self.pid, self.handle, (script, args,))
+    logger.info ('%s runscript %r.', self.handle, (script, args,))
 
     self._script_stack.append ((script,) + args)
     try:
@@ -322,8 +319,7 @@ class Session(object):
     current_path = os.path.dirname(self.script_filepath)
     if not current_path in sys.path:
       sys.path.append (current_path)
-      logger.debug ('%s/%s append to sys.path: %s',
-          self.pid, self.handle, current_path)
+      logger.debug ('%s append to sys.path: %s', self.handle, current_path)
 
     script = scripting.load(self.cwd, self.script_name)
     for idx in bbs.__all__:
