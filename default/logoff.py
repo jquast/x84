@@ -1,83 +1,133 @@
 """
-  Logoff script for X/84, http://1984.ws
-  $Id: logoff.py,v 1.3 2010/01/02 01:03:30 dingo Exp $
+  Default logoff script for X/84, http://1984.ws
 
+  Allows automsg's to be written by unauthorized sessions.
 """
-__author__ = 'Jeffrey Quast <dingo@1984.ws>'
-__copyright__ = ['Copyright (c) 2009 Jeffrey Quast']
-__license__ = 'ISC'
-__url__ = 'http://1984.ws'
-
-deps = ['bbs']
-AUTOMSG_LENGTH=40
-AUTOMSG_POS=(15,11)
-PROMPT_POS =(15,13)
-
-def init():
-  udb = db.openudb('automsg')
-  if not len(udb.keys()):
-    print 'a'
-    lock()
-    udb[1]=('B. b.','bEhAVE YOURSElVES')
-    commit()
-    unlock()
-    print 'b'
+TIMEOUT = 35
+AUTOMSG_LENGTH = 50
 
 def main():
-  getsession().activity = 'Logging Off!'
-  dirty=True
-  while True:
-    if dirty:
-      echo (cls())
-      # display random ansi
-      try:
-        showfile ('ans/goodbye.ans')
-      except IOError:
-        echo ('click...\r\n')
-      echo (ansi.pos(*AUTOMSG_POS) + cl() + color() + 'RX')
-      nick, msg = db.openudb('automsg').values()[-1]
-      echo ('\b \b\b \b')
-      echo ('%s%*s says: %s%s%s' % (
-        color(*WHITE), int(db.cfg.get('nua','max_user'))+1, nick,
-        color(*DARKGREY), msg, color()))
-      echo (ansi.pos(AUTOMSG_POS[0], AUTOMSG_POS[1]+2) + ansi.cursor_show())
-      echo ('s:AY SOMEthiNg; g:Et thE fUCk Off !\b')
+  import time
+  db = DBProxy('automsg')
+  session = getsession()
+  term = session.terminal
+  expert = session.user.get('expert', False) \
+      if session.user is not None else False
+  isSysop = session.user.isSysop \
+      if session.user is not None else False
+  session.activity = 'Logging Off!'
+  prompt_msg = '[spnG]: ' if expert is True \
+      else '%s:AY SOMEthiNG %s:REViOUS %s:EXt %s:Et thE fUCk Off !\b' \
+      % (''.join((term.cyan_reverse, 's', term.normal, term.bold_black,)),
+        ''.join((term.white_on_blue, 'p', term.normal, term.bold_black,)),
+        ''.join((term.white_on_blue, 'n', term.normal, term.bold_black,)),
+        ''.join((term.red_reverse, 'g', term.normal, term.bold_black,)),)
+  prompt_say = ''.join \
+      ((term.bold_blue, session.handle \
+        if session.user is not None else 'PROlE', term.normal,
+        ' sAYs ', term.cyan_reverse, 'WhAt: ', term.normal,))
+  goodbye_msg = ''.join((term.black_bold, '\r\n\r\n',
+          'back to the mundane world...', '\r\n',))
+  commit_msg = '-- !  thANk YOU fOR YOUR CONtRibUtiON, bROthER  ! --'
+  newDb = ((time.time() -1984, 'B. b.', 'bEhAVE YOURSElVES ...'),)
+  chk_next = ('n', 'N', term.KEY_DOWN, term.KEY_NPAGE,)
+  chk_prev = ('p', 'P', term.KEY_UP, term.KEY_PPAGE,)
+  chk_say  = ('s', 'S',)
+  chk_bye  = ('g', 'G', None)
+  nick = session.handle if session.handle is not None else 'anonymous'
 
-    k = getch()
-    if k in 'gG':
-      echo ( cls() + \
-      'Try some of these other fine boards!\r\n\r\n' \
-      '  htc.zapto.org              The Haunted Chapel\r\n' \
-      '  +o MercyFul Fate           C++/BSD\r\n\r\n' \
-        \
-      '  ## offline ##              The Centre\r\n' \
-      '  +o tombin                  perl/linux\r\n\r\n' \
-        \
-      '  bld.ph4.se                 Blood Island\r\n' \
-      '  +o hellbeard               python/linux\r\n\r\n' \
-        \
-      '  ## offline ##              whereabouts unknown!\r\n' \
-      '  +o sinister x              .net/win32\r\n\r\n'
-        \
-      '  graveyardbbs.kicks-ass.net The Graveyard\r\n' \
-      '  +o The Reaper              renegade bbs\r\n\r\n' \
-      )
-      getch (2)
-      echo ('CLICK!')
+  def refresh_prompt(msg):
+    """Refresh automsg prompt using string msg"""
+    echo (term.move (max(14, (term.height -6)),
+                     max(6, (term.width /2) -(AUTOMSG_LENGTH /2) -8)))
+    echo (''.join((term.normal, term.clear_eol)))
+    echo (msg)
+
+  def refresh_automsg(idx):
+    """Refresh automsg database, create a fancy string like 'nick', ':msg',
+    and '[n time ago]' of record idx, and return idx, which can differ if
+    adjusted to bounds.
+    """
+    flushevent ('automsg')
+    echo (term.move(max(12, (term.height/2)),
+                    max(3, (term.width /2) -(AUTOMSG_LENGTH /2) -10)))
+    echo (''.join((term.normal, term.clear_eol, term.bold_black,)))
+    echo (' ... ') # loading
+    automsgs = sorted(db.values()) if len(db) else newDb
+    idx = len(automsgs) -1 if idx < 0 \
+        else 0 if idx > len(automsgs) -1 \
+        else idx
+    t, nick, msg = automsgs[idx]
+    artnick = ''.join((term.blue_reverse, nick \
+        .rjust(int(ini.cfg.get('nua', 'max_user'))),))
+    artmsg = ''.join((term.cyan_reverse, '/', term.blue_reverse, '%d' % (idx,),
+      term.normal, ': ', term.cyan_reverse, msg \
+        .ljust(AUTOMSG_LENGTH -10),))
+    artago = ''.join((term.blue_reverse,
+      (asctime(time.time() -t) + ' ago' + (' %s' % (origin, ) if isSysop else '')) \
+          .ljust (AUTOMSG_LENGTH -ansilen(artmsg))))
+    # output & return new index
+    echo (term.normal.join((artnick, artmsg, ' ', artago,)))
+    return idx
+
+  def refresh_all(idx=None):
+    """
+    refresh screen, database, and return database index
+    """
+    flushevent ('refresh')
+    echo (term.move(0,0) + term.clear)
+    showfile ('art/1984.asc')
+    idx = refresh_automsg (-1 if idx is None else idx)
+    refresh_prompt (prompt_msg)
+    return idx
+
+  idx = refresh_all ()
+  chk_events = ('input', 'automsg', 'refresh',)
+  while True:
+    event, data = readevent(events=chk_events, timeout=TIMEOUT)
+    if (event, data) == (None, None):
+      # timeout
+      logger.info ('logoff/automsg timeout exceeded')
+      echo (''.join((term.black_bold, '\r\n\r\n',
+        'tiMEOUt: 1 dEMERit.', '\r\n',)))
       disconnect ()
-      break
-    if k in 'sS':
-      echo (ansi.pos(*AUTOMSG_POS) + cl() + color())
-      echo ('%10s%s: ' % ('say', color(*WHITE),))
-      echo (ansi.pos(AUTOMSG_POS[0]+10+2, AUTOMSG_POS[1]))
-      echo (color(BLUE) + color(INVERSE) + ' '*AUTOMSG_LENGTH)
-      echo (ansi.pos(AUTOMSG_POS[0]+10+2, AUTOMSG_POS[1]))
-      nmsg = readline(AUTOMSG_LENGTH)
-      if nmsg.strip():
-        udb = db.openudb('automsg')
-        idx = udb.keys()[-1]+1
-        lock()
-        udb[idx] = (handle() if handle() else 'anonymous', nmsg)
-        commit()
-        unlock()
-      dirty=True
+    if event == 'refresh':
+      idx = refresh_all ()
+    elif event == 'automsg':
+      refresh_automsg (-1)
+      echo ('\a') # bel
+    elif event == 'input':
+      if data in chk_bye:
+        echo (goodbye_msg)
+        disconnect ()
+      elif data in chk_next:
+        idx = refresh_automsg(idx +1)
+      elif data in chk_prev:
+        idx = refresh_automsg(idx -1)
+      elif data in chk_say:
+        # new prompt: say something !
+        refresh_prompt (prompt_say)
+        (y, x) = getpos()
+        if (None,None) != (y, x):
+          echo (term.white_reverse)
+          echo (' ' * AUTOMSG_LENGTH)
+          echo (term.move (y, x))
+        msg = readline(AUTOMSG_LENGTH)
+        if len(msg.strip()):
+          if (None,None) != (y, x):
+            echo (term.move (y, x))
+            echo (term.clear_bol)
+            echo ('bURNiNG tO ROM, PlEASE WAiT ...' .rjust(AUTOMSG_LENGTH))
+          idx = len(db)
+          db[idx] = (time.time(), nick, msg.strip())
+          broadcastevent ('automsg', (nick, msg.strip(),))
+          refresh_automsg (idx)
+          if (None,None) != (y, x):
+            echo (term.move (y, x))
+            echo (term.clear_bol)
+            echo (term.green_reverse)
+            echo (commit_msg .rjust(AUTOMSG_LENGTH))
+            getch (1.5) # for effect, LoL
+
+        # display prompt
+        refresh_prompt (prompt_msg)
