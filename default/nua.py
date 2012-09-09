@@ -2,7 +2,8 @@
  New user account script for X/84, http://1984.ws
 
  Simply create a new User() instance and set the most minimum values,
- handle and password, then call the .add() method to commit this record.
+ such as handle and password, then call the .save() method to commit
+ this record.
 """
 
 # input area (y, x)
@@ -25,7 +26,7 @@ def main (handle):
 
   def warning(msg):
     " Display warning to user with a dynamic pause "
-    cpsec =  13.0
+    cpsec =  10.0
     min_sec = 3
     split_loc = 3
     warning_msg = ''.join((
@@ -55,7 +56,7 @@ def main (handle):
         inkey = warning('Enter an alias, Press Ctrl+X to cancel')
         if inkey == chr(24):
           return
-      elif userexist (handle):
+      elif finduser (handle):
         warning ('User exists')
       elif handle == '' or len(handle) < int(ini.cfg.get('nua', 'min_user')):
         warning ('Too short! (%s)' % ini.cfg.get('nua', 'min_user'))
@@ -149,10 +150,7 @@ def main (handle):
     lr.left ()
     lr.run()
     if lr.isleft():
-      # we've gained the following variables:
       # handle, password, location, hint
-      u = User \
-          (handle=handle, password=password, location=location,
-              hint=unicode(hint))
-      u.add ()
+      u = User (handle=handle, password=password, location=location, hint=hint)
+      u.save ()
       goto ('top', u.handle)
