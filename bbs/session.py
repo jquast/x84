@@ -73,7 +73,7 @@ class Session(object):
   @activity.setter
   def activity(self, value):
     if self._activity != value:
-      logger.info ('%s setactivity %s', self.handle, value)
+      logger.info ('%s activity=%s', self.handle, value)
       self._activity = value
 
 
@@ -97,7 +97,7 @@ class Session(object):
   def user(self, value):
     import userbase
     assert type(value) is userbase.User
-    logger.info ('setuser %s', value.handle)
+    logger.info ('user=%s', value.handle)
     self._user = value
     self._handle = value.handle
 
@@ -125,7 +125,7 @@ class Session(object):
   @cwd.setter
   def cwd(self, value):
     if self._cwd != value:
-      logger.debug ('%s setcwd %s', self.handle, value)
+      logger.debug ('%s cwd=%s', self.handle, value)
       self._cwd = value
 
 
@@ -136,7 +136,7 @@ class Session(object):
 
   @encoding.setter
   def encoding(self, value):
-    logger.info ('%s setencoding %s', self.handle, value)
+    logger.info ('%s encoding=%s', self.handle, value)
     self._encoding = value
 
 
@@ -251,7 +251,7 @@ class Session(object):
           (event, data if TAP else 'x' * len(data),))
     else:
       self._buffer[event].insert (0, data)
-      logger.info ('%s event buffered, (%s,%s).', self.handle, event, data,)
+      logger.debug ('%s event buffered, (%s,%s).', self.handle, event, data,)
 
   def send_event (self, event, data):
     """
