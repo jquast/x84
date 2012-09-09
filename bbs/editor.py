@@ -9,9 +9,9 @@ __author__ = "Jeffrey Quast <dingo@1984.ws>"
 __copyright__ = "Copyright (c) 2006, 2007, 2009 Jeffrey Quast <dingo@1984.ws>"
 __license__ = "ISC"
 
-#from bbs import echo, getch
+from output import echo
+from input import getch
 from ansi import color
-import curses
 from ansiwin import InteractiveAnsiWindow
 
 class HorizEditor(InteractiveAnsiWindow):
@@ -31,19 +31,18 @@ class HorizEditor(InteractiveAnsiWindow):
   # scroll horizontally by this amount as a relative percent of visible window
   shiftPercent = 35
 
-  KMAP = { \
-    'refresh': [curses.KEY_REFRESH],
-    'erase':   [curses.KEY_BACKSPACE],
-    'enter':   [curses.KEY_ENTER],
-    'exit':    [curses.KEY_EXIT]
-  }
-
   def __init__(self, w, y, x, xpad=0, max=0):
-    InteractiveAnsiWindow.__init__ (self, h=3, w=w, y=y, x=x)
     self.content = ''
     self.xpad = xpad
     self.max = max
     self.adjwidth(w)  # calculate self.visibleWidth
+    InteractiveAnsiWindow.__init__ (self, h=3, w=w, y=y, x=x)
+    self.KMAP = { \
+      'refresh': [self.terminal.KEY_REFRESH],
+      'erase':   [self.terminal.KEY_BACKSPACE],
+      'enter':   [self.terminal.KEY_ENTER],
+      'exit':    [self.terminal.KEY_EXIT]
+    }
 
   def adjwidth(self, width):
     """ Adjust the window width and recalculate visibleWidth.
