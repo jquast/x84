@@ -1,3 +1,4 @@
+from curses.ascii import isprint
 from session import getsession, logger
 from output import echo
 
