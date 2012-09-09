@@ -18,6 +18,7 @@ __version__ = '1.0rc1'
 
 # this is iteration #3, x/84, 2010-2012 dingo
 import db
+import bbs.session
 
 import sys
 import traceback
@@ -28,10 +29,11 @@ def main (logger, logHandler, cfgFile='default.ini'):
   import bbs.ini
   import terminal
   terminal.logger.addHandler (logHandler)
+  terminal.logger.setLevel (logger.level)
   logger.addHandler (logHandler)
 
-  import bbs.session
   bbs.session.logger.addHandler (logHandler)
+  bbs.session.logger.setLevel (logger.level)
   logger.addHandler (logHandler)
 
   # load .ini file
@@ -39,10 +41,12 @@ def main (logger, logHandler, cfgFile='default.ini'):
 
   # initialize scripting subsystem
   import bbs.scripting
-  bbs.scripting.init (bbs.ini.cfg.get('system', 'scriptpath'))
+  bbs.scripting.init (bbs.ini.cfg.get('session', 'scriptpath'))
 
   # initialize telnet server
   import telnet
+  telnet.logger.setLevel (logger.level)
+  telnet.logger.addHandler (logHandler)
   telnet_port = int(bbs.ini.cfg.get('system', 'telnet_port'))
   telnet_addr = bbs.ini.cfg.get('system', 'telnet_addr')
 
@@ -50,7 +54,8 @@ def main (logger, logHandler, cfgFile='default.ini'):
       (port=telnet_port, address=telnet_addr,
        on_connect=terminal.on_connect,
        on_disconnect=terminal.on_disconnect,
-       timeout=0.01)
+       on_naws=terminal.on_naws,
+       timeout=0.001)
 
   logger.info ('[telnet:%s] listening tcp', telnet_port)
 
@@ -58,32 +63,51 @@ def main (logger, logHandler, cfgFile='default.ini'):
   eof_pipes = set()
   while True:
     event = server.poll()
-    for client, pipe in terminal.CHANNELS:
+    for client, pipe, lock in terminal.SESSION_CHANNELS:
       # poll for keyboard input, send to session channel monitor
-      if client.input_ready:
-        inp = client.get_input()
-        pipe.send (('input', inp))
+      if client.input_ready():
+        if lock.acquire(False):
+          inp = client.get_input()
+          lock.release()
+          pipe.send (('input', inp))
 
       # poll for events received on child process pipe
       if pipe.poll():
         try:
+          if not lock.acquire(False):
+            # this client currently 'locked', by POSHandler, likely.
+            continue
+          lock.release ()
           event, data = pipe.recv()
-          if event == 'output':
+          if event == 'disconnect':
+            client.deactivate ()
+          elif event == 'output':
+            # data to send
+            if not lock.acquire (False):
+              # somebody slipped us a lock. ignore for this pass,
+              continue
             client.send (data)
+            lock.release ()
           elif event == 'global':
-            for (c,p) in terminal.CHANNELS:
+            # broadcast: repeat data as global to all other channels
+            for (c,p,l) in terminal.SESSION_CHANNELS:
               if c != client:
-                c.send (('global', data))
+                c.send ((event, data, lock))
+          elif event == 'pos':
+            # query: what is the cursor position ?
+            t = terminal.POSHandler(pipe, client, lock, event, data)
+            t.start ()
           elif event.startswith ('db-'):
+            # query: database dictionary method
             t = db.DBHandler(pipe, event, data)
             t.start ()
           else:
-            assert 0, 'Unhandled event: %s (data=%s)' % (event,)
+            assert 0, 'Unhandled event: %s' % ((event,data,),)
         except EOFError:
           print 'EOF!'
-          eof_pipes.add ((client, pipe))
+          eof_pipes.add ((client, pipe, lock))
     while 0 != len(eof_pipes):
-      terminal.CHANNELS.remove (eof_pipes.pop())
+      terminal.SESSION_CHANNELS.remove (eof_pipes.pop())
 
 
 if __name__ == '__main__':
@@ -99,10 +123,13 @@ if __name__ == '__main__':
   if '-v' in sys.argv:
     sys.argv.remove('-v')
     log_level = logging.DEBUG
+    logger.setLevel(log_level)
   if '-cfg' in sys.argv:
     cfgFile = sys.argv[sys.argv.index('-cfg')+1]
     sys.argv.remove(cfgFile)
     sys.argv.remove('-cfg')
+  if '-tap' in sys.argv:
+    bbs.session.TAP = True
   logHandler = log.get_stderr(level=log_level)
   sys.stdout.flush()
   main (logger, logHandler, cfgFile)
