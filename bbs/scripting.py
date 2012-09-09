@@ -37,7 +37,6 @@ def chkmodpath(name, parent):
     return name_r, path_r
 
   # script-path relative
-  assert script_path is not None
   name_l = os.path.join(script_path, name)
   path_l = name_l + '.py'
   if os.path.exists(path_l):
