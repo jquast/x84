@@ -18,20 +18,21 @@ def main(recordonly=False):
   def lc_retrieve():
     " retrieve window paint data, list of last callers "
     return '\n'.join((
-      name.ljust (padd_handle) \
+      u.handle.ljust (padd_handle) \
           + u.location.ljust (padd_origin) \
           + ('%s ago' % (timeago,)).rjust (padd_timeago) \
           + ('   Calls: %s' % (u.calls,)).ljust (padd_ncalls) \
-          for timeago, u in [(asctime(time.time() -lc), getuser(name)) \
-            for lc, name in sorted([(v,k) \
-              for (k,v) in db.items() if userexist(k)])]))
+          for timeago, u in [(asctime(time.time() -lc), getuser(handle)) \
+            for lc, handle in sorted([(v,k) \
+              for (k,v) in db.items() \
+                if finduser(k) is not None])]))
 
   session = getsession()
   session.activity = 'Viewing Last Callers'
   term = getsession().terminal
   def refresh_highdef():
     y=14
-    h=term.height -y+1
+    h=term.height - (y+2)
     w=67
     x=(80-w)/2 # ansi is centered for 80-wide
     echo (term.clear + term.normal)
