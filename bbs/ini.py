@@ -15,12 +15,11 @@ def init(cfgFilepath='default.ini'):
   # start with default values,
   cfg = ConfigParser.SafeConfigParser()
   cfg.add_section('system')
-  # TODO: prompt user about encoding during setup
-  cfg.set('system', 'scriptpath', 'default/')
-  cfg.set('system', 'wfcscript', 'wfc')
+  cfg.set('system', 'bbsname', 'x/84')
   cfg.set('system', 'telnet_addr', '127.0.0.1')
   cfg.set('system', 'telnet_port', '6023')
   cfg.add_section ('matrix')
+  cfg.set('matrix', 'newcmds', 'new apply')
   cfg.set('matrix', 'byecmds', 'exit logoff bye quit')
   cfg.set('matrix', 'script', 'matrix')
   cfg.set('matrix', 'topscript', 'top')
@@ -29,6 +28,8 @@ def init(cfgFilepath='default.ini'):
   cfg.add_section('session')
   cfg.set('session', 'log_level', 'debug')
   cfg.set('session', 'default_encoding', 'iso8859-1')
+  cfg.set('session', 'default_ttype', 'vt220')
+  cfg.set('session', 'scriptpath', 'default/')
   cfg.add_section('irc')
   cfg.set('irc', 'server', 'efnet.xs4all.nl')
   cfg.set('irc', 'port', '6667')
@@ -40,7 +41,9 @@ def init(cfgFilepath='default.ini'):
   cfg.set('nua', 'max_email', '30')
   cfg.set('nua', 'max_origin', '24')
   cfg.set('nua', 'invalid_handles', ' '.join \
-      ((cfg.get('matrix','byecmds'), 'new sysop wfc anonymous',)))
+      ((cfg.get('matrix','byecmds'),
+        cfg.get('matrix','newcmds'),
+        'new sysop wfc anonymous',)))
   sys.stdout.write ('ok')
   sys.stdout.flush ()
   if not os.path.exists(cfgFilepath):
