@@ -384,11 +384,14 @@ class Terminal(object):
             return code.decode('utf-8')
         return u''
 
-    def translate_input(self, data):
+    def trans_input (self, data, encoding='iso8859-1'):
       """
       Yield either a unicode byte or a curses key constant as integer.
       If data is a bytestring, it is converted to unicode using encoding.
       """
+      if type(data) in (str, bytes):
+        data = data.decode (encoding)
+
       def scan_keymap(text):
           for (keyseq, keycode) in self._keymap.iteritems():
               if text.startswith (keyseq):
@@ -401,7 +404,10 @@ class Terminal(object):
           if (keyseq, keycode) != (None, None):
               yield keycode
               data = data[len(keyseq):]
-          # all other
+          elif data[0:2] == '\r\x00':
+              # skip beyond telnet nul
+              yield data[0]
+              data = data[2:]
           else:
               yield data[0]
               data = data[1:]
@@ -475,7 +481,8 @@ class ParametrizingString(unicode):
             # Re-encode the cap, because tparm() takes a bytestring in Python
             # 3. However, appear to be a plain Unicode string otherwise so
             # concats work.
-            parametrized = tparm(self.encode('utf-8'), *args).decode('utf-8')
+            lookup = self.encode('utf-8')
+            parametrized = tparm(lookup, *args).decode ('utf-8')
             return (parametrized if self._normal is None else
                     FormattingString(parametrized, self._normal))
         except curses.error:
