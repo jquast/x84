@@ -1,10 +1,18 @@
-from session import getsession
-from curses.ascii import BEL, isprint
+from session import getsession, logger
 from output import echo
 
 def getch(timeout=None):
-    (event, data) = getsession().read_event(events=['input'], timeout=timeout)
-    return data
+  event, data = getsession().read_event(events=['input'], timeout=timeout)
+  return data
+
+def getpos(timeout=None):
+  """Return current terminal position. (Blocking)"""
+  logger.debug ("query ('pos', %f)", float('inf') if timeout is None else timeout)
+  getsession().send_event('pos', timeout,) # ask for cursor position
+  event, data = getsession().read_event(events=['pos'], timeout=timeout)
+  return (None, None) \
+      if (None, None) == (event, data) \
+      else data
 
 def readline(width, value = '', hidden = '', paddchar = ' ', events = [
     'input'], timeout = None, interactive = False, silent = False):
@@ -49,9 +57,8 @@ def readlineevent(width, value = '', hidden = '', paddchar = ' ', events = [
         echo (hidden)
       else:
         echo (char)
-
     elif not silent:
-      echo (BEL)
+      echo ('\a')
     if interactive:
       return (value, 'input', None)
 
