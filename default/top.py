@@ -3,49 +3,41 @@
  This script is called after sucessfull login.
 """
 
-def main(login_handle='anonymous'):
+def main(login_handle=None):
   import time
-
-  # XXX setuid routine, allow 'anonymous' user !
-  user = getuser(login_handle) \
-      if login_handle != 'anonymous' \
-      else User()
+  user = User() if login_handle in (None, 'anonymous') \
+      else getuser(login_handle)
   user.calls += 1
   user.lastcall = time.time()
 
   session = getsession()
   session.activity = 'Intro screen'
   session.user = user
-
   term = session.terminal
 
   # rebuild last caller db
   gosub('lc', True)
-  session.activity = 'Intro screen'
 
+  # check for new messages
   gosub('chkmsgs')
-  session.activity = 'Intro screen'
 
+  # ?quick login
   echo ('\r\n\r\nQuick login? [yn] ')
   while True:
     k = getch()
-    if type(k) is not int:
-      if k.lower() == 'y':
-        goto ('main')
-      elif k.lower() == 'n':
-        break
+    if k in ('y', 'Y', 'q'):
+      goto ('main')
+    elif k in ('n', 'N'):
+      break
 
-  # last callers
+  # long login
+  # ... last callers
   gosub('lc')
-  session.activity = 'Intro screen'
 
-  # news
+  # ... news
   gosub('news')
-  session.activity = 'Intro screen'
 
-  # one liners
+  # ... one liners
   gosub('ol')
-  session.activity = 'Intro screen'
 
-  # jump to main
   goto('main')
