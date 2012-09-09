@@ -1,14 +1,12 @@
 """
 String helper functions for X/84 (formerly 'The Progressive') BBS.
 """
-from ascii import *
-import StringIO
+from curses.ascii import ESC, isdigit
 
 def chompn (s):
   """
     This chomp utility is unique for its purpose. firstly, it removes only
-    trailing \\n and \\r characters, and replaces single \\r's with
-    \\r\\n
+    trailing \\n and \\r characters, and replaces single \\r's with \\r\\n
   """
   s = s.rstrip()
   def cr(n, c, s):
@@ -167,7 +165,7 @@ def isbad(seq):
 
   slen = len(seq)
 
-  if not slen or seq[0] != esc: return False
+  if not slen or seq[0] != chr(ESC): return False
 
   # all sequences are at -least- 3 (\033,#,8)
   if slen < 2: badseq('short length (2)')
@@ -238,7 +236,7 @@ def isbad(seq):
     else: badseq('illegal nondigit')
   badseq('unknown ansi sequence')
 
-def seqc(string, ch=' ', stripnl=True):
+def seqc(string, ch=' '):
   " Replace string with \\033[nnC replaced by ' '*nn.  "
   # TODO: regexp's
   next, nstring = 0, ''
@@ -253,8 +251,6 @@ def seqc(string, ch=' ', stripnl=True):
       next = n + ls
     elif cs and isbad(string[n:]):
       next = n + cs
-    elif stripnl and isnl(string[n]):
-      next = n + 1
     elif next <= n:
       nstring += string[n]
   return nstring
@@ -267,7 +263,7 @@ def chkpadd(seq):
   # TODO: regexp's
   slen = len(seq)
   if not slen: return 0
-  if not seq[0] == esc: return 0
+  if not seq[0] == chr(ESC): return 0
   if not slen >= 4: return 0
   if not seq[1] == '[': return 0
   if not isdigit(ord(seq[2])): return 0
@@ -279,11 +275,11 @@ def chkpadd(seq):
     return 0
   return int(seq[2:p])
 
-def chkseq(seq, nlcounts=True):
+def chkseq(seq):
   """ Return non-zero for string 'seq' that begins with an ansi sequence.
       Value returned is bytes until sequence is complete.  This can be used
       as a 'next' pointer to skip past sequences
-      Newlines count as a 1-width sequence unless 'nlcounts' is set to False."""
+  """
 
   def badseq(msg=''):
     # parse error, or user-supplied string error
@@ -294,11 +290,7 @@ def chkseq(seq, nlcounts=True):
 
   slen = len(seq)
 
-  if not slen or seq[0] != esc: return 0
-
-  # newline
-  if nlcounts and isnl(seq[0]):
-    return 1
+  if not slen or seq[0] != chr(ESC): return 0
 
   # all sequences are at least 2 (\033c)
   if slen < 2: badseq('short length (2)')
@@ -374,7 +366,7 @@ def ansilen(string, max=0):
       give accurate returns. """
 
   # equivalent of len() call if no ansi sequences exist
-  if not esc in string:
+  if not chr(ESC) in string:
     return len(string)
 
   # next points to first character beyond next ansi string
