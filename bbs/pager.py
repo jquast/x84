@@ -44,13 +44,13 @@ class ParaClass(InteractiveAnsiWindow):
     'refresh': ['\014'],
     'goto':    ['G'],
     'gotopct': ['%'],
-    'exit':    [curses.KEY_EXIT, 'q'],
+    'exit':    [curses.KEY_EXIT, 'q', 'Q'],
     'up':      [curses.KEY_UP, 'k'],
     'down':    [curses.KEY_DOWN, 'j'],
     'end':     [curses.KEY_END, 'L'],
     'home':    [curses.KEY_HOME, 'H'],
-    'pgup':    [curses.KEY_PPAGE, curses.KEY_LEFT, 'h', 'K'],
-    'pgdown':  [curses.KEY_NPAGE, curses.KEY_RIGHT, 'l', 'J', ' '] \
+    'pgup':    [curses.KEY_PPAGE, curses.KEY_LEFT, 'h', 'K', 'b'],
+    'pgdown':  [curses.KEY_NPAGE, curses.KEY_RIGHT, 'l', 'J', ' ', 'f'] \
   }
 
   debug = False
@@ -125,7 +125,7 @@ class ParaClass(InteractiveAnsiWindow):
 
     # replace all of the ansi.right(n) sequences with
     # erase to prevent 'bleeding' when scrolling
-    data = seqc(data, ch=self.glyphs['erase'], stripnl=False)
+    data = seqc(data, ch=self.glyphs['erase'])
 
     while data.strip() or remaining.strip():
       nlset = [(x, z) for x, z in [(data.find(seq), seq) for seq in ['\r\n','\n']] if x != -1]
