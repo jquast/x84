@@ -9,6 +9,8 @@ pre-requsite 3rd party:
 	pip install blessings
 	pip install xmodem
 	pip install sauce
+	pip install requests
+        pip install py-bcrypt
 
 Getting Started
 ================
