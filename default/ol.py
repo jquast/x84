@@ -113,7 +113,9 @@ def main ():
     l = threading.Lock()
     t = FetchUpdates(q, l)
     t.start ()
-  session.activity = 'Reading bbs-scene.org one-liners'
+    session.activity = 'Reading bbs-scene 1liners'
+  else:
+    session.activity = 'Reading one-liners'
 
   while True:
     if not q.empty():
