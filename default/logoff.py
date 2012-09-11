@@ -1,7 +1,5 @@
 """
   Default logoff script for X/84, http://1984.ws
-
-  Allows automsg's to be written by unauthorized sessions.
 """
 TIMEOUT = 35
 AUTOMSG_LENGTH = 50
@@ -64,7 +62,8 @@ def main():
       term.normal, ': ', term.cyan_reverse, msg \
         .ljust(AUTOMSG_LENGTH -10),))
     artago = ''.join((term.blue_reverse,
-      (asctime(time.time() -t) + ' ago' + (' %s' % (origin, ) if isSysop else '')) \
+      ('%s ago%s' % (asctime(time.time() -t),
+        ' %s'%(origin,) if isSysop else '')) \
           .ljust (AUTOMSG_LENGTH -ansilen(artmsg))))
     # output & return new index
     echo (term.normal.join((artnick, artmsg, ' ', artago,)))
