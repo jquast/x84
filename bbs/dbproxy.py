@@ -1,14 +1,28 @@
-from session import getsession
 
 class DBProxy(object):
-  def __init__(self, schema):
+  """
+    Provide dictionary-like object interface with sendfunc() and recvfunc()
+    wrappers, intended for IPC pipe data transfers. Sub-processes to the main
+    process (FTP server) use DBProxy directly with their own send and recv
+    wrappers. Session runtimes use the derived class DBSessionProxy.
+  """
+  def __init__(self, schema, send_f, recv_f):
+    """ @schema: database key
+        @send_f: callable receiving arguments (u'event', (u'data',))
+        @recv_f: callable receiving arguments ((u'event',))
+    """
     self.schema = schema
+    self.send_f = send_f
+    self.recv_f = recv_f
 
   def __proxy__(self, method, *args):
+    """
+    Proxy a method name and its arguments via
+      send.sendfunc(dbkey, (method, args,)).
+    """
     event = 'db-%s' % (self.schema,)
-    getsession().send_event(event, (method, args,))
-    event, data = getsession().read_event((event,))
-    return data
+    self.send_f (event, (method, args,))
+    return self.recv_f((event,))
 
   def __cmp__(self, *args):
     return self.__proxy__ ('__cmp__', *args)
@@ -52,3 +66,22 @@ class DBProxy(object):
   def popitem(self):
     return self.__proxy__ ('popitem')
 
+
+def _sendfunc(event, data):
+  from session import getsession
+  return getsession().send_event(event, data)
+
+
+def _recvfunc(events):
+  from session import getsession
+  ev, data = getsession().read_event(events)
+  assert ev in events
+  return data
+
+
+class DBSessionProxy(DBProxy):
+  """
+  Provide database access via a proxy to terminal sessions
+  """
+  def __init__(self, schema):
+    DBProxy.__init__(self, schema, send_f=_sendfunc, recv_f=_recvfunc)
