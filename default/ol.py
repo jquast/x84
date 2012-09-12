@@ -20,7 +20,7 @@ def main ():
   save_msg = 'BURNiNG TO rOM, PlEASE WAiT!'
   erase_msg = 'ERaSE HiSTORY ?!'
   erased_msg = 'ThE MiNiSTRY Of TRUTh hONORS YOU'
-  udb = DBProxy('oneliner')
+  udb = DBSessionProxy('oneliner')
   chk_yesno = (term.KEY_ENTER, term.KEY_LEFT, term.KEY_RIGHT,
       'y', 'n', 'Y', 'N', 'h', 'l', 'H', 'L',)
   window, comment = None, None

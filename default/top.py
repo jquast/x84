@@ -9,6 +9,7 @@ def main(login_handle=None):
       else getuser(login_handle)
   user.calls += 1
   user.lastcall = time.time()
+  user.save ()
 
   session = getsession()
   session.activity = 'Intro screen'
