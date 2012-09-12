@@ -2,7 +2,7 @@
 import time
 
 def main(recordonly=False):
-  db = DBProxy('lastcallers')
+  db = DBSessionProxy('lastcallers')
   def build():
     " build and return last callers list for display "
     for u in listusers():
