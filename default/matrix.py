@@ -30,11 +30,11 @@ def main ():
   topscript = ini.cfg.get('matrix', 'topscript')
   bbsname = ini.cfg.get('system','bbsname')
   status_auth = ''.join((
-    term.move (0,0) + term.clear + term.cyan_reverse + '\033#8',
-    term.move (max(0,(term.height /2) -2), max(0,(term.width /2) -10),),' '*20,
-    term.move (max(0,(term.height /2) -1), max(0,(term.width /2) -10),),
+    term.move (0,0) + term.clear + term.bright_cyan + '\033#8',
+    term.move (max(0,(term.height /2) -1), max(0,(term.width /2) -10),),' '*20,
+    term.move (max(0,(term.height /2)   ), max(0,(term.width /2) -10),),
       'encrypting ...'.center (20),
-    term.move (max(0,(term.height /2)), max(0,(term.width /2) -10),),' '*20,
+    term.move (max(0,(term.height /2) +1), max(0,(term.width /2) -10),),' '*20,
     term.normal,))
   status_dirties_screen = True
 
