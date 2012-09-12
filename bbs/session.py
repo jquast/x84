@@ -12,7 +12,6 @@ import scripting
 
 logger = multiprocessing.get_logger()
 mySession = None
-TAP = False # if True, keystrokes logged at debug level
 
 def getsession():
   """Return session, after a .run() method has been called on any 1 instance.
@@ -39,6 +38,11 @@ class Session(object):
 
   _source is a tuple that indicates the origin of the terminal in some form,
   such as (client.addr, client.port) for telnet connections.
+
+  _tap represents a boolean of wether or not, when debug logging is enabled, to
+  display user input. matrix explicitly stores and restores this during
+  password input, but otherwise is masked by 'x' only when the ini option is
+  'on'
   """
   _user = None
   _handle = None
@@ -46,6 +50,7 @@ class Session(object):
   _cwd = None
   last_input_time = 0.0
   connect_time = 0.0
+  tap_mask = '*'
 
   def __init__ (self, terminal=None, pipe=None, encoding=None,
   source=('undef', None)):
@@ -54,6 +59,7 @@ class Session(object):
     self._script_stack = list(((ini.cfg.get('matrix','script'),),))
     self._encoding = encoding if encoding is not None \
         else ini.cfg.get('session', 'default_encoding')
+    self._tap = ini.cfg.get('session','tap_input') in ('yes','on')
     self._buffer = dict()
     self._source = source
     self.last_input_time = \
@@ -159,7 +165,7 @@ class Session(object):
     global mySession
     assert mySession is None, 'run() cannot be called twice'
     mySession = self
-    fallback_stack = copy.copy(self._script_stack)
+    fallback_stack = self._script_stack #copy.copy(self._script_stack)
     while len(self._script_stack) > 0:
       logger.debug ('%s: script_stack is %s',
           self.handle, self._script_stack)
@@ -196,10 +202,9 @@ class Session(object):
                (fe for fe in traceback.format_exception_only(t, v)))))
       if 0 != len(self._script_stack):
         # recover from a general exception or script error
-        toss = self._script_stack.pop()
-        logger.info ('%s after %s popped from script stack.',
-          'continue' if 0 != len(self._script_stack) else 'stop',
-          toss)
+        fault = self._script_stack.pop()
+        logger.info ('%s after general exception with %s.', 'Resume' \
+            if 0 != len(self._script_stack) else 'Stop', fault)
 
 
   def write (self, data, encoding=None):
@@ -247,8 +252,10 @@ class Session(object):
           self._buffer['refresh'] = list((0, ('input', keystroke,),))
         self._buffer['input'].insert (0, keystroke)
       self._last_input_time = time.time()
-      logger.debug ('%s event buffered, %s.', self.handle,
-          (event, data if TAP else 'x' * len(data),))
+      # special care for input, mask with self.tap_mask
+      if logger.level >= logger.debug:
+        logger.debug ('%s event buffered, %s.', self.handle,
+            (event, data if self.tap else self.tap_mask * len(data),))
     else:
       self._buffer[event].insert (0, data)
       logger.debug ('%s event buffered, (%s,%s).', self.handle, event, data,)
@@ -307,9 +314,8 @@ class Session(object):
   def runscript(self, script, *args):
     """Execute script's .main() callable with optional *args."""
     import bbs
-    logger.info ('%s runscript %r.', self.handle, (script, args,))
-
     self._script_stack.append ((script,) + args)
+    logger.info ('%s runscript %r.', self.handle, (script, args,))
     try:
       self.script_name, self.script_filepath \
           = scripting.chkmodpath (script, self.cwd)
