@@ -30,8 +30,50 @@ def main(pipe):
       assert ev in events
       return data
 
+  class Throttler(ftpserver.ThrottledDTPHandler):
+    read_limit = int(ini.cfg.get('ftp', 'read_limit'))
+    write_limit = int(ini.cfg.get('ftp', 'write_limit'))
+
+  class BBSFTPServer(ftpserver.FTPServer):
+    max_cons = int(ini.cfg.get('ftp', 'conns_max'))
+    max_cons_per_ip = int(ini.cfg.get('ftp', 'conns_per_ip'))
+
+  class BBSFS(ftpserver.AbstractedFS):
+    def __init__(self, root, cmd_channel):
+      root = ini.cfg.get('ftp', 'basedir')
+      ftpserver.AbstractedFS
+
+  class BBSFTPHandler(ftpserver.FTPHandler):
+    dtp_handler = Throttler
+    banner = 'x/84 pyftpdlib %s ready.' % (ftpserver.__ver__,)
+    timeout = int(ini.cfg.get('ftp', 'timeout'))
+    permit_foreign_addresses = ini.cfg.get('ftp', 'enable_fxp') == 'yes'
+    (_low, _high) = ini.cfg.get('ftp', 'pasv_ports').split('-',1)
+    passive_ports = range(int(_low), int(_high))
+    masquerade_address = ini.cfg.get('ftp', 'masq_addr') \
+      if ini.cfg.get('ftp', 'enable_masquerade') == 'yes' else None
+
+    def on_login(self, username):
+      pipe.send ('global', ('ftp', ('login', username,)))
+
+    def on_logout(self, username):
+      pipe.send ('global', ('ftp', ('logout', username,)))
+
+    def on_file_sent(self, file):
+      pipe.send ('global', ('ftp', ('sent', file,)))
+
+    def on_file_received(self, file):
+      pipe.send ('global', ('ftp', ('recv', file,)))
+
+    def on_incompile_file_sent(self, file):
+      pipe.send ('global', ('ftp', ('sent-incomplete', file,)))
+
+    def on_incompile_file_recv(self, file):
+      pipe.send ('global', ('ftp', ('recv-incomplete', file,)))
+
   class BBSAuthorizer(ftpserver.DummyAuthorizer):
     db = None
+
     def __init__(self):
       ftpserver.DummyAuthorizer.__init__(self)
 
@@ -46,20 +88,23 @@ def main(pipe):
         if not username in self.user_table:
           self.add_user (username, password=u'', homedir=ini.cfg.get('ftp','basedir'))
         logger.info ('%s succeded login', username)
+        for (directory, perms) in u.get('ftpoperms', ()):
+          self.ovveride_perm(username, directory, perms, recursive=True)
         return True
       logger.warn ('%s denied: bad password', username)
       return False
 
-  handler = ftpserver.FTPHandler
-  handler.authorizer = BBSAuthorizer()
-  handler.banner = 'x/84 pyftpdlib %s ready.' % (ftpserver.__ver__,)
-  # TODO add masquerade & passive port support
+    #def has_perm(username, permission, path):
+    #  override_perm(self, username, directory, perm, recursive=False):
+
+  handler = BBSFTPHandler
+  handler.authorizer = BBSAuthorizer
+  if ini.cfg.get('ftp', 'enable_anonymous') == 'yes':
+    authorizer.add_user ('anonymous', password=u'', homedir=ini.cfg.get('ftp','basedir'))
   address = (ini.cfg.get('ftp', 'addr'), int(ini.cfg.get('ftp', 'port')))
-  server = ftpserver.FTPServer(address, handler)
-  server.max_cons = 256
-  server.max_cons_per_ip = 5
-  server.serve_forever ()
+  server = BBSFTPServer(address, handler)
   logger.info ('[ftp:%s] listening tcp', address[1])
+  server.serve_forever ()
 
 def init():
   parent_conn, child_conn = multiprocessing.Pipe()
