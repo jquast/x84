@@ -17,7 +17,7 @@ import scripting
 logger = multiprocessing.get_logger()
 logger.setLevel(logging.DEBUG)
 mySession = None
-ASSERT_REWIND = True
+ASSERT_REWIND = False
 
 def getsession():
   """Return session, after a .run() method has been called on any 1 instance.
@@ -468,8 +468,9 @@ class Session(object):
       bp2 = struct.pack('<I', len_data)
       # write
       self._fp_ttyrec.write (bp1 + bp2 + data)
-      logger.error ('writing timechunk: (%r;%r;%r%s' % \
-          (bp1, bp2, data[:20], '...' if len(data) > 20 else '',))
+      if ASSERT_REWIND:
+        logger.debug ('writing timechunk: (%r;%r;%r%s' % \
+            (bp1, bp2, data[:20], '...' if len(data) > 20 else '',))
       self._ttyrec_sec = sec
       self._ttyrec_usec = usec
       self._ttyrec_len_data = len_data
@@ -479,9 +480,9 @@ class Session(object):
     # rewind to last length byte
     last_bp2 = struct.pack('<I', self._ttyrec_len_data)
     new_bp2 = struct.pack('<I', self._ttyrec_len_data +len_data)
-    logger.error ('re-writing timechunk: (%r;...%r%s' % (new_bp2,
-      data[:20], '...' if len(data) > 20 else '',))
     if ASSERT_REWIND:
+      logger.debug ('re-writing timechunk: (%r;...%r%s' % (new_bp2,
+        data[:20], '...' if len(data) > 20 else '',))
       self._fp_ttyrec.seek ((self._ttyrec_len_data +len(last_bp2)) *-1, 2)
       chk = self._fp_ttyrec.read (len(last_bp2))
       assert chk == last_bp2, 'should have %r; got %r' % (last_bp2, chk)
