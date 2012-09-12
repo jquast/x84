@@ -1,0 +1,12 @@
+== [ bROAdCAST tRANSMiSSiON fROM biG bROthER ] ==
+
+9/10/12 - fOR iMMEdiAtE diStRibUtiON
+
+Citzens,
+
+As you all know, this week celebrates the glorious revolution from the IBM-PC DOS runtime of 1997. The software standards comittee has taken another byte out of crime today in remembernce and instituted action code article 78837 serial 11b: source code availability on github. Per committee recommendation r7A it is your duty to inform yourself of the hypertext URL:
+
+   https://github.com/jquast/x84
+
+Remember, open source can open sores.
+

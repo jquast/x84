@@ -3,7 +3,7 @@
  Simply edit text file of NEWS_PATH.
 """
 
-NEWS_PATH = 'text/news.txt'
+NEWS_PATH = 'data/news.txt'
 TIMEOUT = 1984
 
 def main():
@@ -59,7 +59,7 @@ def main():
     return p
 
   try:
-    news_content = fopen(NEWS_PATH).readlines()
+    news_content = open(NEWS_PATH).readlines()
   except IOError:
     news_content = '%s not found -- no news :)\n' \
         % (abspath(NEWS_PATH,))
