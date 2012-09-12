@@ -12,8 +12,8 @@ def main ():
   session = getsession()
   term = session.terminal
   user = session.user
-  MAX_INPUT = 80 # character limit for input
-  HISTORY = 50   # limit history in buffer window
+  MAX_INPUT = 50 # character limit for input
+  HISTORY   = 84   # limit history in buffer window
   SNUFF_TIME = 1*60*60*24   # one message per 24 hours, 0 to disable
   snuff_msg = 'YOU\'VE AlREADY SAiD ENUff!\a'
   say_msg = 'SAY WhAT? CTRl-X TO CANCEl'
@@ -36,7 +36,7 @@ def main ():
       m = '%s/%s' % (term.white + term.reverse, term.normal)
       r = '%s)%s' % (term.bold_white, term.normal)
       output += (l + ol['alias'] + m + ol['bbsname'] + r +': ') .rjust (20)
-      output += str(ol['oneliner']) + '\n'
+      output += str(seqp(ol['oneliner'],term)) + '\n'
     output = output.rstrip()
     window.update (output, refresh=True, scrollToBottom=True)
 
@@ -48,6 +48,7 @@ def main ():
     echo (''.join((term.normal, c, text.center(w)),))
 
   def saysomething():
+    flushevent ('oneliner_update')
     comment.lowlight ()
     statusline (say_msg, term.cyan_inverse)
     comment.update ('')
@@ -60,9 +61,23 @@ def main ():
         comment.run (key=data)
         if comment.enter:
           statusline (save_msg, term.bright_green)
-          addline (comment.data().strip())
+          msg = comment.data().strip()
           session.user.set ('lastliner', time.time())
-          redraw ()
+          if not ini.cfg.has_section('bbs-scene'):
+            addline (msg)
+            break
+          # post to bbs-scene.rog
+          r = requests.post ('http://bbs-scene.org/api/onelinerz.xml',
+            auth=(ini.cfg.get('bbs-scene','user'),
+                  ini.cfg.get('bbs-scene','pass')),
+            data={'oneliner': msg,
+                  'alias': session.handle,
+                  'bbsname': ini.cfg.get('system', 'bbsname'),})
+          if r.status_code == 200 and XML(r.content) \
+              .find('success').text == 'true':
+            # spawn thread to ensure our update got there ..
+            t = FetchUpdates(q, l, history=3)
+            t.start ()
           break
         elif comment.exit:
           break
@@ -83,13 +98,14 @@ def main ():
     }
 
   class FetchUpdates(threading.Thread):
-    def __init__(self, queue, lock):
+    def __init__(self, queue, lock, history):
       self.queue = queue
       self.lock = lock
+      self.history = history
       threading.Thread.__init__ (self)
     def run(self):
       r = requests.get \
-          ('http://bbs-scene.org/api/onelinerz?limit=%d' % (HISTORY,),
+          ('http://bbs-scene.org/api/onelinerz?limit=%d' % (self.history,),
             auth=(ini.cfg.get('bbs-scene','user'),
                   ini.cfg.get('bbs-scene','pass')))
       if 200 != r.status_code:
@@ -109,9 +125,9 @@ def main ():
   flushevent ('oneliner_update')
   forceRefresh = True
   q = Queue.Queue()
+  l = threading.Lock()
   if ini.cfg.has_section('bbs-scene'):
-    l = threading.Lock()
-    t = FetchUpdates(q, l)
+    t = FetchUpdates(q, l, HISTORY)
     t.start ()
     session.activity = 'Reading bbs-scene 1liners'
   else:
@@ -131,10 +147,10 @@ def main ():
           matches += 1
       l.release ()
       if matches > 0:
-        print 'ol:', matches, 'new updates'
+        logger.debug ('bbs-scene.org ol-api: %d new updates', matches)
         redraw ()
       else:
-        print 'ol: no new bbs-scene.org'
+        logger.debug ('bbs-scene.org ol-api: no new updates')
 
     if forceRefresh:
       echo (term.move (0,0) + term.clear + term.normal)
@@ -207,7 +223,6 @@ def main ():
         break
       else:
         # send as movement key to pager window
-        print data
         window.run (key=data, timeout=None)
   echo (term.normal)
   return

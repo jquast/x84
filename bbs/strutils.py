@@ -2,6 +2,8 @@
 String helper functions for X/84 (formerly 'The Progressive') BBS.
 """
 from curses.ascii import ESC, isdigit
+import re
+pANS_PIPE = re.compile(r'(\|\d\d)')
 
 def chompn (s):
   """
@@ -46,12 +48,6 @@ def strpadd(string, paddlen=0, align='left', ch=' ', trim=True):
     return padd +string
   else:
     return '(bad alignment)'
-
-def maxwidth(dataset, ceil=None):
-  " return size of largest record in dataset, trimmed to max "
-  return min(ceil,max([len(l) for l in dataset])) \
-      if ceil is not None \
-      else max([len(l) for l in dataset])
 
 def maxanswidth(dataset, ceil=None):
   " return size of largest line of ansi in art, trimmed to max "
@@ -235,6 +231,18 @@ def isbad(seq):
       else: badseq('illegal single value:'+ seq[p2]+'.')
     else: badseq('illegal nondigit')
   badseq('unknown ansi sequence')
+
+def seqp(src, term):
+  """Return ansi string given string with |03 pipe codes ..."""
+  tgt = ''
+  ptr, match = 0, None
+  for match in pANS_PIPE.finditer(src):
+    value = int(src[match.start()+len('|'):match.end()], 10)
+    tgt += src[ptr:match.start()] + term.color(value)
+    ptr = match.end()
+  if match is None:
+    return src # as-is
+  return ''.join((tgt, src[match.end():], term.normal))
 
 def seqc(string, ch=' '):
   " Replace string with \\033[nnC replaced by ' '*nn.  "
