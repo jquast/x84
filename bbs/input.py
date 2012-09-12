@@ -7,7 +7,7 @@ def getch(timeout=None):
   return data
 
 def getpos(timeout=None):
-  """Return current terminal position. (Blocking)"""
+  """Return current terminal position as (y,x). (Blocking)"""
   logger.debug ("query ('pos', %f)", float('inf') if timeout is None else timeout)
   getsession().send_event('pos', timeout,) # ask for cursor position
   event, data = getsession().read_event(events=['pos'], timeout=timeout)
