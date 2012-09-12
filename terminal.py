@@ -21,6 +21,7 @@ def start_process(child_conn, termtype, rows, columns, charset, origin):
   with term.fullscreen():
     new_session.run ()
   logger.debug ('%s/%s end process', new_session.pid, new_session.handle)
+  new_session.close ()
   child_conn.send (('disconnect', 'process exit',))
 
 
@@ -159,11 +160,21 @@ class ConnectTelnetTerminal (threading.Thread):
     SESSION_CHANNELS.append ((self.client, parent_conn, lock))
 
 
+  def banner(self):
+    """Send sequences for codepage 0, disable line-wrap, utf-8 activation."""
+    # http://www.cl.cam.ac.uk/~mgk25/unicode.html#term
+    # G0-designate 94-set http://en.wikipedia.org/wiki/ISO/IEC_2022
+    # disable line-wrapping http://www.termsys.demon.co.uk/vtansi.htm
+    # activate UTF-8 http://www.cl.cam.ac.uk/~mgk25/unicode.html#term
+    self.client.send (''.join(('\033(U', '\033[7l', '\033%G')))
+    self.client.socket_send () # push
+
   def run(self):
     """Negotiate and inquire about terminal type, telnet options,
     window size, and tcp socket options before spawning a new session."""
     logger.debug ('_set_socket_opts')
     self._set_socket_opts ()
+    self.banner ()
     logger.debug ('_try_echo')
     self._try_echo ()
     logger.debug ('_no_linemode')
@@ -206,22 +217,18 @@ class ConnectTelnetTerminal (threading.Thread):
     """Negotiation binary (BINARY) telnet option (on)."""
     from telnet import BINARY
     if self.client.telnet_eight_bit:
-      if self.DEBUG:
-        self.client.send ('binary mode enabled (unsolicted)\r\n')
+      logger.debug ('binary mode enabled (unsolicted)')
       return
-    if self.DEBUG:
-      self.client.send('request-do-eight-bit\r\n')
+    logger.debug('request-do-eight-bit')
     self.client.request_do_binary ()
     self.client.socket_send() # push
     t = time.time()
     while self.client.telnet_eight_bit is False and self._timeleft(t):
       time.sleep (self.TIME_POLL)
     if self.client.telnet_eight_bit:
-      if self.DEBUG:
-        self.client.send ('binary mode enabled (negotiated)\r\n')
+      logger.debug ('binary mode enabled (negotiated)')
     else:
-      if self.DEBUG:
-        self.client.send ('failed: binary; ignoring\r\n')
+      logger.debug ('failed: binary; ignoring')
 
 
   def _try_sga(self):
@@ -230,12 +237,10 @@ class ConnectTelnetTerminal (threading.Thread):
     enabledRemote = self.client._check_remote_option
     enabledLocal = self.client._check_local_option
     if enabledRemote(SGA) is True and enabledLocal(SGA) is True:
-      if self.DEBUG:
-        self.client.send('sga enabled\r\n')
+      logger.debug('sga enabled')
       return
 
-    if self.DEBUG:
-      self.client.send('request-do-sga\r\n')
+    logger.debug('request-do-sga')
     self.client.request_do_sga ()
     self.client.socket_send() # push
     t = time.time()
@@ -243,21 +248,17 @@ class ConnectTelnetTerminal (threading.Thread):
       and self._timeleft(t):
         time.sleep (self.TIME_POLL)
     if (enabledRemote(SGA) is True and enabledLocal(SGA) is True):
-      if self.DEBUG:
-        self.client.send ('sga enabled (negotiated)\r\n')
+      logger.debug ('sga enabled (negotiated)')
     else:
-      if self.DEBUG:
-        self.client.send ('failed: supress go-ahead\r\n')
+      logger.debug ('failed: supress go-ahead')
 
 
   def _try_echo(self):
     """Negotiate echo (ECHO) telnet option (on)."""
     if self.client.telnet_echo is True:
-      if self.DEBUG:
-        self.client.send ('echo enabled\r\n')
+      logger.debug ('echo enabled')
       return
-    if self.DEBUG:
-      self.client.send('request-will-echo\r\n')
+    logger.debug('request-will-echo')
     self.client.request_will_echo ()
     self.client.socket_send() # push
     t = time.time()
@@ -265,22 +266,18 @@ class ConnectTelnetTerminal (threading.Thread):
         and self._timeleft(t):
       time.sleep (self.TIME_POLL)
     if self.client.telnet_echo:
-      if self.DEBUG:
-        self.client.send ('echo enabled (negotiated)\r\n')
+      logger.debug ('echo enabled (negotiated)')
     else:
-      if self.DEBUG:
-        self.client.send ('failed: echo, ignored !\r\n')
+      logger.debug ('failed: echo, ignored !')
 
 
   def _try_naws(self):
     """Negotiate about window size (NAWS) telnet option (on)."""
     if not None in (self.client.columns, self.client.rows,):
-      if self.DEBUG:
-        self.client.send ('window size: %dx%d (unsolicited)\r\n' \
+      logger.debug ('window size: %dx%d (unsolicited)' \
           % (self.client.columns, self.client.rows,))
       return
-    if self.DEBUG:
-      self.client.send('request-naws\r\n')
+    logger.debug('request-naws')
     self.client.request_do_naws ()
     self.client.socket_send() # push
     t = time.time()
@@ -288,24 +285,19 @@ class ConnectTelnetTerminal (threading.Thread):
       and self._timeleft(t):
         time.sleep (self.TIME_POLL)
     if not None in (self.client.columns, self.client.rows,):
-      if self.DEBUG:
-        self.client.send ('window size: %dx%d (negotiated)\r\n' \
+      logger.debug ('window size: %dx%d (negotiated)' \
           % (self.client.columns, self.client.rows,))
       return
-    if self.DEBUG:
-      self.client.send ('failed: negotiate about window size\r\n')
+    logger.debug ('failed: negotiate about window size')
 
     # Try #2 ... this works for most any screen
     # send to client --> pos(999,999)
     # send to client --> report cursor position
     # read from client <-- window size
-    if self.DEBUG:
-      self.client.send ('store-cursor')
+    logger.debug ('store-cu')
     self.client.send ('\x1b[s')
     for kind, query_seq, response_pattern in self.WINSIZE_TRICK:
-      if self.DEBUG:
-        self.client.send ('\r\n                -- move-to corner' \
-          '& query for %s' % (kind,))
+      logger.debug ('move-to corner & query for %s' % (kind,))
       self.client.send ('\x1b[999;999H')
       self.client.send (query_seq)
       self.client.socket_send() # push
@@ -315,23 +307,19 @@ class ConnectTelnetTerminal (threading.Thread):
           time.sleep (self.TIME_POLL)
       inp = self.client.get_input()
       self.client.send ('\x1b[r')
-      if self.DEBUG:
-        self.client.send ('\r\ncursor restored --\r\n')
+      logger.debug ('cursor restored')
       self.client.socket_send() # push
       match = response_pattern.search (inp)
       if match:
         self.client.rows, self.client.columns = match.groups()
-        if self.DEBUG:
-          self.client.send ('window size: %dx%d (corner-query hack)\r\n' \
+        logger.debug ('window size: %dx%d (corner-query hack)' \
             % (self.client.columns, self.client.rows,))
         return
 
-    if self.DEBUG:
-      self.client.send ('failed: negotiate about window size\r\n')
+    logger.debug ('failed: negotiate about window size')
     # set to 80x24 if not detected
     self.client.columns, self.client.rows = 80, 24
-    if self.DEBUG:
-      self.client.send ('window size: %dx%d (default)\r\n' \
+    logger.debug ('window size: %dx%d (default)' \
         % (self.client.columns, self.client.rows,))
 
 
@@ -340,11 +328,9 @@ class ConnectTelnetTerminal (threading.Thread):
     # haven't seen this work yet ...
     from telnet import CHARSET
     if self.client.charset != self.CHARSET_UNDETECTED:
-      if self.DEBUG:
-        self.client.send ('terminal charset: %s\r\n' % (self.client.charset,))
+      logger.debug ('terminal charset: %s\r\n' % (self.client.char))
       return
-    if self.DEBUG:
-      self.client.send ('request-terminal-charset\r\n')
+    logger.debug ('request-terminal-charset')
     self.client.request_do_charset ()
     self.client.socket_send() #push
     t = time.time()
@@ -353,45 +339,36 @@ class ConnectTelnetTerminal (threading.Thread):
       and self._timeleft(t):
         time.sleep (self.TIME_POLL)
     if self.client.charset != self.CHARSET_UNDETECTED:
-      if self.DEBUG:
-        self.client.send ('terminal charset: %s (negotiated)\r\n' %
+      logger.debug ('terminal charset: %s (negotiated)' %
           (self.client.charset,))
       return
-    if self.DEBUG:
-      self.client.send ('failed: negotiate about character encoding\r\n')
+    logger.debug ('failed: negotiate about character encoding')
     # set to cfg .ini if not detected
     self.client.charset = ini.cfg.get('session', 'default_encoding')
-    if self.DEBUG:
-      self.client.send ('terminal charset: %s (default)\r\n' %
-        (self.client.charset,))
+    logger.debug ('terminal charset: %s (default)' % (self.client.charset,))
 
 
   def _try_ttype(self):
     """Negotiate terminal type (TTYPE) telnet option (on)."""
     detected = lambda: self.client.terminal_type != self.TTYPE_UNDETECTED
     if detected():
-      if self.DEBUG:
-        self.client.send ('terminal type: %s (unsolicited)\r\n' %
+      logger.debug ('terminal type: %s (unsolicited)' %
           (self.client.terminal_type,))
       return
-    if self.DEBUG:
-      self.client.send ('request-terminal-type\r\n')
+    logger.debug ('request-terminal-type')
     self.client.request_ttype ()
     self.client.socket_send() # push
     t = time.time()
     while not detected() and self._timeleft(t):
       time.sleep (self.TIME_POLL)
     if detected():
-      if self.DEBUG:
-        self.client.send ('terminal type: %s (negotiated)\r\n' %
+      logger.debug ('terminal type: %s (negotiated)' %
           (self.client.terminal_type,))
       return
-    if self.DEBUG:
-      self.client.send ('failed: terminal type not determined.\r\n')
+    logger.debug ('failed: terminal type not determined.')
 
     # Try #2 - ... this is bullshit
-    if self.DEBUG:
-      self.client.send('request answerback sequence\r\n')
+    logger.debug('request answerback sequence')
     self.client.request_wont_echo ()
     self.client.socket_send () # push
     self.client.recv_buffer='' # flush & toss nput
@@ -407,17 +384,13 @@ class ConnectTelnetTerminal (threading.Thread):
           time.sleep (self.TIME_POLL)
       inp = self.client.get_input().lower()
       self.client.terminal_type = inp.strip()
-      if self.DEBUG:
-        self.client.send ('terminal type: %s\r\n (from answerback)' %
-          (self.client.terminal_type,))
+      logger.debug ('terminal type: %s (answerback)' \
+          % (self.client.terminal_type,))
       return
-    if self.DEBUG:
-      self.client.send ('failed: answerback reply not receieved\r\n')
+    logger.debug ('failed: answerback reply not receieved')
     # set to cfg .ini if not detected
-    self.client.terminal_type = ini.cfg.get('session', 'default_terminal_type')
-    if self.DEBUG:
-      self.client.send ('terminal type: %s\r\n (default)' %
-        (self.client.terminal_type,))
+    self.client.terminal_type = ini.cfg.get('session', 'default_ttype')
+    logger.debug ('terminal type: %s (default)' % (self.client.terminal_type,))
 
 
 class POSHandler(threading.Thread):
