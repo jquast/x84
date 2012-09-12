@@ -2,16 +2,22 @@ import multiprocessing
 import traceback
 import itertools
 import logging
+import struct
+import math
 import time
 import sys
 import os
+import io
+import re
 
 import ini
 import exception
 import scripting
 
 logger = multiprocessing.get_logger()
+logger.setLevel(logging.DEBUG)
 mySession = None
+ASSERT_REWIND = True
 
 def getsession():
   """Return session, after a .run() method has been called on any 1 instance.
@@ -48,28 +54,62 @@ class Session(object):
   _handle = None
   _activity = None
   _cwd = None
-  last_input_time = 0.0
-  connect_time = 0.0
+  _record_tty = False
+  _ttyrec_folder = 'ttyrecordings/'
+  _fp_ttyrec = None
+  _ttyrec_sec = -1
+  _ttyrec_usec = -1
+  _ttyrec_len_data = 0
+  _last_input_time = 0.0
+  _connect_time = 0.0
   tap_mask = '*'
+  # if the last timechunk and current timechunk to be written differ by less
+  # than TTYREC_uCOMPRESS, modify the last written timechunk to include the current
+  # data as though no time had passed at all. in theory this would lose timing
+  # precision, but it actually gains precision but not wasting unnecessary
+  # chunking, parsing, and short-sleeping by the reader.
+  TTYREC_uCOMPRESS = 1500
+  # http://www.xfree86.org/current/ctlseqs.html#VT100%20Mode
+  # CSI(8);(Y);(X)t #  -- resize the text area to [height;width] in characters.
+  # http://www.cl.cam.ac.uk/~mgk25/unicode.html#term
+  # \033%G          #  -- activate UTF-8
+  TTYREC_HEADER = '\033[8;%d;%dt\033%%G'
 
   def __init__ (self, terminal=None, pipe=None, encoding=None,
-  source=('undef', None)):
+  source=('undef', None), recording=None):
     self.pipe = pipe
     self.terminal = terminal
     self._script_stack = list(((ini.cfg.get('matrix','script'),),))
     self._encoding = encoding if encoding is not None \
         else ini.cfg.get('session', 'default_encoding')
-    self._tap = ini.cfg.get('session','tap_input') in ('yes','on')
+    self._tap = ini.cfg.get('session','tap_input') in ('yes', 'on')
+    self._ttylog_folder = ini.cfg.get('session', 'ttylog_folder')
+    self._record_tty = ini.cfg.get('session', 'record_tty') in ('yes','on')
+    self._ttyrec_folder = ini.cfg.get('session', 'ttylog_folder')
     self._buffer = dict()
     self._source = source
-    self.last_input_time = \
-        self.connect_time = time.time()
+    self._last_input_time = self._connect_time = time.time()
 
-  def idle(self):
-    return time.time() -self.last_input_time
-
+  @property
   def duration(self):
-    return time.time() -self.connect_time
+    """Return length of time since connection began (float)."""
+    return time.time() -self._connect_time
+
+  @property
+  def connect_time(self):
+    """Return time when connection began (float)."""
+    return self._connect_time
+
+  @property
+  def last_input_time(self):
+    """Return last time of keypress (epoch float)."""
+    return self._last_input_time
+
+  @property
+  def idle(self):
+    """Return length of time since last keypress occured (float)."""
+    return time.time() - self._last_input_time
+
 
   @property
   def activity(self):
@@ -79,7 +119,7 @@ class Session(object):
   @activity.setter
   def activity(self, value):
     if self._activity != value:
-      logger.info ('%s activity=%s', self.handle, value)
+      logger.debug ('%s activity=%s', self.handle, value)
       self._activity = value
 
 
@@ -105,7 +145,13 @@ class Session(object):
     assert type(value) is userbase.User
     logger.info ('user=%s', value.handle)
     self._user = value
-    self._handle = value.handle
+    if value.handle != self._handle:
+      if self.is_recording():
+        # mv None.0 -> userName.0
+        self.rename_recording (self.handle, value.handle)
+      # set new handle
+      self._handle = value.handle
+
 
   @property
   def origin(self):
@@ -122,6 +168,7 @@ class Session(object):
   def source(self, value):
     assert type(value) is tuple
     self._source = value
+
 
   @property
   def cwd(self):
@@ -210,10 +257,13 @@ class Session(object):
   def write (self, data, encoding=None):
     """Write data to terminal stream as unicode."""
     if type(data) is not unicode:
-      enc = self.encoding if encoding is None \
-          else encoding
-      data = data.decode (enc)
+      data = data.decode (encoding if encoding is not None else self.encoding)
+    assert len(data)
     self.terminal.stream.write (data)
+    if self._record_tty:
+      if not self.is_recording():
+        self.start_recording ()
+      self._ttyrec_write (data.encode('utf-8'))
 
 
   def flush_event (self, event, timeout=-1):
@@ -259,6 +309,7 @@ class Session(object):
     else:
       self._buffer[event].insert (0, data)
       logger.debug ('%s event buffered, (%s,%s).', self.handle, event, data,)
+
 
   def send_event (self, event, data):
     """
@@ -344,3 +395,101 @@ class Session(object):
     toss = self._script_stack.pop()
     logger.debug ('%s popped from script_stack, return value=%s', toss, value)
     return value
+
+  def close(self):
+    if self.is_recording():
+      self.stop_recording()
+
+  def rename_recording(self, src, dst):
+    """Rename rotate dst and rename src.0 to dst.0."""
+    self.rotate_recordings (dst)
+    os.rename (os.path.join(self._ttylog_folder, '%s.0'%(src,)),
+        os.path.join(self._ttylog_folder, '%s.0'%(dst,)))
+
+  def rotate_recordings(self, key):
+    """Rotate any existing recordings for key."""
+    pattern = re.compile('%s.\d.ttyrec' % (key,))
+    # if .8 exists, move .8 to .9, obliterating .9
+    # if .7 (...)
+    for n in range(9):
+      src = os.path.join(self._ttylog_folder, '%s.%d' % (key, 8-(n)))
+      dst = os.path.join(self._ttylog_folder, '%s.%d' % (key, 8-(n -1)))
+      if os.path.exists(src):
+        os.rename (src, dst)
+    dst = os.path.join(self._ttylog_folder, '%s.0' % (key,))
+    assert not os.path.exists(dst), dst # very rare race condition without locking
+
+  def is_recording(self):
+    return self._fp_ttyrec is not None
+
+  def stop_recording(self):
+    assert self.is_recording() == True
+    self._fp_ttyrec.close ()
+    self._fp_ttyrec = None
+
+  def start_recording(self, dst=None):
+    """Begin recording to ttyrec file in recordings folder, keyed by dst."""
+    assert self._fp_ttyrec is None
+    dst = dst if dst is not None else '%s' % (self.handle,)
+    # rotate existing logfiles
+    self.rotate_recordings (dst)
+    # open ttyrec logfile
+    filename = os.path.join(self._ttyrec_folder, '%s.0' % (dst,))
+    self._fp_ttyrec = io.open(filename, 'wb+')
+    self._ttyrec_sec = -1  # force new header on next write
+    self._recording = True
+    # write header
+    logger.info ('REC %s' % (filename,))
+    (w, h) = self.terminal.width, self.terminal.height
+    self._ttyrec_write ((self.TTYREC_HEADER % (w, h,)).encode ('utf-8'))
+
+  def _ttyrec_write(self, data):
+    """ Is big brother watching you? """
+    # write bytestring to ttyrec file packed as timed byte.
+    # If the current timed byte is within 1,000us:
+    #   rewind stream and re-write the 'length' portion,
+    #   and append data to end of stream.
+    # side-effects:
+    #   self._ttyrec_sec, self._ttyrec_usec, self._ttyrec_len_data
+    assert type(data) is bytes
+    assert self._recording == True
+    timeKey = self.duration
+    # round down current duration since connection was established to the
+    # nearest whole number, and convert to microseconds
+    sec = math.floor(timeKey)
+    usec = (timeKey -sec) * 1e+6
+    sec, usec = int(sec), int(usec)
+    len_data = len(data)
+
+    if sec != self._ttyrec_sec or usec - self._ttyrec_usec > self.TTYREC_uCOMPRESS:
+      # create new timechunk record: (sec, usec, len(data), data)
+      bp1 = struct.pack('<I', sec) \
+          + struct.pack('<I', usec)
+      bp2 = struct.pack('<I', len_data)
+      # write
+      self._fp_ttyrec.write (bp1 + bp2 + data)
+      logger.error ('writing timechunk: (%r;%r;%r%s' % \
+          (bp1, bp2, data[:20], '...' if len(data) > 20 else '',))
+      self._ttyrec_sec = sec
+      self._ttyrec_usec = usec
+      self._ttyrec_len_data = len_data
+      self._fp_ttyrec.flush ()
+      return
+
+    # rewind to last length byte
+    last_bp2 = struct.pack('<I', self._ttyrec_len_data)
+    new_bp2 = struct.pack('<I', self._ttyrec_len_data +len_data)
+    logger.error ('re-writing timechunk: (%r;...%r%s' % (new_bp2,
+      data[:20], '...' if len(data) > 20 else '',))
+    if ASSERT_REWIND:
+      self._fp_ttyrec.seek ((self._ttyrec_len_data +len(last_bp2)) *-1, 2)
+      chk = self._fp_ttyrec.read (len(last_bp2))
+      assert chk == last_bp2, 'should have %r; got %r' % (last_bp2, chk)
+    self._fp_ttyrec.seek ((self._ttyrec_len_data +len(last_bp2)) *-1, 2)
+    # re-write length byte
+    self._fp_ttyrec.write (new_bp2)
+    # append after existing chunk record
+    self._fp_ttyrec.seek (self._ttyrec_len_data, 1)
+    self._fp_ttyrec.write (data)
+    self._ttyrec_len_data = self._ttyrec_len_data + len_data
+    self._fp_ttyrec.flush ()
