@@ -16,8 +16,13 @@ def init(cfgFilepath='default.ini'):
   cfg = ConfigParser.SafeConfigParser()
   cfg.add_section('system')
   cfg.set('system', 'bbsname', 'x/84')
-  cfg.set('system', 'telnet_addr', '127.0.0.1')
-  cfg.set('system', 'telnet_port', '6023')
+  cfg.add_section('telnet')
+  cfg.set('telnet', 'addr', '127.0.0.1')
+  cfg.set('telnet', 'port', '6023')
+  cfg.add_section('ftp')
+  cfg.set('ftp', 'addr', '127.0.0.1')
+  cfg.set('ftp', 'port', '6021')
+  cfg.set('ftp', 'basedir', 'ftpdata/')
   cfg.add_section ('matrix')
   cfg.set('matrix', 'newcmds', 'new apply')
   cfg.set('matrix', 'byecmds', 'exit logoff bye quit')
@@ -30,6 +35,7 @@ def init(cfgFilepath='default.ini'):
   cfg.set('session', 'default_encoding', 'iso8859-1')
   cfg.set('session', 'default_ttype', 'vt220')
   cfg.set('session', 'scriptpath', 'default/')
+  cfg.set('session', 'tap_input', 'no')
   cfg.add_section('irc')
   cfg.set('irc', 'server', 'efnet.xs4all.nl')
   cfg.set('irc', 'port', '6667')
@@ -40,6 +46,7 @@ def init(cfgFilepath='default.ini'):
   cfg.set('nua', 'max_pass', '16')
   cfg.set('nua', 'max_email', '30')
   cfg.set('nua', 'max_origin', '24')
+  cfg.set('nua', 'allow_apply', 'yes')
   cfg.set('nua', 'invalid_handles', ' '.join \
       ((cfg.get('matrix','byecmds'),
         cfg.get('matrix','newcmds'),

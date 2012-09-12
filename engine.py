@@ -22,6 +22,7 @@ import bbs.session
 
 import sys
 import traceback
+import threading
 def main (logger, logHandler, cfgFile='default.ini'):
   """
   x84 main entry point. The system begins and ends here.
@@ -43,20 +44,25 @@ def main (logger, logHandler, cfgFile='default.ini'):
   import bbs.scripting
   bbs.scripting.init (bbs.ini.cfg.get('session', 'scriptpath'))
 
+  # initialize ftp server
+  import ftp
+  ftp.logger.addHandler (logHandler)
+  # XXX just a hack to get it to poll ...
+  client, pipe, lock = None, ftp.init(), threading.Lock()
+  terminal.SESSION_CHANNELS.append ((client, pipe, lock,))
+
   # initialize telnet server
   import telnet
   telnet.logger.setLevel (logger.level)
   telnet.logger.addHandler (logHandler)
-  telnet_port = int(bbs.ini.cfg.get('system', 'telnet_port'))
-  telnet_addr = bbs.ini.cfg.get('system', 'telnet_addr')
-
+  telnet_port = int(bbs.ini.cfg.get('telnet', 'port'))
+  telnet_addr = bbs.ini.cfg.get('telnet', 'addr')
   server = telnet.TelnetServer \
       (port=telnet_port, address=telnet_addr,
        on_connect=terminal.on_connect,
        on_disconnect=terminal.on_disconnect,
        on_naws=terminal.on_naws,
-       timeout=0.001)
-
+       timeout=0.01)
   logger.info ('[telnet:%s] listening tcp', telnet_port)
 
   # main event loop
@@ -65,7 +71,7 @@ def main (logger, logHandler, cfgFile='default.ini'):
     event = server.poll()
     for client, pipe, lock in terminal.SESSION_CHANNELS:
       # poll for keyboard input, send to session channel monitor
-      if client.input_ready():
+      if client is not None and client.input_ready():
         if lock.acquire(False):
           inp = client.get_input()
           lock.release()

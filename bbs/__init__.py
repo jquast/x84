@@ -1,7 +1,7 @@
 import msgbase # FIX, work on msging...
 import ini
 from strutils import chompn, asctime, ansilen, chkseq, seqc, maxanswidth
-from dbproxy import DBProxy
+from dbproxy import DBSessionProxy
 from userbase import User, getuser, finduser, userexist, authuser, listusers
 from session import getsession, logger
 from fileutils import abspath, fopen, ropen
@@ -22,7 +22,7 @@ __all__ = [
     'ansilen',
     'chkseq',
     'seqc',
-    'DBProxy',
+    'DBSessionProxy',
     'User',
     'finduser',
     'userexist',

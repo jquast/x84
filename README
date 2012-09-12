@@ -11,6 +11,7 @@ pre-requsite 3rd party:
 	pip install sauce
 	pip install requests
         pip install py-bcrypt
+        pip install pyftpdlib
 
 Getting Started
 ================

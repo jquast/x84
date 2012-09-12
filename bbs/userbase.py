@@ -1,7 +1,7 @@
-from dbproxy import DBProxy
+from dbproxy import DBSessionProxy
 import bcrypt
 
-db = DBProxy('userbase')
+db = DBSessionProxy('userbase')
 
 import logging
 logger = logging.getLogger(__name__)
@@ -30,14 +30,20 @@ def userexist(handle):
   warnings.warn(DeprecationWarning, 'userexist deprecated, use finduser()', 2)
   return db.has_key(handle)
 
+def auth(user, try_pass):
+  assert type(user) is User
+  assert type(try_pass) is unicode
+  assert len(try_pass) > 0
+  (salt, hashed) = user.password
+  return hashed == bcrypt.hashpw(try_pass, salt) \
+      if not None in (salt, hashed) \
+      else False
+
 def authuser(handle, try_pass):
   """Return True if try_pass is the correct password for a user."""
   assert type(try_pass) is unicode
   assert len(try_pass) > 0
-  (salt, hashed) = getuser(handle).password
-  return hashed == bcrypt.hashpw(try_pass, salt) \
-      if not None in (salt, hashed) \
-      else False
+  return auth(getuser(handle), try_pass)
 
 class User(dict):
   _handle = None
@@ -71,8 +77,6 @@ class User(dict):
   def handle(self, value):
     assert type(value) is unicode and len(value) > 0
     self._handle = value
-    db[self.handle] = self #save
-
 
   @property
   def password(self):
@@ -86,6 +90,11 @@ class User(dict):
     self._password = (salt, hashed)
 
   @property
+  def groups(self):
+    """Set of groups user is a member of"""
+    return self.get('groups')
+
+  @property
   def lastcall(self):
     """Time last called in epoch seconds."""
     return self._lastcall
@@ -94,8 +103,6 @@ class User(dict):
   def lastcall(self, value):
     assert type(value) in (int,float,)
     self._lastcall = value
-    db[self.handle] = self #save
-
 
   @property
   def calls(self):
@@ -106,8 +113,6 @@ class User(dict):
   def calls(self, value):
     assert type(value) is int
     self._calls = value
-    db[self.handle] = self #save
-
 
   @property
   def location(self):
@@ -117,8 +122,6 @@ class User(dict):
   @location.setter
   def location(self, value):
     assert type(value) is unicode
-    self._location = value #save
-
 
   @property
   def hint(self):
@@ -129,8 +132,6 @@ class User(dict):
   def hint(self, value):
     assert type(value) is unicode
     self._hint = value
-    db[self.handle] = self #save
-
 
   @property
   def plan(self):
@@ -144,12 +145,11 @@ class User(dict):
 
   def set (self, key, value):
     self[key] = value
-    db[self.handle] = self # save
 
   def save(self):
-    if 0 == len(listusers()) and not 'sysop' in self.groups:
+    if 0 == len(db) and not 'sysop' in self.groups:
       logger.warn ('first new user becomes sysop: %s', self.handle)
-      self.groups = list(('sysop',))
+      self.set('groups', set(('sysop',)))
     db[self.handle] = self
 
   def delete(self):
