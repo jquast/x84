@@ -1,4 +1,5 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
+# utf-8 test 很高兴见到你
 import multiprocessing
 import logging
 import threading
@@ -9,7 +10,6 @@ from bbs import ini
 
 # global list of (TelnetClient, multiprocessing.Pipe, threading.Lock)
 SESSION_CHANNELS = []
-
 logger = logging.getLogger(__name__)
 logger.setLevel (logging.DEBUG)
 
@@ -132,9 +132,11 @@ class ConnectTelnetTerminal (threading.Thread):
         ('sun', ('\x1b[18t'), re.compile('\033' + r"\[8;(\d+);(\d+)t"))
   ) # see: xresize.c from X11.org
 
+
   def __init__(self, client):
     self.client = client
     threading.Thread.__init__(self)
+
 
   def _spawn_session(self):
     """ Spawn a subprocess, avoiding GIL and forcing all shared data over a
@@ -155,6 +157,7 @@ class ConnectTelnetTerminal (threading.Thread):
             self.client.charset, self.client.addrport(),))
     p.start ()
     SESSION_CHANNELS.append ((self.client, parent_conn, lock))
+
 
   def run(self):
     """Negotiate and inquire about terminal type, telnet options,
@@ -178,9 +181,11 @@ class ConnectTelnetTerminal (threading.Thread):
     logger.debug ('_spawn_session')
     self._spawn_session ()
 
+
   def _timeleft(self, t):
     """Returns True when difference of current time and t is below TIME_WAIT"""
     return bool(time.time() -t < self.TIME_WAIT)
+
 
   def _set_socket_opts(self):
     """Set socket non-blocking and enable TCP KeepAlive"""
@@ -188,12 +193,14 @@ class ConnectTelnetTerminal (threading.Thread):
     self.client.sock.setblocking (0)
     self.client.sock.setsockopt (socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
 
+
   def _no_linemode (self):
     """Negotiate line mode (LINEMODE) telnet option (off)."""
     from telnet import LINEMODE
     self.client._iac_dont(LINEMODE)
     self.client._iac_wont(LINEMODE)
     self.client._note_reply_pending(LINEMODE, True)
+
 
   def _try_binary(self):
     """Negotiation binary (BINARY) telnet option (on)."""
@@ -264,6 +271,7 @@ class ConnectTelnetTerminal (threading.Thread):
       if self.DEBUG:
         self.client.send ('failed: echo, ignored !\r\n')
 
+
   def _try_naws(self):
     """Negotiate about window size (NAWS) telnet option (on)."""
     if not None in (self.client.columns, self.client.rows,):
@@ -326,6 +334,7 @@ class ConnectTelnetTerminal (threading.Thread):
       self.client.send ('window size: %dx%d (default)\r\n' \
         % (self.client.columns, self.client.rows,))
 
+
   def _try_charset(self):
     """Negotiate terminal charset (CHARSET) telnet option (on)."""
     # haven't seen this work yet ...
@@ -355,6 +364,7 @@ class ConnectTelnetTerminal (threading.Thread):
     if self.DEBUG:
       self.client.send ('terminal charset: %s (default)\r\n' %
         (self.client.charset,))
+
 
   def _try_ttype(self):
     """Negotiate terminal type (TTYPE) telnet option (on)."""
@@ -448,5 +458,5 @@ class POSHandler(threading.Thread):
           # holy crap, this isn't for us ;^)
           self.pipe.send (('input', inp))
         continue
-      col, row = match.groups()
-      self.pipe.send (('pos', ((int(col)-1), int(row)-1,)))
+      row, col = match.groups()
+      self.pipe.send (('pos', ((int(row)-1), int(col)-1,)))
