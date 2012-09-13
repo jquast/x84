@@ -1,6 +1,7 @@
 import msgbase # FIX, work on msging...
 import ini
 from strutils import chompn, asctime, ansilen, chkseq, seqp, seqc, maxanswidth
+from door import Door
 from dbproxy import DBSessionProxy
 from userbase import User, getuser, finduser, userexist, authuser, listusers
 from session import getsession, logger
@@ -15,6 +16,7 @@ from pager import ParaClass
 from sauce import SAUCE
 
 __all__ = [
+    'Door',
     'logger',
     'maxanswidth',
     'chompn',
