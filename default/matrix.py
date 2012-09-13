@@ -46,8 +46,8 @@ def main ():
   def refresh():
     flushevent ('refresh')
     echo (term.move (0,0) + term.clear + term.normal)
-    echo ('\r\n%s\r\n' % (bbsname,))
-    echo ('see %s for source\r\n' % (__url__,))
+    echo ('\r\nConnected to %s, see %s for source\r\n' % (bbsname, __url__))
+    Door ('/bin/uname', args=('-a',)).run()
     echo ('\r\n\r\n')
     showfile('art/1984.asc')
     echo ('\r\n\r\n')
