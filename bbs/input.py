@@ -2,6 +2,15 @@ from curses.ascii import isprint
 from session import getsession, logger
 from output import echo
 
+def sendch (keycode):
+  # XXX not ideal;
+  table = getsession().terminal._keymap
+  try:
+    return (seq for (seq, code) in table.iteritems() if
+        code == keycode).next()
+  except StopIteration:
+    raise KeyError, keycode
+
 def getch(timeout=None):
   event, data = getsession().read_event(events=['input'], timeout=timeout)
   return data
