@@ -1,6 +1,5 @@
 """
- Matrix post-login screen for X/84 (formerly 'The Progressive') BBS
- This script is called after sucessfull login.
+ post-login screen for X/84 (formerly 'The Progressive') BBS
 """
 
 def main(login_handle=None):
@@ -11,6 +10,7 @@ def main(login_handle=None):
   user.lastcall = time.time()
   user.save ()
 
+
   session = getsession()
   session.activity = 'Intro screen'
   session.user = user
@@ -18,6 +18,9 @@ def main(login_handle=None):
 
   # rebuild last caller db
   gosub('lc', True)
+
+  # figure out character set
+  gosub('charset')
 
   # check for new messages
   gosub('chkmsgs')
