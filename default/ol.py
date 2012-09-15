@@ -9,12 +9,12 @@ from xml.etree.ElementTree import XML
 import requests
 
 def main ():
-  session = getsession()
-  term = session.terminal
+  session, term = getsession(), getterminal()
   user = session.user
-  MAX_INPUT = 50 # character limit for input
-  HISTORY   = 84   # limit history in buffer window
-  SNUFF_TIME = 1*60*60*24   # one message per 24 hours, 0 to disable
+  API_POLL = 1984 # poll bbs-scene.org for updates
+  MAX_INPUT = 50  # character limit for input
+  HISTORY   = 84  # limit history in buffer window
+  SNUFF_TIME = 1*60*60*24 # one message per 24 hours, 0 to disable
   snuff_msg = 'YOU\'VE AlREADY SAiD ENUff!\a'
   say_msg = 'SAY WhAT? CTRl-X TO CANCEl'
   save_msg = 'BURNiNG TO rOM, PlEASE WAiT!'
@@ -25,7 +25,7 @@ def main ():
       'y', 'n', 'Y', 'N', 'h', 'l', 'H', 'L',)
   window, comment = None, None
 
-  def redraw ():
+  def redraw_msgs ():
     output = ''
     for n, ol in sorted(udb.items())[-HISTORY:]:
       n = int(n)
@@ -36,7 +36,7 @@ def main ():
       m = '%s/%s' % (term.white + term.reverse, term.normal)
       r = '%s)%s' % (term.bold_white, term.normal)
       output += (l + ol['alias'] + m + ol['bbsname'] + r +': ') .rjust (20)
-      output += str(seqp(ol['oneliner'],term)) + '\n'
+      output += seqp(ol['oneliner'],term) + '\n'
     output = output.rstrip()
     window.update (output, refresh=True, scrollToBottom=True)
 
@@ -45,7 +45,7 @@ def main ():
     " display text in status line "
     w = 33
     echo (term.move(term.height-3, (term.width/2)-(w/2)))
-    echo (''.join((term.normal, c, text.center(w)),))
+    echo (''.join((term.normal, c, text.center(w), term.normal),))
 
   def saysomething():
     flushevent ('oneliner_update')
@@ -82,7 +82,7 @@ def main ():
         elif comment.exit:
           break
       elif event == 'oneliner_update':
-        redraw ()
+        redraw_msgs ()
     echo (term.normal)
     comment.noborder ()
     comment.update ()
@@ -103,6 +103,7 @@ def main ():
       self.lock = lock
       self.history = history
       threading.Thread.__init__ (self)
+
     def run(self):
       r = requests.get \
           ('http://bbs-scene.org/api/onelinerz?limit=%d' % (self.history,),
@@ -126,6 +127,7 @@ def main ():
   forceRefresh = True
   q = Queue.Queue()
   l = threading.Lock()
+  t = None
   if ini.cfg.has_section('bbs-scene'):
     t = FetchUpdates(q, l, HISTORY)
     t.start ()
@@ -134,6 +136,10 @@ def main ():
     session.activity = 'Reading one-liners'
 
   while True:
+
+    # a bbs-scene.org update occured from our spawned thread, and has items
+    # in the queue to be read. matches increments for new records, and if any
+    # are found, the screen is refreshed.
     if not q.empty():
       matches = 0
       l.acquire ()
@@ -147,42 +153,41 @@ def main ():
           matches += 1
       l.release ()
       if matches > 0:
-        logger.debug ('bbs-scene.org ol-api: %d new updates', matches)
-        redraw ()
-      else:
-        logger.debug ('bbs-scene.org ol-api: no new updates')
+        echo ('\a')
+        redraw_msgs ()
+      logger.debug ('bbs-scene.org ol-api: %d updates', matches)
 
     if forceRefresh:
+      forceRefresh=False
       echo (term.move (0,0) + term.clear + term.normal)
       if term.width < 78 or term.height < 20:
         echo (term.bold_red + 'Screen size too small to display oneliners' \
               + term.normal + '\r\n\r\npress any key...')
         getch ()
-        return False
       art = fopen('art/wall.ans').readlines()
       mw = min(maxanswidth(art), term.width -6)
       x = max(3, (term.width/2) - (maxanswidth(art)/2) -2)
-
       yn = YesNoClass([x+mw-17, term.height-4])
       yn.interactive = True
       yn.highlight = term.green_reverse
-
-      window= ParaClass(term.height-12, term.width-20,
+      window = ParaClass(term.height-12, term.width-20,
           y=8, x=10, xpad=0, ypad=1)
       window.interactive = True
       comment = HorizEditor(w=mw, y=term.height-3,
           x=x, xpad=1, max=MAX_INPUT)
       comment.partial = True
       comment.interactive = True
-      echo (''.join([term.move(y+1, x) + line.decode('iso8859-1') for y, line in enumerate(art)]))
-
+      echo (''.join([term.move(y+1, x) + fromCP437(line) \
+          for y, line in enumerate(art)]))
       statusline ()
-      redraw ()
+      redraw_msgs ()
       yn.refresh ()
-      forceRefresh=False
 
-    event, data = readevent (['input', 'oneliner_update', 'refresh'], timeout=1)
+    event, data = readevent (['input', 'oneliner_update', 'refresh'],
+        timeout=int(ini.cfg.get('session', 'timeout')))
 
+    if (None, None) == (event, data):
+      return # timeout
     if event == 'refresh':
       forceRefresh=True
       continue
@@ -216,7 +221,7 @@ def main ():
           statusline (erased_msg, term.bright_white)
           getch (1.6)
           udb.clear ()
-          redraw ()
+          redraw_msgs ()
         statusline ()
         yn.interactive = True
       elif data == 'q':
@@ -225,4 +230,3 @@ def main ():
         # send as movement key to pager window
         window.run (key=data, timeout=None)
   echo (term.normal)
-  return
