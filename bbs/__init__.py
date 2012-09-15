@@ -1,5 +1,6 @@
 import msgbase # FIX, work on msging...
 import ini
+from exception import Disconnect, Goto, ConnectionTimeout
 from strutils import chompn, asctime, ansilen, chkseq, seqp, seqc, maxanswidth
 from cp437 import fromCP437
 from door import Door
@@ -17,6 +18,7 @@ from pager import ParaClass
 from sauce import SAUCE
 
 __all__ = [
+    'ConnectionTimeout',
     'Door',
     'fromCP437',
     'logger',
@@ -76,12 +78,10 @@ def gethandle():
 
 
 def disconnect():
-  import exception as exception
   raise exception.Disconnect('disconnect')
 
 
 def goto(*arg):
-  import exception
   raise exception.Goto(arg)
 
 
