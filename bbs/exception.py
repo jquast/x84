@@ -12,6 +12,10 @@ class ConnectionClosed (Exception):
   "Raised when the socket closes connection"
   pass
 
+class ConnectionTimeout (Exception):
+  "Raised when client idle time exceeds threshold"
+  pass
+
 class SilentTermination (Exception):
   "Raised to silently terminate a session"
   pass
