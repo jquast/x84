@@ -54,22 +54,22 @@ def main(pipe):
       if ini.cfg.get('ftp', 'enable_masquerade') == 'yes' else None
 
     def on_login(self, username):
-      pipe.send ('global', ('ftp', ('login', username,)))
+      pipe.send (('global', ('ftp', ('login', username,))))
 
     def on_logout(self, username):
-      pipe.send ('global', ('ftp', ('logout', username,)))
+      pipe.send (('global', ('ftp', ('logout', username,))))
 
     def on_file_sent(self, file):
-      pipe.send ('global', ('ftp', ('sent', file,)))
+      pipe.send (('global', ('ftp', ('sent', file,))))
 
     def on_file_received(self, file):
-      pipe.send ('global', ('ftp', ('recv', file,)))
+      pipe.send (('global', ('ftp', ('recv', file,))))
 
     def on_incompile_file_sent(self, file):
-      pipe.send ('global', ('ftp', ('sent-incomplete', file,)))
+      pipe.send (('global', ('ftp', ('sent-incomplete', file,))))
 
     def on_incompile_file_recv(self, file):
-      pipe.send ('global', ('ftp', ('recv-incomplete', file,)))
+      pipe.send (('global', ('ftp', ('recv-incomplete', file,))))
 
   class BBSAuthorizer(ftpserver.DummyAuthorizer):
     db = None
@@ -98,7 +98,7 @@ def main(pipe):
     #  override_perm(self, username, directory, perm, recursive=False):
 
   handler = BBSFTPHandler
-  handler.authorizer = BBSAuthorizer
+  handler.authorizer = BBSAuthorizer()
   if ini.cfg.get('ftp', 'enable_anonymous') == 'yes':
     authorizer.add_user ('anonymous', password=u'', homedir=ini.cfg.get('ftp','basedir'))
   address = (ini.cfg.get('ftp', 'addr'), int(ini.cfg.get('ftp', 'port')))
