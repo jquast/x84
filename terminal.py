@@ -42,12 +42,9 @@ class IPCStream(object):
 
 class BlessedIPCTerminal(blessings.Terminal):
   """
-    Extend the blessings interface to manage keycode input, namely with
-    translate_input().
-
     Furthermore, .rows and .columns no longer queries using termios routines.
-    They must be managed by another procedure. Instances of this class
-    are stored in the global SESSION_CHANNELS
+    They must be managed by another procedure.
+    Instances of this class are stored in the global SESSION_CHANNELS
   """
   def __init__(self, stream, terminal_type, rows, columns):
     # patch in a .rows and .columns static property.
@@ -62,13 +59,13 @@ class BlessedIPCTerminal(blessings.Terminal):
     except blessings.curses.error, e:
       # when setupterm() fails with client-supplied terminal_type
       # try again using the configuration .ini default type.
-      default_ttype = ini.cfg.get('session','default_ttype')
+      default_ttype = ini.cfg.get('session', 'default_ttype')
       errmsg = 'setupterm(%s) failed: %s' % (terminal_type, e,)
       assert terminal_type != default_ttype, \
           '%s; using default_ttype' % (errmsg,)
       logger.warn (errmsg)
-      stream.write (errmsg + '\r\n')
-      stream.write ('terminal type: %s (default)\r\n' % (default_ttype,))
+      #stream.write (errmsg + '\r\n')
+      #stream.write ('terminal type: %s (default)\r\n' % (default_ttype,))
       blessings.Terminal.__init__ (self,
           kind=default_ttype, stream=stream, force_styling=True)
       self.kind = default_ttype
@@ -110,8 +107,8 @@ def on_naws(client):
      'userland', but should indicate also that the window sizes are checked."""
   for (c,p,l) in SESSION_CHANNELS:
     if client == c:
-      p.send (('refresh-naws', (c.columns, c.rows),))
-      return
+      p.send (('refresh', ('resize', (c.columns, c.rows),)))
+      return True
 
 class ConnectTelnetTerminal (threading.Thread):
   """
@@ -123,9 +120,9 @@ class ConnectTelnetTerminal (threading.Thread):
   TODO: something useful with identd, like IRCd does
   """
   DEBUG = False
-  TIME_WAIT = 1.0
-  TIME_PAUSE = 0.5
-  TIME_POLL  = 0.05
+  TIME_WAIT = 1.25
+  TIME_PAUSE = 0.75
+  TIME_POLL  = 0.1
   TTYPE_UNDETECTED = 'unknown client'
   CHARSET_UNDETECTED = 'unknown encoding'
   WINSIZE_TRICK= (
@@ -172,26 +169,35 @@ class ConnectTelnetTerminal (threading.Thread):
   def run(self):
     """Negotiate and inquire about terminal type, telnet options,
     window size, and tcp socket options before spawning a new session."""
-    logger.debug ('_set_socket_opts')
-    self._set_socket_opts ()
-    self.banner ()
-    logger.debug ('_try_echo')
-    self._try_echo ()
-    logger.debug ('_no_linemode')
-    self._no_linemode ()
-    logger.debug ('_try_binary')
-    self._try_binary ()
-    logger.debug ('_try_sga')
-    self._try_sga ()
-    logger.debug ('_try_naws')
-    self._try_naws ()
-    logger.debug ('_try_ttype')
-    self._try_ttype ()
-    logger.debug ('_try_charset')
-    self._try_charset ()
-    logger.debug ('_spawn_session')
-    self._spawn_session ()
+    import socket
+    from bbs import exception
+    try:
+      logger.debug ('_set_socket_opts')
+      self._set_socket_opts ()
+    except socket.error, e:
+      logger.info ('Socket error during negotiation: %s', e)
+      return
 
+    try:
+      self.banner ()
+      logger.debug ('_try_echo')
+      self._try_echo ()
+      logger.debug ('_no_linemode')
+      self._no_linemode ()
+      logger.debug ('_try_binary')
+      self._try_binary ()
+      logger.debug ('_try_sga')
+      self._try_sga ()
+      logger.debug ('_try_naws')
+      self._try_naws ()
+      logger.debug ('_try_ttype')
+      self._try_ttype ()
+      logger.debug ('_try_charset')
+      self._try_charset ()
+      logger.debug ('_spawn_session')
+      self._spawn_session ()
+    except exception.ConnectionClosed, e:
+      logger.info ('Connection closed during negotiation: %s', e)
 
   def _timeleft(self, t):
     """Returns True when difference of current time and t is below TIME_WAIT"""
@@ -416,20 +422,27 @@ class POSHandler(threading.Thread):
     return bool(time.time() -t < self.TIME_WAIT)
 
   def run(self):
+    logger.debug ('q?')
     for (k,Q,P) in ConnectTelnetTerminal.WINSIZE_TRICK:
       self.lock.acquire ()
       self.client.send (Q)
       self.client.socket_send() # push
       t = time.time()
       while self.client.idle() < self.TIME_PAUSE and self._timeleft(t):
+        logger.debug ('.')
         time.sleep (self.TIME_POLL)
       inp = self.client.get_input()
       self.lock.release ()
       match = P.search (inp)
-      if not match:
-        if len(inp):
-          # holy crap, this isn't for us ;^)
-          self.pipe.send (('input', inp))
+      logger.debug ('x %s/%d', inp, len(inp),)
+      if not match and len(inp):
+        # holy crap, this isn't for us ;^)
+        self.pipe.send (('input', inp))
         continue
-      row, col = match.groups()
-      self.pipe.send (('pos', ((int(row)-1), int(col)-1,)))
+      elif match:
+        row, col = match.groups()
+        logger.debug ('xmit %d,%d', row, col)
+        self.pipe.send (('pos', ((int(row)-1), int(col)-1,)))
+        return
+    self.pipe.send (('pos', (None, None,)))
+    return
