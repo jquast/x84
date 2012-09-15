@@ -84,7 +84,11 @@ def main (logger, logHandler, cfgFile='default.ini'):
             # this client currently 'locked', by POSHandler, likely.
             continue
           lock.release ()
-          event, data = pipe.recv()
+          try:
+            event, data = pipe.recv()
+          except TypeError, e:
+            logger.error (e)
+            continue
           if event == 'disconnect':
             client.deactivate ()
           elif event == 'output':
@@ -92,7 +96,7 @@ def main (logger, logHandler, cfgFile='default.ini'):
             if not lock.acquire (False):
               # somebody slipped us a lock. ignore for this pass,
               continue
-            client.send (data)
+            client.send (*data)
             lock.release ()
           elif event == 'global':
             # broadcast: repeat data as global to all other channels
