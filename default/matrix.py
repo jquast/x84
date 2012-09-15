@@ -69,8 +69,9 @@ def main ():
 
     if event == 'refresh':
       refresh ()
+      continue
 
-    if handle == '':
+    if 0 == len(handle):
       continue # re-prompt
 
     if handle.lower() in newcmds:
@@ -82,6 +83,8 @@ def main ():
       else:
         # applications are denied
         denied (term.bright_red + APPLY_DENIED)
+        handle = ''
+        continue
 
     elif handle in byecmds:
       goto ('logoff')
@@ -91,6 +94,9 @@ def main ():
       if ALLOW_ANONYMOUS:
         goto (topscript, 'anonymous')
       denied (badanon_msg % (handle,))
+      getch (0.8)
+      handle = ''
+      continue
 
     if not DBSessionProxy('userbase').has_key(handle):
       #remain exactly where you are
@@ -100,6 +106,7 @@ def main ():
         # applications are denied
         denied (term.bright_red + APPLY_DENIED)
         getch (0.8)
+        handle = ''
         continue
 
       # the photos of you and the girl will be recycled for prolitarian use
@@ -108,7 +115,7 @@ def main ():
       if str(ynq).lower() == 'q' or ynq == term.KEY_EXIT:
         goto ('logoff')
       if str(ynq).lower() == 'y':
-        goto ('nua', handle)
+        goto ('nua', handle.decode(session.encoding))
       continue
 
     # request & authenticate password
@@ -131,7 +138,8 @@ def main ():
       continue
 
     echo (status_auth)
-    if authuser(handle, password):
+    if authuser(handle.decode(session.encoding),
+        password.decode(session.encoding)):
       goto (ini.cfg.get('matrix', 'topscript'), handle)
     if status_dirties_screen:
       refresh()
