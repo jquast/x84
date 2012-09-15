@@ -632,7 +632,6 @@ class TelnetClient(object):
                         self._check_local_option(SGA) is UNKNOWN):
                     self._note_local_option(SGA, True)
                     self._iac_will(SGA)
-                    ## Just nod
 
             elif option == LINEMODE:
               if self._check_local_option(option) is UNKNOWN:
@@ -692,7 +691,7 @@ class TelnetClient(object):
                     self._iac_wont(SGA)
 
             elif option == LINEMODE:
-                # client: DONT SGA, us: ok, we won't
+                # client: DONT LINEMODE, us: ok, we won't
                 if self._check_reply_pending(LINEMODE):
                     self._note_reply_pending(LINEMODE, False)
                     self._note_local_option(LINEMODE, False)
@@ -741,10 +740,12 @@ class TelnetClient(object):
                 if self._check_reply_pending(SGA):
                     self._note_reply_pending(SGA, False)
                     self._note_remote_option(SGA, True)
+                    self._note_local_option(SGA, True) # ?
 
                 elif (self._check_remote_option(SGA) is False or
                         self._check_remote_option(SGA) is UNKNOWN):
                     self._note_remote_option(SGA, True)
+                    self._note_local_option(SGA, True) # ?
                     self._iac_do(SGA)
                     ## Just nod
 
