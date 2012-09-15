@@ -49,6 +49,7 @@ def init(cfgFilepath='default.ini'):
   cfg.set('session', 'record_tty', 'yes')
   cfg.set('session', 'ttylog_folder', 'ttyrecordings/')
   cfg.set('session', 'timeout', '1984')
+  cfg.set('session', 'door_syspath', '/usr/local/bin:/usr/games')
   cfg.add_section('irc')
   cfg.set('irc', 'server', 'efnet.xs4all.nl')
   cfg.set('irc', 'port', '6667')
