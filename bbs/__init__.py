@@ -116,18 +116,26 @@ def loginuser(handle):
   u.lastcall = time.time()
 
 
-def showfile(filename, bps=0, pause=0.1, cleansauce=True, ibmcp437=True):
+def showfile(filename, bps=0, pause=0.1, cleansauce=True, file_encoding='cp437'):
   # when unspecified, session interprets charset of file
   # open a random file if '*' or '?' is used in filename (glob matching)
   fobj = ropen(filename, 'rb') \
     if '*' in filename or '?' in filename \
       else fopen(filename, 'rb')
-
+  session_encoding = getsession().encoding
   data = chompn(SAUCE(fobj).__str__() if cleansauce else fobj.read())
-  if ibmcp437 and getsession().encoding == 'utf8':
+  if ('cp437', 'utf8') == (file_encoding, session_encoding):
     # convert from cp437 to unicode when the output terminal
-    # is utf-8 encoded. Otherwise just send as-is.
+    # is utf-8 encoded.
     data = fromCP437(data)
+  elif ('cp437','cp437') == (file_encoding, session_encoding):
+    # our client is cp437 too, decode as iso8859-1 so that
+    # no data is transliterated from iso8859-1
+    data = data.decode('iso8859-1')
+  else:
+    logger.warn ('unknown file_encoding to session_encoding')
+    logger.warn ('file=%s, session=%s', encoding, session_encoding)
+    data = data.decode(file_encoding)
 
   if 0 == bps:
     echo (data)
