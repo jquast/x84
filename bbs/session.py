@@ -258,7 +258,10 @@ class Session(object):
     """Write data to terminal stream as unicode."""
     if type(data) is not unicode:
       data = data.decode (encoding if encoding is not None else self.encoding)
-    assert len(data)
+    if 0 == len(data):
+      # on non-capable terminals, something like echo(term.move(0,0))
+      # might become echo (''); just ignore it
+      return
     self.terminal.stream.write (data)
     if self._record_tty:
       if not self.is_recording():
@@ -287,29 +290,37 @@ class Session(object):
     """
     if event == 'ConnectionClosed':
       raise exception.ConnectionClosed (data)
-    if event == 'refresh-naws':
-      # transliterate to 'refresh' event, but record new terminal dimensions
-      (self.terminal.columns, self.terminal.rows) = data
-      (event, data) = 'refresh', ('resize', data)
-    if not self._buffer.has_key(event) or event == 'refresh':
+
+    if event == 'refresh':
+      if data[0] == 'resize':
+        # inherit terminal dimensions values
+        (self.terminal.columns, self.terminal.rows) = data[1]
+      # store only most recent 'refresh' event
+      self._buffer[event] = list((data,))
+      return
+
+    if not self._buffer.has_key(event):
       # create new buffer; only accept 1 most recent 'refresh' event
       self._buffer[event] = list()
-    if event == 'input':
-      for keystroke in self.terminal.trans_input(data, self.encoding):
-        if keystroke == chr(12):
-          # again; buffer only 1 most recent 'refresh' eventm
-          # this time, if <ctrl+L> is pressed; there exists a KEY_REFRESH ...
-          self._buffer['refresh'] = list((0, ('input', keystroke,),))
-        self._buffer['input'].insert (0, keystroke)
-      self._last_input_time = time.time()
-      # special care for input, mask with self.tap_mask
-      if logger.level >= logger.debug:
-        logger.debug ('%s event buffered, %s.', self.handle,
-            (event, data if self.tap else self.tap_mask * len(data),))
-    else:
+
+    if event != 'input':
       self._buffer[event].insert (0, data)
       logger.debug ('%s event buffered, (%s,%s).', self.handle, event, data,)
+      return
 
+    for keystroke in self.terminal.trans_input(data, self.encoding):
+      self._buffer['input'].insert (0, keystroke)
+      if keystroke == chr(12):
+        # again; transliterate to single buffered 'refresh' event,
+        # XXX: there exists a KEY_REFRESH ...
+        data = ('input', keystroke)
+        self._buffer['refresh'] = list((data,))
+    self._last_input_time = time.time()
+
+    if logger.level >= logger.debug:
+      # special care for input, mask with self.tap_mask
+      logger.debug ('%s input buffered, %s.', self.handle, data \
+          if self.tap else self.tap_mask * len(data),)
 
   def send_event (self, event, data):
     """
@@ -366,7 +377,7 @@ class Session(object):
     """Execute script's .main() callable with optional *args."""
     import bbs
     self._script_stack.append ((script,) + args)
-    logger.info ('%s runscript %r.', self.handle, (script, args,))
+    logger.info ('%s runscript %s, %s.', self.handle, script, args,)
     try:
       self.script_name, self.script_filepath \
           = scripting.chkmodpath (script, self.cwd)
