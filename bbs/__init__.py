@@ -1,6 +1,7 @@
 import msgbase # FIX, work on msging...
 import ini
 from strutils import chompn, asctime, ansilen, chkseq, seqp, seqc, maxanswidth
+from cp437 import fromCP437
 from door import Door
 from dbproxy import DBSessionProxy
 from userbase import User, getuser, finduser, userexist, authuser, listusers
@@ -17,6 +18,7 @@ from sauce import SAUCE
 
 __all__ = [
     'Door',
+    'fromCP437',
     'logger',
     'maxanswidth',
     'chompn',
@@ -63,8 +65,7 @@ __all__ = [
     'readline',
     'readlineevent',
     'msgbase',
-    'SAUCE',
-]
+    'SAUCE',]
 
 def getterminal():
   return getsession().terminal
@@ -115,21 +116,26 @@ def loginuser(handle):
   u.lastcall = time.time()
 
 
-def showfile(filename, bps=0, pause=0.1, cleansauce=True):
-  # glob magic
+def showfile(filename, bps=0, pause=0.1, cleansauce=True, ibmcp437=True):
+  # when unspecified, session interprets charset of file
+  # open a random file if '*' or '?' is used in filename (glob matching)
   fobj = ropen(filename, 'rb') \
     if '*' in filename or '?' in filename \
       else fopen(filename, 'rb')
 
-  data = chompn(str(SAUCE(fobj)) if cleansauce else fobj.read())
+  data = chompn(SAUCE(fobj).__str__() if cleansauce else fobj.read())
+  if ibmcp437 and getsession().encoding == 'utf8':
+    # convert from cp437 to unicode when the output terminal
+    # is utf-8 encoded. Otherwise just send as-is.
+    data = fromCP437(data)
 
   if 0 == bps:
     echo (data)
     echo (getterminal().normal)
     return
 
-  # display at a timed speed, re-expereince the pace of 9600bps ...
-  cpp = (float(bps)/8) *pause
+  # display at a timed speed; re-expereince the pace of 9600bps ...
+  cpp = int((float(bps)/8) *pause)
   for n, ch in enumerate(data):
     if 0 == (n % cpp):
       getsession().read_event(events=['input'], timeout=pause)
