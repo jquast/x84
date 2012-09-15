@@ -156,7 +156,7 @@ class TelnetServer(object):
           try:
             client.socket_send ()
           except exception.ConnectionClosed, e:
-            logger.info ('%s connection closed%s.' %
+            logger.debug ('%s connection closed%s.' %
                 (client.addrport(), ': %s' % (e,) if len(str(e))!=0 else ''))
             client.deactivate()
 
@@ -342,9 +342,7 @@ class TelnetClient(object):
         encode as ascii if self.eight_bit is False, otherwise as iso8859-1
         unless otherwise specified.
         """
-        enc = encoding if encoding is not None \
-          else 'ascii' if not self.telnet_eight_bit \
-            else 'iso8859-1'
+        enc = encoding if encoding is not None else self.charset
         try:
           self.send_buffer += bytes(text) \
               if type(text) is not unicode \
@@ -479,9 +477,9 @@ class TelnetClient(object):
           data = self.sock.recv (self.BLOCKSIZE_RECV)
           bytes_received = len(data)
           if 0 == bytes_received:
-            raise socket.error, ((-1, 'recv returned 0 bytes',))
+            raise exception.ConnectionClosed ('client disconnected')
         except socket.error, e:
-          raise exception.ConnectionClosed('socket recv%d:%s' % (e[0], e[1],))
+          raise exception.ConnectionClosed('socket errorno %d: %s' % (e[0], e[1],))
 
         self.bytes_received += bytes_received
         self.last_input_time = time.time()
@@ -658,7 +656,7 @@ class TelnetClient(object):
         elif cmd == DONT:
 
             if option == BINARY:
-
+                # client: DONT BINARY, us: ok, we won't.
                 if self._check_reply_pending(BINARY):
                     self._note_reply_pending(BINARY, False)
                     self._note_local_option(BINARY, False)
@@ -670,7 +668,7 @@ class TelnetClient(object):
                     ## Just nod
 
             elif option == ECHO:
-
+                # client: DONT ECHO, us: ok, we won't (but we will anyway)
                 if self._check_reply_pending(ECHO):
                     self._note_reply_pending(ECHO, False)
                     self._note_local_option(ECHO, True)
@@ -683,7 +681,7 @@ class TelnetClient(object):
                     self.telnet_echo = False
 
             elif option == SGA:
-
+                # client: DONT SGA, us: ok, we won't
                 if self._check_reply_pending(SGA):
                     self._note_reply_pending(SGA, False)
                     self._note_local_option(SGA, False)
@@ -691,8 +689,18 @@ class TelnetClient(object):
                 elif (self._check_remote_option(SGA) is True or
                         self._check_remote_option(SGA) is UNKNOWN):
                     self._note_local_option(SGA, False)
-                    self._iac_will(SGA)
-                    ## Just nod
+                    self._iac_wont(SGA)
+
+            elif option == LINEMODE:
+                # client: DONT SGA, us: ok, we won't
+                if self._check_reply_pending(LINEMODE):
+                    self._note_reply_pending(LINEMODE, False)
+                    self._note_local_option(LINEMODE, False)
+
+                elif (self._check_remote_option(LINEMODE) is True or
+                        self._check_remote_option(LINEMODE) is UNKNOWN):
+                    self._note_local_option(LINEMODE, False)
+                    self._iac_wont(LINEMODE)
 
             else:
                 ## ALL OTHER OPTIONS = Default to ignoring
