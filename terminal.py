@@ -18,7 +18,13 @@ def start_process(child_conn, termtype, rows, columns, charset, origin):
   stream = IPCStream(child_conn)
   term = BlessedIPCTerminal (stream, termtype, rows, columns)
   new_session = bbs.session.Session (term, child_conn, charset, origin)
-  with term.fullscreen():
+  # provide the curses-like 'restore screen to original on exit' trick
+  enter, exit = term.enter_fullscreen(), term.exit_fullscreen()
+  if 0 not in (len(enter), len(exit),):
+    with term.fullscreen():
+      new_session.run ()
+  else:
+    # terminal is not capable, ignore!
     new_session.run ()
   logger.debug ('%s/%s end process', new_session.pid, new_session.handle)
   new_session.close ()
@@ -32,8 +38,9 @@ class IPCStream(object):
   """
   def __init__(self, channel):
     self.channel = channel
-  def write(self, data):
-    self.channel.send (('output', data))
+  def write(self, data, encoding='iso8859-1'):
+    assert 0 != len(data)
+    self.channel.send (('output', (data, encoding,),))
   def fileno(self):
     return self.channel.fileno()
   def close(self):
@@ -64,8 +71,8 @@ class BlessedIPCTerminal(blessings.Terminal):
       assert terminal_type != default_ttype, \
           '%s; using default_ttype' % (errmsg,)
       logger.warn (errmsg)
-      #stream.write (errmsg + '\r\n')
-      #stream.write ('terminal type: %s (default)\r\n' % (default_ttype,))
+      stream.write (errmsg + '\r\n')
+      stream.write ('terminal type: %s (default)\r\n' % (default_ttype,))
       blessings.Terminal.__init__ (self,
           kind=default_ttype, stream=stream, force_styling=True)
       self.kind = default_ttype
@@ -158,13 +165,8 @@ class ConnectTelnetTerminal (threading.Thread):
 
 
   def banner(self):
-    """Send sequences for codepage 0, disable line-wrap, utf-8 activation."""
-    # http://www.cl.cam.ac.uk/~mgk25/unicode.html#term
-    # G0-designate 94-set http://en.wikipedia.org/wiki/ISO/IEC_2022
     # disable line-wrapping http://www.termsys.demon.co.uk/vtansi.htm
-    # activate UTF-8 http://www.cl.cam.ac.uk/~mgk25/unicode.html#term
-    self.client.send (''.join(('\033(U', '\033[7l', '\033%G')))
-    self.client.socket_send () # push
+    self.client.send ('\033[7l')
 
   def run(self):
     """Negotiate and inquire about terminal type, telnet options,
@@ -196,6 +198,7 @@ class ConnectTelnetTerminal (threading.Thread):
       self._try_charset ()
       logger.debug ('_spawn_session')
       self._spawn_session ()
+
     except exception.ConnectionClosed, e:
       logger.info ('Connection closed during negotiation: %s', e)
 
@@ -223,7 +226,7 @@ class ConnectTelnetTerminal (threading.Thread):
     """Negotiation binary (BINARY) telnet option (on)."""
     from telnet import BINARY
     if self.client.telnet_eight_bit:
-      logger.debug ('binary mode enabled (unsolicted)')
+      logger.info ('binary mode enabled (unsolicted)')
       return
     logger.debug('request-do-eight-bit')
     self.client.request_do_binary ()
@@ -232,7 +235,7 @@ class ConnectTelnetTerminal (threading.Thread):
     while self.client.telnet_eight_bit is False and self._timeleft(t):
       time.sleep (self.TIME_POLL)
     if self.client.telnet_eight_bit:
-      logger.debug ('binary mode enabled (negotiated)')
+      logger.info ('binary mode enabled (negotiated)')
     else:
       logger.debug ('failed: binary; ignoring')
 
@@ -243,7 +246,7 @@ class ConnectTelnetTerminal (threading.Thread):
     enabledRemote = self.client._check_remote_option
     enabledLocal = self.client._check_local_option
     if enabledRemote(SGA) is True and enabledLocal(SGA) is True:
-      logger.debug('sga enabled')
+      logger.info ('sga enabled')
       return
 
     logger.debug('request-do-sga')
@@ -254,9 +257,9 @@ class ConnectTelnetTerminal (threading.Thread):
       and self._timeleft(t):
         time.sleep (self.TIME_POLL)
     if (enabledRemote(SGA) is True and enabledLocal(SGA) is True):
-      logger.debug ('sga enabled (negotiated)')
+      logger.info ('sga enabled (negotiated)')
     else:
-      logger.debug ('failed: supress go-ahead')
+      logger.info ('failed: supress go-ahead')
 
 
   def _try_echo(self):
@@ -408,7 +411,7 @@ class POSHandler(threading.Thread):
   """
   TIME_POLL = 0.05
   TIME_PAUSE = 0.35
-  TIME_WAIT = 0.35
+  TIME_WAIT = 1.30
   def __init__(self, pipe, client, lock, event='pos', timeout=None):
     self.pipe = pipe
     self.client = client
@@ -422,26 +425,25 @@ class POSHandler(threading.Thread):
     return bool(time.time() -t < self.TIME_WAIT)
 
   def run(self):
-    logger.debug ('q?')
+    logger.debug ('getpos?')
     for (k,Q,P) in ConnectTelnetTerminal.WINSIZE_TRICK:
       self.lock.acquire ()
       self.client.send (Q)
       self.client.socket_send() # push
       t = time.time()
       while self.client.idle() < self.TIME_PAUSE and self._timeleft(t):
-        logger.debug ('.')
         time.sleep (self.TIME_POLL)
       inp = self.client.get_input()
       self.lock.release ()
       match = P.search (inp)
-      logger.debug ('x %s/%d', inp, len(inp),)
+      logger.debug ('x %r/%d', inp, len(inp),)
       if not match and len(inp):
         # holy crap, this isn't for us ;^)
         self.pipe.send (('input', inp))
         continue
       elif match:
         row, col = match.groups()
-        logger.debug ('xmit %d,%d', row, col)
+        logger.debug ('xmit %s,%s', row, col)
         self.pipe.send (('pos', ((int(row)-1), int(col)-1,)))
         return
     self.pipe.send (('pos', (None, None,)))
