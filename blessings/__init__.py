@@ -109,7 +109,7 @@ class Terminal(object):
             # after sucessful setupterm(), a _keymap of keyboard sequences to
             # curses capability names can be constructed, where those capability
             # strings return non-None
-            self._keymap = dict([(tigetstr(cap), keycode) \
+            self._keymap = dict([(tigetstr(cap).decode('utf-8'), keycode) \
                 for (keycode,cap) in curses.has_key._capability_names.iteritems() \
                     if tigetstr(cap) is not None])
 
