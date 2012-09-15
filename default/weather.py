@@ -10,133 +10,127 @@ __contributors__ = []
 __copyright__ = ['Copyright (c) 2007 Jeffrey Quast']
 __license__ = 'ISC'
 
-import urllib, cStringIO, gzip, xml.parsers.expat, time
-from time import strftime, gmtime, mktime
+import requests
+import urllib, cStringIO, gzip
+import xml.parsers.expat
+import time
 deps = ['bbs']
 
 weather_xmlurl = \
-  'http://apple.accuweather.com/adcbin/apple/Apple_Weather_Data.asp?zipcode='
-
+  'http://apple.accuweather.com/adcbin/apple/Apple_Weather_Data.asp'
+  #?zipcode=%s'
 location_xmlurl = \
-  'http://apple.accuweather.com/adcbin/apple/Apple_find_city.asp?location='
+  'http://apple.accuweather.com/adcbin/apple/Apple_find_city.asp'
+  #?location=%s'
 
 days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
 
 # xml keys for current conditions
-current_keys = [ \
+current_keys = ( \
   'City', 'State', 'Time', 'Temperature', 'RealFeel', 'Humidity', \
   'WeatherText', 'WeatherIcon', 'WindSpeed', 'WindDirection', \
   'Visibility', 'Precip', 'DayCode', 'Pressure', 'GmtDiff', 'Tree',
   'Weed', 'Grass', 'Mold', 'UVIndex', 'Copyright', 'AirQuality',
-  'AirQualityType' \
-  ]
+  'AirQualityType' )
 
 # xml keys for forecast data
-fcast_keys = [ \
+fcast_keys = ( \
   'TXT_Short', 'TXT_Long', 'High_Temperature', 'Low_Temperature', \
   'Real_Feel_High', 'Real_Feel_Low', 'WindGust', 'MaxUV', \
   'Rain_Amount', 'Snow_Amount', 'Precip_Amount', 'TStorm_Prob', \
   'DayCode', 'WeatherIcon', 'WindSpeed', 'WindDirection', 'Max_UV' \
-  ]
+  )
 
 def main(zipcode=''):
-  # global 'state' variables
+  session, term = getsession(), getterminal()
+  user = session.user
+
+  # global 'state' & 'data' variables for SAX parsing
   global cname, cattrs, cfdate
-  # global 'data' variables
   global current, forecast, pom, lookup, today
 
+  zipcode = None
+  prompt_location = 'Enter US postal code, or nearest major international city'
   # is location a US zipcode?
-  def iUS():
-    if len(zipcode) == 5:
-      for n in zipcode:
-        if not isdigit(ord(n)): return
-      return True
+  def isUS():
+    return 5 == len(zipcode) and not False in \
+        (ch.isdigit() for ch in zipcode)
 
   # measurement converstions
   def conv_t(f):
-    if iUS(): return f
-    return str(int((5.0*float(int(f)-32))/9))
+    return f if isUS() else str(int((5.0*float(int(f)-32))/9))
   def conv_s(mph):
-    if iUS(): return mph
-    return str(int(float(mph)*1.6))
+    return mph if isUS() else str(int(float(mph)*1.6))
   def conv_m(inch):
-    if iUS(): return inch
-    return str(int(float(inch)*2.54))
+    return inch if isUS() else str(int(float(inch)*2.54))
 
   # measurement types
   def temp():
-    if iUS(): return 'F'
-    return 'C'
+    return 'F' if isUS() else 'C'
   def speed():
-    if iUS(): return 'mph'
-    return 'km/h'
+    return 'mph' if isUS() else 'km/h'
   def measure():
-    if iUS(): return 'inches'
-    return 'centimeters'
-
-  echo (cls() + color() + cursor_show())
+    return 'inches' if isUS() else 'centimeters'
 
   if not zipcode:
+    echo (term.move (0,0) + term.clear + term.normal)
     # retrieve user's zipcode from db
-    search = getsession().getuser().zipcode \
-      if hasattr(getsession().getuser(), 'zipcode') \
+    search = user.get('zipcode') \
+      if user.get('zipcode') is not None \
       else ''
 
     # location finder
     while True:
-      echo (color() + pos(8,4) + cl() + 'Enter US postal code, or nearest major international city')
-      echo (pos(26,2) + cl() + color(RED) + attr(INVERSE) + ' '*30 + pos(26,2))
+      echo (term.normal + term.move(4, 8) + term.clear_eol)
+      echo (prompt_location)
+      echo (term.move (2, 26) + term.clear_eol + term.red_reverse)
+      echo (' '*30)
+      echo (term.move (2, 26))
       search = readline(30, search)
       if not search:
         break
 
-      echo (color() + pos(16,4) + cl() + 'Verifying/Searching...')
-      oflush ()
-
-      fobj = cStringIO.StringIO(urllib.urlopen(location_xmlurl+search).read())
-      try: data = trim(gzip.GzipFile(fileobj=fobj).read())
-      except: data = trim('<?' + fobj.read())
-      if 'Bad Request' in data:
-        echo (color() + pos(16,4) + cl() + 'Bad request, Enter city only!')
+      echo (term.normal + term.move(4, 8) + term.clear_eol)
+      echo ('Searching ...')
+      r = requests.get (location_xmlurl, params=(('location', search),))
+      if 200 != r.status_code:
+        echo (term.bold_red + term.move (8, 4) + term.clear_eol)
+        echo ('Bad request, Enter city name')
         inkey (1.7)
         continue
 
-      # global variable modified by expat parser (XXX lock issue)
       lookup = []
       # xml parser for location lookup
       lp = xml.parsers.expat.ParserCreate ()
       lp.StartElementHandler = start
       lp.EndElementHandler = end
       lp.CharacterDataHandler = location_chdata
-      try:
-        lp.Parse (data, True)
-      except:
-        type, value, tb = sys.exc_info ()
-        print handle() + ' weather: Error in parse: ' + str(traceback.format_exception_only(type, value))
-        print 'data:'
-        print repr(data)
+      lp.Parse (r.content, True)
 
       if not len(lookup):
-        echo (color() + pos(16,4) + cl() + 'No results found!')
+        echo (term.normal + term.move (4, 8) + term.clear_eol)
+        echo ('No results found!')
         inkey (1.7)
         continue
+
       if len(lookup) == 1:
         zipcode = str(lookup[0]['postal'])
         break
       else:
-        echo (color() + pos(16,4) + cl() + 'Chose a city')
-        picker = []
-        for l in lookup:
-          picker.append (stoascii(l['city']) + ', ' + stoascii(l['state']))
-
+        echo (term.normal + term.move (4, 8) + term.clear_eol)
+        echo ('Chose a city')
+        picker = [l['city'].encode('iso8859-1','replace')
+              + ', ' + l['state'].encode('iso8859-1','replace') \
+                  for l in lookup]
         # picker width: width always > 1/4 width, leaves 8 chars margin minimum
-        mw=min(max(maxwidth(picker),getsession().width/4),getsession().width-8)
+        mw=min(max(max([len(p) for p in picker]),term.width/4),term.width-8)
         llb = LightClass \
-            (h=max(getsession().height-4,2), w=mw, y=5,
-                x=(getsession().width -mw)/2)
+            (h=max(term.height-4,2), w=mw, y=5,
+                x=(term.width -mw)/2)
         llb.interactive = True
+        llb.partial = True
         llb.update (picker, refresh=False)
-        llb.lowlight (partial=True)
+        llb.lowlight ()
         llb.interactive = False
         llb.title('-< CtRl-X: CANCEl >-')
         llb.refresh ()
@@ -152,41 +146,41 @@ def main(zipcode=''):
   if not zipcode:
     return
 
-  getsession().getuser().set ('zipcode', zipcode)
+  user.set ('zipcode', zipcode)
   s = 'postal code: '
-  echo (pos(26,2) + cl() + color(RED) + s \
-    + attr(INVERSE) + zipcode + (30-len(zipcode))*' ')
+  echo (term.move(2, 26) + term.clear_eol + term.red + s \
+      + term.reverse + zipcode + (30-len(zipcode))*' ')
 
-  # global variables modified by expat parser (XXX lock issue)
   cname, cattrs, cfdate = None, None, None
   current, forecast, pom, today = {}, {}, {}, ''
-
   # array becomes forecast data in order, today first
   fc = ['','','','','','','']
-
-  echo (color() + pos(16,4) + 'Retrieving weather data...')
-  oflush ()
+  echo (term.normal + term.move(4, 16))
+  echo ('Retrieving weather data...')
 
   # retrieve weather data
-  fobj = cStringIO.StringIO(urllib.urlopen(weather_xmlurl +zipcode).read())
-  try: data = gzip.GzipFile(fileobj=fobj).read()
-  except: data = '<?' + fobj.read()
+  #fobj = cStringIO.StringIO(urllib.urlopen(weather_xmlurl +zipcode).read())
+  #try: data = gzip.GzipFile(fileobj=fobj).read()
+  #except: data = '<?' + fobj.read()
+  r = requests.get (weather_xmlurl, params=(('zipcode', zipcode),))
+  if 200 != r.status_code:
+    return # log
 
   # parse xml weather data
   wp = xml.parsers.expat.ParserCreate ()
   wp.StartElementHandler = start
   wp.EndElementHandler = end
   wp.CharacterDataHandler = weather_chdata
-  wp.Parse(data, True)
+  wp.Parse(r.content, True)
 
-  echo (pos(16, 4) + cl() + cursor_hide())
+  echo (term.move(4, 16) + term.clear_eol)
 
   # convert forecast data into list, ordered sunday through monday
   for key in forecast.keys():
     fc[days.index(forecast[key]['DayCode'])] = forecast[key]
     fc[days.index(forecast[key]['DayCode'])]['key'] = str(key)
   # find today's weekday, and reorder list
-  usr_wkday = strftime('%A', time.strptime(today, '%m/%d/%Y'))
+  usr_wkday = time.strftime('%A', time.strptime(today, '%m/%d/%Y'))
   fc = fc[days.index(usr_wkday):] + fc[:days.index(usr_wkday)]
   # add fake forecast named 'Moon Data'
   fc.append ({'DayCode':'Moon Data'})
@@ -205,12 +199,17 @@ def main(zipcode=''):
 
   def refresh_windows():
     # clear
-    echo (cls() + color() + cursor_show())
-    flb.lowlight (partial=True)
+    echo (term.move (0,0) + term.clear)
+    flb.partial = True
+    flb.lowlight ()
     flb.refresh ()
-    pager.lowlight (partial=True)
-    pager.title (color(RED) + '-< ' + attr(INVERSE) + title + color() + color(RED) + ' >-')
-    pager.title (color(RED) + '-< ' + attr(INVERSE) + 'q:QUit, UP/dOWN: fORECASt' + color() + color(RED) + ' >-', align='bottom')
+    pager.partial = True
+    pager.lowlight ()
+    pager.title (''.join((term.red, '-< ', term.reverse, title, term.normal,
+      term.red, ' >-',)), align='top')
+    pager.title (''.join((term.red, '-< ', term.reverse,
+      'q:QUit, UP/dOWN: fORECASt', term.normal, term.red, ' >-',)),
+      align='bottom')
 
   refresh_windows()
   #
@@ -220,12 +219,11 @@ def main(zipcode=''):
     if not flb.moved and flb.lastkey == '\014':
       refresh_windows ()
       pager.update (str(txt))
-    if flb.moved:
-      echo (color())
 
+    if flb.moved:
+      echo (term.normal)
       for index in range(0, len(fc)):
         if fc[index]['DayCode'] == flb.selection: break
-
       txt = ''
       if index == 0:
         c_temp = conv_t(current['Temperature'])
@@ -243,7 +241,7 @@ def main(zipcode=''):
 
       if index < len(flb.content) -1:
         # Localization of forecast data
-        date = strftime('%A, %b %d', time.strptime(fc[index]['key'], '%m/%d/%Y'))
+        date = time.strftime('%A, %b %d', time.strptime(fc[index]['key'], '%m/%d/%Y'))
         fc_high = conv_t((fc[index]['High_Temperature']))
         fc_low = conv_t(fc[index]['Low_Temperature'])
         fc_wspeed = conv_s(fc[index]['WindSpeed'])
@@ -273,7 +271,7 @@ def main(zipcode=''):
         for k in pom.keys():
           if pom[k]['text'] != '':
             txt += pom[k]['text'] + ' Moon: ' \
-                + strftime('%A, %b %d', \
+                + time.strftime('%A, %b %d', \
                   time.strptime(k, '%m/%d/%Y')) \
                 + '.\n\n'
 
@@ -297,29 +295,29 @@ def end(name):
 
 def weather_chdata(data):
   global cname, cattrs, cfdate, today
-  if cname == 'ObsDate' and trim(data):
+  if cname == 'ObsDate' and data.strip():
     # forecast date
-    cfdate = trim(data)
-    if not today: today = trim(data)
+    cfdate = data.strip()
+    if not today: today = data.strip()
     return
-  if cname in current_keys and trim(data) and not cfdate:
+  if cname in current_keys and data.strip() and not cfdate:
     # current weather
-    current[cname] = trim(data)
+    current[cname] = data.strip()
 
-  elif cname in fcast_keys and trim(data) and cfdate:
+  elif cname in fcast_keys and data.strip() and cfdate:
     # forecasted
     if not forecast.has_key(cfdate):
       forecast[cfdate] = {}
-    forecast[cfdate][cname] = trim(data)
+    forecast[cfdate][cname] = data.strip()
 
-  elif cname == 'Phase' and trim(data):
+  elif cname == 'Phase' and data.strip():
     # phase of moon
     pomdate = cattrs['date']
     if not pom.has_key(pomdate):
       pom[pomdate] = {}
     pom[pomdate]['text'] = cattrs['text']
     # data represents integer phase, 0=new, etc.
-    pom[pomdate]['phase'] = trim(data)
+    pom[pomdate]['phase'] = data.strip()
 
 def location_chdata(data):
   global cname, cattrs, lookup
