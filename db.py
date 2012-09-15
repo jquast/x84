@@ -1,10 +1,11 @@
 import threading
 import traceback
+import logging
 import os
 import sys
 import sqlitedict
 import bbs.ini
-
+logger = logging.getLogger(__name__)
 DATABASES = {}
 LOCK = threading.Lock()
 
@@ -35,12 +36,13 @@ class DBHandler(threading.Thread):
     db = DATABASES[self.schema]
     LOCK.release ()
     assert hasattr(db, self.cmd), \
-        "'%(cmd)s' not a valid method of <type 'dict'>" % self
+        "'%(_cmd)s' not a valid method of <type 'dict'>" % self
+    f = getattr(db, self.cmd)
+    assert callable(f), \
+        "'%(_cmd)s' not a valid method of <type 'dict'>" % self
+    logger.debug ('%s/%s(%s)', self.schema, self.cmd, self.args)
     try:
-      if 0 == len(self.args):
-        result = getattr(db, self.cmd) ()
-      else:
-        result = getattr(db, self.cmd) (*self.args)
+      result = f() if 0==len(self.args) else f(*self.args)
       self.pipe.send ((self.event, result,))
     except:
       t, v, tb= sys.exc_info()
