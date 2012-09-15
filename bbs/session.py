@@ -189,8 +189,9 @@ class Session(object):
 
   @encoding.setter
   def encoding(self, value):
-    logger.info ('%s encoding=%s', self.handle, value)
-    self._encoding = value
+    if value != self._encoding:
+      logger.info ('%s encoding=%s', self.handle, value)
+      self._encoding = value
 
 
   @property
@@ -234,6 +235,9 @@ class Session(object):
       except exception.ConnectionClosed, e:
         logger.info ('Connection Closed: %s' % (e,))
         return
+      except exception.ConnectionTimeout, e:
+        logger.info ('Connection Timed out: %s' % (e,))
+        return
       except exception.SilentTermination, e:
         logger.info ('Silent Termination: %s' % (e,))
         return
@@ -256,16 +260,17 @@ class Session(object):
 
   def write (self, data, encoding=None):
     """Write data to terminal stream as unicode."""
-    if type(data) is not unicode:
-      data = data.decode (encoding if encoding is not None else self.encoding)
     if 0 == len(data):
       # on non-capable terminals, something like echo(term.move(0,0))
       # might become echo (''); just ignore it
       return
-    self.terminal.stream.write (data)
+    self.terminal.stream.write (data, self.encoding \
+        if self.encoding != 'cp437' else 'iso8859-1')
+
     if self._record_tty:
       if not self.is_recording():
         self.start_recording ()
+      # ttyrec is formatted as utf-8, regardless of capability
       self._ttyrec_write (data.encode('utf-8'))
 
 
@@ -331,7 +336,6 @@ class Session(object):
        pipe used by dbproxy.py
     """
     self.pipe.send ((event, data))
-
 
   def read_event (self, events, timeout=None):
     """
