@@ -14,13 +14,17 @@ class Door(object):
   pid = None
   pEIO = re.compile('[eE]rrno 5')
 
-  def __init__(self, cmd='/bin/uname', args=(), lang='en_US.UTF-8', term=None):
+  def __init__(self, cmd='/bin/uname', args=(), lang=u'en_US.UTF-8', term=None,
+      path=None):
     from session import getsession
+    import ini
     self.cmd = cmd
     self.args = (self.cmd,) + args
     self.lang = lang
     self.term = term if term is not None else \
         getsession().terminal.terminal_type
+    self.path = path if path is not None else \
+        ini.cfg.get('session', 'door_syspath')
 
   def run(self):
     from session import logger
@@ -30,11 +34,13 @@ class Door(object):
       logger.error ('OSError in pty.fork(): %s', e,)
       return
 
+    # subprocess
     if self.pid == pty.CHILD:
       sys.stdout.flush ()
-      os.execle(self.cmd, self.args, \
-          (('LANG', self.lang,),
-           ('TERM', self.term,),))
+      args = list(self.args)
+      env = {u'LANG': self.lang, u'TERM': self.term,
+             u'PATH': self.path,}
+      os.execvpe(self.cmd, self.args, env)
 
     # catch all i/o and o/s errors
     try:
@@ -44,7 +50,7 @@ class Door(object):
       logger.error ('IOError: %s', e)
     except OSError, e:
       if self.pEIO.search (str(e)) != None:
-        # this occurs on read() when child closed sys.stdout
+        # this occurs on read() after child closed sys.stdout
         logger.debug ('(eof) OSError: %s', e)
       else:
         logger.error ('OSError: %s', e)
