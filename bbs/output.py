@@ -3,8 +3,8 @@ from session import getsession
 def delay(n):
     getsession().read_event([], seconds)
 
-def echo(data):
-    return getsession().write(data)
+def echo(data, encoding=None):
+    return getsession().write(data, encoding)
 
 def oflush():
   import warnings
