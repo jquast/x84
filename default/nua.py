@@ -18,7 +18,7 @@ loc_yesno  = (62, 23) #23, 62)
 
 def main (handle):
   if handle.lower() in ('new',):
-    handle = ''
+    handle = u''
   location, hint = '', ''
   password, verify, = '', ''
   session = getsession()
@@ -151,6 +151,9 @@ def main (handle):
     lr.run()
     if lr.isleft():
       # handle, password, location, hint
-      u = User (handle=handle, password=password, location=location, hint=hint)
+      u = User (handle=handle.decode('utf-8'),
+          password=password.decode('utf-8'),
+          location=location.decode('utf-8'),
+          hint=hint.decode('utf-8'))
       u.save ()
       goto ('top', u.handle)
