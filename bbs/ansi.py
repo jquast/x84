@@ -12,7 +12,8 @@ __author__ = "Jeffrey Quast"
 __contributors__ = []
 __copyright__ = "Copyright (c) 2006, 2007 Jeffrey Quast"
 __license__ = "ISC"
-from bbs.ascii import esc
+#from bbs.ascii import esc
+esc = '\033'
 import warnings
 warnings.warn ("deprecated", DeprecationWarning)
 # attributes
