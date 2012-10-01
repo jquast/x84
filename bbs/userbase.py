@@ -41,8 +41,6 @@ def auth(user, try_pass):
 
 def authuser(handle, try_pass):
   """Return True if try_pass is the correct password for a user."""
-  assert type(try_pass) is unicode
-  assert len(try_pass) > 0
   return auth(getuser(handle), try_pass)
 
 class User(dict):
@@ -64,7 +62,7 @@ class User(dict):
 
 
   @property
-  def isSysop(self):
+  def is_sysop(self):
     """Return True if 'sysop' in groups."""
     return 'sysop' in self.get('groups')
 
