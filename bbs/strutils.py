@@ -115,7 +115,7 @@ def filetime(file):
    " Return 'm/d/y' of file "
    return time.strftime ('%m/%d/%y', time.localtime (os.path.getctime(file)))
 
-def asctime(secs, precision=0):
+def timeago(secs, precision=0):
   """
   Pass float or int in seconds, and return string of 0d 0h 0s format,
   but only the two most relative, fe:
@@ -143,6 +143,13 @@ def asctime(secs, precision=0):
   else:
     fmt = '%.'+str(precision)+'f s'
     return fmt % secs
+
+def asctime(secs, precision=0):
+  """ depricated ... """
+  import warnings
+  warnings.warn ("deprecated; use timeago(); unfortunate name of asctime",
+    DeprecationWarning)
+  return timeago(secs, precision)
 
 ## ANSI string routines
 
@@ -232,17 +239,18 @@ def isbad(seq):
     else: badseq('illegal nondigit')
   badseq('unknown ansi sequence')
 
-def seqp(src, term):
+def seqp(src):
   """Return ansi string given string with |03 pipe codes ..."""
+  from session import getsession
   tgt = ''
   ptr, match = 0, None
   for match in pANS_PIPE.finditer(src):
     value = int(src[match.start()+len('|'):match.end()], 10)
-    tgt += src[ptr:match.start()] + term.color(value)
+    tgt += src[ptr:match.start()] + getsession().terminal.color(value)
     ptr = match.end()
   if match is None:
     return src # as-is
-  return ''.join((tgt, src[match.end():], term.normal))
+  return ''.join((tgt, src[match.end():], getsession().terminal.normal))
 
 def seqc(string, ch=' '):
   " Replace string with \\033[nnC replaced by ' '*nn.  "
