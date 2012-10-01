@@ -1,0 +1,8 @@
+see __init__.py file, contains list __all__
+
+everything listed in __all__ is exported into the global namespace
+
+it is as if the statement:
+  from bbs import *
+
+is implied for all scripts.

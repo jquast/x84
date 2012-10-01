@@ -1,9 +1,0 @@
-Mastermind is a game of deductive reasoning.
-
-You are a codebreaker. Your task is to crack an unknown code. Each turn, you may select the combinations for each pin. Use the left and right keys to change pins, and up and down to change combination of each pin (or hl, and kj). To make a break-in attempt, press return.
-
-After each turn, a series of markers may appear alongside the attempt, indicating a correct combination for a pin. The markers do not indicate the exact position in the series, that must be deduced by testing:
-
-[31;1m*[m  a gear turned: correct color in correct position.
-[37;1mo[m  a clicked tumbler: correct color in wrong position.
-
