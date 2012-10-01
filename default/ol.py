@@ -128,15 +128,13 @@ def main ():
   q = Queue.Queue()
   l = threading.Lock()
   t = None
+  session.activity = 'Reading one-liners'
   if ini.cfg.has_section('bbs-scene'):
     t = FetchUpdates(q, l, HISTORY)
     t.start ()
     session.activity = 'Reading bbs-scene 1liners'
-  else:
-    session.activity = 'Reading one-liners'
 
   while True:
-
     # a bbs-scene.org update occured from our spawned thread, and has items
     # in the queue to be read. matches increments for new records, and if any
     # are found, the screen is refreshed.
@@ -209,15 +207,14 @@ def main ():
             continue
           # write something
           saysomething ()
-      elif str(data).lower() == '\003':
-        # sysop can clear history
-        if not 'sysop' in session.user.groups:
-          continue
+      elif str(data).lower() == '\003' and session.user.is_sysop:
+        # sysop can clear history with ctrl+c
         yn.right ()
         statusline (erase_msg, term.red_reverse)
         yn.interactive = False
         choice = yn.run (key=data)
         if choice == term.KEY_LEFT:
+          # yes, delete all the db ..
           statusline (erased_msg, term.bright_white)
           getch (1.6)
           udb.clear ()
