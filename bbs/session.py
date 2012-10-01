@@ -62,7 +62,8 @@ class Session(object):
   _ttyrec_len_data = 0
   _last_input_time = 0.0
   _connect_time = 0.0
-  tap_mask = '*'
+  _enable_keycodes = True
+  _tap_mask = '*'
   # if the last timechunk and current timechunk to be written differ by less
   # than TTYREC_uCOMPRESS, modify the last written timechunk to include the current
   # data as though no time had passed at all. in theory this would lose timing
@@ -195,6 +196,21 @@ class Session(object):
 
 
   @property
+  def enable_keycodes(self):
+    """
+    Should multibyte sequences be translated to keycodes for 'input' events?
+    It may be desirable to disable this when doing pass-through, to a door, f.e.,
+    """
+    return self._enable_keycodes
+
+  @enable_keycodes.setter
+  def enable_keycodes(self, value):
+    if value != self._enable_keycodes:
+      logger.info ('%s enable_keycodes=%s', self.handle, value)
+      self._enable_keycodes = value
+
+
+  @property
   def pid(self):
     """Process ID."""
     return os.getpid()
@@ -313,19 +329,23 @@ class Session(object):
       logger.debug ('%s event buffered, (%s,%s).', self.handle, event, data,)
       return
 
-    for keystroke in self.terminal.trans_input(data, self.encoding):
-      self._buffer['input'].insert (0, keystroke)
-      if keystroke == chr(12):
-        # again; transliterate to single buffered 'refresh' event,
-        # XXX: there exists a KEY_REFRESH ...
-        data = ('input', keystroke)
-        self._buffer['refresh'] = list((data,))
+    if False == self.enable_keycodes:
+      self._buffer['input'].insert (0, data)
+    else:
+      # given input string OD, return terminal.KEY_LEFT (an integer)
+      for keystroke in self.terminal.trans_input(data, self.encoding):
+        self._buffer['input'].insert (0, keystroke)
+        if keystroke == chr(12):
+          # again; transliterate to single buffered 'refresh' event,
+          # XXX: there exists a KEY_REFRESH ...
+          data = ('input', keystroke)
+          self._buffer['refresh'] = list((data,))
     self._last_input_time = time.time()
 
     if logger.level >= logger.debug:
-      # special care for input, mask with self.tap_mask
+      # special care for input, mask with self._tap_mask
       logger.debug ('%s input buffered, %s.', self.handle, data \
-          if self.tap else self.tap_mask * len(data),)
+          if self.tap else self._tap_mask * len(data),)
 
   def send_event (self, event, data):
     """
