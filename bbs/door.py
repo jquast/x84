@@ -54,7 +54,7 @@ class Door(object):
 
     # execute self._loop() and catch all i/o and o/s errors
     try:
-      logger.info ('exec/%s: %s, %s' % (self.pid, self.cmd, ' '.join(self.args)))
+      logger.info ('exec/%s: %s' % (self.pid, ' '.join(self.args)))
       self._loop()
     except IOError, e:
       logger.error ('IOError: %s', e)
