@@ -17,6 +17,7 @@ loc_prompt = (23, 35)
 loc_yesno  = (62, 23) #23, 62)
 
 def main (handle):
+  import os
   if handle.lower() in ('new',):
     handle = u''
   location, hint = '', ''
@@ -163,4 +164,4 @@ def main (handle):
           location=location.decode('utf-8'),
           hint=hint.decode('utf-8'))
       u.save ()
-      goto ('top', u.handle)
+      goto (ini.cfg.get('matrix', 'topscript'), u.handle)
