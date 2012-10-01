@@ -23,7 +23,8 @@ import bbs.session
 import sys
 import traceback
 import threading
-def main (logger, logHandler, cfgFile='default.ini'):
+
+def main (logger, logHandler, cfgFile='default.ini', doTAP=False):
   """
   x84 main entry point. The system begins and ends here.
   """
@@ -43,6 +44,10 @@ def main (logger, logHandler, cfgFile='default.ini'):
   # initialize scripting subsystem
   import bbs.scripting
   bbs.scripting.init (bbs.ini.cfg.get('session', 'scriptpath'))
+
+  if doTAP:
+    bbs.ini.cfg.set('session', 'tap_input', 'yes')
+    bbs.ini.cfg.set('session', 'tap_output', 'yes')
 
   # initialize ftp server
   import ftp
@@ -130,6 +135,7 @@ if __name__ == '__main__':
   sys.stdout.write ('x/84 bbs ')
   log_level = logging.INFO
   cfgFile = 'default.ini'
+  doTAP=False
   if '-v' in sys.argv:
     sys.argv.remove('-v')
     log_level = logging.DEBUG
@@ -139,7 +145,7 @@ if __name__ == '__main__':
     sys.argv.remove(cfgFile)
     sys.argv.remove('-cfg')
   if '-tap' in sys.argv:
-    bbs.session.TAP = True
+    doTAP = True
   logHandler = log.get_stderr(level=log_level)
   sys.stdout.flush()
-  main (logger, logHandler, cfgFile)
+  main (logger, logHandler, cfgFile, doTAP)
