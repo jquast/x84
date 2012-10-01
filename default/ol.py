@@ -11,7 +11,6 @@ import requests
 def main ():
   session, term = getsession(), getterminal()
   user = session.user
-  API_POLL = 1984 # poll bbs-scene.org for updates
   MAX_INPUT = 50  # character limit for input
   HISTORY   = 84  # limit history in buffer window
   SNUFF_TIME = 1*60*60*24 # one message per 24 hours, 0 to disable
@@ -20,6 +19,9 @@ def main ():
   save_msg = 'BURNiNG TO rOM, PlEASE WAiT!'
   erase_msg = 'ERaSE HiSTORY ?!'
   erased_msg = 'ThE MiNiSTRY Of TRUTh hONORS YOU'
+  color1 = term.bold_white
+  color2 = term.bold_green
+  color3 = term.bold_blue
   udb = DBSessionProxy('oneliner')
   chk_yesno = (term.KEY_ENTER, term.KEY_LEFT, term.KEY_RIGHT,
       'y', 'n', 'Y', 'N', 'h', 'l', 'H', 'L',)
@@ -28,18 +30,18 @@ def main ():
   def redraw_msgs ():
     output = ''
     for n, ol in sorted(udb.items())[-HISTORY:]:
-      n = int(n)
-      if n%3 == 0: c = term.bold_white
-      elif n%3 == 1: c = term.bold_green
-      else: c = term.bold_blue
+      c = (color1, color2, color3)[int(n)%3]
       l = '%s(%s' % (term.bold_white, c)
-      m = '%s/%s' % (term.white + term.reverse, term.normal)
+      m = '%s/%s' % (c + term.reverse, term.normal)
       r = '%s)%s' % (term.bold_white, term.normal)
+      a = timeago(time.time() -time.mktime \
+          (time.strptime(ol['timestamp'], '%Y-%m-%d %H:%M:%S'))).strip()
       output += (l + ol['alias'] + m + ol['bbsname'] + r +': ') .rjust (20)
-      output += seqp(ol['oneliner'],term) + '\n'
-    output = output.rstrip()
+      output += seqp(ol['oneliner'])
+      output += ' %s/%s%s%s ago%s\n' \
+          % (term.bold_white, c, a, term.bold_black, term.normal)
+    output = output.strip()
     window.update (output, refresh=True, scrollToBottom=True)
-
 
   def statusline (text='SAY SUMthiNG?', c=''):
     " display text in status line "
@@ -58,10 +60,14 @@ def main ():
       session.activity = 'Blabbering'
       event, data = readevent(['input', 'oneliner_update'])
       if event == 'input':
+        if data == '\030':
+          break # ^X (cancel)
         comment.run (key=data)
         if comment.enter:
-          statusline (save_msg, term.bright_green)
           msg = comment.data().strip()
+          if 0 == len(msg):
+            break
+          statusline (save_msg, term.bright_green)
           session.user.set ('lastliner', time.time())
           if not ini.cfg.has_section('bbs-scene'):
             addline (msg)
@@ -76,7 +82,7 @@ def main ():
           if r.status_code == 200 and XML(r.content) \
               .find('success').text == 'true':
             # spawn thread to ensure our update got there ..
-            t = FetchUpdates(q, l, history=3)
+            t = FetchUpdates(queue, l, history=3)
             t.start ()
           break
         elif comment.exit:
@@ -94,7 +100,7 @@ def main ():
         'oneliner': msg,
         'alias': session.handle,
         'bbsname': ini.cfg.get('system', 'bbsname'),
-        'timestamp': time.strftime('%Y-%m-%d %H:%M:%s'),
+        'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
     }
 
   class FetchUpdates(threading.Thread):
@@ -125,12 +131,12 @@ def main ():
 
   flushevent ('oneliner_update')
   forceRefresh = True
-  q = Queue.Queue()
-  l = threading.Lock()
+  queue = Queue.Queue()
+  lock = threading.Lock()
   t = None
   session.activity = 'Reading one-liners'
   if ini.cfg.has_section('bbs-scene'):
-    t = FetchUpdates(q, l, HISTORY)
+    t = FetchUpdates(queue, l, HISTORY)
     t.start ()
     session.activity = 'Reading bbs-scene 1liners'
 
@@ -138,18 +144,18 @@ def main ():
     # a bbs-scene.org update occured from our spawned thread, and has items
     # in the queue to be read. matches increments for new records, and if any
     # are found, the screen is refreshed.
-    if not q.empty():
+    if not queue.empty():
+      lock.acquire ()
       matches = 0
-      l.acquire ()
       while True:
         try:
-          key, value = q.get(block=False)
-        except Queue.Empty:
+          key, value = queue.get(block=False)
+        except Queue.Empty: # queue exausted
           break
         if not udb.has_key(key):
           udb[key] = value
           matches += 1
-      l.release ()
+      lock.release ()
       if matches > 0:
         echo ('\a')
         redraw_msgs ()
@@ -199,12 +205,13 @@ def main ():
           # exit
           break
         elif choice == yn.YES:
-          lastliner = user.get('lastliner', time.time() -SNUFF_TIME)
-          if time.time() -lastliner < SNUFF_TIME:
-            statusline (snuff_msg, term.red_reverse)
-            getch (1.5)
-            yn.right ()
-            continue
+          if SNUFF_TIME != 0:
+            lastliner = user.get('lastliner', time.time() -SNUFF_TIME)
+            if time.time() -lastliner < SNUFF_TIME:
+              statusline (snuff_msg, term.red_reverse)
+              getch (1.5)
+              yn.right ()
+              continue
           # write something
           saysomething ()
       elif str(data).lower() == '\003' and session.user.is_sysop:
