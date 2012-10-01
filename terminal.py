@@ -38,7 +38,7 @@ class IPCStream(object):
   """
   def __init__(self, channel):
     self.channel = channel
-  def write(self, data, encoding='iso8859-1'):
+  def write(self, data, encoding='utf-8'):
     assert 0 != len(data)
     self.channel.send (('output', (data, encoding,),))
   def fileno(self):

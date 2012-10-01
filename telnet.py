@@ -354,9 +354,8 @@ class TelnetClient(object):
           logger.warn ('%s: UnicodeEncodeError: %s; '
             're-trying as iso8859-1 on 7-bit ascii terminal!',
               self.addrport(), e)
-          self.send_buffer += bytes(text) \
-              if type(text) is not unicode \
-              else text.encode ('iso8859-1')
+          logger.debug ('%r', text)
+          self.send_buffer += text.encode ('iso8859-1', 'replace')
 
     def deactivate(self):
         """
