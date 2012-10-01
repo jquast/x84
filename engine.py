@@ -86,7 +86,7 @@ def main (logger, logHandler, cfgFile='default.ini'):
           lock.release ()
           try:
             event, data = pipe.recv()
-          except TypeError(e):
+          except TypeError, e:
             logger.error (e)
             continue
           if event == 'disconnect':
