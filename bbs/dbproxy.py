@@ -20,7 +20,10 @@ class DBProxy(object):
     Proxy a method name and its arguments via
       send.sendfunc(dbkey, (method, args,)).
     """
+    #from session import logger
     event = 'db-%s' % (self.schema,)
+    # if tap ...
+    #logger.debug ('%s (%s (%s, %s))', self.send_f, event, method, args)
     self.send_f (event, (method, args,))
     return self.recv_f((event,))
 
