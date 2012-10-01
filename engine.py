@@ -86,7 +86,7 @@ def main (logger, logHandler, cfgFile='default.ini'):
           lock.release ()
           try:
             event, data = pipe.recv()
-          except TypeError, e:
+          except TypeError(e):
             logger.error (e)
             continue
           if event == 'disconnect':
@@ -99,10 +99,11 @@ def main (logger, logHandler, cfgFile='default.ini'):
             client.send (*data)
             lock.release ()
           elif event == 'global':
-            # broadcast: repeat data as global to all other channels
-            for (c,p,l) in terminal.SESSION_CHANNELS:
-              if c != client:
-                c.send ((event, data, lock))
+            pass
+#            # broadcast: repeat data as global to all other channels
+#            for (c,p,l) in terminal.SESSION_CHANNELS:
+#              if c != client:
+#                p.send ((event, data))
           elif event == 'pos':
             # query: what is the cursor position ?
             t = terminal.POSHandler(pipe, client, lock, event, data)
@@ -114,7 +115,6 @@ def main (logger, logHandler, cfgFile='default.ini'):
           else:
             assert 0, 'Unhandled event: %s' % ((event,data,),)
         except EOFError:
-          print 'EOF!'
           eof_pipes.add ((client, pipe, lock))
     while 0 != len(eof_pipes):
       terminal.SESSION_CHANNELS.remove (eof_pipes.pop())
