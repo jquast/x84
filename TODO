@@ -1,0 +1,27 @@
+doc generation
+example of using xmodem protocol
+'expert' mode goes everywhere, a way to test low-fi terminals ..
+groupbase
+user editor: overhall
+bbs-scene.org bbs lister
+flesh out fileserver ... zIPE's call.
+  at least hook on_* methods
+  file stats, ftpd admin door, etc.
+bring weather up to date
+pickup/dropoff of global events
+? nntp support
+? zmodem support
+
+script/ui/menu.py:
+     # make new menu
+     menu(paraclass)
+     # add choices
+     choices['c'] = "chat"
+     # update and refresh menu
+     menu.update(choices)
+  - a simple menu class that display's a user menu using
+    a readonly paraclass and a high split value by default.
+! + menu class takes user input, and listens to broadcast messages
+    such as chat invination or new mail and calls gosubs()!
+  - get user input like:
+     choice = menu.run()

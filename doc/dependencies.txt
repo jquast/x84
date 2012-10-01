@@ -1,6 +1,0 @@
-py-setuptools-0.6.11v0
-py-zopeinterface-3.5.1
-py-openssl-0.9
-py-twisted-core-8.2.0p0
-gmp-4.3.1
-py-crypto-2.0.1p6
