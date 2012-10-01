@@ -471,6 +471,9 @@ class Session(object):
     self.rotate_recordings (dst)
     # open ttyrec logfile
     filename = os.path.join(self._ttyrec_folder, '%s.0' % (dst,))
+    if not os.path.exists(self._ttyrec_folder):
+      logger.info('creating ttyrec folder, %s.', self._ttyrec_folder)
+      os.makedirs (self._ttyrec_folder)
     self._fp_ttyrec = io.open(filename, 'wb+')
     self._ttyrec_sec = -1  # force new header on next write
     self._recording = True
