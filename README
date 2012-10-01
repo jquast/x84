@@ -104,13 +104,17 @@ PuTTy
  - under preference item 'Window -> Translation',
    option 'Remote character set', select or key in 'UTF-8'.
 
-Terminal.app
+Unicode Unix
+ - Use the UTF-8 locale, or otherwise select UTF-8 character encoding
+   for your terminal application. This is the default for most modern
+   unix environments. wrappers such as 'uxterm' or the utf-8 enabled
+   rxvt varient, 'urxvt' can also be used.
 
-uxterm
- - this is an alias on most systems for utf-8 enabled xterm,
-   urxvt is also suitable. Failing utf-8, font sets such as
-   'terminus' can be installed, select cp437 encoding when
-   prompted by the bbs system.
+Classic Unix
+ - Failing utf-8, to display block art ansi, a font set such as
+   'terminus', or dosemu fonts, should be used for an ibm
+   cp437-compatible display. This is a traditional DOS encoding
+   and internationalization characters may appear as '?'.
 
 SyncTerm
    select cp437 encoding when prompted by the bbs system.
