@@ -10,6 +10,7 @@ msg_anon_noedit = "'anonymous' not allowed to edit .nethackrc."
 editor = '/usr/local/bin/virus'
 hackexe = '/nh343/nethack.343-nao'
 xlogfile = '/nh343/var/xlogfile'
+pattern_resize = r'\033\[8;(\d+);(\d+)t'
 
 def main(handle=None):
   import os
@@ -20,7 +21,6 @@ def main(handle=None):
   import textwrap
   import requests
   # when used as a 'top' script, 'handle' is passed in as arg1,
-
   session, term = getsession(), getterminal()
 
   # when None or anonymous is used, use a default user record
@@ -208,18 +208,30 @@ def main(handle=None):
           idx = n +1
           line_1 = '%-2d %7d %s%-15s%s' % \
               (idx, points, term.bold_red, name, term.normal,)
+          parawidth = term.columns - ansilen(line_1) -8
           paragraph = textwrap.wrap('%s-%s-%s-%s %s on level %s%s.\r\n' % (
               attrs['role'], attrs['race'], attrs['gender'], attrs['align'],
               attrs['death'].title(), attrs['deathlev'],
-              '(max %s)' if int(attrs['maxlvl']) > int(attrs['deathlev']) \
-                  else '',), term.columns - ansilen(line_1))
+              ' (max %s)'%(attrs['maxlvl']) \
+                  if int(attrs['maxlvl']) > int(attrs['deathlev']) \
+                  else '',), parawidth)
           echo ('\r\n%s' % (line_1,))
-          echo (('\r\n%s' % (' '*ansilen(line_1))).join(paragraph))
+          echo (('\r\n%s' % (' '*ansilen(line_1))).join \
+              ([p.ljust(parawidth) for p in paragraph]))
           if idx >= (term.rows/3) -3:
             break
           fp = find_recording(attrs)
           if fp is not None:
             recordings[idx] = fp
+          data = open(fp).read(100)
+          match = re.search(re.compile(pattern_resize),data)
+          if match is not None:
+            h, w = match.groups()
+            w_color = term.red if int(w) > term.columns else term.bold_white
+            h_color = term.red if int(h) > term.lines else term.bold_white
+            echo (''.join((term.normal, '[', w_color, str(w),
+              term.normal, 'x', h_color, str(h), term.normal, ']',)))
+
         if 0 == len(recordings):
           pak ()
           continue # no recordings; refresh
@@ -272,3 +284,7 @@ def main(handle=None):
       elif str(choice) == '*' and session.user.is_sysop:
         # debug: reload self
         goto ('default/speedhack', handle)
+
+      elif str(choice) == '/':
+        gosub ('default/torus')
+        refresh ()
