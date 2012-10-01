@@ -1,0 +1,274 @@
+"""
+ time-competitive version of nethack, 'speedhack' is offered as a door game.
+ This is really just nao's nethack setup (telnet alt.nethack.org), but replacing
+ dgamelaunch. This is meant to be used as a 'topscript'. 'speedhack' is a
+ varient that only allows the game to be played for a limited time before
+ auto-ascending a character. The goal being to plunder as quickly as possible.
+"""
+
+msg_anon_noedit = "'anonymous' not allowed to edit .nethackrc."
+editor = '/usr/local/bin/virus'
+hackexe = '/nh343/nethack.343-nao'
+xlogfile = '/nh343/var/xlogfile'
+
+def main(handle=None):
+  import os
+  import re
+  import time
+  import glob
+  import tempfile
+  import textwrap
+  import requests
+  # when used as a 'top' script, 'handle' is passed in as arg1,
+
+  session, term = getsession(), getterminal()
+
+  # when None or anonymous is used, use a default user record
+  if handle in (None, 'anonymous'):
+    user = User ()
+    handle = user.handle
+  else:
+    # otherwise retrieve from database
+    user = getuser(handle)
+
+  # assign the user to this session .. topscript needs to ..
+  session.user = user
+
+  # TODO: allow only 1 login per nick, to avoid a malicious persons from
+  # somehow recording the top score, but simultaneously showing a crummy
+  # session by abusing time conditions of 2 simultanous nethack games,
+  # and assumptions made about the latest 'recording',
+
+  # for last callers, really ..
+  user.calls += 1
+  user.lastcall = time.time()
+  user.save ()
+
+  gosub('lc', True)
+
+  gosub('charset')
+
+  def clear():
+    echo (''.join((term.normal, term.normal_cursor, term.clear, '\r\n')))
+
+  def prompt():
+    echo ('\r\n\r\n [eupvcosg] > ')
+
+  def refresh():
+    " refresh main menu screen "
+    session.activity = 'Main Menu'
+    clear ()
+    showfile ('art/speedmain.asc')
+    # speak session variables as equivalent os environment values
+    echo ('\r\nTERM: %s' % (term.terminal_type,))
+    echo (', LINES: %d' % (term.rows,))
+    echo (', COLUMNS: %d' % (term.columns,))
+    prompt ()
+
+  def pak():
+    echo ('\r\n\r\n' + term.normal + 'Press any key...')
+    getch ()
+    refresh ()
+
+  refresh ()
+  while True:
+    event, choice = session.read_event(events=('input','refresh',),
+        timeout=int(ini.cfg.get('session','timeout')))
+    if (None, None) == (event, choice):
+      # timeout
+      raise ConnectionTimeout, 'timeout at menu prompt'
+    elif event == 'refresh':
+      # resized window ...  ^L ...
+      refresh ()
+    elif event == 'input':
+      # edit .nethackrc using vi
+      if str(choice).lower() == 'e':
+        if session.user.handle == 'anonymous':
+          echo (''.join(('\r\n', term.bold_red, msg_anon_noedit, temr.normal)))
+          getch (2)
+          prompt ()
+          continue # denied
+        fp, tmppath = tempfile.mkstemp ()
+        nethackrc = session.user.get('.nethackrc', '')
+        length = len(nethackrc)
+        if 0 != length:
+          written = 0
+          while written < length:
+            written += os.write (fp, nethackrc[written:])
+            print 'x', written ##### XXX
+        os.close (fp)
+        lastmod = os.stat(tmppath).st_mtime
+        d = Door(editor, args=(tmppath,))
+        d._TAP = True
+        if 0 == d.run() and os.stat(tmppath).st_mtime > lastmod:
+          # program exited normaly, file has been modified
+          fp = open(tmppath, 'r')
+          session.user.set('.nethackrc', fp.read())
+          fp.close ()
+          session.user.save ()
+        os.unlink (tmppath)
+        refresh ()
+
+      # download rc file from alt.org
+      elif str(choice).lower() == 'd':
+        # download .nethackrc from NAO,
+        echo ('\r\nNAO account name: ')
+        echo (term.black_on_red + ' '*15 + '\b'*15)
+        nao = readline (15, handle)
+        echo (term.normal)
+        url = 'http://alt.org/nethack/userdata/%s/%s/%s.nh343rc'  \
+            % (nao[0], nao, nao,)
+        if 0 == len(nao.strip()):
+          continue
+        r = requests.get (url)
+        if r.status_code == 200:
+          session.user.set('.nethackrc', r.content)
+          echo ('\r\n\r\n%d bytes xfered.' % (len(r.content),))
+          session.user.save ()
+        else:
+          echo ('\r\nrequest failed (%s)%s\r\nusing url %s\r\n' % (r.status_code,
+            ':\r\n%r\r\n' % (r.content[:1500]) if 0 != len(r.content) else '' , url,))
+        pak ()
+        prompt ()
+
+      # play nethack ..
+      elif str(choice).lower() == 'p':
+        # begin recording to a ttyrec file .. intention is to somehow
+        # parse score files and allow users to playback top score sessions ...
+        fname_ttyrec = 'speedhack.%s_%d.ttyrec' % (handle, time.time(),)
+        d = Door(hackexe, args=('-u', handle,))
+        tmpHome = None
+        nethackrc = session.user.get('.nethackrc', '')
+        # create temporary $HOME with users' .nethackrc
+        tmpHome = tempfile.mkdtemp()
+        os.environ['HOME'] = tmpHome
+        if 0 != len(nethackrc):
+          fp = open(os.path.join(tmpHome, '.nethackrc',), 'w')
+          fp.write (nethackrc)
+          fp.close ()
+        # begin nethack recording
+        chk = session.is_recording ()
+        if chk:
+          session.stop_recording ()
+        # begin nethack recording
+        session.start_recording (fname_ttyrec)
+        d.run ()
+        session.stop_recording () # end nethack recording
+        if chk:
+          # resume bbs recording, if it were
+          session.start_recording ()
+        if tmpHome is not None:
+          os.unlink (os.path.join(tmpHome, '.nethackrc',))
+          os.rmdir (tmpHome)
+        pak ()
+        refresh ()
+
+      # view high scores ...
+      # offer recordings for playback
+      elif str(choice).lower() == 'v':
+        playerBest = dict()
+        fp = open(xlogfile, 'r')
+        for record in fp.readlines():
+          # xlogfile format key=value:key=value:(...)
+          attrs = dict([keyval.split('=',1) for keyval in record.split(':')])
+          name = attrs['name']
+          pts = int(attrs['points'])
+          if name in playerBest:
+            cmp_pts, cmp_attrs = playerBest[name]
+            if pts > cmp_pts:
+              playerBest[name] = (pts, attrs)
+          else:
+            playerBest[name] = (pts, attrs)
+        byPts = [(pts, (name, attrs,),) \
+            for name, (pts, attrs) in playerBest.items()]
+        byPts.sort ()
+        byPts.reverse ()
+        echo ('\r\n\r\nNo  Points')
+        def find_recording(attrs):
+          cmp_diff = 10
+          ttyrec_folder = abspath(os.path.join('..',session._ttyrec_folder))
+          g_pattern = '%s/speedhack.%s_*.ttyrec.0' % (
+              ttyrec_folder, attrs['name'])
+          r_pattern = re.compile('%s/speedhack.%s_(\d+).ttyrec.0' % ( \
+              ttyrec_folder, attrs['name']))
+          stime = int(attrs['starttime'])
+          l = [] # closest match ... has been ~3s difference ..
+          for fp in glob.glob(g_pattern):
+            x = int(r_pattern.match(fp).groups()[0]) -stime
+            if x < 0: x *= -1
+            l.append ((x, fp,))
+          l.sort()
+          diff, fp = l[0]
+          for diff, rm_fp in l[1:]:
+            logger.info ('removing unused ttyrec: %s', rm_fp)
+            os.unlink (rm_fp) # delete recordings not used in high score ..
+          return fp
+        recordings = dict ()
+        for n, (points, (name, attrs)) in enumerate(byPts):
+          idx = n +1
+          line_1 = '%-2d %7d %s%-15s%s' % \
+              (idx, points, term.bold_red, name, term.normal,)
+          paragraph = textwrap.wrap('%s-%s-%s-%s %s on level %s%s.\r\n' % (
+              attrs['role'], attrs['race'], attrs['gender'], attrs['align'],
+              attrs['death'].title(), attrs['deathlev'],
+              '(max %s)' if int(attrs['maxlvl']) > int(attrs['deathlev']) \
+                  else '',), term.columns - ansilen(line_1))
+          echo ('\r\n%s' % (line_1,))
+          echo (('\r\n%s' % (' '*ansilen(line_1))).join(paragraph))
+          if idx >= (term.rows/3) -3:
+            break
+          fp = find_recording(attrs)
+          if fp is not None:
+            recordings[idx] = fp
+        if 0 == len(recordings):
+          pak ()
+          continue # no recordings; refresh
+        echo ('\r\nEnter No. to playback recording: ')
+        idx = readline (3, )
+        if 0 == len(idx):
+          refresh ()
+          continue # no input; refresh
+        try:
+          idx = int(idx)
+        except ValueError:
+          refresh ()
+          continue # invalid entry; refresh
+        if not idx in recordings:
+          refresh ()
+          continue # not found; refresh
+        Door('/usr/bin/ttyplay', args=(recordings[idx],)).run ()
+        pak ()
+        refresh ()
+
+      # change TERM type ...
+      elif str(choice).lower() == 'c':
+        echo ('\r\n TERM: ')
+        TERM = readline (30)
+        echo ("\r\n set TERM to '%s'? [yn]" % (TERM,))
+        while True:
+          ch = getch()
+          if str(ch).lower() == 'y':
+            term.terminal_type = TERM
+            break
+          elif str(ch).lower() == 'n':
+            break
+        prompt ()
+
+      elif str(choice).lower() == 'l':
+        gosub ('default/lc')
+        refresh ()
+
+      elif str(choice).lower() == 'o':
+        gosub ('default/ol')
+        refresh ()
+
+      elif str(choice).lower() == 's':
+        gosub ('default/si')
+        refresh ()
+
+      elif str(choice).lower() == 'g':
+        goto ('default/logoff')
+
+      elif str(choice) == '*' and session.user.is_sysop:
+        # debug: reload self
+        goto ('default/speedhack', handle)
