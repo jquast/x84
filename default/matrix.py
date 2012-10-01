@@ -97,6 +97,7 @@ def main ():
       getch (0.8)
       handle = ''
       continue
+    handle = handle.decode(session.encoding)
 
     if not DBSessionProxy('userbase').has_key(handle):
       #remain exactly where you are
@@ -117,7 +118,7 @@ def main ():
       if str(ynq).lower() == 'q' or ynq == term.KEY_EXIT:
         goto ('logoff')
       if str(ynq).lower() == 'y':
-        goto ('nua', handle.decode(session.encoding))
+        goto (ini.cfg.get('nua', 'script'), handle)
       continue
 
     # request & authenticate password
@@ -126,13 +127,13 @@ def main ():
     # even when running a keyboard debug tap (default = off)
     # disable tap during password input.
 
-    chk = session._tap # save
-    session._tap = False
+    chk = session._tap_input # save
+    session._tap_input = False
     # get keyboard input
     password, event, data = readlineevent \
         (width=int(ini.cfg.get('nua', 'max_pass')),
             hidden=CH_MASK_PASSWD, timeout=timeout)
-    session._tap = chk # restore
+    session._tap_input = chk # restore
 
     if (None, None) == (event, data):
       raise ConnectionTimeout, 'timeout at password prompt'
