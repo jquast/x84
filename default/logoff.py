@@ -11,7 +11,7 @@ def main():
   term = session.terminal
   expert = session.user.get('expert', False) \
       if session.user is not None else False
-  isSysop = session.user.isSysop \
+  is_sysop = session.user.is_sysop \
       if session.user is not None else False
   session.activity = 'Logging Off!'
   prompt_msg = '[spnG]: ' if expert is True \
@@ -62,8 +62,7 @@ def main():
       term.normal, ': ', term.cyan_reverse, msg \
         .ljust(AUTOMSG_LENGTH -10),))
     artago = ''.join((term.blue_reverse,
-      ('%s ago%s' % (asctime(time.time() -t),
-        ' %s'%(origin,) if isSysop else '')) \
+      ('%s ago' % (asctime(time.time() -t),)) \
           .ljust (AUTOMSG_LENGTH -ansilen(artmsg))))
     # output & return new index
     echo (term.normal.join((artnick, artmsg, ' ', artago,)))
