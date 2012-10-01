@@ -2,19 +2,20 @@
 import time
 
 def main(recordonly=False):
-  db = DBSessionProxy('lastcallers')
-  def build():
-    " build and return last callers list for display "
-    for u in listusers():
-      db[u.handle] = u.lastcall
+  session, term = getsession(), getterminal()
+  udb = DBSessionProxy('lastcallers')
+  session.activity = 'Viewing Last Callers'
 
+  for u in listusers():
+    udb[u.handle] = u.lastcall
   if recordonly:
-    return build ()
+    return
 
-  padd_handle = 1+ int(ini.cfg.get('nua','max_user'))
-  padd_origin = 1+ int(ini.cfg.get('nua','max_origin'))
+  padd_handle = int(ini.cfg.get('nua','max_user')) +1
+  padd_origin = int(ini.cfg.get('nua','max_origin')) +1
   padd_timeago = 12
   padd_ncalls = 13
+
   def lc_retrieve():
     " retrieve window paint data, list of last callers "
     return '\n'.join((
@@ -22,14 +23,11 @@ def main(recordonly=False):
           + u.location.ljust (padd_origin) \
           + ('%s ago' % (timeago,)).rjust (padd_timeago) \
           + ('   Calls: %s' % (u.calls,)).ljust (padd_ncalls) \
-          for timeago, u in [(asctime(time.time() -lc), getuser(handle)) \
+          for timeago, u in [(timeago(time.time() -lc), getuser(handle)) \
             for lc, handle in sorted([(v,k) \
-              for (k,v) in db.items() \
+              for (k,v) in udb.items() \
                 if finduser(k) is not None])]))
 
-  session = getsession()
-  session.activity = 'Viewing Last Callers'
-  term = getsession().terminal
   def refresh_highdef():
     y=14
     h=term.height - (y+2)
@@ -44,6 +42,7 @@ def main(recordonly=False):
     p= ParaClass(h, w, y, (80-w)/2-2, xpad=2, ypad=1)
     p.colors['inactive'] = term.red
     p.partial = True
+    #return p
     p.lowlight ()
     echo (term.move(0,0))
     showfile ('art/lc.ans')
@@ -61,14 +60,14 @@ def main(recordonly=False):
     p.interactive = True
     return p
 
-  if not term.number_of_colors:
-    # TODO: scrolling, polling for new logins while waiting for return key..
-    echo (lc_retrieve)
-    return
+  #if not term.number_of_colors:
+  #  # TODO: scrolling, polling for new logins while waiting for return key..
+  #  echo (lc_retrieve)
+  #  return
 
   pager = refresh_highdef()
   while pager.exit is False:
-    event, data = readevent(['input', 'refresh', 'login'], timeout=None)
+    event, data = readevent(('input', 'refresh', 'login'), timeout=None)
     if event in ['refresh', 'login']:
       # in the event of a window refresh (or screen resize),
       # or another user logging in, refresh the screen
