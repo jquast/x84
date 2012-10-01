@@ -18,6 +18,7 @@ def main ():
   session = getsession()
   term = getterminal()
   handle=''
+  timeout = int(ini.cfg.get('session',  'timeout'))
   byecmds = ini.cfg.get('matrix', 'byecmds').split()
   newcmds = ini.cfg.get('matrix', 'newcmds').split()
   APPLY_DENIED = '\r\n\r\nfiRSt, YOU MUSt AbANdON YOUR libERtIES.'
@@ -61,11 +62,10 @@ def main ():
     echo (prompt_user)
     handle, event, data = readlineevent \
         (width=max_user, value=handle,
-            events=(('refresh','input',)), timeout=TIMEOUT)
+            events=(('refresh','input',)), timeout=timeout)
 
     if (None, None) == (event, data):
-      logger.info ('login timeout exceeded')
-      goto ('logoff')
+      raise ConnectionTimeout, 'timeout at login prompt'
 
     if event == 'refresh':
       refresh ()
@@ -111,7 +111,9 @@ def main ():
 
       # the photos of you and the girl will be recycled for prolitarian use
       echo (apply_msg)
-      ynq = getch()
+      ynq = getch(timeout)
+      if ynq is None:
+        raise ConnectionTimeout, 'timeout at nua? prompt'
       if str(ynq).lower() == 'q' or ynq == term.KEY_EXIT:
         goto ('logoff')
       if str(ynq).lower() == 'y':
@@ -121,18 +123,19 @@ def main ():
     # request & authenticate password
     echo ('\r\n\r\n  pass: ')
 
+    # even when running a keyboard debug tap (default = off)
+    # disable tap during password input.
+
     chk = session._tap # save
     session._tap = False
-
     # get keyboard input
     password, event, data = readlineevent \
         (width=int(ini.cfg.get('nua', 'max_pass')),
-            hidden=CH_MASK_PASSWD, timeout=TIMEOUT*2)
-
+            hidden=CH_MASK_PASSWD, timeout=timeout)
     session._tap = chk # restore
 
     if (None, None) == (event, data):
-      goto ('logoff')
+      raise ConnectionTimeout, 'timeout at password prompt'
 
     if password == '':
       continue
