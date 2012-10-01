@@ -89,6 +89,12 @@ class BlessedIPCTerminal(blessings.Terminal):
   def terminal_type(self):
     return self.kind
 
+  @terminal_type.setter
+  def terminal_type(self, value):
+    if value != self.kind:
+      self.kind = value
+      logger.warn ('TERM=%s; cannot re-initialize curses' % (value,))
+
   def _height_and_width(self):
     """Return a tuple of (terminal height, terminal width)."""
     return self.rows, self.columns
