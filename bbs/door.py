@@ -13,6 +13,7 @@ class Door(object):
   master_fd = None
   pid = None
   pEIO = re.compile('[eE]rrno 5')
+  _TAP = False # for debugging
 
   def __init__(self, cmd='/bin/uname', args=(), lang=u'en_US.UTF-8', term=None,
       path=None):
@@ -27,7 +28,7 @@ class Door(object):
         ini.cfg.get('session', 'door_syspath')
 
   def run(self):
-    from session import logger
+    from session import getsession, logger
     try:
       self.pid, self.master_fd = pty.fork()
     except OSError, e:
@@ -38,13 +39,22 @@ class Door(object):
     if self.pid == pty.CHILD:
       sys.stdout.flush ()
       args = list(self.args)
-      env = {u'LANG': self.lang, u'TERM': self.term,
-             u'PATH': self.path,}
+      env = {
+          u'LANG': self.lang,
+          u'TERM': self.term,
+          u'PATH': self.path,
+          u'HOME': os.getenv('HOME') }
       os.execvpe(self.cmd, self.args, env)
 
-    # catch all i/o and o/s errors
+    # typically, return values from 'input' events are translated keycodes,
+    # such as terminal.KEY_ENTER. However, when executing a sub-door, we
+    # disable this by setting session.enable_keycodes = False
+    chk_keycodes = getsession().enable_keycodes
+    getsession().enable_keycodes = False
+
+    # execute self._loop() and catch all i/o and o/s errors
     try:
-      logger.info ('exec/%s: %s %s' % (self.pid, self.cmd, self.args,))
+      logger.info ('exec/%s: %s, %s' % (self.pid, self.cmd, ' '.join(self.args)))
       self._loop()
     except IOError, e:
       logger.error ('IOError: %s', e)
@@ -55,6 +65,8 @@ class Door(object):
       else:
         logger.error ('OSError: %s', e)
 
+    getsession().enable_keycodes = True
+
     # retrieve return code
     (self.pid, status) = os.waitpid (self.pid, 0)
     res = status >> 8
@@ -63,10 +75,11 @@ class Door(object):
     else:
       logger.info ('child %s exit %s.' % (self.pid, res,))
     os.close (self.master_fd)
+    return res
 
   def _loop(self):
     from session import getsession, logger
-    from input import getch, sendch
+    from input import getch
     from output import echo
 
     # signal window size to child pty, untested XXX
@@ -81,6 +94,8 @@ class Door(object):
         data = os.read(self.master_fd, self.BLOCKSIZE)
         if 0 == len(data):
           return
+        if self._TAP:
+          logger.debug ('<-- %r', data)
         echo (data, encoding='utf-8')
 
       # then, block up to self.POLL for keyboard input,
@@ -97,11 +112,12 @@ class Door(object):
         continue
 
       if event == 'input':
-        if type(data) is int:
-          # translate curses keycodes into a byte sequence that
-          # is equivalent to our terminal setting
-          data = sendch (data)
         assert 0 != len(data)
+        if self._TAP:
+          logger.debug ('--> %r' % (data,))
+
+        # XXX blocking write loop for non-blocking i/o..
+        # could be rather cpu consuming ..
         while 0 != len(data):
           n = os.write(self.master_fd, data)
           data = data[n:]
