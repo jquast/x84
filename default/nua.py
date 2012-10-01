@@ -62,6 +62,13 @@ def main (handle):
         warning ('Too short! (%s)' % ini.cfg.get('nua', 'min_user'))
       elif handle.lower() in ini.cfg.get('nua', 'invalid_handles').split():
         warning ('Illegal username')
+      elif os.path.sep in handle:
+        # handle is often used for filenames, like tty recordings, so avoid
+        # allowing usernames with '/' inside the nickname
+        warning ('Illegal username')
+      elif ':' in handle:
+        # hrm,
+        warning ('Illegal username')
       else:
         user_ok = True
 
@@ -144,7 +151,7 @@ def main (handle):
 
     echo (terminal.move (*loc_prompt))
     echo (terminal.clear_eol + terminal.normal)
-    echo ('Everything cool?')
+    echo ('   Everything cool?')
 
     lr = YesNoClass(loc_yesno)
     lr.left ()
