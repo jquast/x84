@@ -45,10 +45,8 @@ class Session(object):
   _source is a tuple that indicates the origin of the terminal in some form,
   such as (client.addr, client.port) for telnet connections.
 
-  _tap represents a boolean of wether or not, when debug logging is enabled, to
-  display user input. matrix explicitly stores and restores this during
-  password input, but otherwise is masked by 'x' only when the ini option is
-  'on'
+  _tap_input represents a boolean of wether or not, when debug logging is
+  enabled, to display user input.
   """
   _user = None
   _handle = None
@@ -72,9 +70,7 @@ class Session(object):
   TTYREC_uCOMPRESS = 1500
   # http://www.xfree86.org/current/ctlseqs.html#VT100%20Mode
   # CSI(8);(Y);(X)t #  -- resize the text area to [height;width] in characters.
-  # http://www.cl.cam.ac.uk/~mgk25/unicode.html#term
-  # \033%G          #  -- activate UTF-8
-  TTYREC_HEADER = '\033[8;%d;%dt\033%%G'
+  TTYREC_HEADER = '\033[8;%d;%dt'
 
   def __init__ (self, terminal=None, pipe=None, encoding=None,
   source=('undef', None), recording=None):
@@ -83,7 +79,8 @@ class Session(object):
     self._script_stack = list(((ini.cfg.get('matrix','script'),),))
     self._encoding = encoding if encoding is not None \
         else ini.cfg.get('session', 'default_encoding')
-    self._tap = ini.cfg.get('session','tap_input') in ('yes', 'on')
+    self._tap_input = ini.cfg.get('session','tap_input') in ('yes', 'on')
+    self._tap_output = ini.cfg.get('session','tap_output') in ('yes', 'on')
     self._ttylog_folder = ini.cfg.get('session', 'ttylog_folder')
     self._record_tty = ini.cfg.get('session', 'record_tty') in ('yes','on')
     self._ttyrec_folder = ini.cfg.get('session', 'ttylog_folder')
@@ -280,6 +277,7 @@ class Session(object):
       # on non-capable terminals, something like echo(term.move(0,0))
       # might become echo (''); just ignore it
       return
+    # XXX hmm
     self.terminal.stream.write (data, self.encoding \
         if self.encoding != 'cp437' else 'iso8859-1')
 
@@ -288,6 +286,11 @@ class Session(object):
         self.start_recording ()
       # ttyrec is formatted as utf-8, regardless of capability
       self._ttyrec_write (data.encode('utf-8'))
+
+    if logger.level >= logger.debug and self._tap_output:
+      # special care for input, mask with self._tap_mask
+      logger.debug ('%s --> %r.', self.handle, data)
+
 
 
   def flush_event (self, event, timeout=-1):
@@ -342,10 +345,8 @@ class Session(object):
           self._buffer['refresh'] = list((data,))
     self._last_input_time = time.time()
 
-    if logger.level >= logger.debug:
-      # special care for input, mask with self._tap_mask
-      logger.debug ('%s input buffered, %s.', self.handle, data \
-          if self.tap else self._tap_mask * len(data),)
+    if logger.level >= logger.debug and self._tap_input:
+      logger.debug ('%s <-- %s', self.handle, data)
 
   def send_event (self, event, data):
     """
@@ -476,7 +477,17 @@ class Session(object):
     # write header
     logger.info ('REC %s' % (filename,))
     (w, h) = self.terminal.width, self.terminal.height
-    self._ttyrec_write ((self.TTYREC_HEADER % (w, h,)).encode ('utf-8'))
+    self._ttyrec_write ((self.TTYREC_HEADER % (h, w,)).encode ('utf-8'))
+    # http://www.cl.cam.ac.uk/~mgk25/unicode.html#term
+    # ESC %G activates UTF-8 with an unspecified implementation level from
+    # ISO 2022 in a way that allows to go back to ISO 2022 again.
+    #
+    # ESC %@ goes back from UTF-8 to ISO 2022 in case UTF-8 had been entered
+    # via ESC %G. ESC ) K or ESC ) U Sets character set G1 to codepage 437,
+    # for examble linux vga console
+    self._ttyrec_write ('\033%G'.encode('utf-8') \
+        if self.encoding == 'utf8' \
+        else '\033%@\033)K\033)U'.encode('utf-8'))
 
   def _ttyrec_write(self, data):
     """ Is big brother watching you? """
