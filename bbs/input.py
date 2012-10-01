@@ -3,13 +3,28 @@ from session import getsession, logger
 from output import echo
 
 def sendch (keycode):
-  # XXX not ideal;
-  table = getsession().terminal._keymap
-  try:
-    return (seq for (seq, code) in table.iteritems() if
-        code == keycode).next()
-  except StopIteration:
-    raise KeyError, keycode
+  """
+  Given a keycode (integer), return any matching unicode string
+  that is a suitable multi-byte char sequence, such as '\033OD' for KEY.LEFT
+  """
+  term = getsession().terminal
+  # TODO: What is needed is a keycode object type, that retains
+  # its string value,
+  if keycode == term.KEY_ENTER:
+    val = unicode('\r')
+  elif keycode == term.KEY_BACKSPACE:
+    val = unicode(chr(127))
+  else:
+    # XXX not ideal; lookup order is first-match, which might
+    # be whack to the underlying program, unless it is ncurses?
+    table = term._keymap
+    try:
+      val = (seq for (seq, code) in table.iteritems() if
+          code == keycode).next()
+    except StopIteration:
+      raise KeyError, keycode
+  logger.debug ('sendch: %r -> %r', term.keyname(keycode), val)
+  return val
 
 def getch(timeout=None):
   event, data = getsession().read_event(events=['input'], timeout=timeout)
