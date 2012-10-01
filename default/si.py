@@ -31,7 +31,7 @@ def main ():
   txt += '\n' + ((maxanswidth(txt.split('\n'))/2)-(len(PAK)/2))*' ' + PAK
   txt = txt.split('\n')
   width, height = maxanswidth(txt), len(txt)
-  numStars = int((term.width *term.height) *.02)
+  numStars = int((term.width *term.height) *.01)
   stars = dict([(n, (random.choice('\\|/-'),
     float(random.choice(range(term.width))),
     float(random.choice(range(term.height))))) for n in range(numStars)])
@@ -47,18 +47,20 @@ def main ():
       echo (term.bold_red + 'your screen is too thin! (%s/%s)\r\n' \
         'press any key...' % (term.width, width+5))
       getch ()
-      return
+      return (None, None)
     if term.height < height:
       echo (term.bold_red + 'your screen is too short! (%s/%s)\r\n' \
         'press any key...' % (term.height, height))
       getch ()
-      return
+      return (none, None)
     x = (term.width /2) -(width /2)
     y = (term.height /2) -(height /2)
     echo (''.join([term.move(y+abs_y, x) + data \
           for abs_y, data in enumerate(txt)]))
     return x, y
   txt_x, txt_y = refresh ()
+  if (txt_x, txt_y) == (None, None):
+    return
 
   def charAtPos(y, x, txt_y, txt_x):
     return ' ' if y-txt_y < 0 or y-txt_y >= height \
