@@ -11,7 +11,6 @@ __url__ = 'http://1984.ws'
 from output import echo
 from input import getch
 import ansiwin
-import ansi
 import curses
 import log
 
@@ -44,10 +43,11 @@ class LightClass (ansiwin.InteractiveAnsiWindow):
 
   def __init__(self, h, w, y, x, xpad=0, ypad=0):
     ansiwin.InteractiveAnsiWindow.__init__ (self, h, w, y, x)
-
+    from session import getsession
     self.content = []
     self.lastkey = ' '
     self.xpad, self.ypad = xpad, ypad
+    self.term = getsession().terminal
 
     # Drawing
     self.visibleWidth, self.visibleHeight = self.w -(self.xpad*2), self.h -(self.ypad*2) # margins
@@ -115,7 +115,7 @@ class LightClass (ansiwin.InteractiveAnsiWindow):
         return s.center(n)
       assert 0, 'invalid alignment: %(alignment)s' % self
     echo (align(self.content[entry], self.visibleWidth))
-    echo (ansi.color())
+    echo (self.term.normal)
 
   def refresh (self):
     """ display all viewable items in lightbar object.
