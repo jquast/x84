@@ -348,8 +348,6 @@ class TelnetClient(object):
               if type(text) is not unicode \
               else text.encode (enc)
         except UnicodeEncodeError, e:
-          if enc != 'ascii':
-            raise
           # if the terminal cannot negotiate BINARY (8-bit), and encoding has
           # not been specified, then try as iso8859-1, which should allow
           # bytes between 127 and 255 through
