@@ -2,13 +2,13 @@
 #from curses import ACS_VLINE, ACS_HLINE
 #                   ACS_ULCORNER, ACS_URCORNER,
 #                   ACS_BLCORNER, ACS_BRCORNER
-from session import getsession
 from output import echo
 from strutils import ansilen
 
 class AnsiWindow:
 
   def __init__(self, h, w, y, x, partial=False):
+    from session import getsession
     self.h, self.w = h, w
     self.y, self.x = y, x
     self.partial = partial
@@ -39,9 +39,9 @@ class AnsiWindow:
       'left-vertical bot-left bot-right top-left top-right'.split()])
 
   def border(self, glyphs=None, color=None):
-    if color:
+    if color is not None:
       echo (color)
-    if not glyphs:
+    if glyphs is None:
       glyphs = self.glyphs.copy()
       if self.partial:
         glyphs['left-vertical'] = glyphs['right-vertical'] = glyphs['fill']
