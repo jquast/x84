@@ -66,6 +66,25 @@ and so it should be called as goto('topscript', handle). and the main function i
 'topscript' defined as def main(handle=None). If 'topscript' is called without a
 handle, the value will default to 'None'.
 
+Example scripts
+===============
+
+These scripts are found in the default/ subdirectory
+
+  charset.py    prompt user to select 'cp437' or 'utf-8' character set
+  lc.py         display 'last callers' of the board
+  logoff.py     an automsg display/prompt and logoff
+  main.py       main menu, called by default topscript, top.py
+  matrix.py     login script, called by new connections
+  news.py       file reader used to display 'system news'
+  nua.py        new user application routine called by default matrix, matrix.py
+  ol.py         bbs-scene.org enabled 'one liners' / wall script
+  si.py         display system information door
+  speedhack.py  an alternative 'topscript', to simulate dgamelaunch+NAO
+  telnet.py     a telnet-out door, pass telnet address/port  as arguments
+  top.py        default 'top script' called after authentication success
+  weather.py    a weather API and lightbar demonstration .. ?
+
 Globals
 =======
 
@@ -91,9 +110,10 @@ uxterm
  - this is an alias on most systems for utf-8 enabled xterm,
    urxvt is also suitable. Failing utf-8, font sets such as
    'terminus' can be installed, select cp437 encoding when
-   prompted by the bbs if enabled.
+   prompted by the bbs system.
 
 SyncTerm
+   select cp437 encoding when prompted by the bbs system.
 
 Support
 =======
