@@ -1,7 +1,7 @@
 import msgbase # FIX, work on msging...
 import ini
 from exception import Disconnect, Goto, ConnectionTimeout
-from strutils import chompn, asctime, ansilen, chkseq, seqp, seqc, maxanswidth
+from strutils import chompn, asctime, timeago, ansilen, chkseq, seqp, seqc, maxanswidth
 from cp437 import fromCP437
 from door import Door
 from dbproxy import DBSessionProxy
@@ -25,6 +25,7 @@ __all__ = [
     'maxanswidth',
     'chompn',
     'asctime',
+    'timeago',
     'ansilen',
     'chkseq',
     'seqp',
