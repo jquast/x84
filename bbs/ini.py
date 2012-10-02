@@ -67,6 +67,13 @@ def init(cfgFilepath='default.ini'):
       ((cfg.get('matrix','byecmds'),
         cfg.get('matrix','newcmds'),
         'new sysop wfc anonymous',)))
+  cfg.add_section('dopewars')
+  cfg.set('dopewars', 'scorefile',
+      os.path.join(cfg.get('database','sqlite_folder'), 'dopewars.scores'))
+  cfg.set('dopewars', 'pidfile',
+      os.path.join(cfg.get('database','sqlite_folder'), 'dopewars.pid'))
+  cfg.set('dopewars', 'logfile',
+      os.path.join(cfg.get('database','sqlite_folder'), 'dopewars.log'))
   sys.stdout.write ('ok')
   sys.stdout.flush ()
   if not os.path.exists(cfgFilepath):
