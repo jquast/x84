@@ -52,7 +52,7 @@ def main(handle=None):
     echo (''.join((term.normal, term.normal_cursor, term.clear, '\r\n')))
 
   def prompt():
-    echo ('\r\n\r\n [eupvcosg] > ')
+    echo ('\r\n\r\n [#eupvcosg] > ')
 
   def refresh():
     " refresh main menu screen "
@@ -152,7 +152,7 @@ def main(handle=None):
           session.stop_recording ()
         # begin nethack recording
         session.start_recording (fname_ttyrec)
-        d.run ()
+        d.run () # begin door
         session.stop_recording () # end nethack recording
         if chk:
           # resume bbs recording, if it were
@@ -163,8 +163,7 @@ def main(handle=None):
         pak ()
         refresh ()
 
-      # view high scores ...
-      # offer recordings for playback
+      # view high scores ... (and recordings!)
       elif str(choice).lower() == 'v':
         playerBest = dict()
         fp = open(xlogfile, 'r')
@@ -249,6 +248,47 @@ def main(handle=None):
           refresh ()
           continue # not found; refresh
         Door('/usr/bin/ttyplay', args=(recordings[idx],)).run ()
+        pak ()
+        refresh ()
+
+      # play dopewars!
+      elif str(choice) == '#':
+        # check if server is already running ...
+        pidfile = ini.cfg.get('dopewars', 'pidfile')
+        running = False
+        if os.path.exists(pidfile):
+          # str->int->str, sanitize input
+          pid = str(int(open(pidfile).read().strip()))
+          d = Door('/bin/ps', args=('-p', pid,))
+          running = bool(0 == d.run())
+        if running == False:
+          scorefile = ini.cfg.get('dopewars', 'scorefile'),
+          logfile = ini.cfg.get('dopewars', 'logfile'),
+          echo ('\r\n\r\nLaunching dopewars server,\r\n')
+          os.spawnl(os.P_NOWAIT, '/usr/local/bin/dopewars', 'dopewars',
+            '--private-server',
+            '--hostname=127.0.0.1',
+            '--port=60387',
+            '--scorefile=%s' % (scorefile,),
+            '--pidfile=%s' % (pidfile,),
+            '--logfile=%s' % (logfile,),)
+        else:
+          echo ('\r\n\r\ndopewars server already running,\r\n')
+        if session.user.is_sysop:
+          pak ()
+        echo ('\r\n\r\nLaunching dopewars client,\r\n')
+        # HACK -- send input to program game; avoids requiring .cfg file :P
+        # anykey;connect;accept localhost;accept port
+        session.enable_keycodes = False
+        session._buffer_event('input', 'Xc\015\015')
+        d = Door('/usr/local/bin/dopewars', args=( \
+            '--scorefile=%s' % (ini.cfg.get('dopewars', 'scorefile'),),
+            '--hostname=127.0.0.1', '--port=60387',
+            '--text-client', '--player=%s' % (handle,),))
+        res = d.run ()
+        session.enable_keycodes = True
+        if (0 != res):
+          echo ('\r\nExit: %s' % (res,))
         pak ()
         refresh ()
 
