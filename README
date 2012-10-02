@@ -25,7 +25,7 @@ To start the system, execute command
 
 	python2.6 engine.py 
 
-various options are defined in defualt.ini. Optional arguments are
+various options are defined in default.ini. Optional arguments are
  -cfg <cfgFile> alternate configuration file
  -v enable debug logging
  -tap snoop keyboard traffic when debugging
@@ -117,7 +117,11 @@ Classic Unix
    and internationalization characters may appear as '?'.
 
 SyncTerm
-   select cp437 encoding when prompted by the bbs system.
+ - select cp437 encoding when prompted by the bbs system.
+
+iTerm
+ - Under Preferences -> Terminal, set Character Encoding to UTF-8
+   Also set Regular Font to "Courier New" under Text
 
 Support
 =======
