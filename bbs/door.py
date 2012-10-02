@@ -79,7 +79,6 @@ class Door(object):
 
   def _loop(self):
     from session import getsession, logger
-    from input import getch
     from output import echo
 
     # signal window size to child pty, untested XXX
@@ -112,7 +111,7 @@ class Door(object):
         continue
 
       if event == 'input':
-        assert 0 != len(data)
+        #assert 0 != len(data)
         if self._TAP:
           logger.debug ('--> %r' % (data,))
 
