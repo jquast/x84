@@ -262,8 +262,8 @@ def main(handle=None):
           d = Door('/bin/ps', args=('-p', pid,))
           running = bool(0 == d.run())
         if running == False:
-          scorefile = ini.cfg.get('dopewars', 'scorefile'),
-          logfile = ini.cfg.get('dopewars', 'logfile'),
+          scorefile = ini.cfg.get('dopewars', 'scorefile')
+          logfile = ini.cfg.get('dopewars', 'logfile')
           echo ('\r\n\r\nLaunching dopewars server,\r\n')
           os.spawnl(os.P_NOWAIT, '/usr/local/bin/dopewars', 'dopewars',
             '--private-server',
