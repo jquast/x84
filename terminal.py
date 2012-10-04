@@ -6,10 +6,10 @@ import threading
 import time
 import re
 import blessings
-from bbs import ini
 
 # global list of (TelnetClient, multiprocessing.Pipe, threading.Lock)
-SESSION_CHANNELS = []
+# this is a shared global variable across threads.
+registry = list ()
 logger = logging.getLogger(__name__)
 logger.setLevel (logging.DEBUG)
 
@@ -51,7 +51,7 @@ class BlessedIPCTerminal(blessings.Terminal):
   """
     Furthermore, .rows and .columns no longer queries using termios routines.
     They must be managed by another procedure.
-    Instances of this class are stored in the global SESSION_CHANNELS
+    Instances of this class are stored in the global registry (list)
   """
   def __init__(self, stream, terminal_type, rows, columns):
     # patch in a .rows and .columns static property.
@@ -64,6 +64,7 @@ class BlessedIPCTerminal(blessings.Terminal):
       logging.debug ('setupterm(%s) succesfull', terminal_type,)
 
     except blessings.curses.error, e:
+      from bbs import ini
       # when setupterm() fails with client-supplied terminal_type
       # try again using the configuration .ini default type.
       default_ttype = ini.cfg.get('session', 'default_ttype')
@@ -100,12 +101,14 @@ class BlessedIPCTerminal(blessings.Terminal):
     return self.rows, self.columns
 
 def on_disconnect(client):
+  """Discover the matching client in registry and remove it"""
   import copy
+  global registry
   logger.info ('Disconnected from telnet client %s:%s',
       client.address, client.port)
-  for (c,p,l) in copy.copy(SESSION_CHANNELS):
+  for (c,p,l) in registry[:]:
     if client == c:
-      SESSION_CHANNELS.remove ((c,p,l))
+      registry.remove ((c,p,l))
 
 def on_connect(client):
   """Spawn a ConnectTelnetTerminal() thread for each new connection."""
@@ -115,13 +118,13 @@ def on_connect(client):
   t.start ()
 
 def on_naws(client):
-  """On a NAWS event, check if client is yet registered in SESSION_CHANNELS and
+  """On a NAWS event, check if client is yet registered in registry and
      send the pipe a refresh event. This is the same thing as ^L to the
      'userland', but should indicate also that the window sizes are checked."""
-  for (c,p,l) in SESSION_CHANNELS:
+  for (c,p,l) in registry:
     if client == c:
       p.send (('refresh', ('resize', (c.columns, c.rows),)))
-      return True
+      return
 
 class ConnectTelnetTerminal (threading.Thread):
   """
@@ -134,8 +137,8 @@ class ConnectTelnetTerminal (threading.Thread):
   """
   DEBUG = False
   TIME_WAIT = 1.25
-  TIME_PAUSE = 0.75
-  TIME_POLL  = 0.1
+  TIME_PAUSE = 1.75
+  TIME_POLL  = 0.01
   TTYPE_UNDETECTED = 'unknown client'
   CHARSET_UNDETECTED = 'unknown encoding'
   WINSIZE_TRICK= (
@@ -155,10 +158,10 @@ class ConnectTelnetTerminal (threading.Thread):
         thread-based, and shared variables.
 
         All IPC communication occurs through the bi-directional pipe. The
-        server end polls the parent end of a pipe in SESSION_CHANNELS, while
+        server end polls the parent end of a pipe in registry, while
         the client polls the child end as getsession().pipe.
     """
-    global SESSION_CHANNELS
+    global registry
     parent_conn, child_conn = multiprocessing.Pipe()
     lock = threading.Lock()
     p = multiprocessing.Process \
@@ -167,12 +170,11 @@ class ConnectTelnetTerminal (threading.Thread):
             self.client.rows, self.client.columns,
             self.client.charset, self.client.addrport(),))
     p.start ()
-    SESSION_CHANNELS.append ((self.client, parent_conn, lock))
-
+    registry.append ((self.client, parent_conn, lock))
 
   def banner(self):
     # disable line-wrapping http://www.termsys.demon.co.uk/vtansi.htm
-    self.client.send ('\033[7l')
+    self.client.send_str (bytes('\033[7l'))
 
   def run(self):
     """Negotiate and inquire about terminal type, telnet options,
@@ -202,6 +204,8 @@ class ConnectTelnetTerminal (threading.Thread):
       self._try_ttype ()
       logger.debug ('_try_charset')
       self._try_charset ()
+      logger.debug ('_try_echo')
+      self._try_echo ()
       logger.debug ('_spawn_session')
       self._spawn_session ()
 
@@ -234,6 +238,7 @@ class ConnectTelnetTerminal (threading.Thread):
     if self.client.telnet_eight_bit:
       logger.info ('binary mode enabled (unsolicted)')
       return
+
     logger.debug('request-do-eight-bit')
     self.client.request_do_binary ()
     self.client.socket_send() # push
@@ -292,6 +297,7 @@ class ConnectTelnetTerminal (threading.Thread):
       logger.debug ('window size: %dx%d (unsolicited)' \
           % (self.client.columns, self.client.rows,))
       return
+
     logger.debug('request-naws')
     self.client.request_do_naws ()
     self.client.socket_send() # push
@@ -300,7 +306,7 @@ class ConnectTelnetTerminal (threading.Thread):
       and self._timeleft(t):
         time.sleep (self.TIME_POLL)
     if not None in (self.client.columns, self.client.rows,):
-      logger.debug ('window size: %dx%d (negotiated)' \
+      logger.info ('window size: %dx%d (negotiated)' \
           % (self.client.columns, self.client.rows,))
       return
     logger.debug ('failed: negotiate about window size')
@@ -319,15 +325,16 @@ class ConnectTelnetTerminal (threading.Thread):
       inp=''
       t = time.time()
       while self.client.idle() < self.TIME_PAUSE and self._timeleft(t):
-          time.sleep (self.TIME_POLL)
+        time.sleep (self.TIME_POLL)
       inp = self.client.get_input()
       self.client.send ('\x1b[r')
       logger.debug ('cursor restored')
       self.client.socket_send() # push
       match = response_pattern.search (inp)
       if match:
-        self.client.rows, self.client.columns = match.groups()
-        logger.debug ('window size: %dx%d (corner-query hack)' \
+        h, w = match.groups()
+        self.client.rows, self.client.columns = int(h), int(w)
+        logger.info ('window size: %dx%d (corner-query hack)' \
             % (self.client.columns, self.client.rows,))
         return
 
@@ -341,6 +348,7 @@ class ConnectTelnetTerminal (threading.Thread):
   def _try_charset(self):
     """Negotiate terminal charset (CHARSET) telnet option (on)."""
     # haven't seen this work yet ...
+    from bbs import ini
     from telnet import CHARSET
     if self.client.charset != self.CHARSET_UNDETECTED:
       logger.debug ('terminal charset: %s\r\n' % (self.client.char))
@@ -358,6 +366,7 @@ class ConnectTelnetTerminal (threading.Thread):
           (self.client.charset,))
       return
     logger.debug ('failed: negotiate about character encoding')
+
     # set to cfg .ini if not detected
     self.client.charset = ini.cfg.get('session', 'default_encoding')
     logger.debug ('terminal charset: %s (default)' % (self.client.charset,))
@@ -365,6 +374,7 @@ class ConnectTelnetTerminal (threading.Thread):
 
   def _try_ttype(self):
     """Negotiate terminal type (TTYPE) telnet option (on)."""
+    from bbs import ini
     detected = lambda: self.client.terminal_type != self.TTYPE_UNDETECTED
     if detected():
       logger.debug ('terminal type: %s (unsolicited)' %
@@ -386,8 +396,8 @@ class ConnectTelnetTerminal (threading.Thread):
     logger.debug('request answerback sequence')
     self.client.request_wont_echo ()
     self.client.socket_send () # push
-    self.client.recv_buffer='' # flush & toss nput
-    self.client.send ('\005')  # send request termtype
+    self.client.get_input () # flush & toss input
+    self.client.send_str ('\005')  # send request termtype
     self.client.socket_send () # push
     t= time.time()
     while not self.client.input_ready() and self._timeleft(t):
@@ -415,8 +425,8 @@ class POSHandler(threading.Thread):
   otherwise a ('pos', None) is sent if no cursor position is reported within
   TIME_PAUSE.
   """
-  TIME_POLL = 0.05
-  TIME_PAUSE = 0.35
+  TIME_POLL = 0.01
+  TIME_PAUSE = 1.75
   TIME_WAIT = 1.30
   def __init__(self, pipe, client, lock, event='pos', timeout=None):
     self.pipe = pipe
