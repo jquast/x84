@@ -271,27 +271,23 @@ class Session(object):
             if 0 != len(self._script_stack) else 'Stop', fault)
 
 
-  def write (self, data, encoding=None):
-    """Write data to terminal stream as unicode."""
+  def write (self, data, encoding='utf8'):
+    """Write data to terminal stream as utf8.
+       One special exception: cp437 !"""
     if 0 == len(data):
       # on non-capable terminals, something like echo(term.move(0,0))
       # might become echo (''); just ignore it
       return
-    # XXX hmm
-    self.terminal.stream.write (data, self.encoding \
-        if self.encoding != 'cp437' else 'iso8859-1')
+    self.terminal.stream.write (data, encoding)
 
-    if self._record_tty:
-      if not self.is_recording():
-        self.start_recording ()
-      # ttyrec is formatted as utf-8, regardless of capability
-      self._ttyrec_write (data.encode('utf-8'))
+    if self._record_tty: # should this tty be recorded?
+      if not self.is_recording(): # is it recording?
+        self.start_recording () # then begin,
+      # ttyrec is formatted as utf8, regardless of capability
+      self._ttyrec_write (data.encode('utf8'))
 
-    if logger.level >= logger.debug and self._tap_output:
-      # special care for input, mask with self._tap_mask
+    if self._tap_output and logger.isEnabledFor(logging.DEBUG):
       logger.debug ('%s --> %r.', self.handle, data)
-
-
 
   def flush_event (self, event, timeout=-1):
     """Flush all data buffered for 'event'."""
@@ -345,7 +341,7 @@ class Session(object):
           self._buffer['refresh'] = list((data,))
     self._last_input_time = time.time()
 
-    if logger.level >= logger.debug and self._tap_input:
+    if self._tap_input and logger.isEnabledFor(logging.DEBUG):
       logger.debug ('%s <-- %s', self.handle, data)
 
   def send_event (self, event, data):
