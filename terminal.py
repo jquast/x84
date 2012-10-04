@@ -190,22 +190,22 @@ class ConnectTelnetTerminal (threading.Thread):
 
     try:
       self.banner ()
-      logger.debug ('_try_echo')
-      self._try_echo ()
-      logger.debug ('_no_linemode')
-      self._no_linemode ()
-      logger.debug ('_try_binary')
-      self._try_binary ()
       logger.debug ('_try_sga')
       self._try_sga ()
+      logger.debug ('_try_echo')
+      self._try_echo ()
+      # according to the internets, 'sga + echo' means
+      # character mode. at least 'linux understands this'
+      #logger.debug ('_no_linemode')
+      #self._no_linemode ()
       logger.debug ('_try_naws')
       self._try_naws ()
       logger.debug ('_try_ttype')
       self._try_ttype ()
       logger.debug ('_try_charset')
       self._try_charset ()
-      logger.debug ('_try_echo')
-      self._try_echo ()
+      logger.debug ('_try_binary')
+      self._try_binary ()
       logger.debug ('_spawn_session')
       self._spawn_session ()
 
@@ -261,7 +261,7 @@ class ConnectTelnetTerminal (threading.Thread):
       return
 
     logger.debug('request-do-sga')
-    self.client.request_do_sga ()
+    self.client.request_will_sga ()
     self.client.socket_send() # push
     t = time.time()
     while not (enabledRemote(SGA) is True and enabledLocal(SGA) is True) \
@@ -394,8 +394,9 @@ class ConnectTelnetTerminal (threading.Thread):
 
     # Try #2 - ... this is bullshit
     logger.debug('request answerback sequence')
-    self.client.request_wont_echo ()
-    self.client.socket_send () # push
+    #self.client.request_wont_echo () # tell the client we will not echo,
+    #                                 # on the other hand..., who cares?
+    #self.client.socket_send () # push
     self.client.get_input () # flush & toss input
     self.client.send_str ('\005')  # send request termtype
     self.client.socket_send () # push
@@ -411,6 +412,7 @@ class ConnectTelnetTerminal (threading.Thread):
       self.client.terminal_type = inp.strip()
       logger.debug ('terminal type: %s (answerback)' \
           % (self.client.terminal_type,))
+      self.client.request_wont_echo ()
       return
     logger.debug ('failed: answerback reply not receieved')
     # set to cfg .ini if not detected
