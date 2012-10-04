@@ -42,8 +42,8 @@ def init(cfgFilepath='default.ini'):
   cfg.set('database', 'sqlite_folder', 'data/')
   cfg.add_section('session')
   cfg.set('session', 'log_level', 'debug')
-  cfg.set('session', 'default_encoding', 'cp437')
-  cfg.set('session', 'default_ttype', 'ansi')
+  cfg.set('session', 'default_encoding', 'utf8')
+  cfg.set('session', 'default_ttype', 'xterm')
   cfg.set('session', 'scriptpath', 'default/')
   cfg.set('session', 'tap_input', 'no')
   cfg.set('session', 'tap_output', 'no')
@@ -68,12 +68,9 @@ def init(cfgFilepath='default.ini'):
         cfg.get('matrix','newcmds'),
         'new sysop wfc anonymous',)))
   cfg.add_section('dopewars')
-  cfg.set('dopewars', 'scorefile',
-      os.path.join(cfg.get('database','sqlite_folder'), 'dopewars.scores'))
-  cfg.set('dopewars', 'pidfile',
-      os.path.join(cfg.get('database','sqlite_folder'), 'dopewars.pid'))
-  cfg.set('dopewars', 'logfile',
-      os.path.join(cfg.get('database','sqlite_folder'), 'dopewars.log'))
+  cfg.set('dopewars', 'scorefile', 'data/dopewars.scores')
+  cfg.set('dopewars', 'pidfile', 'data/dopewars.pid')
+  cfg.set('dopewars', 'logfile', 'data/dopewars.log')
   sys.stdout.write ('ok')
   sys.stdout.flush ()
   if not os.path.exists(cfgFilepath):
