@@ -29,6 +29,7 @@ svn address http://miniboa.googlecode.com/svn/trunk/miniboa
 
 import socket
 import select
+import array
 import time
 import sys
 import logging
@@ -151,8 +152,8 @@ class TelnetServer(object):
             client.deactivate()
 
         ## Process sockets with data to send
-        send_ready = (c for c in self.clients.values() if c.active)
-        for client in send_ready:
+        slist = (c for c in self.clients.values() if c.active if c.send_ready())
+        for client in slist:
           try:
             client.socket_send ()
           except exception.ConnectionClosed, e:
@@ -306,8 +307,8 @@ class TelnetClient(object):
         self.columns = None
         self.rows = None
         self.on_naws = None         # callback for window resize events
-        self.send_buffer = bytes()
-        self.recv_buffer = bytes()
+        self.send_buffer = array.array('c')
+        self.recv_buffer = array.array('c')
         self.bytes_sent = 0
         self.bytes_received = 0
         self.connect_time = time.time()
@@ -332,30 +333,18 @@ class TelnetClient(object):
         Get any input bytes received from the DE. The input_ready method
         returns True when bytes are available.
         """
-        data = self.recv_buffer
-        self.recv_buffer = ''
+        data = self.recv_buffer.tostring ()
+        self.recv_buffer = array.array('c')
         return data
 
-    def send(self, text, encoding=None):
+    def send_str(self, bytestring):
         """
-        Send bytestring to the distant end. If text is unicode,
-        encode as ascii if self.eight_bit is False, otherwise as iso8859-1
-        unless otherwise specified.
+        buffer bytestrings for sending to the distant end.
         """
-        enc = encoding if encoding is not None else self.charset
-        try:
-          self.send_buffer += bytes(text) \
-              if type(text) is not unicode \
-              else text.encode (enc)
-        except UnicodeEncodeError, e:
-          # if the terminal cannot negotiate BINARY (8-bit), and encoding has
-          # not been specified, then try as iso8859-1, which should allow
-          # bytes between 127 and 255 through
-          logger.warn ('%s: UnicodeEncodeError: %s; '
-            're-trying as iso8859-1 on 7-bit ascii terminal!',
-              self.addrport(), e)
-          logger.debug ('%r', text)
-          self.send_buffer += text.encode ('iso8859-1', 'replace')
+        self.send_buffer.fromstring (bytestring)
+
+    def send_unicode(self, unibytes, encoding='utf8'):
+        self.send_buffer.fromstring (unibytes.encode(encoding, 'replace'))
 
     def deactivate(self):
         """
@@ -383,11 +372,11 @@ class TelnetClient(object):
         """
         return time.time() - self.connect_time
 
-    def request_do_sga(self):
+    def request_will_sga(self):
         """
         Request DE to Suppress Go-Ahead.  See RFC 858.
         """
-        self._iac_do(SGA)
+        self._iac_will(SGA)
         self._note_reply_pending(SGA, True)
 
     def request_will_echo(self):
@@ -433,19 +422,19 @@ class TelnetClient(object):
         Request sub-negotiation ttype.  See RFC 779.
         A successful response will set self.terminal_type.
         """
-        self.send (bytes(''.join((IAC, SB, TTYPE, SEND, IAC, SE))))
+        self.send_str (bytes(''.join((IAC, SB, TTYPE, SEND, IAC, SE))))
 
     def send_ready(self):
         """
         Return True if any data is buffered for sending (screen output).
         """
-        return bool(0 != len(self.send_buffer))
+        return bool(0 != self.send_buffer.__len__())
 
     def input_ready(self):
         """
         Return True if any data is buffered for reading (keyboard input).
         """
-        return bool(0 != len(self.recv_buffer))
+        return bool(0 != self.recv_buffer.__len__())
 
     def socket_send(self):
         """
@@ -453,14 +442,16 @@ class TelnetClient(object):
         data buffered, trim self.send_buffer to bytes sent, and return
         number of bytes sent. exception.ConnectionClosed may be raised.
         """
-        bytes_sent = 0
+        sent = 0
+        ready_bytes = ''.join(self.send_buffer)
         try:
-          bytes_sent = self.sock.send(self.send_buffer)
+          sent = self.sock.send(ready_bytes)
         except socket.error, e:
           raise exception.ConnectionClosed('socket send %d:%s' % (e[0], e[1],))
-        self.bytes_sent += bytes_sent
-        self.send_buffer = self.send_buffer[bytes_sent:]
-        return bytes_sent
+        assert sent > 0 # why did you call socket.send() with no data ready?
+        self.bytes_sent += sent
+        self.send_buffer = array.array('c')
+        self.send_buffer.fromstring (''.join(ready_bytes[sent:]))
 
     def socket_recv(self):
         """
@@ -490,7 +481,7 @@ class TelnetClient(object):
         """
         Buffer non-telnet commands bytestrings into recv_buffer.
         """
-        self.recv_buffer += byte
+        self.recv_buffer.fromstring(byte)
 
     def _iac_sniffer(self, byte):
         """
@@ -511,7 +502,7 @@ class TelnetClient(object):
                 self.telnet_sb_buffer += byte
             else:
                 ## Just a normal NVT character
-                self._recv_byte(byte)
+                self._recv_byte (byte)
             return
 
         else:
@@ -557,7 +548,7 @@ class TelnetClient(object):
         """
         Handle incoming Telnet commands that are two bytes long.
         """
-        logger.debug ('_two_byte_cmd %s' % (self.name_option(cmd),))
+        logger.debug ('recv _two_byte_cmd %s' % (self.name_option(cmd),))
 
         if cmd == SB:
             ## Begin capturing a sub-negotiation string
@@ -583,7 +574,7 @@ class TelnetClient(object):
         Handle incoming Telnet commmands that are three bytes long.
         """
         cmd = self.telnet_got_cmd
-        logger.debug ('_three_byte_cmd %s %s' % (self.name_option(cmd),
+        logger.debug ('recv _three_byte_cmd %s %s' % (self.name_option(cmd),
           self.name_option(option),))
 
         ## Incoming DO's and DONT's refer to the status of this end
@@ -624,10 +615,13 @@ class TelnetClient(object):
                 if self._check_reply_pending(SGA):
                     self._note_reply_pending(SGA, False)
                     self._note_local_option(SGA, True)
+                    self._note_remote_option(SGA, True)
 
+                # client wants to SGA? Yes please !
                 elif (self._check_local_option(SGA) is False or
                         self._check_local_option(SGA) is UNKNOWN):
                     self._note_local_option(SGA, True)
+                    self._note_remote_option(SGA, True)
                     self._iac_will(SGA)
 
             elif option == LINEMODE:
@@ -737,27 +731,27 @@ class TelnetClient(object):
                 if self._check_reply_pending(SGA):
                     self._note_reply_pending(SGA, False)
                     self._note_remote_option(SGA, True)
-                    self._note_local_option(SGA, True) # ?
+                    self._note_local_option(SGA, True)
 
                 elif (self._check_remote_option(SGA) is False or
                         self._check_remote_option(SGA) is UNKNOWN):
                     self._note_remote_option(SGA, True)
-                    self._note_local_option(SGA, True) # ?
-                    self._iac_do(SGA)
-                    ## Just nod
+                    self._note_local_option(SGA, True)
+                    self._iac_do(SGA) # yes please
 
             elif option == TTYPE:
 
                 if self._check_reply_pending(TTYPE):
                     self._note_reply_pending(TTYPE, False)
                     self._note_remote_option(TTYPE, True)
+                    # cough ..
                     ## Tell them to send their terminal type
-                    self.send (bytes(''.join((IAC, SB, TTYPE, SEND, IAC, SE))))
+                    self.send_str (bytes(''.join((IAC, SB, TTYPE, SEND, IAC, SE))))
 
                 elif (self._check_remote_option(TTYPE) is False or
                         self._check_remote_option(TTYPE) is UNKNOWN):
                     self._note_remote_option(TTYPE, True)
-                    self._iac_do(TTYPE)
+                    self._iac_do(TTYPE) # go ahead,
 
             # linemode is for girls .. ?
             elif option == LINEMODE:
@@ -909,20 +903,20 @@ class TelnetClient(object):
 
     def _iac_do(self, option):
         """Send a Telnet IAC "DO" sequence."""
-        logger.debug ('IAC DO %s' % (self.name_option(option)))
-        self.send (bytes(''.join((IAC, DO, option))))
+        logger.debug ('send IAC DO %s' % (self.name_option(option)))
+        self.send_str (bytes(''.join((IAC, DO, option))))
 
     def _iac_dont(self, option):
         """Send a Telnet IAC "DONT" sequence."""
-        logger.debug ('IAC DONT %s' % (self.name_option(option)))
-        self.send (bytes(''.join((IAC, DONT, option))))
+        logger.debug ('send IAC DONT %s' % (self.name_option(option)))
+        self.send_str (bytes(''.join((IAC, DONT, option))))
 
     def _iac_will(self, option):
         """Send a Telnet IAC "WILL" sequence."""
-        logger.debug ('IAC WILL %s' % (self.name_option(option)))
-        self.send (bytes(''.join((IAC, WILL, option))))
+        logger.debug ('send IAC WILL %s' % (self.name_option(option)))
+        self.send_str (bytes(''.join((IAC, WILL, option))))
 
     def _iac_wont(self, option):
         """Send a Telnet IAC "WONT" sequence."""
-        logger.debug ('IAC WONT %s' % (self.name_option(option)))
-        self.send (bytes(''.join((IAC, WONT, option))))
+        logger.debug ('send IAC WONT %s' % (self.name_option(option)))
+        self.send_str (bytes(''.join((IAC, WONT, option))))
