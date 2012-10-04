@@ -25,19 +25,53 @@ To start the system, execute command
 
 	python2.6 engine.py 
 
-various options are defined in defualt.ini. Optional arguments are
- -cfg <cfgFile> alternate configuration file
+default.ini contains system options
+
+Command line arguments to engine.py,
+ -cfg <configuration file>
  -v enable debug logging
- -tap snoop keyboard traffic when debugging
+
+
+Connecting
+==========
+
+telnet localhost 6023
+
+
+Compatible Terminals
+====================
+
+Any Unicode Terminal. We use a codepage translation for IBM artwork to UTF-8,
+
+  https://maze.io/2012/09/18/cp437-rendering-using-utf-8/index.html
+
+iTerm, uxterm, Some fonts better than others.
+
+One exception is made for cp437-only clients, such as SyncTerm. This is implemented
+as door bbs/charset.py, and optional parameters to showfile() and echo().
+
 
 Monitoring
 ==========
 
-Sessions are recorded to ttyrecordings/
+Sessions are recorded to ttyrecordings/ folder, and can be played with 'ttyplay'
+or compatible utility. The '-p' option can be used to monitor a live sessions,
+analogous to 'tail -f'.
 
-These can be played with the 'ttyplay' utility.
 
-The '-p' option can be used to monitor a live session, analogous to 'tail -f'.
+Session Scripts
+===============
+
+The default.ini 'scriptpath' of [session] defines folder 'default/', the default
+lookup path for goto() and gosub() commands executed by bbs scripts. This path
+should also contain the 'matrix.py' script.
+
+By default, matrix.py will chain to 'nua.py' for new account creation, and
+'main.py' for a main menu. The 'topscript' script, 'top.py' should receive
+the handle of the user that is authorized, and log the call. If 'topscript'
+is called without a handle, the value will default to 'None', and the user
+is presumed 'anonymous'.
+
 
 Matrix
 ======
@@ -50,21 +84,6 @@ continuation.
 This section also defines a 'topscript' python program, which is the script to
 execute after the 'matrix' routine has determined succesful authentication.
 
-Session Scripts
-===============
-
-The default.ini section 'scriptpath' defines a folder 'default', which contains
-python programs for session execution. By default, the 'matrix.py' script is
-used to login a user, 'nua.py' for new account creation, 'top.py' to begin
-an authentication session, and 'main.py' for the main menu.
-
-These scripts can call each other using the exported goto() and gosub() functions,
-which work as one would expect, gosub() returning value and goto()
-
-The 'topscript' script should receive the handle of the user that is authorized,
-and so it should be called as goto('topscript', handle). and the main function in
-'topscript' defined as def main(handle=None). If 'topscript' is called without a
-handle, the value will default to 'None'.
 
 Example scripts
 ===============
@@ -85,6 +104,7 @@ These scripts are found in the default/ subdirectory
   top.py        default 'top script' called after authentication success
   weather.py    a weather API and lightbar demonstration .. ?
 
+
 Globals
 =======
 
@@ -97,27 +117,6 @@ from bbs import *
 
 is applied to all bbs scripts executed by goto() and gosub() commands.
 
-Compatible terminal clients
-===========================
-
-PuTTy
- - under preference item 'Window -> Translation',
-   option 'Remote character set', select or key in 'UTF-8'.
-
-Unicode Unix
- - Use the UTF-8 locale, or otherwise select UTF-8 character encoding
-   for your terminal application. This is the default for most modern
-   unix environments. wrappers such as 'uxterm' or the utf-8 enabled
-   rxvt varient, 'urxvt' can also be used.
-
-Classic Unix
- - Failing utf-8, to display block art ansi, a font set such as
-   'terminus', or dosemu fonts, should be used for an ibm
-   cp437-compatible display. This is a traditional DOS encoding
-   and internationalization characters may appear as '?'.
-
-SyncTerm
-   select cp437 encoding when prompted by the bbs system.
 
 Support
 =======
