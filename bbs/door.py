@@ -12,7 +12,7 @@ class Door(object):
   BLOCKSIZE = 1920
   master_fd = None
   pid = None
-  pEIO = re.compile('[eE]rrno 5')
+  pEIO = re.compile('Errno 5')
   _TAP = False # for debugging
 
   def __init__(self, cmd='/bin/uname', args=(), lang=u'en_US.UTF-8', term=None,
@@ -59,10 +59,9 @@ class Door(object):
     except IOError, e:
       logger.error ('IOError: %s', e)
     except OSError, e:
-      if self.pEIO.search (str(e)) != None:
-        # this occurs on read() after child closed sys.stdout
-        logger.debug ('(eof) OSError: %s', e)
-      else:
+      if self.pEIO.search (str(e)) == None:
+        # match occurs on read() after child closed sys.stdout
+        # otherwise log as an error,
         logger.error ('OSError: %s', e)
 
     getsession().enable_keycodes = True
