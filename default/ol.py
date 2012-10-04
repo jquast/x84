@@ -71,6 +71,7 @@ def main ():
           session.user.set ('lastliner', time.time())
           if not ini.cfg.has_section('bbs-scene'):
             addline (msg)
+            redraw_msgs ()
             break
           # post to bbs-scene.rog
           r = requests.post ('http://bbs-scene.org/api/onelinerz.xml',
