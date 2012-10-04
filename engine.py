@@ -114,7 +114,10 @@ def main (logger, logHandler, cfgFile='default.ini'):
         text, encoding = data
         if 'cp437' != encoding:
           # send output args (text, encoding) unmanipulated.
-          client.send_unicode (*data)
+          if None == encoding:
+            client.send_unicode (text)
+          else:
+            client.send_unicode (text, encoding)
         else:
           # convert utf8'd cp437 art to real cp437 128-254 equivalents,
           unibytes = u''.join([unichr(bbs.cp437.CP437.index(glyph))
