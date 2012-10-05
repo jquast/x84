@@ -1,3 +1,6 @@
+clients acquire and release named locks, w/timeout
+revive tetrawdraw and integrate it -- it would output cp437
+  and door.py can translate to utf-8 (and vice-versa? for alt+178's?)
 doc generation
 example of using xmodem protocol
 'expert' mode goes everywhere, a way to test low-fi terminals ..
