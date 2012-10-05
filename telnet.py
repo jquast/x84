@@ -219,11 +219,12 @@ IS      = chr(0)        # Sub-process negotiation IS command
 
 BINARY  = chr(0)      # Transmit Binary
 TTYPE   = chr(24)      # Terminal Type
-CHARSET = chr(42)      # Character set
 
+# some comments and variable names here gotten from,
 # Copyright (c) 2001-2009 Twisted Matrix Laboratories.
 
 NULL =           chr(0)   # No operation.
+STATUS =         chr(5)   # RFC 651
 BEL =            chr(7)   # Produces an audible or
                           # visible signal (which does
                           # NOT move the print head).
@@ -258,6 +259,17 @@ SGA =            chr(3)   # Suppress Go Ahead.  Go Ahead is silly
 NAWS =           chr(31)  # Negotiate About Window Size.  Indicate that
                           # information about the size of the terminal
                           # can be communicated.
+TSPEED =         chr(32)  # terminal speed
+LFLOW =          chr(33)  # toggle remote flow control
+XDISPLOC =       chr(35) # X Display Location
+OLD_ENVIRON =    chr(36) # Old - Environment variables
+AUTHENTICATION = chr(37) # Authenticate
+ENCRYPT =        chr(38) # Encryption option
+NEW_ENVIRON =    chr(39) # New - Environment variables
+# the following ones come from
+# http://www.iana.org/assignments/telnet-options
+CHARSET = chr(42)      # Character set
+
 LINEMODE =       chr(34)  # Allow line buffering to be
                           # negotiated about.
 SE =             chr(240) # End of subnegotiation parameters.
@@ -344,7 +356,10 @@ class TelnetClient(object):
         self.send_buffer.fromstring (bytestring)
 
     def send_unicode(self, unibytes, encoding='utf8'):
-        self.send_buffer.fromstring (unibytes.encode(encoding, 'replace'))
+        """
+        buffer unicode data, encoded to bytestrings as 'encoding'
+        """
+        self.send_str (unibytes.encode(encoding, 'replace'))
 
     def deactivate(self):
         """
@@ -556,12 +571,14 @@ class TelnetClient(object):
             self.telnet_sb_buffer = ''
 
         elif cmd == SE:
-            ## Stop capturing a sub-negotiation string
-            self.telnet_got_sb = False
-            self._sb_decoder()
+          ## Stop capturing a sub-negotiation string
+          self.telnet_got_sb = False
+          self._sb_decoder()
+          logger.debug ('decoded (SE)')
 
         elif cmd in (NOP, IP, AO, AYT, EC, EL, GA, DM):
-            pass
+          logger.debug ('pass %s' % (self.name_option(cmd,)))
+          pass
 
         else:
           logger.error ('_two_byte_cmd invalid: %r'  % (ord(cmd),))
@@ -574,7 +591,9 @@ class TelnetClient(object):
         Handle incoming Telnet commmands that are three bytes long.
         """
         cmd = self.telnet_got_cmd
-        logger.debug ('recv _three_byte_cmd %s %s' % (self.name_option(cmd),
+        logger.debug ('recv _three_byte_cmd %s %s' % ('DO' if cmd == DO \
+            else 'DONT' if cmd == DONT else 'WILL' if cmd == WILL \
+            else 'WONT' if cmd == WONT else self.name_option(cmd),
           self.name_option(option),))
 
         ## Incoming DO's and DONT's refer to the status of this end
@@ -627,9 +646,14 @@ class TelnetClient(object):
             elif option == LINEMODE:
               if self._check_local_option(option) is UNKNOWN:
                 self._note_local_option(option, False)
-                self._iac_wont(option)
-                logger.warn ('%s: linemode requested but refused.' % \
-                    (self.addrport(),))
+                self._iac_do(LINEMODE)
+
+
+            elif option == STATUS:
+              if self._check_local_option(option) is UNKNOWN:
+                self._note_local_option(option, True)
+                self._note_remote_option(option, True)
+                self._iac_will(STATUS)
 
             else:
 
@@ -664,8 +688,8 @@ class TelnetClient(object):
                     self._note_local_option(ECHO, True)
                     self.telnet_echo = False
 
-                elif (self._check_local_option(BINARY) is True or
-                        self._check_local_option(BINARY) is UNKNOWN):
+                elif (self._check_local_option(ECHO) is True or
+                        self._check_local_option(ECHO) is UNKNOWN):
                     self._note_local_option(ECHO, False)
                     self._iac_wont(ECHO)
                     self.telnet_echo = False
@@ -687,9 +711,9 @@ class TelnetClient(object):
                     self._note_reply_pending(LINEMODE, False)
                     self._note_local_option(LINEMODE, False)
 
-                elif (self._check_remote_option(LINEMODE) is True or
+                if (self._check_remote_option(LINEMODE) is True or
                         self._check_remote_option(LINEMODE) is UNKNOWN):
-                    self._note_local_option(LINEMODE, False)
+                    self._note_remote_option(LINEMODE, False)
                     self._iac_wont(LINEMODE)
 
             else:
@@ -704,73 +728,74 @@ class TelnetClient(object):
         #---[ WILL ]-----------------------------------------------------------
 
         elif cmd == WILL:
-
             if option == ECHO:
-
                 ## Nutjob DE offering to echo the server...
                 if self._check_remote_option(ECHO) is UNKNOWN:
                     self._note_remote_option(ECHO, False)
                     # No no, bad DE!
                     self._iac_dont(ECHO)
-
+                    logger.error ('nutjob condition?')
+            elif option == TSPEED:
+              if self._check_reply_pending(TSPEED):
+                  self._note_reply_pending(TSPEED, False)
+              if (self._check_remote_option(TSPEED) is False or
+                  self._check_remote_option(TSPEED) is UNKNOWN):
+                self._note_remote_option(TSPEED, True)
+                self._note_local_option(TSPEED, True)
+              self._iac_do(TSPEED) # ?
             elif option == NAWS:
-
-                if self._check_reply_pending(NAWS):
-                    self._note_reply_pending(NAWS, False)
-                    self._note_remote_option(NAWS, True)
-                    ## Nothing else to do, client follow with SB
-
-                elif (self._check_remote_option(NAWS) is False or
-                        self._check_remote_option(NAWS) is UNKNOWN):
-                    self._note_remote_option(NAWS, True)
-                    self._iac_do(NAWS)
-                    ## Client should respond with SB
-
-            elif option == SGA:
-
-                if self._check_reply_pending(SGA):
-                    self._note_reply_pending(SGA, False)
-                    self._note_remote_option(SGA, True)
-                    self._note_local_option(SGA, True)
-
-                elif (self._check_remote_option(SGA) is False or
-                        self._check_remote_option(SGA) is UNKNOWN):
-                    self._note_remote_option(SGA, True)
-                    self._note_local_option(SGA, True)
-                    self._iac_do(SGA) # yes please
-
-            elif option == TTYPE:
-
-                if self._check_reply_pending(TTYPE):
-                    self._note_reply_pending(TTYPE, False)
-                    self._note_remote_option(TTYPE, True)
-                    # cough ..
-                    ## Tell them to send their terminal type
-                    self.send_str (bytes(''.join((IAC, SB, TTYPE, SEND, IAC, SE))))
-
-                elif (self._check_remote_option(TTYPE) is False or
-                        self._check_remote_option(TTYPE) is UNKNOWN):
-                    self._note_remote_option(TTYPE, True)
-                    self._iac_do(TTYPE) # go ahead,
-
-            # linemode is for girls .. ?
+              if self._check_reply_pending(NAWS):
+                  self._note_reply_pending(NAWS, False)
+              if (self._check_remote_option(NAWS) is False or
+                  self._check_remote_option(NAWS) is UNKNOWN):
+                self._note_remote_option(NAWS, True)
+                self._note_local_option(NAWS, True)
+              self._iac_do(NAWS) # client then begins SB
             elif option == LINEMODE:
+              if self._check_reply_pending(LINEMODE):
+                  self._note_reply_pending(LINEMODE, False)
               if self._check_remote_option(LINEMODE) is UNKNOWN:
-                  self._note_remote_option(LINEMODE, False)
-                  self._iac_dont(LINEMODE)
-
+                self._note_remote_option(LINEMODE, True)
+                self._note_local_option(LINEMODE, True)
+              self._iac_do(LINEMODE) # client then begins SB
+            elif option == SGA:
+              if self._check_reply_pending(SGA):
+                  self._note_reply_pending(SGA, False)
+              if (self._check_remote_option(SGA) is False or
+                  self._check_remote_option(SGA) is UNKNOWN):
+                self._note_remote_option(SGA, True)
+                self._note_local_option(SGA, True)
+              self._iac_do(SGA) # yes please
+            elif option == NEW_ENVIRON:
+              if self._check_reply_pending(NEW_ENVIRON):
+                  self._note_reply_pending(NEW_ENVIRON, False)
+              if (self._check_remote_option(NEW_ENVIRON) in (False, UNKNOWN)):
+                self._note_remote_option(NEW_ENVIRON, True)
+                self._note_local_option(NEW_ENVIRON, True)
+              self._iac_do(NEW_ENVIRON) # yes please, lol, SB ?
+            elif option == TTYPE:
+              if self._check_reply_pending(TTYPE):
+                  self._note_reply_pending(TTYPE, False)
+              if (self._check_remote_option(TTYPE) is False or
+                  self._check_remote_option(TTYPE) is UNKNOWN):
+                self._note_remote_option(TTYPE, True)
+              self._iac_do(TTYPE) # client then begins SB
+              self.send_str (bytes(''.join( \
+                  (IAC, SB, TTYPE, SEND, IAC, SE)))) # trigger SB
             elif option == BINARY:
-              if self._check_remote_option(BINARY) is UNKNOWN:
-                  self._note_remote_option(BINARY, True)
-                  self._iac_do(BINARY)
-                  self.telnet_eight_bit = True
-                  logger.debug ('eight-bit binary enabled')
-
+              if (self._check_remote_option(BINARY) in (UNKNOWN, False)):
+                self._note_remote_option(BINARY, True)
+                self._note_local_option(BINARY, True)
+                self._iac_do(BINARY)
+                self.telnet_eight_bit = True
+                logger.debug ('eight-bit binary enabled')
+            elif option == LFLOW:
+              self._iac_wont(LFLOW)
+              pass # no, i dont know nuttin bout XOFF/XON, sorry.
+              # (... I don't care; do you?)
             else:
-                ## ALL OTHER OPTIONS = Default to ignoring
-                logger.debug ('%s: unhandled will: %s.' % \
+                logger.warn ('%s: unhandled will: %s.' % \
                     (self.addrport(), self.name_option(option)))
-                pass
 
         #---[ WONT ]-----------------------------------------------------------
 
@@ -823,26 +848,52 @@ class TelnetClient(object):
         """
         Figures out what to do with a received sub-negotiation block.
         """
-        bloc = self.telnet_sb_buffer
-        if len(bloc) > 2:
-
-            if bloc[0] == TTYPE and bloc[1] == IS:
-                self.terminal_type = bloc[2:].lower()
-                logger.debug ('%s: terminal type %s' % \
-                    (self.addrport(), self.terminal_type,))
-
-            if bloc[0] == NAWS:
-                if len(bloc) != 5:
-                    logger.error('%s: bad length in NAWS block (%d)' % \
-                        (self.addrport(), len(block),))
-                else:
-                    self.columns = (256 * ord(bloc[1])) + ord(bloc[2])
-                    self.rows = (256 * ord(bloc[3])) + ord(bloc[4])
-                    logger.debug ('%s: window size is %dx%d' % \
-                        (self.addrport(), self.columns, self.rows))
-                    if self.on_naws is not None:
-                      self.on_naws (self)
-
+        buf = self.telnet_sb_buffer
+        slc = chr(3)
+        if len(buf) <= 2:
+          logger.error  ('fail decode subnegotiation, ' \
+              'shortlength: %r' % (buf,))
+          return
+        elif (TSPEED, IS) == (buf[0], buf[1]):
+          self.terminal_speed = buf[2:].lower()
+          logger.info ('%s: terminal speed %s' % \
+              (self.addrport(), self.terminal_speed,))
+        elif (TTYPE, IS) == (buf[0], buf[1]):
+          self.terminal_type = buf[2:].lower()
+          logger.info ('%s: terminal type %s' % \
+              (self.addrport(), self.terminal_type,))
+        elif (LINEMODE, slc) == (buf[0], buf[1],):
+          logger.error ('DO ME! SLC')
+          logger.info ('%s' % (' '.join([str(ord(ch)) for ch in buf[2:]]),))
+          #SYNC< DEFAULT, 0 IP VALUE|FLUSHIN|FLUSHOUT 3 AO
+          #VALUE 15 AYT DEFAULT 0 ABORT VALUE|FLUSHIN|FLUSHOUT 28 EOF VALUE 4
+          #SUSP VALUE|FLUSHIN 26 EC VALUE 127 EL VALUE 21 EW VALUE 23 RP VALUE
+          #18 LNEXT VALUE 22 XON VALUE 17 XOFF VALUE 19
+          #n = 2
+          #while n < len(buf) and not buf[n] == IAC \
+          #  and n < len(buf)-1 and not buf[n+1] == SE:
+          #  logger.info ('SLC %s %r', self.name_option(buf[n],), buf[n])
+          #  n+= 1
+        elif (LINEMODE,) == (buf[0],):
+          # IAC SB LINEMODE[0], MODE[1], MASK[2], IAC[3?], SE[4?]
+          logger.info ('mode %r' % (buf[1],))
+          logger.info ('mask %r' % (buf[2],))
+          assert buf[3] == IAC, '%s/%r' % (self.name_option(buf[3],), buf[3],)
+          assert buf[4] == SE
+        elif (NAWS,) == (buf[0],):
+          if 5 != len(buf):
+            logger.error('%s: bad length in NAWS buf (%d)' % \
+                (self.addrport(), len(buf),))
+            return
+          self.columns = (256 * ord(buf[1])) + ord(buf[2])
+          self.rows = (256 * ord(buf[3])) + ord(buf[4])
+          if self.on_naws is not None:
+            self.on_naws (self)
+          logger.info ('%s: window size is %dx%d' % \
+              (self.addrport(), self.columns, self.rows))
+        else:
+          logger.error ('unsupported subnegotiation: (%s,%s,)%r' % \
+              (self.name_option(buf[0]), self.name_option(buf[1]), buf,))
         self.telnet_sb_buffer = ''
 
 
