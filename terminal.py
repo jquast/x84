@@ -38,9 +38,9 @@ class IPCStream(object):
   """
   def __init__(self, channel):
     self.channel = channel
-  def write(self, data, encoding='utf-8'):
-    assert 0 != len(data)
-    self.channel.send (('output', (data, encoding,),))
+  def write(self, data, cp437=False):
+    assert issubclass(type(data), unicode)
+    self.channel.send (('output', (data, cp437)))
   def fileno(self):
     return self.channel.fileno()
   def close(self):
@@ -173,6 +173,8 @@ class ConnectTelnetTerminal (threading.Thread):
     registry.append ((self.client, parent_conn, lock))
 
   def banner(self):
+    #self.client.send_str (bytes('\xff\xfb\x01')) # will echo
+    #self.client.send_str (bytes('\
     # disable line-wrapping http://www.termsys.demon.co.uk/vtansi.htm
     self.client.send_str (bytes('\033[7l'))
 
@@ -190,10 +192,10 @@ class ConnectTelnetTerminal (threading.Thread):
 
     try:
       self.banner ()
-      logger.debug ('_try_sga')
-      self._try_sga ()
       logger.debug ('_try_echo')
       self._try_echo ()
+      logger.debug ('_try_sga')
+      self._try_sga ()
       # according to the internets, 'sga + echo' means
       # character mode. at least 'linux understands this'
       #logger.debug ('_no_linemode')
@@ -316,18 +318,18 @@ class ConnectTelnetTerminal (threading.Thread):
     # send to client --> report cursor position
     # read from client <-- window size
     logger.debug ('store-cu')
-    self.client.send ('\x1b[s')
+    self.client.send_str ('\x1b[s')
     for kind, query_seq, response_pattern in self.WINSIZE_TRICK:
       logger.debug ('move-to corner & query for %s' % (kind,))
-      self.client.send ('\x1b[999;999H')
-      self.client.send (query_seq)
+      self.client.send_str ('\x1b[999;999H')
+      self.client.send_str (query_seq)
       self.client.socket_send() # push
       inp=''
       t = time.time()
       while self.client.idle() < self.TIME_PAUSE and self._timeleft(t):
         time.sleep (self.TIME_POLL)
       inp = self.client.get_input()
-      self.client.send ('\x1b[r')
+      self.client.send_str ('\x1b[r')
       logger.debug ('cursor restored')
       self.client.socket_send() # push
       match = response_pattern.search (inp)
@@ -444,9 +446,9 @@ class POSHandler(threading.Thread):
 
   def run(self):
     logger.debug ('getpos?')
-    for (k,Q,P) in ConnectTelnetTerminal.WINSIZE_TRICK:
+    for (ttype, seq, pattern) in ConnectTelnetTerminal.WINSIZE_TRICK:
       self.lock.acquire ()
-      self.client.send (Q)
+      self.client.send_str (seq)
       self.client.socket_send() # push
       t = time.time()
       while self.client.idle() < self.TIME_PAUSE and self._timeleft(t):
