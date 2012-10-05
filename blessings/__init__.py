@@ -384,12 +384,12 @@ class Terminal(object):
             return code.decode('utf-8')
         return u''
 
-    def trans_input (self, data, encoding='iso8859-1'):
+    def trans_input (self, data, encoding='utf8'):
       """
       Yield either a unicode byte or a curses key constant as integer.
       If data is a bytestring, it is converted to unicode using encoding.
       """
-      if type(data) in (str, bytes):
+      if isinstance(data, str):
         data = data.decode (encoding)
 
       def scan_keymap(text):
@@ -399,18 +399,25 @@ class Terminal(object):
           return (None, None) # no match
 
       while len(data):
-          keyseq, keycode = scan_keymap(data)
-          # keymap KEY_ sequence
-          if (keyseq, keycode) != (None, None):
-              yield keycode
-              data = data[len(keyseq):]
-          elif data[0:2] == '\r\x00':
-              # skip beyond telnet nul
-              yield data[0]
+        if ('\r','\x00') == (data[0], data[1] if 1 != len(data) else None):
+              # skip beyond nul (nvt telnet)
+              yield self.KEY_ENTER #data[0]
               data = data[2:]
-          else:
-              yield data[0]
-              data = data[1:]
+              continue
+        if ('\r','\n') == (data[0], data[1] if 1 != len(data) else None):
+              # skip beyond \n (putty)
+              print 'putty'
+              yield self.KEY_ENTER #data[0]
+              data = data[2:]
+              continue
+        keyseq, keycode = scan_keymap(data)
+        # keymap KEY_ sequence
+        if (keyseq, keycode) != (None, None):
+            yield keycode
+            data = data[len(keyseq):]
+        else:
+            yield data[0]
+            data = data[1:]
 
     def keyname(self, value):
       """Return a matching keycode attribute name given a keycode value."""
