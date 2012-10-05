@@ -7,16 +7,29 @@ import sys
 import re
 import os
 
+patternEIO = re.compile('Errno 5')
+
 class Door(object):
-  POLL = 0.15
+  POLL = 0.02
   BLOCKSIZE = 1920
   master_fd = None
+  decode_cp437 = False
   pid = None
-  pEIO = re.compile('Errno 5')
   _TAP = False # for debugging
 
-  def __init__(self, cmd='/bin/uname', args=(), lang=u'en_US.UTF-8', term=None,
-      path=None):
+  def __init__(self, cmd='/bin/uname', args=(),
+      lang=u'en_US.UTF-8', term=None, path=None,
+      decode_cp437=False):
+    """
+    cmd, args = argv[0], argv[1:]
+    lang, term, and path become LANG, TERM, and PATH environment
+    variables. when term is None, the session terminal type is used.
+    When path is None, the .ini 'path' value of [door] is used.
+
+    When decode_cp437 is True, the door is presumed to be in CP437
+    encoding and high-bit characters are mapped to their utf8-equivalent
+    glyph.
+    """
     from session import getsession
     import ini
     self.cmd = cmd
@@ -25,7 +38,8 @@ class Door(object):
     self.term = term if term is not None else \
         getsession().terminal.terminal_type
     self.path = path if path is not None else \
-        ini.cfg.get('session', 'door_syspath')
+        ini.cfg.get('door', 'path')
+    self.decode_cp437 = True
 
   def run(self):
     from session import getsession, logger
@@ -39,11 +53,10 @@ class Door(object):
     if self.pid == pty.CHILD:
       sys.stdout.flush ()
       args = list(self.args)
-      env = {
-          u'LANG': self.lang,
-          u'TERM': self.term,
-          u'PATH': self.path,
-          u'HOME': os.getenv('HOME') }
+      env={u'LANG': self.lang,
+           u'TERM': self.term,
+           u'PATH': self.path,
+           u'HOME': os.getenv('HOME') }
       os.execvpe(self.cmd, self.args, env)
 
     # typically, return values from 'input' events are translated keycodes,
@@ -59,7 +72,7 @@ class Door(object):
     except IOError, e:
       logger.error ('IOError: %s', e)
     except OSError, e:
-      if self.pEIO.search (str(e)) == None:
+      if patternEIO.search (str(e)) is None:
         # match occurs on read() after child closed sys.stdout
         # otherwise log as an error,
         logger.error ('OSError: %s', e)
@@ -69,16 +82,19 @@ class Door(object):
     # retrieve return code
     (self.pid, status) = os.waitpid (self.pid, 0)
     res = status >> 8
+
     if res != 0:
       logger.warn ('child %s has non-zero exit code: %s' % (self.pid, res,))
     else:
-      logger.info ('child %s exit %s.' % (self.pid, res,))
+      logger.info ('%s child %s exit %s.' % (self.cmd, self.pid, res,))
+
     os.close (self.master_fd)
     return res
 
   def _loop(self):
     from session import getsession, logger
     from output import echo
+    from bbs.cp437 import CP437
 
     # signal window size to child pty, untested XXX
     term = getsession().terminal
@@ -86,39 +102,47 @@ class Door(object):
         struct.pack('HHHH', term.height, term.width, 0, 0))
 
     while True:
+      rlist, wlist, xlist = (self.master_fd,), (), ()
       # block up to self.POLL for screen output
-      rfds, wfds, xfds = select.select([self.master_fd,],[],[], self.POLL)
+      (rfds, wfds, xfds) = select.select (rlist, wlist, xlist, self.POLL)
       if self.master_fd in rfds:
         data = os.read(self.master_fd, self.BLOCKSIZE)
         if 0 == len(data):
+          logger.debug ('read 0 bytes from masterfd')
           return
         if self._TAP:
           logger.debug ('<-- %r', data)
-        echo (data, encoding='utf-8')
+        if self.decode_cp437:
+          echo (u''.join((CP437[ord(ch)] for ch in data)))
+        else: # utf8 only supported here ...
+          echo (data.decode('utf8'))
 
-      # then, block up to self.POLL for keyboard input,
+      # self.POLL for keyboard input,
       event, data = getsession().read_event (('refresh','input'), self.POLL)
       if (None, None) == (event, data):
-        continue
+        continue # no input
 
       # handle resize event by propigating to ioctl to child pty
       if event == 'refresh':
         if data[0] == 'resize':
+          # XXX i haven't seen this work yet,
           logger.debug ('send TIOCSWINSZ: %dx%d', term.width, term.height)
           fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ,
               struct.pack('HHHH', int(term.height), int(term.width), 0, 0))
         continue
 
       if event == 'input':
-        #assert 0 != len(data)
         if self._TAP:
           logger.debug ('--> %r' % (data,))
 
-        # XXX blocking write loop for non-blocking i/o..
-        # could be rather cpu consuming ..
         while 0 != len(data):
           n = os.write(self.master_fd, data)
           data = data[n:]
+          if 0 != len(data):
+            # if we wait a bit, we can probobly get more data
+            # into the next call to write and avoid a cpu-intensive
+            # 1-byte at-a-time loop
+            time.sleep(self.POLL)
         continue
 
       assert 0, 'unhandled event, data: %s, %r' %(event, data,)
