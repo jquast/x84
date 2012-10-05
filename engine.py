@@ -43,7 +43,6 @@ def main (logger, logHandler, cfgFile='default.ini'):
 
   # initialize scripting subsystem
   import bbs.scripting
-  import bbs.cp437
   bbs.scripting.init (bbs.ini.cfg.get('session', 'scriptpath'))
 
   # initialize telnet server
@@ -109,23 +108,16 @@ def main (logger, logHandler, cfgFile='default.ini'):
       if event == 'disconnect':
         client.deactivate ()
 
-      # 'output' data in form of (u'unicodestring', encoding=None)
       elif event == 'output':
-        text, encoding = data
-        if 'cp437' != encoding:
-          # send output args (text, encoding) unmanipulated.
-          if None == encoding:
-            client.send_unicode (text)
-          else:
-            client.send_unicode (text, encoding)
+        text, cp437 = data
+        if cp437 == True:
+          print repr(text)
+          client.send_str (bytes(text.encode('iso8859-1')))
+          # probobly should catch conversion errors,
+          # decode as iso8859-1, and try again ?
         else:
-          # convert utf8'd cp437 art to real cp437 128-254 equivalents,
-          unibytes = u''.join([unichr(bbs.cp437.CP437.index(glyph))
-              if glyph in bbs.cp437.CP437 else glyph for glyph in text])
-          # and then we go and call it iso8859-1 -- iso8859-1 is the default
-          # encoding for bytes 128-254 in utf-8, leaving our cp437-mapped
-          # characters unmanipulated as possible ..
-          client.send_unicode (unibytes, encoding='iso8859-1')
+          assert cp437 == False
+          client.send_unicode (text)
 
       # broadcast event to all other telnet clients,
       elif event == 'global':
@@ -172,3 +164,15 @@ if __name__ == '__main__':
   logHandler = log.get_stderr(level=log_level)
   sys.stdout.flush()
   main (logger, logHandler, cfgFile)
+
+
+  #import bbs.cp437
+#        if 'cp437' == encoding:
+#          # convert utf8'd cp437 art to real cp437 128-254 equivalents,
+#          unibytes = u''.join([unichr(bbs.cp437.CP437.index(glyph))
+#              if glyph in bbs.cp437.CP437 else glyph for glyph in text])
+#          # and then we go and call it utf8(iso8859-1?), leaving our
+#          # cp437-mapped characters between u'\0000' and u'\0256'
+#          # unmanipulated ..
+#          client.send_unicode (unibytes, encoding='utf8')
+
