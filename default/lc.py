@@ -24,9 +24,9 @@ def main(recordonly=False):
           + ('%s ago' % (timeago,)).rjust (padd_timeago) \
           + ('   Calls: %s' % (u.calls,)).ljust (padd_ncalls) \
           for timeago, u in [(timeago(time.time() -lc), getuser(handle)) \
-            for lc, handle in sorted([(v,k) \
+            for lc, handle in reversed(sorted([(v,k) \
               for (k,v) in udb.items() \
-                if finduser(k) is not None])]))
+                if finduser(k) is not None]))]))
 
   def refresh_highdef():
     y=14
@@ -43,7 +43,8 @@ def main(recordonly=False):
     p.colors['inactive'] = term.red
     p.partial = True
     #return p
-    p.lowlight ()
+    #p.lowlight ()
+    #return p
     echo (term.move(0,0))
     showfile ('art/lc.ans')
     data = lc_retrieve()
