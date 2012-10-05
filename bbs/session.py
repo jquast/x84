@@ -57,20 +57,22 @@ class Session(object):
   _fp_ttyrec = None
   _ttyrec_sec = -1
   _ttyrec_usec = -1
-  _ttyrec_len_data = 0
+  _ttyrec_len_text = 0
   _last_input_time = 0.0
   _connect_time = 0.0
   _enable_keycodes = True
   _tap_mask = '*'
   # if the last timechunk and current timechunk to be written differ by less
-  # than TTYREC_uCOMPRESS, modify the last written timechunk to include the current
-  # data as though no time had passed at all. in theory this would lose timing
-  # precision, but it actually gains precision but not wasting unnecessary
-  # chunking, parsing, and short-sleeping by the reader.
+  # than TTYREC_uCOMPRESS (microseconds), modify the last written timechunk
+  # to include the current data as though no time had passed at all. in
+  # theory this would lose timing precision, but it actually gains precision
+  # at times by removing unnecessarily acruate timings that cause the playback
+  # to become slower than it intended!
   TTYREC_uCOMPRESS = 1500
   # http://www.xfree86.org/current/ctlseqs.html#VT100%20Mode
-  # CSI(8);(Y);(X)t #  -- resize the text area to [height;width] in characters.
-  TTYREC_HEADER = '\033[8;%d;%dt'
+  # CSI(8);(Y);(X)t #  -- resize the text area to
+  #                       [height;width] in characters.
+  TTYREC_HEADER = u'\033[8;%d;%dt'
 
   def __init__ (self, terminal=None, pipe=None, encoding=None,
   source=('undef', None), recording=None):
@@ -140,7 +142,7 @@ class Session(object):
   @user.setter
   def user(self, value):
     import userbase
-    assert type(value) is userbase.User
+    assert isinstance(value, userbase.User)
     logger.info ('user=%s', value.handle)
     self._user = value
     if value.handle != self._handle:
@@ -271,21 +273,43 @@ class Session(object):
             if 0 != len(self._script_stack) else 'Stop', fault)
 
 
-  def write (self, data, encoding='utf8'):
-    """Write data to terminal stream as utf8.
-       One special exception: cp437 !"""
+  def write (self, data):
+    """ Write unicode data through multiprocessing.Pipe() as
+        unicode data, unless self.encoding is 'cp437'.
+
+        We might as well name this variable 'PC-DOS' or 'SyncTerm'.
+
+        We pretend to provide our parent terminal utf-8 data,
+        but this is where the slippery cp437-undoing trick is
+        done. We send utf-8, but its really intended for syncterm,
+        and will not contain any unicode that would become multibyte
+    """
     if 0 == len(data):
-      # on non-capable terminals, something like echo(term.move(0,0))
-      # might become echo (''); just ignore it
+      return # warning: a terminal incapability such as .move(0,0)
+             # became an empty string.
+    assert isinstance(data, unicode)
+    if self.encoding == 'cp437':
+      from bbs.cp437 import CP437
+      # first, encode as iso8859-1, this will replace a lot
+      # of characters, including artwork, as '?'
+      text = data.encode('iso8859-1', 'replace')
+      # then, iterate over all the unicode glyphs, mapping
+      # back to their bytestring equivalents
+      data = u''.join([unichr(CP437.index(glyph)) \
+          if glyph in CP437 else unicode(text[n]) \
+          for n, glyph in enumerate(data)])
+      print data + '\r\n'
+      print repr(data)
+      # just for kicks,
+      for ch in data:
+        assert ord(ch) < 256
+    self.terminal.stream.write (data, cp437=(self.encoding == 'cp437'))
+
+    if False == self._record_tty:
       return
-    self.terminal.stream.write (data, encoding)
-
-    if self._record_tty: # should this tty be recorded?
-      if not self.is_recording(): # is it recording?
-        self.start_recording () # then begin,
-      # ttyrec is formatted as utf8, regardless of capability
-      self._ttyrec_write (data.encode('utf8'))
-
+    if not self.is_recording():
+      self.start_recording ()
+    self._ttyrec_write (data)
     if self._tap_output and logger.isEnabledFor(logging.DEBUG):
       logger.debug ('%s --> %r.', self.handle, data)
 
@@ -455,7 +479,7 @@ class Session(object):
     return self._fp_ttyrec is not None
 
   def stop_recording(self):
-    assert self.is_recording() == True
+    assert self.is_recording()
     self._fp_ttyrec.close ()
     self._fp_ttyrec = None
 
@@ -463,30 +487,37 @@ class Session(object):
     """Begin recording to ttyrec file in recordings folder, keyed by dst."""
     assert self._fp_ttyrec is None
     dst = dst if dst is not None else '%s' % (self.handle,)
+
+    # XXX global lock.acquire ('ttyrecordings')
     # rotate existing logfiles
     self.rotate_recordings (dst)
+
     # open ttyrec logfile
     filename = os.path.join(self._ttyrec_folder, '%s.0' % (dst,))
     if not os.path.exists(self._ttyrec_folder):
       logger.info('creating ttyrec folder, %s.', self._ttyrec_folder)
       os.makedirs (self._ttyrec_folder)
+
     self._fp_ttyrec = io.open(filename, 'wb+')
-    self._ttyrec_sec = -1  # force new header on next write
+    # XXX global lock.release ('ttyrecordings')
+    self._ttyrec_sec = -1
     self._recording = True
+
     # write header
     logger.info ('REC %s' % (filename,))
-    (w, h) = self.terminal.width, self.terminal.height
-    self._ttyrec_write ((self.TTYREC_HEADER % (h, w,)).encode ('utf-8'))
+    (h, w) = self.terminal.height, self.terminal.width
+    self._ttyrec_write (self.TTYREC_HEADER % (h, w,))
+
     # http://www.cl.cam.ac.uk/~mgk25/unicode.html#term
     # ESC %G activates UTF-8 with an unspecified implementation level from
     # ISO 2022 in a way that allows to go back to ISO 2022 again.
     #
     # ESC %@ goes back from UTF-8 to ISO 2022 in case UTF-8 had been entered
-    # via ESC %G. ESC ) K or ESC ) U Sets character set G1 to codepage 437,
-    # for examble linux vga console
-    self._ttyrec_write ('\033%G'.encode('utf-8') \
-        if self.encoding == 'utf8' \
-        else '\033%@\033)K\033)U'.encode('utf-8'))
+    # via ESC %G.
+    #
+    # ESC ) K or ESC ) U Sets character set G1 to codepage 437,
+    # for example, classic linux vga console)
+    self._ttyrec_write (u'\033%G')
 
   def _ttyrec_write(self, data):
     """ Is big brother watching you? """
@@ -496,46 +527,54 @@ class Session(object):
     #   and append data to end of stream.
     # side-effects:
     #   self._ttyrec_sec, self._ttyrec_usec, self._ttyrec_len_data
-    assert type(data) is bytes
-    assert self._recording == True
+    assert self._recording
+    assert isinstance(data, unicode)
+    text = data.encode('utf8')
     timeKey = self.duration
-    # round down current duration since connection was established to the
-    # nearest whole number, and convert to microseconds
+
+    # round down timeKey to nearest whole number,
+    # use the remainder for microseconds, upconvert,
+    # constructing a (seconds, microseconds) pair.
     sec = math.floor(timeKey)
     usec = (timeKey -sec) * 1e+6
     sec, usec = int(sec), int(usec)
-    len_data = len(data)
+    len_text = len(text)
 
-    if sec != self._ttyrec_sec or usec - self._ttyrec_usec > self.TTYREC_uCOMPRESS:
-      # create new timechunk record: (sec, usec, len(data), data)
+    if sec != self._ttyrec_sec \
+    or usec - self._ttyrec_usec > self.TTYREC_uCOMPRESS:
+      # create new timechunk record:
+      #  bytes (sec, usec, len(text), text.. )
       bp1 = struct.pack('<I', sec) \
           + struct.pack('<I', usec)
-      bp2 = struct.pack('<I', len_data)
+      bp2 = struct.pack('<I', len_text)
       # write
-      self._fp_ttyrec.write (bp1 + bp2 + data)
-      if ASSERT_REWIND:
-        logger.debug ('writing timechunk: (%r;%r;%r%s' % \
-            (bp1, bp2, data[:20], '...' if len(data) > 20 else '',))
+      self._fp_ttyrec.write (bp1 + bp2 + text)
+#      if ASSERT_REWIND:
+#        logger.debug ('writing timechunk: (%r;%r;%r%s' % \
+#            (bp1, bp2, text[:20], '...' if len(text) > 20 else '',))
       self._ttyrec_sec = sec
       self._ttyrec_usec = usec
-      self._ttyrec_len_data = len_data
+      self._ttyrec_len_text = len_text
       self._fp_ttyrec.flush ()
       return
 
     # rewind to last length byte
-    last_bp2 = struct.pack('<I', self._ttyrec_len_data)
-    new_bp2 = struct.pack('<I', self._ttyrec_len_data +len_data)
+    last_bp2 = struct.pack('<I', self._ttyrec_len_text)
+    new_bp2 = struct.pack('<I', self._ttyrec_len_text +len_text)
     if ASSERT_REWIND:
       logger.debug ('re-writing timechunk: (%r;...%r%s' % (new_bp2,
-        data[:20], '...' if len(data) > 20 else '',))
-      self._fp_ttyrec.seek ((self._ttyrec_len_data +len(last_bp2)) *-1, 2)
+        text[:20], '...' if len(text) > 20 else '',))
+      self._fp_ttyrec.seek ((self._ttyrec_len_text +len(last_bp2)) *-1, 2)
       chk = self._fp_ttyrec.read (len(last_bp2))
       assert chk == last_bp2, 'should have %r; got %r' % (last_bp2, chk)
-    self._fp_ttyrec.seek ((self._ttyrec_len_data +len(last_bp2)) *-1, 2)
+    self._fp_ttyrec.seek ((self._ttyrec_len_text +len(last_bp2)) *-1, 2)
+
     # re-write length byte
     self._fp_ttyrec.write (new_bp2)
+
     # append after existing chunk record
-    self._fp_ttyrec.seek (self._ttyrec_len_data, 1)
-    self._fp_ttyrec.write (data)
-    self._ttyrec_len_data = self._ttyrec_len_data + len_data
+    self._fp_ttyrec.seek (self._ttyrec_len_text, 1)
+    self._fp_ttyrec.write (text)
+    self._ttyrec_len_text = self._ttyrec_len_text + len_text
     self._fp_ttyrec.flush ()
+    """ Yes. """
