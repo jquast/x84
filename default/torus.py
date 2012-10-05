@@ -1,6 +1,7 @@
-
 def main():
   from math import cos, sin, pi
+  #blocks = fromCP437(''.join(chr(176),chr(166),chr(178),chr(220),chr(223))
+  blocks = ".,-~:;=!*#$@"
   term = getterminal()
   # www.a1k0n.net/2011/07/20/donut-math.html
   theta_spacing = 0.07
@@ -67,13 +68,7 @@ def main():
             luminance_index = int(L*8)
             # now we lookup the character corresponding to the
             # luminance and plot it in our output:
-            output[yp][xp] = ".,-~:;=!*#$@"[luminance_index]
-            #if (yp, xp) != (lyp, lxp):
-            #  echo (term.move (lyp, lxp))
-            #  echo (lc)
-            #lyp, lxp = yp, xp
-            lc = ".,-~:;=!*#$@"[luminance_index]
-            #echo (".,-~:;=!*#$@"[luminance_index])
+            output[yp][xp] = blocks[luminance_index]
         phi += phi_spacing
       theta += theta_spacing
     return output
