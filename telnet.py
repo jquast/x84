@@ -742,7 +742,7 @@ class TelnetClient(object):
                   self._check_remote_option(TSPEED) is UNKNOWN):
                 self._note_remote_option(TSPEED, True)
                 self._note_local_option(TSPEED, True)
-              self._iac_do(TSPEED) # ?
+                self._iac_do(TSPEED) # ?
             elif option == NAWS:
               if self._check_reply_pending(NAWS):
                   self._note_reply_pending(NAWS, False)
@@ -750,14 +750,14 @@ class TelnetClient(object):
                   self._check_remote_option(NAWS) is UNKNOWN):
                 self._note_remote_option(NAWS, True)
                 self._note_local_option(NAWS, True)
-              self._iac_do(NAWS) # client then begins SB
+                self._iac_do(NAWS) # client then begins SB
             elif option == LINEMODE:
               if self._check_reply_pending(LINEMODE):
                   self._note_reply_pending(LINEMODE, False)
               if self._check_remote_option(LINEMODE) is UNKNOWN:
                 self._note_remote_option(LINEMODE, True)
                 self._note_local_option(LINEMODE, True)
-              self._iac_do(LINEMODE) # client then begins SB
+                self._iac_do(LINEMODE) # client then begins SB
             elif option == SGA:
               if self._check_reply_pending(SGA):
                   self._note_reply_pending(SGA, False)
@@ -765,23 +765,23 @@ class TelnetClient(object):
                   self._check_remote_option(SGA) is UNKNOWN):
                 self._note_remote_option(SGA, True)
                 self._note_local_option(SGA, True)
-              self._iac_do(SGA) # yes please
+                self._iac_do(SGA) # yes please
             elif option == NEW_ENVIRON:
               if self._check_reply_pending(NEW_ENVIRON):
                   self._note_reply_pending(NEW_ENVIRON, False)
               if (self._check_remote_option(NEW_ENVIRON) in (False, UNKNOWN)):
                 self._note_remote_option(NEW_ENVIRON, True)
                 self._note_local_option(NEW_ENVIRON, True)
-              self._iac_do(NEW_ENVIRON) # yes please, lol, SB ?
+                self._iac_do(NEW_ENVIRON) # yes please, lol, SB ?
             elif option == TTYPE:
               if self._check_reply_pending(TTYPE):
                   self._note_reply_pending(TTYPE, False)
               if (self._check_remote_option(TTYPE) is False or
                   self._check_remote_option(TTYPE) is UNKNOWN):
                 self._note_remote_option(TTYPE, True)
-              self._iac_do(TTYPE) # client then begins SB
-              self.send_str (bytes(''.join( \
-                  (IAC, SB, TTYPE, SEND, IAC, SE)))) # trigger SB
+                self._iac_do(TTYPE) # client then begins SB
+                self.send_str (bytes(''.join( \
+                    (IAC, SB, TTYPE, SEND, IAC, SE)))) # trigger SB
             elif option == BINARY:
               if (self._check_remote_option(BINARY) in (UNKNOWN, False)):
                 self._note_remote_option(BINARY, True)
