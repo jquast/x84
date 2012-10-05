@@ -17,7 +17,7 @@ def echo(data, encoding=None):
     return getsession().write \
         (data.decode(encoding if encoding is not None else 'iso8859-1'))
 
-  assert encoding is not None, 'just send unicode'
+  assert encoding is None, 'just send unicode'
   # thanks for using unicode !
   return getsession().write (data)
 
