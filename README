@@ -11,12 +11,7 @@ $ easy_install-2.6 pip
  
 install 3rd party dependencies using pip,
 
-$ pip-2.6 install sqlitedict
-$ pip-2.6 install xmodem
-$ pip-2.6 install sauce
-$ pip-2.6 install requests
-$ pip-2.6 install py-bcrypt
-$ pip-2.6 install pyftpdlib
+$ pip-2.6 install -r requirements.txt
 
 Getting Started
 ===============
