@@ -176,7 +176,13 @@ class ConnectTelnetTerminal (threading.Thread):
     #self.client.send_str (bytes('\xff\xfb\x01')) # will echo
     #self.client.send_str (bytes('\
     # disable line-wrapping http://www.termsys.demon.co.uk/vtansi.htm
+    time.sleep (0.5)
     self.client.send_str (bytes('\033[7l'))
+    self.client.charset = 'utf8'
+    self._try_echo ()
+    self._try_sga ()
+    self._try_ttype ()
+    self._try_naws ()
 
   def run(self):
     """Negotiate and inquire about terminal type, telnet options,
@@ -191,23 +197,9 @@ class ConnectTelnetTerminal (threading.Thread):
       return
 
     try:
+      time.sleep (0.25)
+      logger.info ('connect thread started')
       self.banner ()
-      logger.debug ('_try_echo')
-      self._try_echo ()
-      logger.debug ('_try_sga')
-      self._try_sga ()
-      # according to the internets, 'sga + echo' means
-      # character mode. at least 'linux understands this'
-      #logger.debug ('_no_linemode')
-      #self._no_linemode ()
-      logger.debug ('_try_naws')
-      self._try_naws ()
-      logger.debug ('_try_ttype')
-      self._try_ttype ()
-      logger.debug ('_try_charset')
-      self._try_charset ()
-      logger.debug ('_try_binary')
-      self._try_binary ()
       logger.debug ('_spawn_session')
       self._spawn_session ()
 
