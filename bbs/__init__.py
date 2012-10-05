@@ -118,6 +118,8 @@ def loginuser(handle):
 
 
 def showfile(filename, bps=0, pause=0.1, cleansauce=True, file_encoding='cp437'):
+  # this is for ansi art, really. if you're not doing that, use .read() and
+  # such. this is overkill u kno?
   # when unspecified, session interprets charset of file
   # open a random file if '*' or '?' is used in filename (glob matching)
   fobj = ropen(filename, 'rb') \
@@ -125,19 +127,10 @@ def showfile(filename, bps=0, pause=0.1, cleansauce=True, file_encoding='cp437')
       else fopen(filename, 'rb')
   session_encoding = getsession().encoding
   data = chompn(SAUCE(fobj).__str__() if cleansauce else fobj.read())
-  if ('cp437', 'utf8') == (file_encoding, session_encoding):
-    # convert from cp437 to unicode when the output terminal
-    # is utf-8 encoded.
+  if file_encoding == 'cp437':
     data = fromCP437(data)
-  elif ('cp437','cp437') == (file_encoding, session_encoding):
-    # our client is cp437 too, decode as iso8859-1 so that
-    # no data is transliterated from iso8859-1
-    data = data.decode('iso8859-1')
   else:
-    logger.warn ('unknown file_encoding to session_encoding')
-    logger.warn ('file=%s, session=%s', encoding, session_encoding)
     data = data.decode(file_encoding)
-
   if 0 == bps:
     echo (data)
     echo (getterminal().normal)
