@@ -39,12 +39,12 @@ def getpos(timeout=None):
       if (None, None) == (event, data) \
       else data
 
-def readline(width, value = '', hidden = '', paddchar = ' ', events = [
+def readline(width, value = u'', hidden = u'', paddchar = u' ', events = [
     'input'], timeout = None, interactive = False, silent = False):
     (value, event, data) = readlineevent(width, value, hidden, paddchar, events, timeout, interactive, silent)
     return value
 
-def readlineevent(width, value = '', hidden = '', paddchar = ' ', events = [
+def readlineevent(width, value = u'', hidden = u'', paddchar = u' ', events = [
     'input'], timeout = None, interactive = False, silent = False):
   term = getsession().terminal
 
