@@ -294,15 +294,11 @@ class Session(object):
       # of characters, including artwork, as '?'
       text = data.encode('iso8859-1', 'replace')
       # then, iterate over all the unicode glyphs, mapping
-      # back to their bytestring equivalents
+      # back to their bytestring equivalents unless there isn't
+      # a mapping, then use that position in text ('?').
       data = u''.join([unichr(CP437.index(glyph)) \
           if glyph in CP437 else unicode(text[n]) \
           for n, glyph in enumerate(data)])
-      print data + '\r\n'
-      print repr(data)
-      # just for kicks,
-      for ch in data:
-        assert ord(ch) < 256
     self.terminal.stream.write (data, cp437=(self.encoding == 'cp437'))
 
     if False == self._record_tty:
@@ -353,20 +349,20 @@ class Session(object):
       return
 
     if False == self.enable_keycodes:
+      # send keyboard bytes in as-is, unmanipulated
       self._buffer['input'].insert (0, data)
     else:
       # given input string OD, return terminal.KEY_LEFT (an integer)
+      # otherwise yield us some unicode ...
       for keystroke in self.terminal.trans_input(data, self.encoding):
         self._buffer['input'].insert (0, keystroke)
         if keystroke == chr(12):
-          # again; transliterate to single buffered 'refresh' event,
-          # XXX: there exists a KEY_REFRESH ...
-          data = ('input', keystroke)
-          self._buffer['refresh'] = list((data,))
+          # should we? send refresh events when ^L is found ?
+          self._buffer['refresh'] = list((('input', keystroke),))
     self._last_input_time = time.time()
 
     if self._tap_input and logger.isEnabledFor(logging.DEBUG):
-      logger.debug ('%s <-- %s', self.handle, data)
+      logger.debug ('%s <-- %r', self.handle, data)
 
   def send_event (self, event, data):
     """
