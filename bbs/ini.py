@@ -20,6 +20,7 @@ def init(cfgFilepath='default.ini'):
   cfg.set('telnet', 'addr', '127.0.0.1')
   cfg.set('telnet', 'port', '6023')
   cfg.add_section('ftp')
+  cfg.set('ftp', 'enabled', 'no')
   cfg.set('ftp', 'addr', '127.0.0.1')
   cfg.set('ftp', 'port', '6021')
   cfg.set('ftp', 'basedir', 'ftpdata/')
