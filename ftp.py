@@ -84,7 +84,7 @@ def main(pipe):
         logger.info ('%s denied: user does not exist', username)
         return False
       u = self.db[username]
-      if bbs.userbase.auth(u, password.decode('utf-8')):
+      if bbs.userbase.auth(u, password.decode('utf8')):
         if not username in self.user_table:
           self.add_user (username, password=u'', homedir=ini.cfg.get('ftp','basedir'))
         logger.info ('%s succeded login', username)
