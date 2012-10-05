@@ -62,7 +62,7 @@ def main():
       term.normal, ': ', term.cyan_reverse, msg \
         .ljust(AUTOMSG_LENGTH -10),))
     artago = ''.join((term.blue_reverse,
-      ('%s ago' % (asctime(time.time() -t),)) \
+      ('%s ago' % (timeago(time.time() -t),)) \
           .ljust (AUTOMSG_LENGTH -ansilen(artmsg))))
     # output & return new index
     echo (term.normal.join((artnick, artmsg, ' ', artago,)))
