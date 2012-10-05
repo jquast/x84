@@ -7,13 +7,13 @@
  auto-answering to strange strings, or simply, "login" program. thats what we
  do here.
 """
-__url__ = 'https://github.com/jquast/x84/'
+__url__ = u'https://github.com/jquast/x84/'
 
 TIMEOUT = 45
-CH_MASK_PASSWD = 'x'
+CH_MASK_PASSWD = u'x'
 ALLOW_ANONYMOUS = True
 def main ():
-  echo ('\033(U') # switches to CP437 on some systems.
+  echo (u'\033(U') # switches to CP437 on some systems.
   # you may or may not want this; the art on this bbs does!
   session = getsession()
   term = getterminal()
@@ -21,17 +21,17 @@ def main ():
   timeout = int(ini.cfg.get('session',  'timeout'))
   byecmds = ini.cfg.get('matrix', 'byecmds').split()
   newcmds = ini.cfg.get('matrix', 'newcmds').split()
-  APPLY_DENIED = '\r\n\r\nfiRSt, YOU MUSt AbANdON YOUR libERtIES.'
-  apply_msg = '\r\n\r\n  --> Create new account? [ynq]   <--' + '\b'*5
-  prompt_user = '\r\n  user: '
-  badpass_msg = "\r\n  " + term.red_reverse + "'%s' login failed."
-  badanon_msg = "\r\n  " + term.bright_red + "'%s' login denied."
+  APPLY_DENIED = u'\r\n\r\nfiRSt, YOU MUSt AbANdON YOUR libERtIES.'
+  apply_msg = u'\r\n\r\n  --> Create new account? [ynq]   <--' + '\b'*5
+  prompt_user = u'\r\n  user: '
+  badpass_msg = u"\r\n  " + term.red_reverse + u"'%s' login failed."
+  badanon_msg = u"\r\n  " + term.bright_red + u"'%s' login denied."
   max_user = int(ini.cfg.get('nua', 'max_user'))
   allow_apply = ini.cfg.get('nua', 'allow_apply') in ('yes',)
   topscript = ini.cfg.get('matrix', 'topscript')
   bbsname = ini.cfg.get('system','bbsname')
   status_auth = ''.join((
-    term.move (0,0) + term.clear + term.bright_cyan + '\033#8',
+    term.move (0,0) + term.clear + term.bright_cyan + u'\033#8',
     term.move (max(0,(term.height /2) -1), max(0,(term.width /2) -10),),' '*20,
     term.move (max(0,(term.height /2)   ), max(0,(term.width /2) -10),),
       'encrypting ...'.center (20),
@@ -41,24 +41,24 @@ def main ():
 
   def denied(msg):
     echo (msg)
-    echo (term.normal + '\r\n\r\n')
+    echo (term.normal + u'\r\n\r\n')
     getch (0.7)
 
   def refresh():
     flushevent ('refresh')
-    echo (term.move (0,0) + term.clear + term.normal)
-    echo ('\r\nConnected to %s, see %s for source\r\n' % (bbsname, __url__))
+    echo ('\r\n' + term.normal)
+    echo (u'\r\nConnected to %s, see %s for source\r\n' % (bbsname, __url__))
     Door ('/bin/uname', args=('-a',)).run()
-    echo ('\r\n\r\n')
+    echo (u'\r\n\r\n')
     showfile('art/1984.asc')
-    echo ('\r\n\r\n')
+    echo (u'\r\n\r\n')
     if ALLOW_ANONYMOUS:
-      echo ("'anonymous' login enabled.\r\n")
+      echo (u"'anonymous' login enabled.\r\n")
     echo (term.normal_cursor)
 
   refresh ()
   while True:
-    session.activity = 'logging in'
+    session.activity = u'logging in'
     echo (prompt_user)
     handle, event, data = readlineevent \
         (width=max_user, value=handle,
@@ -122,7 +122,7 @@ def main ():
       continue
 
     # request & authenticate password
-    echo ('\r\n\r\n  pass: ')
+    echo (u'\r\n\r\n  pass: ')
 
     # even when running a keyboard debug tap (default = off)
     # disable tap during password input.
