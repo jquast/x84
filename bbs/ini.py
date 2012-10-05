@@ -43,7 +43,7 @@ def init(cfgFilepath='default.ini'):
   cfg.add_section('session')
   cfg.set('session', 'log_level', 'debug')
   cfg.set('session', 'default_encoding', 'utf8')
-  cfg.set('session', 'default_ttype', 'xterm')
+  cfg.set('session', 'default_ttype', 'linux')
   cfg.set('session', 'scriptpath', 'default/')
   cfg.set('session', 'tap_input', 'no')
   cfg.set('session', 'tap_output', 'no')
