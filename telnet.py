@@ -305,7 +305,9 @@ class TelnetClient(object):
     Second argument is the tuple (ip address, port number).
     """
     BLOCKSIZE_RECV=2048
-
+    SEARCH_ENV = 'USER TERM SHELL COLUMNS LINES LC_CTYPE XTERM_LOCALE ' \
+        'DISPLAY SSH_CLIENT SSH_CONNECTION SSH_TTY HOME SYSTEMTYPE'
+    SB_MAXLEN = 65534
     def __init__(self, sock, addr_tup):
         self.protocol = 'telnet'
         self.active = True          # Turns False when the connection is lost
@@ -425,12 +427,25 @@ class TelnetClient(object):
         self._iac_do(NAWS)
         self._note_reply_pending(NAWS, True)
 
-    def request_do_charset(self):
+    def request_do_NEW_ENVIRON(self):
         """
-        Request terminal character set. See RFC 2066.
+        Request to Negotiate About Window Size.  See RFC 1073.
         """
-        self._iac_do(CHARSET)
-        self._note_reply_pending(CHARSET, True)
+        self._iac_do(NEW_ENVIRON)
+        self._note_reply_pending(NEW_ENVIRON, True)
+        self.request_env ()
+
+    def request_env(self):
+        self.send_str (bytes(''.join( \
+          (IAC, SB, NEW_ENVIRON, SEND, IAC, SE))))
+
+
+#    def request_do_charset(self):
+#        """
+#        Request terminal character set. See RFC 2066.
+#        """
+#        self._iac_do(CHARSET)
+#        self._note_reply_pending(CHARSET, True)
 
     def request_ttype(self):
         """
@@ -511,7 +526,7 @@ class TelnetClient(object):
             ## Are we currenty in a sub-negotion?
             elif self.telnet_got_sb is True:
                 ## Sanity check on length
-                assert len(self.telnet_sb_buffer) < 64, \
+                assert len(self.telnet_sb_buffer) < self.SB_MAXLEN, \
                     'sub-negotiation buffer full: %r' \
                     % (self.telnet_sb_buffer,)
                 self.telnet_sb_buffer += byte
@@ -642,6 +657,7 @@ class TelnetClient(object):
                     self._note_local_option(SGA, True)
                     self._note_remote_option(SGA, True)
                     self._iac_will(SGA)
+                    self._iac_do(SGA) # both?
 
             elif option == LINEMODE:
               if self._check_local_option(option) is UNKNOWN:
@@ -765,14 +781,15 @@ class TelnetClient(object):
                   self._check_remote_option(SGA) is UNKNOWN):
                 self._note_remote_option(SGA, True)
                 self._note_local_option(SGA, True)
-                self._iac_do(SGA) # yes please
+                self._iac_will(SGA) # yes please
             elif option == NEW_ENVIRON:
               if self._check_reply_pending(NEW_ENVIRON):
                   self._note_reply_pending(NEW_ENVIRON, False)
               if (self._check_remote_option(NEW_ENVIRON) in (False, UNKNOWN)):
                 self._note_remote_option(NEW_ENVIRON, True)
                 self._note_local_option(NEW_ENVIRON, True)
-                self._iac_do(NEW_ENVIRON) # yes please, lol, SB ?
+                self._iac_do(NEW_ENVIRON) # client then begins SB
+                self.request_env ()
             elif option == TTYPE:
               if self._check_reply_pending(TTYPE):
                   self._note_reply_pending(TTYPE, False)
@@ -874,12 +891,12 @@ class TelnetClient(object):
           #  and n < len(buf)-1 and not buf[n+1] == SE:
           #  logger.info ('SLC %s %r', self.name_option(buf[n],), buf[n])
           #  n+= 1
-        elif (LINEMODE,) == (buf[0],):
+        #elif (LINEMODE,) == (buf[0],):
           # IAC SB LINEMODE[0], MODE[1], MASK[2], IAC[3?], SE[4?]
-          logger.info ('mode %r' % (buf[1],))
-          logger.info ('mask %r' % (buf[2],))
-          assert buf[3] == IAC, '%s/%r' % (self.name_option(buf[3],), buf[3],)
-          assert buf[4] == SE
+          #logger.info ('mode %r' % (buf[1],))
+          #logger.info ('mask %r' % (buf[2],))
+          #assert buf[3] == IAC, '%s/%r' % (self.name_option(buf[3],), buf[3],)
+          #assert buf[4] == SE
         elif (NAWS,) == (buf[0],):
           if 5 != len(buf):
             logger.error('%s: bad length in NAWS buf (%d)' % \
