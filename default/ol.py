@@ -137,7 +137,7 @@ def main ():
   t = None
   session.activity = 'Reading one-liners'
   if ini.cfg.has_section('bbs-scene'):
-    t = FetchUpdates(queue, l, HISTORY)
+    t = FetchUpdates(queue, lock, HISTORY)
     t.start ()
     session.activity = 'Reading bbs-scene 1liners'
 
