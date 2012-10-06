@@ -57,7 +57,11 @@ class Door(object):
            u'TERM': self.term,
            u'PATH': self.path,
            u'HOME': os.getenv('HOME') }
-      os.execvpe(self.cmd, self.args, env)
+      try:
+        os.execvpe(self.cmd, self.args, env)
+      except OSError, e:
+        logger.error ('OSError, %s', e)
+        sys.exit (1)
 
     # typically, return values from 'input' events are translated keycodes,
     # such as terminal.KEY_ENTER. However, when executing a sub-door, we
