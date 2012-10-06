@@ -5,7 +5,7 @@ $Id: irc.py,v 1.7 2009/05/31 16:14:07 dingo Exp $
 This is a basic IRC client implementation, currently limited to
 a single channel on a single server.
 """
-__author__ = 'Wijnand Modderman <python@tehmaze.com>'
+__author__ = 'Wijnand Modderman-Lenstra <maze@pyth0n.org>'
 __copyright__ = ['Copyright (c) 2008, 2009 Jeffrey Quast',
                  'Copyright (c) 2009 Wijnand Modderman']
 __license__ = 'ISC'
