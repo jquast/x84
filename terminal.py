@@ -183,6 +183,7 @@ class ConnectTelnetTerminal (threading.Thread):
     self._try_sga ()
     self._try_ttype ()
     self._try_naws ()
+    self._try_env ()
 
   def run(self):
     """Negotiate and inquire about terminal type, telnet options,
@@ -197,8 +198,6 @@ class ConnectTelnetTerminal (threading.Thread):
       return
 
     try:
-      time.sleep (0.25)
-      logger.info ('connect thread started')
       self.banner ()
       logger.debug ('_spawn_session')
       self._spawn_session ()
@@ -284,6 +283,20 @@ class ConnectTelnetTerminal (threading.Thread):
     else:
       logger.debug ('failed: echo, ignored !')
 
+  def _try_env(self):
+    """ Try to snarf out some environment variables from unix machines """
+    from telnet import NEW_ENVIRON, UNKNOWN
+    if self.client._check_remote_option(NEW_ENVIRON) in (False,UNKNOWN):
+      logger.debug('request-do-env')
+      self.client.request_do_NEW_ENVIRON ()
+      self.client.socket_send() # push
+      t = time.time()
+      while self.client._check_remote_option(NEW_ENVIRON) in (False,UNKNOWN) \
+          and self._timeleft(t):
+            time.sleep (self.TIME_POLL)
+    if self.client._check_remote_option(NEW_ENVIRON) in (False,UNKNOWN):
+      logger.debug ('failed: negotiate environment variables')
+      return
 
   def _try_naws(self):
     """Negotiate about window size (NAWS) telnet option (on)."""
