@@ -3,7 +3,7 @@ Finger protocol support for X/84 BBS, http://1984.ws
 $Id: finger.py,v 1.3 2010/01/02 00:54:00 dingo Exp $
 #"""
 __license__ = 'ISC'
-__author__ = 'Wijnand Modderman <python@tehmaze.com>'
+__author__ = 'Wijnand Modderman-Lenstra <maze@pyth0n.org>'
 __copyright__ = ['Copyright (c) 2009 Jeffrey Quast <dingo@1984.ws>',
                  'Copyright (c) 2005 Johannes Lundberg <johannes.lundberg@gmail.com>']
 

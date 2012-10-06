@@ -9,6 +9,8 @@
 """
 __url__ = u'https://github.com/jquast/x84/'
 
+import sys
+
 TIMEOUT = 45
 CH_MASK_PASSWD = u'x'
 ALLOW_ANONYMOUS = True
@@ -48,7 +50,8 @@ def main ():
     flushevent ('refresh')
     echo ('\r\n' + term.normal)
     echo (u'\r\nConnected to %s, see %s for source\r\n' % (bbsname, __url__))
-    Door ('/bin/uname', args=('-a',)).run()
+    uname = '/usr/bin/uname' if sys.platform in ['darwin'] else '/bin/uname'
+    Door (uname, args=('-a',)).run()
     echo (u'\r\n\r\n')
     showfile('art/1984.asc')
     echo (u'\r\n\r\n')

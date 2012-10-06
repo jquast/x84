@@ -10,7 +10,7 @@ def main ():
   body = ' Authors:\n' \
     '   Johannes Lundberg <johannes.lundberg@gmail.com>\n' \
     '   Jeffrey Quast <dingo@1984.ws>\n' \
-    '   Wijnand Modderman <python@tehmaze.com>\n' \
+    '   Wijnand Modderman-Lenstra <maze@pyth0n.org>\n' \
     ' Artwork: spidy!food, hellbeard!impure\n'
   footer = fopen('art/si-header.asc').read()
   header = fopen('art/si-footer.asc').read()
