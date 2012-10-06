@@ -30,53 +30,39 @@ Connecting
 
 telnet localhost 6023
 
-
 Compatible Terminals
 ====================
 
-Any Unicode Terminal. We use a codepage translation for IBM artwork to UTF-8,
-
-  https://maze.io/2012/09/18/cp437-rendering-using-utf-8/index.html
-
-iTerm, uxterm, Some fonts better than others.
-
-One exception is made for cp437-only clients, such as SyncTerm. This is implemented
-as door bbs/charset.py, and optional parameters to showfile() and echo().
-
-Compatible terminal clients
-===========================
+Any Unicode Terminal set at UTF-8 encoding. We use codepage translation
+for IBM cp437 artwork to UTF-8,
 
 PuTTy
- - under preference item 'Window -> Translation',
-   option 'Remote character set', select or key in 'UTF-8'.
+ - Under preference item 'Window -> Translation', option
+   'Remote character set', change 'iso8859-1' to 'UTF-8'.
+
+Terminal.app
+ - Terminal -> Preferences, Chose profile 'Pro', (Font Andale Mono),
+   enable 'use bright colors for bold text'.
 
 iTerm
- - Under Preferences -> Terminal, set Character Encoding to UTF-8
-   Also set Regular Font to "Andale Mono" under Text
+ - iTerm -> Preferences, Profiles -> Text, chose Andale Mono.
 
 Unicode Unix
  - uxterm, urxvt, gnome-terminal, Konsole, ...
 
-Classic Unix
- - To display block art ansi, a font set such as 'terminus',
-   or 'vga fonts' supplied with dosemu, of encoding 'cp437'
-   should be used.
- - select cp437 encoding when prompted by the bbs system.
-
 SyncTerm
- - select cp437 encoding when prompted by the bbs system.
+ - select cp437 when prompted by the bbs system (charset.py).
 
-
-Support
-=======
-
+Classic Unix
+ - Use a font of cp437 encoding, such as 'Terminus'.
+ - Select cp437 when prompted by the bbs system (charset.py).
 
 
 Monitoring
 ==========
 
 Sessions are recorded to ttyrecordings/ folder, and can be played with 'ttyplay'
-or compatible utility. The '-p' option can be used to monitor a live sessions,
+or compatible utility. The '-p' option can be used to monitor live sessions,
 analogous to 'tail -f'.
 
 
