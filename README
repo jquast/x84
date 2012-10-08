@@ -1,26 +1,34 @@
 Installation
 ============
 
-This software requires Python 2.6 or 2.7 to run.
+This software requires Python 2.6 or 2.7 and virtualenv.
 
-install 'setuptools', from http://pypi.python.org/pypi/setuptools#files
+# the installer will perform these commands,
+# as a human, you will do these yourself,
 
-then, install 'pip', using command
+curl -o virtualenv.py 'https://raw.github.com/pypa/virtualenv/master/virtualenv.py'
 
-$ easy_install-2.6 pip
- 
-install 3rd party dependencies using pip,
+# for testing 2.6
+python2.6 virtualenv.py ENV26
+. ENV26/bin/activate
 
-$ pip-2.6 install -r requirements.txt
+# for testing 2.7,
+python2.6 virtualenv.py ENV27
+. ENV26/bin/activate
+
+pip install -r requirements.txt
+
+# we may freeze external dependencies ..
+
 
 Getting Started
 ===============
 
-To start the system, execute command 
+To start the system, launch 'x84'.
 
-	python2.6 engine.py 
+	./x84
 
-Command line arguments to engine.py,
+Optional command line arguments,
  -cfg <configuration file>
  -v enable debug logging
 
@@ -30,32 +38,37 @@ Connecting
 
 telnet localhost 6023
 
-Compatible Terminals
-====================
 
-Any Unicode Terminal set at UTF-8 encoding. We use codepage translation
-for IBM cp437 artwork to UTF-8,
+Compatible Clients (UTF-8)
+============================
 
+iTerm,
+- Menu item iTerm -> Preferences,
+  section Profiles, select 'Text' tab,
+  chose 'Andale Mono' font.
+ 
 PuTTy
- - Under preference item 'Window -> Translation', option
-   'Remote character set', change 'iso8859-1' to 'UTF-8'.
+- Under preference item Window -> Translation,
+  option 'Remote character set',
+  change 'iso8859-1' to 'UTF-8'.
 
 Terminal.app
- - Terminal -> Preferences, Chose profile 'Pro', (Font Andale Mono),
+ - Menu item Terminal -> Preferences,
+   chose profile 'Pro', (Font Andale Mono),
    enable 'use bright colors for bold text'.
 
-iTerm
- - iTerm -> Preferences, Profiles -> Text, chose Andale Mono.
+uxterm
 
-Unicode Unix
- - uxterm, urxvt, gnome-terminal, Konsole, ...
+
+Semi-compatible Clients (CP437)
+=================================
 
 SyncTerm
- - select cp437 when prompted by the bbs system (charset.py).
+- Select cp437 when prompted by the bbs system (charset.py).
 
 Classic Unix
- - Use a font of cp437 encoding, such as 'Terminus'.
- - Select cp437 when prompted by the bbs system (charset.py).
+- Select cp437 when prompted by the bbs system (charset.py).
+- Use a font of cp437 encoding, such as 'Terminus'.
 
 
 Monitoring
