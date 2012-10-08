@@ -3,3 +3,8 @@ data/*.sqlite3
 *.pyc
 *.swp
 *~
+ENV26
+ENV27
+default.ini
+virtualenv.py
+ttyrecordings
