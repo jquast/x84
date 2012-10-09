@@ -1,9 +1,14 @@
 """
- time-competitive version of nethack, 'speedhack' is offered as a door game.
- This is really just nao's nethack setup (telnet alt.nethack.org), but replacing
- dgamelaunch. This is meant to be used as a 'topscript'. 'speedhack' is a
- varient that only allows the game to be played for a limited time before
- auto-ascending a character. The goal being to plunder as quickly as possible.
+ time-competitive version of nethack, 'speedhack' is offered as a door game,
+ as well as 'dopewars'.  This is really just nao's nethack setup
+ (telnet alt.nethack.org), but replacing dgamelaunch with x/84. Similarly,
+ we offer ttyrec record & playback functionality...
+
+ This is meant to be used as a 'topscript'.
+
+('speedhack' is a varient that only allows the game to be played for a limited
+ time before auto-ascending a character. The goal being to plunder as quickly
+ as possible. and a lot of wild luck.)
 """
 
 msg_anon_noedit = "'anonymous' not allowed to edit .nethackrc."
@@ -24,7 +29,7 @@ def main(handle=None):
   session, term = getsession(), getterminal()
 
   # when None or anonymous is used, use a default user record
-  if handle in (None, 'anonymous'):
+  if handle in (None, u'anonymous'):
     user = User ()
     handle = user.handle
   else:
@@ -49,31 +54,31 @@ def main(handle=None):
   gosub('charset')
 
   def clear():
-    echo (''.join((term.normal, term.normal_cursor, term.clear, '\r\n')))
+    echo (u''.join((term.normal, term.normal_cursor, term.clear, u'\r\n')))
 
   def prompt():
-    echo ('\r\n\r\n [#eupvcosg] > ')
+    echo (u'\r\n\r\n [#eupvcosg] > ')
 
   def refresh():
     " refresh main menu screen "
-    session.activity = 'Main Menu'
+    session.activity = u'Main Menu'
     clear ()
-    showfile ('art/speedmain.asc')
+    showfile (u'art/speedmain.asc')
     # speak session variables as equivalent os environment values
-    echo ('\r\nTERM: %s' % (term.terminal_type,))
-    echo (', LINES: %d' % (term.rows,))
-    echo (', COLUMNS: %d' % (term.columns,))
+    echo (u'\r\nTERM: %s' % (term.terminal_type,))
+    echo (u', LINES: %d' % (term.rows,))
+    echo (u', COLUMNS: %d' % (term.columns,))
     prompt ()
 
   def pak():
-    echo ('\r\n\r\n' + term.normal + 'Press any key...')
+    echo (u'\r\n\r\n' + term.normal + u'Press any key...')
     getch ()
     refresh ()
 
   refresh ()
   while True:
-    event, choice = session.read_event(events=('input','refresh',),
-        timeout=int(ini.cfg.get('session','timeout')))
+    event, choice = session.read_event(events=('input', 'refresh',),
+        timeout=int(ini.cfg.get('session', 'timeout')))
     if (None, None) == (event, choice):
       # timeout
       raise ConnectionTimeout, 'timeout at menu prompt'
@@ -83,8 +88,8 @@ def main(handle=None):
     elif event == 'input':
       # edit .nethackrc using vi
       if str(choice).lower() == 'e':
-        if session.user.handle == 'anonymous':
-          echo (''.join(('\r\n', term.bold_red, msg_anon_noedit, temr.normal)))
+        if session.user.handle == u'anonymous':
+          echo (u''.join((u'\r\n', term.bold_red, msg_anon_noedit, temr.normal)))
           getch (2)
           prompt ()
           continue # denied
@@ -95,7 +100,6 @@ def main(handle=None):
           written = 0
           while written < length:
             written += os.write (fp, nethackrc[written:])
-            print 'x', written ##### XXX
         os.close (fp)
         lastmod = os.stat(tmppath).st_mtime
         d = Door(editor, args=(tmppath,))
@@ -112,8 +116,8 @@ def main(handle=None):
       # download rc file from alt.org
       elif str(choice).lower() == 'd':
         # download .nethackrc from NAO,
-        echo ('\r\nNAO account name: ')
-        echo (term.black_on_red + ' '*15 + '\b'*15)
+        echo (u'\r\nNAO account name: ')
+        echo (term.black_on_red + u' '*15 + u'\b'*15)
         nao = readline (15, handle)
         echo (term.normal)
         url = 'http://alt.org/nethack/userdata/%s/%s/%s.nh343rc'  \
@@ -126,8 +130,11 @@ def main(handle=None):
           echo ('\r\n\r\n%d bytes xfered.' % (len(r.content),))
           session.user.save ()
         else:
-          echo ('\r\nrequest failed (%s)%s\r\nusing url %s\r\n' % (r.status_code,
-            ':\r\n%r\r\n' % (r.content[:1500]) if 0 != len(r.content) else '' , url,))
+          echo (u'\r\nrequest failed (%s)%s\r\n' \
+              u'using url %s\r\n' % (r.status_code,
+                u':\r\n%r\r\n' % \
+                    (r.content[:1500]) if 0 != len(r.content) else '',
+                    url,))
         pak ()
         prompt ()
 
@@ -182,7 +189,7 @@ def main(handle=None):
             for name, (pts, attrs) in playerBest.items()]
         byPts.sort ()
         byPts.reverse ()
-        echo ('\r\n\r\nNo  Points')
+        echo (u'\r\n\r\nNo  Points')
         def find_recording(attrs):
           cmp_diff = 10
           ttyrec_folder = abspath(os.path.join('..',session._ttyrec_folder))
@@ -205,17 +212,17 @@ def main(handle=None):
         recordings = dict ()
         for n, (points, (name, attrs)) in enumerate(byPts):
           idx = n +1
-          line_1 = '%-2d %7d %s%-15s%s' % \
+          line_1 = u'%-2d %7d %s%-15s%s' % \
               (idx, points, term.bold_red, name, term.normal,)
           parawidth = term.columns - ansilen(line_1) -8
-          paragraph = textwrap.wrap('%s-%s-%s-%s %s on level %s%s.\r\n' % (
+          paragraph = textwrap.wrap(u'%s-%s-%s-%s %s on level %s%s.\r\n' % (
               attrs['role'], attrs['race'], attrs['gender'], attrs['align'],
               attrs['death'].title(), attrs['deathlev'],
-              ' (max %s)'%(attrs['maxlvl']) \
+              u' (max %s)'%(attrs['maxlvl']) \
                   if int(attrs['maxlvl']) > int(attrs['deathlev']) \
-                  else '',), parawidth)
-          echo ('\r\n%s' % (line_1,))
-          echo (('\r\n%s' % (' '*ansilen(line_1))).join \
+                  else u'',), parawidth)
+          echo (u'\r\n%s' % (line_1,))
+          echo ((u'\r\n%s' % (u' '*ansilen(line_1))).join \
               ([p.ljust(parawidth) for p in paragraph]))
           if idx >= (term.rows/3) -3:
             break
@@ -228,13 +235,13 @@ def main(handle=None):
             h, w = match.groups()
             w_color = term.red if int(w) > term.columns else term.bold_white
             h_color = term.red if int(h) > term.lines else term.bold_white
-            echo (''.join((term.normal, '[', w_color, str(w),
-              term.normal, 'x', h_color, str(h), term.normal, ']',)))
+            echo (u''.join((term.normal, u'[', w_color, str(w),
+              term.normal, u'x', h_color, str(h), term.normal, u']',)))
 
         if 0 == len(recordings):
           pak ()
           continue # no recordings; refresh
-        echo ('\r\nEnter No. to playback recording: ')
+        echo (u'\r\nEnter No. to playback recording: ')
         idx = readline (3, )
         if 0 == len(idx):
           refresh ()
@@ -264,7 +271,7 @@ def main(handle=None):
         if running == False:
           scorefile = ini.cfg.get('dopewars', 'scorefile')
           logfile = ini.cfg.get('dopewars', 'logfile')
-          echo ('\r\n\r\nLaunching dopewars server,\r\n')
+          echo (u'\r\n\r\nLaunching dopewars server,\r\n')
           os.spawnl(os.P_NOWAIT, '/usr/local/bin/dopewars', 'dopewars',
             '--private-server',
             '--hostname=127.0.0.1',
@@ -273,10 +280,10 @@ def main(handle=None):
             '--pidfile=%s' % (pidfile,),
             '--logfile=%s' % (logfile,),)
         else:
-          echo ('\r\n\r\ndopewars server already running,\r\n')
+          echo (u'\r\n\r\ndopewars server already running,\r\n')
         if session.user.is_sysop:
           pak ()
-        echo ('\r\n\r\nLaunching dopewars client,\r\n')
+        echo (u'\r\n\r\nLaunching dopewars client,\r\n')
         # HACK -- send input to program game; avoids requiring .cfg file :P
         # anykey;connect;accept localhost;accept port
         session.enable_keycodes = False
@@ -288,15 +295,15 @@ def main(handle=None):
         res = d.run ()
         session.enable_keycodes = True
         if (0 != res):
-          echo ('\r\nExit: %s' % (res,))
+          echo (u'\r\nExit: %s' % (res,))
         pak ()
         refresh ()
 
       # change TERM type ...
       elif str(choice).lower() == 'c':
-        echo ('\r\n TERM: ')
-        TERM = readline (30)
-        echo ("\r\n set TERM to '%s'? [yn]" % (TERM,))
+        echo (u'\r\n TERM: ')
+        TERM = readline (30).strip()
+        echo (u"\r\n set TERM to '%s'? [yn]" % (TERM,))
         while True:
           ch = getch()
           if str(ch).lower() == 'y':
