@@ -361,7 +361,8 @@ class TelnetClient(object):
         """
         buffer unicode data, encoded to bytestrings as 'encoding'
         """
-        self.send_str (unibytes.encode(encoding, 'replace'))
+        bytestring = unibytes.encode(encoding, 'replace').replace('\xFF',2*'\xFF')
+        self.send_str (bytestring)
 
     def deactivate(self):
         """
@@ -402,7 +403,6 @@ class TelnetClient(object):
         """
         self._iac_will(ECHO)
         self._note_reply_pending(ECHO, True)
-        self.telnet_echo = True
 
     def request_wont_echo(self):
         """
@@ -412,6 +412,14 @@ class TelnetClient(object):
         self._iac_wont(ECHO)
         self._note_reply_pending(ECHO, True)
         self.telnet_echo = False
+
+    def request_do_sga(self):
+        """
+        idk why i swallowed the fly from a url,
+        """
+        self._iac_do(SGA)
+        self._note_reply_pending(SGA, True)
+
 
     def request_do_binary(self):
         """

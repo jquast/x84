@@ -173,17 +173,33 @@ class ConnectTelnetTerminal (threading.Thread):
     registry.append ((self.client, parent_conn, lock))
 
   def banner(self):
-    #self.client.send_str (bytes('\xff\xfb\x01')) # will echo
-    #self.client.send_str (bytes('\
-    # disable line-wrapping http://www.termsys.demon.co.uk/vtansi.htm
-    time.sleep (0.5)
-    self.client.send_str (bytes('\033[7l'))
+    # http://www.unixguide.net/network/socketfaq/4.13.shtml
+    # Writing Server Applications (TCP/SOCK_STREAM): How can I read only one
+    #   character at a time?
+    # According to Roger Espel Llima (espel@drakkar.ens.fr), you can
+    #   have your server send a sequence of control characters:
+    # (0xff 0xfb 0x01) (0xff 0xfb 0x03) (0xff 0xfd 0x0f3).
+    #   Which translates to:
+    # (IAC WILL ECHO) (IAC WILL SUPPRESS-GO-AHEAD) (IAC DO SUPPRESS-GO-AHEAD).
+    self.client.request_will_echo ()
+    self.client.request_will_sga ()
+    self.client.request_do_sga ()
+    nbytes = self.client.bytes_received
+    while nbytes == self.client.bytes_received and self._timeleft(t):
+      time.sleep (self.TIME_POLL)
+    time.sleep (self.TIME_POLL)
+    # allow any time to pass for the client to send us negotiations
+    # before we begin making more demands than the 'magic character-at-a-time'
     self.client.charset = 'utf8'
-    self._try_echo ()
-    self._try_sga ()
     self._try_ttype ()
-    self._try_naws ()
+    #self._no_linemode () #SGA/ECHO should always be enough !
     self._try_env ()
+    self._try_naws ()
+    #self._try_echo ()
+    #self._try_sga ()
+
+    # disable line-wrapping http://www.termsys.demon.co.uk/vtansi.htm
+    self.client.send_str (bytes('\033[7l'))
 
   def run(self):
     """Negotiate and inquire about terminal type, telnet options,
@@ -223,25 +239,6 @@ class ConnectTelnetTerminal (threading.Thread):
     self.client._iac_dont(LINEMODE)
     self.client._iac_wont(LINEMODE)
     self.client._note_reply_pending(LINEMODE, True)
-
-
-  def _try_binary(self):
-    """Negotiation binary (BINARY) telnet option (on)."""
-    from telnet import BINARY
-    if self.client.telnet_eight_bit:
-      logger.info ('binary mode enabled (unsolicted)')
-      return
-
-    logger.debug('request-do-eight-bit')
-    self.client.request_do_binary ()
-    self.client.socket_send() # push
-    t = time.time()
-    while self.client.telnet_eight_bit is False and self._timeleft(t):
-      time.sleep (self.TIME_POLL)
-    if self.client.telnet_eight_bit:
-      logger.info ('binary mode enabled (negotiated)')
-    else:
-      logger.debug ('failed: binary; ignoring')
 
 
   def _try_sga(self):
