@@ -7,9 +7,9 @@ def delay(n):
 
 def echo(data, encoding=None):
   if data is None or 0 == len(data):
-    warnings.warn ('terminal capability not translated: %s%r' % \
-        (encoding if encoding is not None \
-        else '', data,), Warning, 2)
+    warnings.warn ('terminal capability not translated? %s' % \
+        ('encoding=%s'%(encoding,) if encoding is not None else '',),
+        Warning, 2)
   if type(data) is bytes:
     warnings.warn('non-unicode: %s%r' % \
         (encoding if encoding is not None \
