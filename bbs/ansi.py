@@ -15,7 +15,7 @@ __license__ = "ISC"
 #from bbs.ascii import esc
 esc = '\033'
 import warnings
-warnings.warn ("deprecated", DeprecationWarning)
+warnings.warn ("deprecated", DeprecationWarning, 3)
 # attributes
 NORMAL = 0
 BOLD = BRIGHT = 1    # bold or bright
