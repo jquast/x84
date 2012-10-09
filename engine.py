@@ -17,20 +17,12 @@ __version__ = '1.0rc1'
 # THIS IS FREE SOFTWARE. USE AT YOUR OWN RISK. NO WARRANTY.
 
 # this is iteration #3, x/84, 2010-2012 dingo
-import db
-import bbs.session
-
-import sys
-import traceback
-import threading
 
 def main (logger, logHandler, cfgFile='default.ini'):
   """
   x84 main entry point. The system begins and ends here.
   """
-  import bbs.ini
-  import terminal
-  import __builtin__
+  import __builtin__, sys
   real_import = __builtin__.__import__
   def debug_import(name, locals=None, globals=None, fromlist=None, level=-1):
     glob = globals or sys._getframe(1).f_globals
@@ -38,16 +30,23 @@ def main (logger, logHandler, cfgFile='default.ini'):
     logger.debug ('%s imports %s', importer_name, name)
     return real_import(name, locals, globals, fromlist, level)
   __builtin__.__import__ = debug_import
+  import traceback
+  import threading
 
+  import db
+
+  import terminal
   terminal.logger.addHandler (logHandler)
   terminal.logger.setLevel (logger.level)
   logger.addHandler (logHandler)
 
+  import bbs.session
   bbs.session.logger.addHandler (logHandler)
   bbs.session.logger.setLevel (logger.level)
   logger.addHandler (logHandler)
 
   # load .ini file
+  import bbs.ini
   bbs.ini.init (cfgFile)
 
   # initialize scripting subsystem
@@ -69,12 +68,12 @@ def main (logger, logHandler, cfgFile='default.ini'):
        timeout=0.01)
   logger.info ('[telnet:%s] listening tcp', telnet_port)
 
-  if bbs.ini.cfg.get('ftp', 'enabled', 'no'):
-    # initialize ftp server
-    import ftp
-    ftp.logger.addHandler (logHandler)
-    ftp_eventpipe = ftp.init()
-    #ftp_lock = threading.Lock()
+  #if bbs.ini.cfg.get('ftp', 'enabled', 'no'):
+  #  # initialize ftp server
+  #  import ftp
+  #  ftp.logger.addHandler (logHandler)
+  #  ftp_eventpipe = ftp.init()
+  #  #ftp_lock = threading.Lock()
 
   # main event loop
   eof_pipes = set()
@@ -85,10 +84,10 @@ def main (logger, logHandler, cfgFile='default.ini'):
     telnet_server.poll()
 
     # process ftp server i/o
-    if bbs.ini.cfg.get('ftp', 'enabled', 'no') == 'yes':
-      if ftp_eventpipe.poll():
-        # ftp child process sent us a gift
-        event, data = ftp_eventpipe.recv()
+    #if bbs.ini.cfg.get('ftp', 'enabled', 'no') == 'yes':
+    #  if ftp_eventpipe.poll():
+    #    # ftp child process sent us a gift
+    #    event, data = ftp_eventpipe.recv()
 
     for client, pipe, lock in terminal.registry[:]:
       if not lock.acquire(False):
