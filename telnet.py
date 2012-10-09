@@ -35,17 +35,19 @@ import array
 import time
 import sys
 import logging
-from bbs import exception
 logger = logging.getLogger(__name__)
 logger.setLevel (logging.DEBUG)
 
 #--[ Telnet Options ]----------------------------------------------------------
 from telnetlib import BINARY, SGA, ECHO, STATUS, TTYPE, LINEMODE
 from telnetlib import TSPEED, NAWS, LFLOW, NEW_ENVIRON
+from telnetlib import COM_PORT_OPTION, ENCRYPT
 from telnetlib import IAC, DONT, DO, WONT, WILL, theNULL as NULL
 from telnetlib import SE, NOP, DM, BRK, IP, AO, AYT, EC, EL, GA, SB
 IS      = chr(0)        # Sub-process negotiation IS command
 SEND    = chr(1)        # Sub-process negotiation SEND command
+
+from bbs import exception
 
 class TelnetServer(object):
     """
@@ -134,8 +136,8 @@ class TelnetServer(object):
             self.on_disconnect (client)
 
         ## Build a list of connections to test for receive data
-        recv_list = [self.server_fileno] + [client.fileno \
-            for client in self.clients.values()]
+        recv_list = [self.server_fileno] + [c.fileno \
+            for c in self.clients.values() if c.active]
 
         ## Build a list of connections that have data to receieve
         rlist, slist, elist = select.select(recv_list, [], [], self.timeout)
@@ -149,10 +151,7 @@ class TelnetServer(object):
 
           ## Check for maximum connections
           if self.client_count() < self.MAX_CONNECTIONS:
-            client = TelnetClient(sock, addr_tup)
-            ## on_naws, on_env inherited by client
-            client.on_naws = self.on_naws
-            client.on_env = self.on_env
+            client = TelnetClient(sock, addr_tup, self.on_naws, self.on_env)
             ## Add the connection to our dictionary and call handler
             self.clients[client.fileno] = client
             self.on_connect (client)
@@ -161,23 +160,23 @@ class TelnetServer(object):
             sock.close()
 
         ## Process sockets with data to receive
-        recv_ready = (self.clients[f] for f in rlist if f!=self.server_fileno)
+        recv_ready = (self.clients[f] for f in rlist \
+            if f != self.server_fileno)
         for client in recv_ready:
           try:
             client.socket_recv ()
           except exception.ConnectionClosed, e:
-            logger.info ('%s connection closed%s.' %
-                (client.addrport(), ': %s' % (e,) if len(str(e))!=0 else ''))
+            logger.debug ('%s connection closed: %s.' % (client.addrport(), e))
             client.deactivate()
 
         ## Process sockets with data to send
-        slist = (c for c in self.clients.values() if c.active if c.send_ready())
+        slist = (c for c in self.clients.values() \
+            if c.active and c.send_ready())
         for client in slist:
           try:
             client.socket_send ()
           except exception.ConnectionClosed, e:
-            logger.debug ('%s connection closed%s.' %
-                (client.addrport(), ': %s' % (e,) if len(str(e))!=0 else ''))
+            logger.debug ('%s connection closed: %s.' % (client.addrport(), e))
             client.deactivate()
 
 #---[ Telnet Notes ]-----------------------------------------------------------
@@ -244,33 +243,34 @@ class TelnetClient(object):
     BLOCKSIZE_RECV=64
     SB_MAXLEN = 65534 # maximum length of subnegotiation string, allow
                       # a fairly large one for NEW_ENVIRON negotiation
-    def __init__(self, sock, addr_tup):
-        self.protocol = 'telnet'
-        self.active = True          # Turns False when the connection is lost
-        self.sock = sock            # The connection's socket
-        self.fileno = sock.fileno() # The socket's file descriptor
-        self.address = addr_tup[0]  # The client's remote TCP/IP address
-        self.port = addr_tup[1]     # The client's remote port
-        self.terminal_type='unknown'# set via request_terminal_type()
-        self.env = dict()           # The client's environment variables
-        self.use_ansi = True
+    def __init__(self, sock, addr_tup, on_naws=None, on_env=None):
+        self.sock = sock
+        self.address = addr_tup[0]
+        self.port = addr_tup[1]
+        self.on_naws = on_naws if on_naws is not None else None
+        self.on_env = on_env if on_env is not None else None
+        self.fileno = sock.fileno()
+        self.active = True
+        self.terminal_type='unknown'
+        self.env = dict()
         self.columns = None
         self.rows = None
-        self.on_naws = None         # callback for window resize events
         self.send_buffer = array.array('c')
         self.recv_buffer = array.array('c')
+        self.telnet_sb_buffer = array.array('c')
         self.bytes_sent = 0
         self.bytes_received = 0
         self.connect_time = time.time()
         self.last_input_time = time.time()
 
         ## State variables for interpreting incoming telnet commands
-        self.telnet_got_iac = False  # Are we inside an IAC sequence?
-        self.telnet_got_cmd = None   # Did we get a telnet command?
-        self.telnet_got_sb = False   # Are we inside a subnegotiation?
-        self.telnet_opt_dict = {}    # Mapping for up to 256 TelnetOptions
-        self.telnet_echo = False     # Echo input back to the client?
-        self.telnet_sb_buffer = ''   # Buffer for sub-negotiations
+        self.telnet_got_iac = False
+        self.telnet_got_cmd = None
+        self.telnet_got_sb = False
+        self.telnet_opt_dict = {}
+        # we don't actually honor telnet_echo anymore, we just
+        # use it for 'did the client actually agree?' bool
+        self.telnet_echo = False
 
     def name_option(self, option):
       v = ';?'.join([k for k,v in globals().iteritems() if option == v and
@@ -296,7 +296,8 @@ class TelnetClient(object):
         """
         buffer unicode data, encoded to bytestrings as 'encoding'
         """
-        self.send_str (unibytes.encode(encoding, 'replace'))
+        self.send_str (unibytes.encode(encoding, 'replace') \
+            .replace(chr(255), 2*chr(255)))
 
     def deactivate(self):
         """
@@ -385,15 +386,16 @@ class TelnetClient(object):
         Request sub-negotiation NEW_ENVIRON. See RFC 1572.
         """
         # chr(0) indicates VAR request,
+        #  followed by variable name,
         # chr(3) indicates USERVAR request,
-        self.send_str (bytes(''.join( \
-          (IAC, SB, NEW_ENVIRON, SEND, chr(0), "USER", chr(0), "TERM",
-            chr(0), "SHELL", chr(0), "COLUMNS", chr(0), "LINES", chr(0),
-            "LC_CTYPE", chr(0), "XTERM_LOCALE", chr(0), "DISPLAY", chr(0),
-            "SSH_CLIENT", chr(0), "SSH_CONNECTION", chr(0), "SSH_TTY", chr(0),
-            "HOME", chr(0), "SYSTEMTYPE", chr(0), "HOSTNAME", chr(0),
-            "LANG", chr(0), "PWD", chr(0), "UID", chr(0), "EDITOR", chr(3),
-            IAC, SE))))
+        # chr(0)
+        self.send_str (bytes(''.join((IAC, SB, NEW_ENVIRON, SEND, chr(0)))))
+        self.send_str (bytes(chr(0).join( \
+            ("USER", "TERM", "SHELL", "COLUMNS", "LINES", "LC_CTYPE",
+            "XTERM_LOCALE", "DISPLAY", "SSH_CLIENT", "SSH_CONNECTION",
+            "SSH_TTY", "HOME", "HOSTNAME", "PWD", "MAIL", "LANG", "PWD",
+            "UID", "USER_ID", "EDITOR", "LOGNAME"))))
+        self.send_str (bytes(''.join((chr(3), IAC, SE))))
 
     def request_ttype(self):
         """
@@ -442,22 +444,22 @@ class TelnetClient(object):
         other bytestrings to self.recv_buffer.  If data is not received,
         or the connection is closed, exception.ConnectionClosed is raised.
         """
-        bytes_received = 0
+        recv = 0
         try:
           data = self.sock.recv (self.BLOCKSIZE_RECV)
-          bytes_received = len(data)
-          if 0 == bytes_received:
-            raise exception.ConnectionClosed ('client disconnected')
+          recv = len(data)
+          if 0 == recv:
+            raise exception.ConnectionClosed ('Client closed connection')
         except socket.error, e:
-          raise exception.ConnectionClosed('socket errorno %d: %s' % (e[0], e[1],))
-
-        self.bytes_received += bytes_received
+          raise exception.ConnectionClosed \
+              ('socket errorno %d: %s' % (e[0], e[1],))
+        self.bytes_received += recv
         self.last_input_time = time.time()
 
         ## Test for telnet commands, non-telnet bytes
         ## are pushed to self.recv_buffer (side-effect),
         map(self._iac_sniffer, data)
-        return bytes_received
+        return recv
 
     def _recv_byte(self, byte):
         """
@@ -473,83 +475,59 @@ class TelnetClient(object):
         """
         ## Are we not currently in an IAC sequence coming from the DE?
         if self.telnet_got_iac is False:
-            if byte == IAC:
-                self.telnet_got_iac = True
-            ## Are we currenty in a sub-negotion?
-            elif self.telnet_got_sb is True:
-                ## Sanity check on length
-                assert len(self.telnet_sb_buffer) < self.SB_MAXLEN, \
-                    'sub-negotiation buffer full: %r' \
-                    % (self.telnet_sb_buffer,)
-                self.telnet_sb_buffer += byte
-            else:
-                ## Just a normal NVT character
-                self._recv_byte (byte)
-            return
+          if byte == IAC:
+            self.telnet_got_iac = True
+          ## Are we currenty in a sub-negotion?
+          elif self.telnet_got_sb is True:
+            self.telnet_sb_buffer.fromstring (byte)
+            ## Sanity check on length
+            if len(self.telnet_sb_buffer) >= self.SB_MAXLEN:
+              raise exception.ConnectionClosed \
+                  ('sub-negotiation buffer filled: %r', self.telnet_sb_buffer)
+          else:
+            ## Just a normal NVT character
+            self._recv_byte (byte)
+          return
 
+        ## Did we get sent a second IAC?
+        if byte == IAC and self.telnet_got_sb is True:
+          ## Must be an escaped 255 (IAC + IAC)
+          self.telnet_sb_buffer.fromstring (byte)
+          self.telnet_got_iac = False
+        ## Do we already have an IAC + CMD?
+        elif self.telnet_got_cmd is not None:
+          ## Yes, so handle the option
+          self._three_byte_cmd(byte)
+        ## We have IAC but no CMD
         else:
-            ## Did we get sent a second IAC?
-            if byte == IAC and self.telnet_got_sb is True:
-                ## Must be an escaped 255 (IAC + IAC)
-                self.telnet_sb_buffer += byte
-                self.telnet_got_iac = False
-                return
-
-            ## Do we already have an IAC + CMD?
-            elif self.telnet_got_cmd:
-                ## Yes, so handle the option
-                self._three_byte_cmd(byte)
-                return
-
-            ## We have IAC but no CMD
-            else:
-
-                ## Is this the middle byte of a three-byte command?
-                if byte == DO:
-                    self.telnet_got_cmd = DO
-                    return
-
-                elif byte == DONT:
-                    self.telnet_got_cmd = DONT
-                    return
-
-                elif byte == WILL:
-                    self.telnet_got_cmd = WILL
-                    return
-
-                elif byte == WONT:
-                    self.telnet_got_cmd = WONT
-                    return
-
-                else:
-                    ## Nope, must be a two-byte command
-                    self._two_byte_cmd(byte)
-
+          ## Is this the middle byte of a three-byte command?
+          if byte in (DO, DONT, WILL, WONT):
+            self.telnet_got_cmd = byte
+          else:
+            ## Nope, must be a two-byte command
+            self._two_byte_cmd(byte)
 
     def _two_byte_cmd(self, cmd):
         """
         Handle incoming Telnet commands that are two bytes long.
         """
         logger.debug ('recv _two_byte_cmd %s' % (self.name_option(cmd),))
-
         if cmd == SB:
-            ## Begin capturing a sub-negotiation string
-            self.telnet_got_sb = True
-            self.telnet_sb_buffer = ''
-
+          ## Begin capturing a sub-negotiation string
+          self.telnet_got_sb = True
+          self.telnet_sb_buffer = array.array('c')
         elif cmd == SE:
           ## Stop capturing a sub-negotiation string
           self.telnet_got_sb = False
           self._sb_decoder()
           logger.debug ('decoded (SE)')
-
         elif cmd in (NOP, IP, AO, AYT, EC, EL, GA, DM):
-          logger.debug ('pass %s' % (self.name_option(cmd,)))
+          ## Unimplemented -- DM-relateds
+          logger.warn ('_two_byte_cmd not implemented: %r',
+              self.name_option(cmd,))
           pass
-
         else:
-          logger.error ('_two_byte_cmd invalid: %r'  % (ord(cmd),))
-
+          logger.error ('_two_byte_cmd invalid: %r', cmd)
         self.telnet_got_iac = False
         self.telnet_got_cmd = None
 
@@ -558,233 +536,166 @@ class TelnetClient(object):
         Handle incoming Telnet commmands that are three bytes long.
         """
         cmd = self.telnet_got_cmd
-        logger.debug ('recv _three_byte_cmd %s %s' % ('DO' if cmd == DO \
-            else 'DONT' if cmd == DONT else 'WILL' if cmd == WILL \
-            else 'WONT' if cmd == WONT else self.name_option(cmd),
-          self.name_option(option),))
-
+        logger.debug ('recv _three_byte_cmd %s', self.name_option(cmd))
         ## Incoming DO's and DONT's refer to the status of this end
-
         #---[ DO ]-------------------------------------------------------------
-
         if cmd == DO:
-
-            if option == ECHO:
-
-                if self._check_reply_pending(ECHO):
-                    self._note_reply_pending(ECHO, False)
-                    self._note_local_option(ECHO, True)
-
-                elif (self._check_local_option(ECHO) is False or
-                        self._check_local_option(ECHO) is UNKNOWN):
-                    self._note_local_option(ECHO, True)
-                    self._iac_will(ECHO)
-                self.telnet_echo = True # always !
-
-            elif option == SGA:
-
-                if self._check_reply_pending(SGA):
-                    self._note_reply_pending(SGA, False)
-                    self._note_local_option(SGA, True)
-                    self._note_remote_option(SGA, True)
-
-                # client wants to SGA? Yes please !
-                elif (self._check_local_option(SGA) is False or
-                        self._check_local_option(SGA) is UNKNOWN):
-                    self._note_local_option(SGA, True)
-                    self._note_remote_option(SGA, True)
-                    self._iac_will(SGA)
-                    #self._iac_do(SGA) # both?
-
-            elif option == LINEMODE:
-              if self._check_local_option(option) is UNKNOWN:
-                self._note_local_option(option, False)
-                self._iac_wont(LINEMODE)
-
-# XXX            # pretend like we do, not yet implemented !!
-            elif option == STATUS:
-              if self._check_local_option(option) is UNKNOWN:
-                self._note_local_option(option, True)
-                self._note_remote_option(option, True)
-                self._iac_will(STATUS)
-
-            else:
-
-                ## ALL OTHER OTHERS = Default to refusing once
-                if self._check_local_option(option) is UNKNOWN:
-                    self._note_local_option(option, False)
-                    logger.warn ('%s: unhandled do: %s; wont.' % \
-                        (self.addrport(), self.name_option(option)))
-                    self._iac_wont(option)
-
-
+          if option == ECHO:
+            if self._check_reply_pending(ECHO):
+              self._note_reply_pending(ECHO, False)
+              self._note_local_option(ECHO, True)
+            elif (self._check_local_option(ECHO) in (False, UNKNOWN)):
+              self._note_local_option(ECHO, True)
+              self._iac_will(ECHO)
+            self.telnet_echo = True
+          elif option == SGA:
+            if self._check_reply_pending(SGA):
+              self._note_reply_pending(SGA, False)
+              self._note_local_option(SGA, True)
+              self._note_remote_option(SGA, True)
+            # client wants to SGA? Yes please !
+            elif (self._check_local_option(SGA) in (False, UNKNOWN)):
+              self._note_local_option(SGA, True)
+              self._note_remote_option(SGA, True)
+              self._iac_will(SGA)
+              # always send 'do' SGA after 'will' SGA. I don't know why, but
+              # this order seems to be the 'magic sequence' to disable
+              # linemode on some clients ! #XXX Prove w/testcase XXX
+              self._iac_do(SGA)
+          elif option == LINEMODE:
+            if self._check_local_option(option) is UNKNOWN:
+              self._note_local_option(option, False)
+              self._iac_wont(LINEMODE)
+          elif option == STATUS:
+            # TODO Not Yet Implemented
+            if self._check_local_option(option) is UNKNOWN:
+              self._note_local_option(option, False)
+              self._iac_wont(STATUS)
+          else:
+            if self._check_local_option(option) is UNKNOWN:
+              self._note_local_option(option, False)
+              logger.warn ('%s: unhandled do: %s.',
+                  self.addrport(), self.name_option(option))
+              self._iac_wont(option)
         #---[ DONT ]-----------------------------------------------------------
-
         elif cmd == DONT:
-
-            if option == BINARY:
-                # client: DONT BINARY, us: ok, we won't.
-                if self._check_reply_pending(BINARY):
-                    self._note_reply_pending(BINARY, False)
-                    self._note_local_option(BINARY, False)
-
-                elif (self._check_local_option(BINARY) is True or
-                        self._check_local_option(BINARY) is UNKNOWN):
-                    self._note_local_option(BINARY, False)
-                    self._iac_wont(BINARY)
-                    ## Just nod
-
-            elif option == ECHO:
-                # client: DONT ECHO, us: ok, we won't (but we will anyway)
-                if self._check_reply_pending(ECHO):
-                    self._note_reply_pending(ECHO, False)
-                    self._note_local_option(ECHO, True)
-                    self.telnet_echo = False
-
-                elif (self._check_local_option(ECHO) is True or
-                        self._check_local_option(ECHO) is UNKNOWN):
-                    self._note_local_option(ECHO, False)
-                    self._iac_wont(ECHO)
-                    self.telnet_echo = False
-
-            elif option == SGA:
-                # client: DONT SGA, us: ok, we won't
-                if self._check_reply_pending(SGA):
-                    self._note_reply_pending(SGA, False)
-                    self._note_local_option(SGA, False)
-
-                elif (self._check_remote_option(SGA) is True or
-                        self._check_remote_option(SGA) is UNKNOWN):
-                    self._note_local_option(SGA, False)
-                    self._iac_wont(SGA)
-
-            elif option == LINEMODE:
-              # client: DONT LINEMODE, us: ok, we won't
-              if self._check_reply_pending(LINEMODE):
-                self._note_reply_pending(LINEMODE, False)
-                self._note_local_option(LINEMODE, False) # we got our answer ...
-
-              if self._check_remote_option(LINEMODE) in (True, UNKNOWN):
-                self._note_remote_option(LINEMODE, False) # oh no we won't
-                self._iac_wont(LINEMODE)
-
-            else:
-                ## ALL OTHER OPTIONS = Default to ignoring
-                logger.warn ('%s: unhandled dont: %s.' % \
-                    (self.addrport(), self.name_option(option)))
-                pass
-
-
-        ## Incoming WILL's and WONT's refer to the status of the DE
-
+          if option == BINARY:
+            if self._check_reply_pending(BINARY):
+              self._note_reply_pending(BINARY, False)
+              self._note_local_option(BINARY, False)
+            elif self._check_local_option(BINARY) in (True, UNKNOWN):
+              self._note_local_option(BINARY, False)
+              self._iac_wont(BINARY) # agree
+          elif option == ECHO:
+            # local echo is not actually supported.
+            if self._check_reply_pending(ECHO):
+              self._note_reply_pending(ECHO, False)
+              self._note_local_option(ECHO, False)
+              self.telnet_echo = False
+            elif self._check_local_option(ECHO) in (True, UNKNOWN):
+              self._note_local_option(ECHO, False)
+              self._iac_wont(ECHO) # agree
+              self.telnet_echo = False
+          elif option == SGA:
+            # client: DONT SGA, us: ok, we won't
+            if self._check_reply_pending(SGA):
+              self._note_reply_pending(SGA, False)
+              self._note_local_option(SGA, False)
+            elif self._check_remote_option(SGA) in (True,UNKNOWN):
+              self._note_local_option(SGA, False)
+              self._iac_wont(SGA)
+          elif option == LINEMODE:
+            # client: DONT LINEMODE, us: ok, we won't
+            if self._check_reply_pending(LINEMODE):
+              self._note_reply_pending(LINEMODE, False)
+              self._note_local_option(LINEMODE, False)
+            if self._check_remote_option(LINEMODE) in (True, UNKNOWN):
+              self._note_remote_option(LINEMODE, False)
+              self._iac_wont(LINEMODE)
+          else:
+            ## ALL OTHER OPTIONS = Default to ignoring
+            logger.warn ('%s: unhandled dont: %s.',
+                self.addrport(), self.name_option(option))
         #---[ WILL ]-----------------------------------------------------------
-
         elif cmd == WILL:
-            if option == ECHO:
-                ## Nutjob DE offering to echo the server...
-                if self._check_remote_option(ECHO) is UNKNOWN:
-                    self._note_remote_option(ECHO, False)
-                    # No no, bad DE!
-                    self._iac_dont(ECHO)
-                    logger.error ('nutjob condition?')
-            elif option == TSPEED:
-              if self._check_reply_pending(TSPEED):
-                  self._note_reply_pending(TSPEED, False)
-              if (self._check_remote_option(TSPEED) is False or
-                  self._check_remote_option(TSPEED) is UNKNOWN):
-                self._note_remote_option(TSPEED, True)
-                self._note_local_option(TSPEED, True)
-                self._iac_do(TSPEED) # ?
-            elif option == NAWS:
-              if self._check_reply_pending(NAWS):
-                  self._note_reply_pending(NAWS, False)
-              if (self._check_remote_option(NAWS) is False or
-                  self._check_remote_option(NAWS) is UNKNOWN):
-                self._note_remote_option(NAWS, True)
-                self._note_local_option(NAWS, True)
-                self._iac_do(NAWS) # client then begins SB
-            elif option == LINEMODE:
-              self._iac_dont (LINEMODE) # no linemode plz
-
-              #if self._check_reply_pending(LINEMODE):
-              #    self._note_reply_pending(LINEMODE, False)
-              #if self._check_remote_option(LINEMODE) is UNKNOWN:
-                #self._note_remote_option(LINEMODE, True)
-                #self._note_local_option(LINEMODE, True)
-            elif option == SGA:
-              if self._check_reply_pending(SGA):
-                  self._note_reply_pending(SGA, False)
-              if (self._check_remote_option(SGA) is False or
-                  self._check_remote_option(SGA) is UNKNOWN):
-                self._note_remote_option(SGA, True)
-                self._note_local_option(SGA, True)
-                self._iac_will(SGA) # yes please
-            elif option == NEW_ENVIRON:
-              if self._check_reply_pending(NEW_ENVIRON):
-                  self._note_reply_pending(NEW_ENVIRON, False)
-              if (self._check_remote_option(NEW_ENVIRON) in (False, UNKNOWN)):
-                self._note_remote_option(NEW_ENVIRON, True)
-                self._note_local_option(NEW_ENVIRON, True)
-                self._iac_do(NEW_ENVIRON) # client then begins SB
-                self.request_env ()
-            elif option == TTYPE:
-              if self._check_reply_pending(TTYPE):
-                  self._note_reply_pending(TTYPE, False)
-              if (self._check_remote_option(TTYPE) is False or
-                  self._check_remote_option(TTYPE) is UNKNOWN):
-                self._note_remote_option(TTYPE, True)
-                self._iac_do(TTYPE) # client then begins SB
-                self.send_str (bytes(''.join( \
-                    (IAC, SB, TTYPE, SEND, IAC, SE)))) # trigger SB
-            elif option == LFLOW:
-              self._iac_wont(LFLOW)
-              # no, i dont know nuttin bout XOFF/XON, sorry.
-              # (... I don't care; do you?)
-              pass
-            else:
-                logger.warn ('%s: unhandled will: %s.' % \
-                    (self.addrport(), self.name_option(option)))
-
+          if option == ECHO:
+            ## Nutjob DE offering to echo the server...
+            if self._check_remote_option(ECHO) in (UNKNOWN,False):
+              # No no, bad DE!
+              self._iac_dont(ECHO)
+              logger.error ('nutjob condition?')
+# TODO
+#            elif option == TSPEED:
+#              if self._check_reply_pending(TSPEED):
+#                  self._note_reply_pending(TSPEED, False)
+#              if (self._check_remote_option(TSPEED) in (False, UNKNOWN):
+#                self._note_remote_option(TSPEED, True)
+#                self._note_local_option(TSPEED, True)
+#                self._iac_do(TSPEED) # ?
+          elif option == NAWS:
+            if self._check_reply_pending(NAWS):
+                self._note_reply_pending(NAWS, False)
+            if self._check_remote_option(NAWS) in (False, UNKNOWN):
+              self._note_remote_option(NAWS, True)
+              self._note_local_option(NAWS, True)
+              self._iac_do(NAWS)
+          elif option == LINEMODE:
+            self._iac_dont (LINEMODE)
+          elif option == SGA:
+            if self._check_reply_pending(SGA):
+                self._note_reply_pending(SGA, False)
+            if self._check_remote_option(SGA) in (False, UNKNOWN):
+              self._note_remote_option(SGA, True)
+              self._note_local_option(SGA, True)
+              self._iac_will(SGA)
+          elif option == NEW_ENVIRON:
+            if self._check_reply_pending(NEW_ENVIRON):
+                self._note_reply_pending(NEW_ENVIRON, False)
+            if self._check_remote_option(NEW_ENVIRON) in (False, UNKNOWN):
+              self._note_remote_option(NEW_ENVIRON, True)
+              self._note_local_option(NEW_ENVIRON, True)
+              self._iac_do(NEW_ENVIRON)
+              self.request_env ()
+          elif option == TTYPE:
+            if self._check_reply_pending(TTYPE):
+                self._note_reply_pending(TTYPE, False)
+            if self._check_remote_option(TTYPE) in (False, UNKNOWN):
+              self._note_remote_option(TTYPE, True)
+              self._iac_do(TTYPE)
+              # trigger SB response
+              self.send_str (bytes(''.join( \
+                  (IAC, SB, TTYPE, SEND, IAC, SE))))
+          elif option == LFLOW:
+            self._iac_wont(LFLOW) # TODO
+          else:
+            logger.warn ('%s: unhandled will: %s.',
+                self.addrport(), self.name_option(option))
         #---[ WONT ]-----------------------------------------------------------
-
         elif cmd == WONT:
-
-            if option == ECHO:
-
-                ## DE states it wont echo us -- good, they're not suppose to.
-                if self._check_remote_option(ECHO) is UNKNOWN:
-                    self._note_remote_option(ECHO, False)
-                    self._iac_dont(ECHO)
-
-            elif option == SGA:
-
-                if self._check_reply_pending(SGA):
-                    self._note_reply_pending(SGA, False)
-                    self._note_remote_option(SGA, False)
-
-                elif (self._check_remote_option(SGA) is True or
-                        self._check_remote_option(SGA) is UNKNOWN):
-                    self._note_remote_option(SGA, False)
-                    self._iac_dont(SGA)
-
-                if self._check_reply_pending(TTYPE):
-                    self._note_reply_pending(TTYPE, False)
-                    self._note_remote_option(TTYPE, False)
-
-                elif (self._check_remote_option(TTYPE) is True or
-                        self._check_remote_option(TTYPE) is UNKNOWN):
-                    self._note_remote_option(TTYPE, False)
-                    self._iac_dont(TTYPE)
-
-            else:
-                logger.debug ('%s: unhandled wont: %s.' % \
-                    (self.addrport(), self.name_option(option)))
-                pass
-
+          if option == ECHO:
+            if self._check_remote_option(ECHO) in (True, UNKNOWN):
+              self._note_remote_option(ECHO, False)
+              self._iac_dont(ECHO)
+          elif option == SGA:
+            if self._check_reply_pending(SGA):
+              self._note_reply_pending(SGA, False)
+              self._note_remote_option(SGA, False)
+            elif self._check_remote_option(SGA) in (True, UNKNOWN):
+              self._note_remote_option(SGA, False)
+              self._iac_dont(SGA)
+          elif option == TTYPE:
+            if self._check_reply_pending(TTYPE):
+              self._note_reply_pending(TTYPE, False)
+              self._note_remote_option(TTYPE, False)
+            elif self._check_remote_option(TTYPE) in (True, UNKNOWN):
+              self._note_remote_option(TTYPE, False)
+              self._iac_dont(TTYPE)
+          else:
+            logger.debug ('%s: unhandled wont: %s.',
+                self.addrport(), self.name_option(option))
         else:
             logger.warn ('%s: unhandled _three_byte_cmd: %s.' % \
                 (self.addrport(), self.name_option(option)))
-
         self.telnet_got_iac = False
         self.telnet_got_cmd = None
 
@@ -794,20 +705,22 @@ class TelnetClient(object):
         """
         buf = self.telnet_sb_buffer
         slc = chr(3) # naw,
-        if len(buf) <= 2:
-          logger.error  ('fail decode subnegotiation, ' \
-              'shortlength: %r' % (buf,))
+        if 1 == len(buf) and buf[0] == chr(0):
+          logger.debug ('nil SB')
           return
+        elif COM_PORT_OPTION == buf[0]:
+          logger.warn ('%s: COM_PORT_OPTION not supported: %r',
+              self.addrport(), buf)
         elif (TSPEED, IS) == (buf[0], buf[1]):
           self.terminal_speed = buf[2:].lower()
-          logger.info ('%s: terminal speed %s' % \
-              (self.addrport(), self.terminal_speed,))
+          logger.info ('%s: terminal speed %s',
+              self.addrport(), self.terminal_speed)
         elif (TTYPE, IS) == (buf[0], buf[1]):
-          term_str = buf[2:].lower()
+          term_str = buf[2:].tostring().lower()
           if self.terminal_type == 'unknown':
-            logger.info ("env['TERM'] = %r" % (term_str,))
+            logger.info ("env['TERM'] = %r", term_str,)
           elif self.terminal_type != term_str:
-            logger.warn ("env['TERM'] = %r by TTYPE" % (term_str,))
+            logger.warn ("env['TERM'] = %r by TTYPE", term_str)
             if self.on_env is not None:
               self.on_env (self) # simulate update of 'TERM' ..
           else:
@@ -817,62 +730,64 @@ class TelnetClient(object):
             if self.on_env is not None:
               self.on_env (self) # simulate update of 'TERM' ..
           else:
-            logger.debug ('.. ttype ignored')
+            logger.debug ('.. ttype ignored (TERM already set)')
           self.terminal_type = term_str
-        elif (NEW_ENVIRON, chr(0), chr(0)) == (buf[0], buf[1], buf[2],):
+        elif (NEW_ENVIRON, chr(0)) == (buf[0], buf[1],):
+          if 2 == len(buf):
+            logger.debug ('NEW_ENVIRON SB; empty')
           nwrites = 0
           columns, lines = (None, None)
-          for keyvalue in buf[3:].split(chr(3)):
+          for keyvalue in buf[3:].tostring().split(chr(3)):
+            if 0 == len(keyvalue):
+              continue
             ksp = keyvalue.split(chr(1))
             # validation of environment variables .. i guess so
-            if 1 == len(ksp) or  0 == len(ksp[1]):
+            if 1 == len(ksp) or 0 == len(ksp[1]):
               if ksp[0] in self.env:
                 logger.warn ("del env[%r]", ksp[0],)
                 del self.env[ksp[0]]
-              return
-            if 2 != len(ksp):
+            elif 2 != len(ksp):
               logger.error ('bad NEW_ENVIRON SB; %r ' \
                   'bad chr(3) split length in %r', buf[3:], ksp)
-              return
             elif chr(1) in ksp:
               logger.error ('bad NEW_ENVIRON SB; %r ' \
                   'misaligned chr(1) or chr(0) in %r', buf[3:], ksp)
-              return
-            elif not (ksp[0].isalnum()):
-              logger.error ('bad NEW_ENVIRON SB; %r ' \
-                  '(non-alnum: %r)', buf[3:], ksp[0])
-              return
             elif not ksp[0].isupper():
               logger.error ('bad NEW_ENVIRON SB; %r ' \
                   '(non-upper: %r)', buf[3:], ksp[0])
-              return
             else:
-              for ch in (chr(n) for n in range(2,32)+range(127,256)):
+              moar = ksp[1].split('\x00',1)
+              ksp[1] = moar[0]
+              if len(moar) > 1:
+                logger.debug ('not found; env: %s', moar[1:])
+              valid=True
+              for ch in (chr(n) for n in range(0,32)+range(127,256)):
                 if ch not in ksp[0] and ch not in ksp[1]:
                   continue
                 logger.error ('bad NEW_ENVIRON SB; %r ' \
-                    '(unprintable: %r)' % (buf[3:], ch))
-                return
-            if self.env.get(ksp[0], None) == ksp[1]:
-              continue # repeated
-            self.env[ksp[0]] = ksp[1]
-            nwrites += 1
-            logger.info ('env[%r] = %r', ksp[0], ksp[1])
-            if ksp[0] == 'TERM':
-              if self.terminal_type == 'unknown':
-                self.terminal_type = ksp[1]
-              elif ksp[1] == self.terminal_type:
-                logger.info ('double-plus good terminal type detected.')
-                # we already negotiated by TTYPE
-              else:
-                logger.warn ('TTYPE %r different from TERM %r',
-                    self.terminal_type, ksp[1])
-            elif ksp[0] == 'COLUMNS':
-              try: columns = int(ksp[1])
-              except ValueError: pass
-            elif ksp[0] == 'LINES':
-              try: lines = int(ksp[1])
-              except ValueError: pass
+                    '(unprintable: %r)', buf[3:], ch)
+                valid=False
+              if True == valid:
+                ksp[1] = ksp[1].lower()
+                if self.env.get(ksp[0], None) == ksp[1]:
+                  continue # repeated
+                self.env[ksp[0]] = ksp[1]
+                nwrites += 1
+                logger.info ('env[%r] = %r', ksp[0], ksp[1])
+                if ksp[0] == 'TERM':
+                  if self.terminal_type == 'unknown':
+                    self.terminal_type = ksp[1]
+                  elif ksp[1] == self.terminal_type:
+                    logger.info ('double-plus good terminal type detected.')
+                  else:
+                    logger.warn ('TTYPE %r different from TERM %r',
+                        self.terminal_type, ksp[1])
+                elif ksp[0] == 'COLUMNS':
+                  try: columns = int(ksp[1])
+                  except ValueError: pass
+                elif ksp[0] == 'LINES':
+                  try: lines = int(ksp[1])
+                  except ValueError: pass
           if 0 == nwrites:
             logger.debug ('NEW_ENVIRON SB: no updates')
           elif (None, None) != (columns, lines):
@@ -885,44 +800,24 @@ class TelnetClient(object):
             logger.debug ('NEW_ENVIRON SB: %d updates', nwrites,)
             if self.on_env is not None:
               self.on_env (self)
-        elif (LINEMODE, slc) == (buf[0], buf[1],):
-          logger.error ('DO ME! SLC')
-          logger.info ('%s' % (' '.join([str(ord(ch)) for ch in buf[2:]]),))
-          #SYNC< DEFAULT, 0 IP VALUE|FLUSHIN|FLUSHOUT 3 AO
-          #VALUE 15 AYT DEFAULT 0 ABORT VALUE|FLUSHIN|FLUSHOUT 28 EOF VALUE 4
-          #SUSP VALUE|FLUSHIN 26 EC VALUE 127 EL VALUE 21 EW VALUE 23 RP VALUE
-          #18 LNEXT VALUE 22 XON VALUE 17 XOFF VALUE 19
-          #n = 2
-          #while n < len(buf) and not buf[n] == IAC \
-          #  and n < len(buf)-1 and not buf[n+1] == SE:
-          #  logger.info ('SLC %s %r', self.name_option(buf[n],), buf[n])
-          #  n+= 1
-        #elif (LINEMODE,) == (buf[0],):
-          # IAC SB LINEMODE[0], MODE[1], MASK[2], IAC[3?], SE[4?]
-          #logger.info ('mode %r' % (buf[1],))
-          #logger.info ('mask %r' % (buf[2],))
-          #assert buf[3] == IAC, '%s/%r' % (self.name_option(buf[3],), buf[3],)
-          #assert buf[4] == SE
         elif (NAWS,) == (buf[0],):
           if 5 != len(buf):
             logger.error('%s: bad length in NAWS buf (%d)' % \
                 (self.addrport(), len(buf),))
-            return
-          columns = (256 * ord(buf[1])) + ord(buf[2])
-          rows = (256 * ord(buf[3])) + ord(buf[4])
-          if (self.columns, self.rows) == (columns, rows):
-            logger.debug ('.. naws repeated')
           else:
-            self.columns, self.rows = (columns, rows)
-            if self.on_naws is not None:
-              self.on_naws (self)
-            logger.info ('%s: window size is %dx%d' % \
-                (self.addrport(), self.columns, self.rows))
+            columns = (256 * ord(buf[1])) + ord(buf[2])
+            rows = (256 * ord(buf[3])) + ord(buf[4])
+            if (self.columns, self.rows) == (columns, rows):
+              logger.debug ('.. naws repeated')
+            else:
+              self.columns, self.rows = (columns, rows)
+              if self.on_naws is not None:
+                self.on_naws (self)
+              logger.info ('%s: window size is %dx%d' % \
+                  (self.addrport(), self.columns, self.rows))
         else:
-          logger.error ('unsupported subnegotiation: (%s,%s,)%r' % \
-              (self.name_option(buf[0]), self.name_option(buf[1]), buf,))
+          logger.error ('unsupported subnegotiation: %r' % (buf,))
         self.telnet_sb_buffer = ''
-
 
     #---[ State Juggling for Telnet Options ]----------------------------------
 
