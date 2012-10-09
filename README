@@ -13,8 +13,8 @@ python2.6 virtualenv.py ENV26
 . ENV26/bin/activate
 
 # for testing 2.7,
-python2.6 virtualenv.py ENV27
-. ENV26/bin/activate
+python2.7 virtualenv.py ENV27
+. ENV27/bin/activate
 
 pip install -r requirements.txt
 
