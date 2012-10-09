@@ -14,7 +14,7 @@ import curses
 from input import getch
 from output import echo
 from strutils import ansilen, chkseq, seqc
-from ansi import color
+#from ansi import color
 from ansiwin import InteractiveAnsiWindow
 
 class ParaClass(InteractiveAnsiWindow):
