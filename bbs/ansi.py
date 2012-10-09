@@ -208,12 +208,12 @@ def scroll_up():
 # DEC Terminal sequences
 #
 
-def charset(charset='U'):
+def charset(ch='U'):
   """ sets character set,
       use 'U' for IBM VGA font,
       'B' for Latin-1 font,
       '0' for DEC font. """
-  return esc + '(' + charset
+  return esc + '(' + ch
 
 def fls():
   """ returns sequence for filling screen
