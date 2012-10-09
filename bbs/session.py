@@ -75,10 +75,11 @@ class Session(object):
   #                       [height;width] in characters.
   TTYREC_HEADER = u'\033[8;%d;%dt'
 
-  def __init__ (self, terminal=None, pipe=None, source=('undef', None), recording=None):
+  def __init__ (self, terminal=None, pipe=None, source=('undef', None),
+      recording=None, env=None):
     self.pipe = pipe
     self.terminal = terminal
-    self.env = dict()
+    self.env = dict() if env is None else env
     self._script_stack = [(ini.cfg.get('matrix','script'),)] # <- can we make it this short?
     self._script_stack = list(((ini.cfg.get('matrix','script'),),))
     self._tap_input = ini.cfg.get('session','tap_input') in ('yes', 'on')
