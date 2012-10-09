@@ -56,6 +56,7 @@ def main (logger, logHandler, cfgFile='default.ini'):
        on_connect=terminal.on_connect,
        on_disconnect=terminal.on_disconnect,
        on_naws=terminal.on_naws,
+       on_env=terminal.on_env,
        timeout=0.01)
   logger.info ('[telnet:%s] listening tcp', telnet_port)
 
@@ -98,6 +99,7 @@ def main (logger, logHandler, cfgFile='default.ini'):
         continue
 
       try:
+        # session i/o sent from child process
         event, data = pipe.recv()
 
       except EOFError:
@@ -126,9 +128,13 @@ def main (logger, logHandler, cfgFile='default.ini'):
               p.send ((event, data,))
 
       elif event == 'pos':
-        # query: what is the cursor position ? we answer
-        # with an equivalently named event as a callback mechanism.
-        t = terminal.POSHandler(pipe, client, lock, event, data)
+        # assert 'timeout' parameter
+        assert type(data) in (float, int, type(None))
+        # 'pos' query: 'what is the cursor position ?'
+        # 'pos-reply' event is a callback mechanism
+        # data of (None, None) indicates timeout
+        t = terminal.POSHandler(pipe, client, lock,
+            reply_event='pos-reply', timeout=data)
         t.start ()
 
       elif event.startswith ('db-'):
@@ -139,6 +145,17 @@ def main (logger, logHandler, cfgFile='default.ini'):
         t = db.DBHandler(pipe, event, data)
         t.start ()
 
+      elif event == 'env':
+        # data is dictionary of key, values
+        matches = set()
+        for key, value in data:
+          if not key in client.env \
+          or not client.env[key] == value:
+            client.env[key] = value
+            matches.add (key)
+        # notify userland of env updated variables ..
+        if 0 != len(matches):
+          p.send ((event, matches,))
       else:
         assert 0, 'Unhandled event: %s' % ((event,data,),)
 
@@ -164,15 +181,3 @@ if __name__ == '__main__':
   logHandler = log.get_stderr(level=log_level)
   sys.stdout.flush()
   main (logger, logHandler, cfgFile)
-
-
-  #import bbs.cp437
-#        if 'cp437' == encoding:
-#          # convert utf8'd cp437 art to real cp437 128-254 equivalents,
-#          unibytes = u''.join([unichr(bbs.cp437.CP437.index(glyph))
-#              if glyph in bbs.cp437.CP437 else glyph for glyph in text])
-#          # and then we go and call it utf8(iso8859-1?), leaving our
-#          # cp437-mapped characters between u'\0000' and u'\0256'
-#          # unmanipulated ..
-#          client.send_unicode (unibytes, encoding='utf8')
-
