@@ -52,6 +52,7 @@ class Session(object):
   _handle = None
   _activity = None
   _cwd = None
+  _encoding = 'utf8'
   _record_tty = False
   _ttyrec_folder = 'ttyrecordings/'
   _fp_ttyrec = None
@@ -74,13 +75,12 @@ class Session(object):
   #                       [height;width] in characters.
   TTYREC_HEADER = u'\033[8;%d;%dt'
 
-  def __init__ (self, terminal=None, pipe=None, encoding=None,
-  source=('undef', None), recording=None):
+  def __init__ (self, terminal=None, pipe=None, source=('undef', None), recording=None):
     self.pipe = pipe
     self.terminal = terminal
+    self.env = dict()
+    self._script_stack = [(ini.cfg.get('matrix','script'),)] # <- can we make it this short?
     self._script_stack = list(((ini.cfg.get('matrix','script'),),))
-    self._encoding = encoding if encoding is not None \
-        else ini.cfg.get('session', 'default_encoding')
     self._tap_input = ini.cfg.get('session','tap_input') in ('yes', 'on')
     self._tap_output = ini.cfg.get('session','tap_output') in ('yes', 'on')
     self._ttylog_folder = ini.cfg.get('session', 'ttylog_folder')
@@ -228,7 +228,7 @@ class Session(object):
     global mySession
     assert mySession is None, 'run() cannot be called twice'
     mySession = self
-    fallback_stack = self._script_stack #copy.copy(self._script_stack)
+    fallback_stack = self._script_stack
     while len(self._script_stack) > 0:
       logger.debug ('%s: script_stack is %s',
           self.handle, self._script_stack)
@@ -331,38 +331,55 @@ class Session(object):
     if event == 'ConnectionClosed':
       raise exception.ConnectionClosed (data)
 
-    if event == 'refresh':
+    if not self._buffer.has_key(event):
+      # create new buffer;
+      self._buffer[event] = list()
+
+    if event == 'input':
+      self._buffer_input (data)
+    elif event == 'env':
+      for key, value in data:
+        logger.debug ('Session.env[%r] = %r', key, value)
+        self.env[key] = value
+    elif event == 'refresh':
       if data[0] == 'resize':
         # inherit terminal dimensions values
         (self.terminal.columns, self.terminal.rows) = data[1]
       # store only most recent 'refresh' event
       self._buffer[event] = list((data,))
-      return
-
-    if not self._buffer.has_key(event):
-      # create new buffer; only accept 1 most recent 'refresh' event
-      self._buffer[event] = list()
-
-    if event != 'input':
+    else:
       self._buffer[event].insert (0, data)
+      # XXX very large for database queries, lol..
       logger.debug ('%s event buffered, (%s,%s).', self.handle, event, data,)
-      return
+
+  def _buffer_input (self, data):
+    """
+      Given multibyte keysequences, either pass into 'input' event
+      buffer unmanipulated when self.enable_keycodes is True, otherwise
+      decode as possible nvt, vt100, telnet, and curses input keysequences.
+
+      The unfortunate side-effect is something might appear as an equivalent
+      KEY_SEQUENCE that is better described as it was, '\r' and '\b', for
+      example.
+    """
+    self._last_input_time = time.time()
 
     if False == self.enable_keycodes:
       # send keyboard bytes in as-is, unmanipulated
       self._buffer['input'].insert (0, data)
-    else:
-      # given input string OD, return terminal.KEY_LEFT (an integer)
-      # otherwise yield us some unicode ...
-      for keystroke in self.terminal.trans_input(data, self.encoding):
-        self._buffer['input'].insert (0, keystroke)
-        if keystroke == chr(12):
-          # should we? send refresh events when ^L is found ?
-          self._buffer['refresh'] = list((('input', keystroke),))
-    self._last_input_time = time.time()
-
-    if self._tap_input and logger.isEnabledFor(logging.DEBUG):
-      logger.debug ('%s <-- %r', self.handle, data)
+      return
+    # translate ^L to KEY_REFRESH in getch() stream, but
+    # also send a ('refresh', ('input',)) event for signaling
+    ctrl_l = list((('input', self.terminal.KEY_REFRESH),))
+    # perform keycode translation voodoo with modified blessings/curses
+    for keystroke in self.terminal.trans_input(data, self.encoding):
+      if keystroke == chr(12): # ^L
+        self._buffer['refresh'] = ctrl_l
+        self._buffer['input'].insert (0, self.terminal.KEY_REFRESH)
+      # place unicode into buffer, suprise, sometimes its an integer,
+      # which is equivalent to a curses.KEY_SOMETHING, othertimes
+      # its just unicode. TODO: something more duck type-ish
+      self._buffer['input'].insert (0, keystroke)
 
   def send_event (self, event, data):
     """
