@@ -60,7 +60,7 @@ class Door(object):
       try:
         os.execvpe(self.cmd, self.args, env)
       except OSError, e:
-        logger.error ('OSError, %s', e)
+        logger.error ('OSError, %s: %s', e, self.args,)
         sys.exit (1)
 
     # typically, return values from 'input' events are translated keycodes,
