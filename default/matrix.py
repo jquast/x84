@@ -19,7 +19,7 @@ def main ():
   # you may or may not want this; the art on this bbs does!
   session = getsession()
   term = getterminal()
-  handle=''
+  handle = session.env.get('USER', u'')
   timeout = int(ini.cfg.get('session',  'timeout'))
   byecmds = ini.cfg.get('matrix', 'byecmds').split()
   newcmds = ini.cfg.get('matrix', 'newcmds').split()
@@ -31,7 +31,7 @@ def main ():
   max_user = int(ini.cfg.get('nua', 'max_user'))
   allow_apply = ini.cfg.get('nua', 'allow_apply') in ('yes',)
   topscript = ini.cfg.get('matrix', 'topscript')
-  bbsname = ini.cfg.get('system','bbsname')
+  bbsname = ini.cfg.get('system', 'bbsname')
   status_auth = ''.join((
     term.move (0,0) + term.clear + term.bright_cyan + u'\033#8',
     term.move (max(0,(term.height /2) -1), max(0,(term.width /2) -10),),' '*20,
@@ -71,7 +71,8 @@ def main ():
       raise ConnectionTimeout, 'timeout at login prompt'
 
     if event == 'refresh':
-      refresh ()
+      # let the user know why we're breaking up his prompt ..
+      echo (u' [%s]\r\n' % (data[0],))
       continue
 
     if 0 == len(handle):
