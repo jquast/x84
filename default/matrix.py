@@ -19,7 +19,8 @@ def main ():
   # you may or may not want this; the art on this bbs does!
   session = getsession()
   term = getterminal()
-  handle = session.env.get('USER', u'')
+  # we only allow ASCII in ENV variables anyway, so encode as iso8859-1
+  handle = session.env.get('USER', '').decode('iso8859-1', 'replace')
   timeout = int(ini.cfg.get('session',  'timeout'))
   byecmds = ini.cfg.get('matrix', 'byecmds').split()
   newcmds = ini.cfg.get('matrix', 'newcmds').split()
@@ -57,7 +58,9 @@ def main ():
     echo (u'\r\n\r\n')
     if ALLOW_ANONYMOUS:
       echo (u"'anonymous' login enabled.\r\n")
-    echo (term.normal_cursor)
+    show_cur = term.normal_cursor
+    if 0 != len(show_cur):
+      echo (show_cur)
 
   refresh ()
   while True:
