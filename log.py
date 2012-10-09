@@ -1,6 +1,7 @@
 # built-ins
 import copy
 import logging
+import multiprocessing
 import datetime
 
 #from bbs.dbproxy import DBProxy
@@ -11,6 +12,9 @@ MAX_SIZE=10000 # N records to store (as openudb('eventlog'))
 MAX_STEP=100 # cut N lines every buffer trim
 
 class ColoredConsoleHandler(logging.StreamHandler):
+  def __init__(self, term):
+    self.term = term
+    logging.StreamHandler.__init__ (self)
   el = None
   fmt_txt = '%(levelname)s' \
       '%(space)s%(filename)s%(colon)s%(lineno)s' \
@@ -18,8 +22,13 @@ class ColoredConsoleHandler(logging.StreamHandler):
         '%(sep)s%(prefix)s%(message)s'
 
   def color_levelname (self, r):
+    r.levelname = '%s%s%s' % \
+        (self.term.bold_red if r.levelno >= 50 else \
+         self.term.bold_red if r.levelno >= 40 else \
+         self.term.bold_yellow if r.levelno >= 30 else \
+         self.term.bold_white if r.levelno >= 20 else \
+         self.term.yellow, r.levelname.title(), self.term.normal)
     return r
-    #r.levelname = '%s%s%s' % \
     #  (ansi.color(ansi.LIGHTRED) if r.levelno >= 50 \
     #  else ansi.color(*ansi.LIGHTRED) if r.levelno >= 40 \
     #  else ansi.color(*ansi.YELLOW) if r.levelno >= 30 \
@@ -96,8 +105,11 @@ class ColoredConsoleHandler(logging.StreamHandler):
       (self, dst_record)
 
 def get_stderr(level=logging.INFO):
+  import sys
+  import blessings
+  term = blessings.Terminal(kind='ansi', stream=sys.stderr, force_styling=True)
   stderr_format = logging.Formatter (ColoredConsoleHandler.fmt_txt)
-  wscons = ColoredConsoleHandler()
+  wscons = ColoredConsoleHandler(term)
   wscons.setFormatter (stderr_format)
   level = level if level != None else logging.INFO # default
   if level != None:
