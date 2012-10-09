@@ -405,9 +405,8 @@ class Terminal(object):
               data = data[2:]
               continue
         if ('\r','\n') == (data[0], data[1] if 1 != len(data) else None):
-              # skip beyond \n (putty)
-              print 'putty'
-              yield self.KEY_ENTER #data[0]
+              # skip beyond \n (putty, SyncTerm)
+              yield self.KEY_ENTER
               data = data[2:]
               continue
         keyseq, keycode = scan_keymap(data)
