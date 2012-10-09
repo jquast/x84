@@ -11,7 +11,6 @@ __license__ = "ISC"
 
 from output import echo
 from input import getch
-from ansi import color
 from ansiwin import InteractiveAnsiWindow
 
 class HorizEditor(InteractiveAnsiWindow):
@@ -115,7 +114,9 @@ class HorizEditor(InteractiveAnsiWindow):
     """ Refresh window.
         @var startCol: Refresh only from this column
     """
-    echo (color())
+    from bbs.session import getsession
+    term = getsession().terminal
+    echo (term.normal)
     nextSeq, c = 0, 0
     data = self.data()
     self.lastShift = self.shift
