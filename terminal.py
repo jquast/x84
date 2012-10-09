@@ -13,11 +13,11 @@ registry = list ()
 logger = logging.getLogger(__name__)
 logger.setLevel (logging.DEBUG)
 
-def start_process(pipe, termtype, rows, columns, origin):
+def start_process(pipe, termtype, rows, columns, origin, env):
   import bbs.session
   stream = IPCStream(pipe)
   term = BlessedIPCTerminal (stream, termtype, rows, columns)
-  new_session = bbs.session.Session (term, pipe, origin)
+  new_session = bbs.session.Session (term, pipe, origin, env)
   # provide the curses-like 'restore screen to original on exit' trick
   enter, exit = term.enter_fullscreen(), term.exit_fullscreen()
   if 0 not in (len(enter), len(exit),):
@@ -102,7 +102,6 @@ class BlessedIPCTerminal(blessings.Terminal):
 
 def on_disconnect(client):
   """Discover the matching client in registry and remove it"""
-  import copy
   global registry
   logger.info ('Disconnected from telnet client %s:%s',
       client.address, client.port)
@@ -176,7 +175,7 @@ class ConnectTelnetTerminal (threading.Thread):
         (target=start_process,
            args=(child_conn, self.client.terminal_type,
             self.client.rows, self.client.columns,
-            self.client.addrport(),))
+            self.client.addrport(), self.client.env,))
     p.start ()
     registry.append ((self.client, parent_conn, lock))
 
@@ -216,7 +215,6 @@ class ConnectTelnetTerminal (threading.Thread):
     """Negotiate and inquire about terminal type, telnet options,
     window size, and tcp socket options before spawning a new session."""
     import socket
-    from bbs import exception
     try:
       logger.debug ('_set_socket_opts')
       self._set_socket_opts ()
@@ -224,6 +222,7 @@ class ConnectTelnetTerminal (threading.Thread):
       logger.info ('Socket error during negotiation: %s', e)
       return
 
+    from bbs import exception
     try:
       self.banner ()
       logger.debug ('_spawn_session')
@@ -355,9 +354,9 @@ class ConnectTelnetTerminal (threading.Thread):
         self.client.rows, self.client.columns = int(h), int(w)
         logger.info ('window size: %dx%d (corner-query hack)' \
             % (self.client.columns, self.client.rows,))
-        if self.terminal_type == self.TTYPE_UNDETECTED:
+        if self.client.terminal_type == self.TTYPE_UNDETECTED:
           logger.warn ("env['TERM'] = %r by POS" % (kind,))
-          self.terminal_type = kind
+          self.client.terminal_type = kind
         return
     logger.debug ('failed: negotiate about window size')
     # set to 80x24 if not detected
