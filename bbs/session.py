@@ -75,8 +75,7 @@ class Session(object):
   #                       [height;width] in characters.
   TTYREC_HEADER = u'\033[8;%d;%dt'
 
-  def __init__ (self, terminal=None, pipe=None, source=('undef', None),
-      recording=None, env=None):
+  def __init__ (self, terminal=None, pipe=None, source=('undef', None), env=None):
     self.pipe = pipe
     self.terminal = terminal
     self.env = dict() if env is None else env
@@ -206,7 +205,7 @@ class Session(object):
   @enable_keycodes.setter
   def enable_keycodes(self, value):
     if value != self._enable_keycodes:
-      logger.info ('%s enable_keycodes=%s', self.handle, value)
+      logger.debug ('%s enable_keycodes=%s', self.handle, value)
       self._enable_keycodes = value
 
 
@@ -365,6 +364,8 @@ class Session(object):
     """
     self._last_input_time = time.time()
 
+    if self._tap_input and logger.isEnabledFor(logging.DEBUG):
+      logger.debug ('%s <-- %r.', self.handle, data)
     if False == self.enable_keycodes:
       # send keyboard bytes in as-is, unmanipulated
       self._buffer['input'].insert (0, data)
