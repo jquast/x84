@@ -11,7 +11,7 @@ def sendch (keycode):
   # TODO: What is needed is a keycode object type, that retains
   # its string value,
   if keycode == term.KEY_ENTER:
-    val = unicode('\r')
+    val = unicode(u'\r')
   elif keycode == term.KEY_BACKSPACE:
     val = unicode(chr(127))
   else:
@@ -34,10 +34,8 @@ def getpos(timeout=None):
   """Return current terminal position as (y,x). (Blocking)"""
   logger.debug ("query ('pos', %f)", float('inf') if timeout is None else timeout)
   getsession().send_event('pos', timeout,) # ask for cursor position
-  event, data = getsession().read_event(events=['pos'], timeout=timeout)
-  return (None, None) \
-      if (None, None) == (event, data) \
-      else data
+  event, data = getsession().read_event(events=['pos-reply'], timeout=timeout)
+  return data[0]
 
 def readline(width, value = u'', hidden = u'', paddchar = u' ', events = [
     'input'], timeout = None, interactive = False, silent = False):
@@ -66,12 +64,12 @@ def readlineevent(width, value = u'', hidden = u'', paddchar = u' ', events = [
       return (None, 'input', data)
 
     elif char == term.KEY_ENTER:
-      return (value, 'input', '\n')
+      return (value, 'input', u'\n')
 
     elif char == term.KEY_BACKSPACE:
       if len(value) > 0:
         value = value [:-1]
-        echo ('\b' + paddchar + '\b')
+        echo (u'\b' + paddchar + u'\b')
 
     elif isinstance(char, int):
       pass # unhandled keycode ...
@@ -83,7 +81,7 @@ def readlineevent(width, value = u'', hidden = u'', paddchar = u' ', events = [
       else:
         echo (char)
     elif not silent:
-      echo ('\a')
+      echo (u'\a')
     if interactive:
       return (value, 'input', None)
 
