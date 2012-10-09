@@ -23,14 +23,6 @@ import bbs.session
 import sys
 import traceback
 import threading
-import __builtin__
-real_import = __builtin__.__import__
-def debug_import(name, locals=None, globals=None, fromlist=None, level=-1):
-  glob = globals or sys._getframe(1).f_globals
-  importer_name = glob and glob.get('__name__') or 'unknown'
-  logger.debug ('%s imports %s', importer_name, name)
-  return real_import(name, locals, globals, fromlist, level)
-__builtin__.__import__ = debug_import
 
 def main (logger, logHandler, cfgFile='default.ini'):
   """
@@ -38,6 +30,15 @@ def main (logger, logHandler, cfgFile='default.ini'):
   """
   import bbs.ini
   import terminal
+  import __builtin__
+  real_import = __builtin__.__import__
+  def debug_import(name, locals=None, globals=None, fromlist=None, level=-1):
+    glob = globals or sys._getframe(1).f_globals
+    importer_name = glob and glob.get('__name__') or 'unknown'
+    logger.debug ('%s imports %s', importer_name, name)
+    return real_import(name, locals, globals, fromlist, level)
+  __builtin__.__import__ = debug_import
+
   terminal.logger.addHandler (logHandler)
   terminal.logger.setLevel (logger.level)
   logger.addHandler (logHandler)
