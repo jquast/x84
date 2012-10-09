@@ -158,13 +158,7 @@ def main (logger, logHandler, cfgFile='default.ini'):
         # data is dictionary of key, values
         matches = set()
         for key, value in data:
-          if not key in client.env \
-          or not client.env[key] == value:
-            client.env[key] = value
-            matches.add (key)
-        # notify userland of env updated variables ..
-        if 0 != len(matches):
-          p.send ((event, matches,))
+          p.send ((event, (key, value),))
       else:
         assert 0, 'Unhandled event: %s' % ((event,data,),)
 
