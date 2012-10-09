@@ -83,7 +83,7 @@ def main ():
           if r.status_code == 200 and XML(r.content) \
               .find('success').text == 'true':
             # spawn thread to ensure our update got there ..
-            t = FetchUpdates(queue, l, history=3)
+            t = FetchUpdates(queue, lock, history=3)
             t.start ()
           break
         elif comment.exit:
