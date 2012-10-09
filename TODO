@@ -1,6 +1,36 @@
+telnet.py:
+  correctly negotiate the following:
+    STATUS, TSPEED, LFLOW
+
+message reader/browser
+(cheap) message editor
+find nvi -S .... nvi still lets you :r /etc/passwd,
+  and virus doesn't support unicode ..
+  sigh ..
+
 clients acquire and release named locks, w/timeout
-revive tetrawdraw and integrate it -- it would output cp437
+  like for dosemu autoexec.bat doors, etc.
+
+support some dosemu game or something with cp437 charset,
+ensure it translates correclty..
   and door.py can translate to utf-8 (and vice-versa? for alt+178's?)
+
+something wrong with pipe.send() in getpos()
+also snuff getpos() queries from ttyrec !
+
+properly implement STATUS in telnet.py ;/
+
+terminal clients to test against:
+  OSX:
+   Terminal.app, iTerm2,
+  Windows:
+   PuTTy
+   SyncTerm
+   mtel
+   telnet (-t vtnt?)
+  BSD:
+   uxterm + telnet
+
 doc generation
 example of using xmodem protocol
 'expert' mode goes everywhere, a way to test low-fi terminals ..
