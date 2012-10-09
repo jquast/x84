@@ -13,11 +13,11 @@ registry = list ()
 logger = logging.getLogger(__name__)
 logger.setLevel (logging.DEBUG)
 
-def start_process(child_conn, termtype, rows, columns, charset, origin):
+def start_process(pipe, termtype, rows, columns, origin):
   import bbs.session
-  stream = IPCStream(child_conn)
+  stream = IPCStream(pipe)
   term = BlessedIPCTerminal (stream, termtype, rows, columns)
-  new_session = bbs.session.Session (term, child_conn, charset, origin)
+  new_session = bbs.session.Session (term, pipe, origin)
   # provide the curses-like 'restore screen to original on exit' trick
   enter, exit = term.enter_fullscreen(), term.exit_fullscreen()
   if 0 not in (len(enter), len(exit),):
@@ -28,7 +28,7 @@ def start_process(child_conn, termtype, rows, columns, charset, origin):
     new_session.run ()
   logger.debug ('%s/%s end process', new_session.pid, new_session.handle)
   new_session.close ()
-  child_conn.send (('disconnect', 'process exit',))
+  pipe.send (('disconnect', ('process exit',)))
 
 
 class IPCStream(object):
@@ -72,7 +72,7 @@ class BlessedIPCTerminal(blessings.Terminal):
       assert terminal_type != default_ttype, \
           '%s; using default_ttype' % (errmsg,)
       logger.warn (errmsg)
-      stream.write (errmsg + '\r\n')
+      stream.write ('%s\r\n' % (errmsg,))
       stream.write ('terminal type: %s (default)\r\n' % (default_ttype,))
       blessings.Terminal.__init__ (self,
           kind=default_ttype, stream=stream, force_styling=True)
@@ -126,6 +126,15 @@ def on_naws(client):
       p.send (('refresh', ('resize', (c.columns, c.rows),)))
       return
 
+def on_env(client):
+  """On a NEW_ENVIRON event, send all environment variables to be unpacked
+     and applied to session.env{} """
+  for (c,p,l) in registry:
+    if client == c:
+      p.send (('env', (client.env.items(),)))
+      return
+
+
 class ConnectTelnetTerminal (threading.Thread):
   """
   This thread spawns long enough to
@@ -138,9 +147,8 @@ class ConnectTelnetTerminal (threading.Thread):
   DEBUG = False
   TIME_WAIT = 1.25
   TIME_PAUSE = 1.75
-  TIME_POLL  = 0.01
-  TTYPE_UNDETECTED = 'unknown client'
-  CHARSET_UNDETECTED = 'unknown encoding'
+  TIME_POLL  = 0.10
+  TTYPE_UNDETECTED = 'unknown'
   WINSIZE_TRICK= (
         ('vt100', ('\x1b[6n'), re.compile('\033' + r"\[(\d+);(\d+)R")),
         ('sun', ('\x1b[18t'), re.compile('\033' + r"\[8;(\d+);(\d+)t"))
@@ -168,12 +176,11 @@ class ConnectTelnetTerminal (threading.Thread):
         (target=start_process,
            args=(child_conn, self.client.terminal_type,
             self.client.rows, self.client.columns,
-            self.client.charset, self.client.addrport(),))
+            self.client.addrport(),))
     p.start ()
     registry.append ((self.client, parent_conn, lock))
 
   def banner(self):
-    # http://www.unixguide.net/network/socketfaq/4.13.shtml
     # Writing Server Applications (TCP/SOCK_STREAM): How can I read only one
     #   character at a time?
     # According to Roger Espel Llima (espel@drakkar.ens.fr), you can
@@ -184,20 +191,24 @@ class ConnectTelnetTerminal (threading.Thread):
     self.client.request_will_echo ()
     self.client.request_will_sga ()
     self.client.request_do_sga ()
-    nbytes = self.client.bytes_received
-    while nbytes == self.client.bytes_received and self._timeleft(t):
-      time.sleep (self.TIME_POLL)
-    time.sleep (self.TIME_POLL)
-    # allow any time to pass for the client to send us negotiations
-    # before we begin making more demands than the 'magic character-at-a-time'
-    self.client.charset = 'utf8'
-    self._try_ttype ()
-    #self._no_linemode () #SGA/ECHO should always be enough !
-    self._try_env ()
-    self._try_naws ()
-    #self._try_echo ()
-    #self._try_sga ()
 
+    # wait for some bytes to be received, and if we get any bytes,
+    # at least make sure to get some more, and then -- wait a bit!
+    t = time.time()
+    mrk_bytes = self.client.bytes_received
+    while (0 == mrk_bytes or mrk_bytes == self.client.bytes_received) \
+        and time.time() -t < (0.25):
+      time.sleep (self.TIME_POLL)
+    time.sleep (self.TIME_POLL *2)
+    if 0 == self.client.bytes_received:
+      logger.warn ('silent client -- XXX kill?')
+    # this will set .terminal_type if 'TERM'
+    self._try_env ()
+    # this will set .terminal_type if still undetected,
+    self._try_ttype ()
+    # this will set TERM to vt100 or sun if still undetected,
+    # this will set .rows, .columns if not LINES and COLUMNS
+    self._try_naws ()
     # disable line-wrapping http://www.termsys.demon.co.uk/vtansi.htm
     self.client.send_str (bytes('\033[7l'))
 
@@ -240,16 +251,14 @@ class ConnectTelnetTerminal (threading.Thread):
     self.client._iac_wont(LINEMODE)
     self.client._note_reply_pending(LINEMODE, True)
 
-
   def _try_sga(self):
     """Negotiate supress go-ahead (SGA) telnet option (on)."""
     from telnet import SGA
     enabledRemote = self.client._check_remote_option
     enabledLocal = self.client._check_local_option
     if enabledRemote(SGA) is True and enabledLocal(SGA) is True:
-      logger.info ('sga enabled')
+      logger.info ('sga enabled (unsolicited)')
       return
-
     logger.debug('request-do-sga')
     self.client.request_will_sga ()
     self.client.socket_send() # push
@@ -260,13 +269,14 @@ class ConnectTelnetTerminal (threading.Thread):
     if (enabledRemote(SGA) is True and enabledLocal(SGA) is True):
       logger.info ('sga enabled (negotiated)')
     else:
-      logger.info ('failed: supress go-ahead')
+      logger.error ('failed: supress go-ahead')
+      # XXX kick them off?
 
 
   def _try_echo(self):
     """Negotiate echo (ECHO) telnet option (on)."""
     if self.client.telnet_echo is True:
-      logger.debug ('echo enabled')
+      logger.debug ('echo enabled (unsolicited)')
       return
     logger.debug('request-will-echo')
     self.client.request_will_echo ()
@@ -275,50 +285,55 @@ class ConnectTelnetTerminal (threading.Thread):
     while self.client.telnet_echo is False \
         and self._timeleft(t):
       time.sleep (self.TIME_POLL)
-    if self.client.telnet_echo:
+    if self.client.telnet_echo is True:
       logger.debug ('echo enabled (negotiated)')
     else:
-      logger.debug ('failed: echo, ignored !')
+      logger.error ('failed: echo, ignored ?!')
+      # XXX kick them off?
 
   def _try_env(self):
     """ Try to snarf out some environment variables from unix machines """
     from telnet import NEW_ENVIRON, UNKNOWN
-    if self.client._check_remote_option(NEW_ENVIRON) in (False,UNKNOWN):
-      logger.debug('request-do-env')
-      self.client.request_do_NEW_ENVIRON ()
-      self.client.socket_send() # push
-      t = time.time()
-      while self.client._check_remote_option(NEW_ENVIRON) in (False,UNKNOWN) \
-          and self._timeleft(t):
-            time.sleep (self.TIME_POLL)
-    if self.client._check_remote_option(NEW_ENVIRON) in (False,UNKNOWN):
-      logger.debug ('failed: negotiate environment variables')
+    if self.client._check_remote_option(NEW_ENVIRON) == True:
+      logger.debug('environment enabled (unsolicted)')
+      return
+    logger.debug('request-do-env')
+    self.client.request_do_NEW_ENVIRON ()
+    self.client.socket_send() # push
+    t = time.time()
+    while self.client._check_remote_option(NEW_ENVIRON) == UNKNOWN \
+        and self._timeleft(t):
+          time.sleep (self.TIME_POLL)
+    if self.client._check_remote_option(NEW_ENVIRON) == UNKNOWN:
+      logger.debug ('failed: NEW_ENVIRON')
       return
 
   def _try_naws(self):
     """Negotiate about window size (NAWS) telnet option (on)."""
-    if not None in (self.client.columns, self.client.rows,):
+    if not None in (self.client.columns, self.client.rows,) \
+    and self.client.terminal_type != self.TTYPE_UNDETECTED:
       logger.debug ('window size: %dx%d (unsolicited)' \
           % (self.client.columns, self.client.rows,))
       return
-
     logger.debug('request-naws')
-    self.client.request_do_naws ()
-    self.client.socket_send() # push
-    t = time.time()
-    while None in (self.client.columns, self.client.rows,) \
-      and self._timeleft(t):
-        time.sleep (self.TIME_POLL)
-    if not None in (self.client.columns, self.client.rows,):
-      logger.info ('window size: %dx%d (negotiated)' \
-          % (self.client.columns, self.client.rows,))
-      return
-    logger.debug ('failed: negotiate about window size')
+    if None in (self.client.columns, self.client.rows,):
+      self.client.request_do_naws ()
+      self.client.socket_send() # push
+      t = time.time()
+      while None in (self.client.columns, self.client.rows,) \
+        and self._timeleft(t):
+          time.sleep (self.TIME_POLL)
+      if not None in (self.client.columns, self.client.rows,):
+        logger.info ('window size: %dx%d (negotiated)' \
+            % (self.client.columns, self.client.rows,))
+        return
+      logger.debug ('failed: negotiate about window size')
 
     # Try #2 ... this works for most any screen
     # send to client --> pos(999,999)
     # send to client --> report cursor position
     # read from client <-- window size
+    # bonus: 'vt100' or 'sun' TERM type set, lol.
     logger.debug ('store-cu')
     self.client.send_str ('\x1b[s')
     for kind, query_seq, response_pattern in self.WINSIZE_TRICK:
@@ -340,40 +355,15 @@ class ConnectTelnetTerminal (threading.Thread):
         self.client.rows, self.client.columns = int(h), int(w)
         logger.info ('window size: %dx%d (corner-query hack)' \
             % (self.client.columns, self.client.rows,))
+        if self.terminal_type == self.TTYPE_UNDETECTED:
+          logger.warn ("env['TERM'] = %r by POS" % (kind,))
+          self.terminal_type = kind
         return
-
     logger.debug ('failed: negotiate about window size')
     # set to 80x24 if not detected
     self.client.columns, self.client.rows = 80, 24
     logger.debug ('window size: %dx%d (default)' \
         % (self.client.columns, self.client.rows,))
-
-
-  def _try_charset(self):
-    """Negotiate terminal charset (CHARSET) telnet option (on)."""
-    # haven't seen this work yet ...
-    from bbs import ini
-    from telnet import CHARSET
-    if self.client.charset != self.CHARSET_UNDETECTED:
-      logger.debug ('terminal charset: %s\r\n' % (self.client.char))
-      return
-    logger.debug ('request-terminal-charset')
-    self.client.request_do_charset ()
-    self.client.socket_send() #push
-    t = time.time()
-    while self.client.charset == self.CHARSET_UNDETECTED \
-      and self.client._check_reply_pending(CHARSET) \
-      and self._timeleft(t):
-        time.sleep (self.TIME_POLL)
-    if self.client.charset != self.CHARSET_UNDETECTED:
-      logger.debug ('terminal charset: %s (negotiated)' %
-          (self.client.charset,))
-      return
-    logger.debug ('failed: negotiate about character encoding')
-
-    # set to cfg .ini if not detected
-    self.client.charset = ini.cfg.get('session', 'default_encoding')
-    logger.debug ('terminal charset: %s (default)' % (self.client.charset,))
 
 
   def _try_ttype(self):
@@ -428,17 +418,17 @@ class POSHandler(threading.Thread):
   """
   This thread requires a client pipe, The telnet terminal is queried for its
   cursor position, and that position is sent as 'pos' event to the child pipe,
-  otherwise a ('pos', None) is sent if no cursor position is reported within
+  otherwise a ('pos-reply', None) is sent if no cursor position is reported within
   TIME_PAUSE.
   """
   TIME_POLL = 0.01
   TIME_PAUSE = 1.75
   TIME_WAIT = 1.30
-  def __init__(self, pipe, client, lock, event='pos', timeout=None):
+  def __init__(self, pipe, client, lock, reply_event='pos-reply', timeout=None):
     self.pipe = pipe
     self.client = client
     self.lock = lock
-    self.event = event
+    self.reply_event = reply_event
     self.TIME_WAIT = timeout if timeout is not None else self.TIME_WAIT
     threading.Thread.__init__ (self)
 
@@ -448,6 +438,7 @@ class POSHandler(threading.Thread):
 
   def run(self):
     logger.debug ('getpos?')
+    data = (None, None)
     for (ttype, seq, pattern) in ConnectTelnetTerminal.WINSIZE_TRICK:
       self.lock.acquire ()
       self.client.send_str (seq)
@@ -457,16 +448,20 @@ class POSHandler(threading.Thread):
         time.sleep (self.TIME_POLL)
       inp = self.client.get_input()
       self.lock.release ()
-      match = P.search (inp)
+      match = pattern.search (inp)
       logger.debug ('x %r/%d', inp, len(inp),)
-      if not match and len(inp):
+      if match:
+        row, col = match.groups()
+        try:
+          data = (int(row)-1, int(col)-1)
+          break
+        except ValueError:
+          pass
+      if len(inp):
         # holy crap, this isn't for us ;^)
         self.pipe.send (('input', inp))
+        logger.error ('input bypass %r', inp)
         continue
-      elif match:
-        row, col = match.groups()
-        logger.debug ('xmit %s,%s', row, col)
-        self.pipe.send (('pos', ((int(row)-1), int(col)-1,)))
-        return
-    self.pipe.send (('pos', (None, None,)))
+    logger.debug ('send: %s, %r', self.reply_event, data,)
+    self.pipe.send ((self.reply_event, (data,)))
     return
