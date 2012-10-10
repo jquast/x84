@@ -66,34 +66,32 @@ import os
 #  return os.path.abspath(os.path.join(path, os.path.pardir +os.path.sep))
 
 def abspath(filename=None):
-  """
-  return absolute path under context of current session, including calls from
-  bbs engine, where no session exists. With no arguments, the current working
-  directory is returned
-  """
-  import session
-  if (filename and not filename.startswith(os.path.sep)) or not filename:
-    # find apropriate relative filepath
-    try:
-      # called from user session
-      path = session.getsession().cwd
-    except KeyError:
-      # called from main engine daemon
-      path = os.path.curdir
-    if filename:
-      path = os.path.join(path, filename)
-  else:
-    path = filename
-  return os.path.normpath(path)
+    """
+    return absolute path under context of current session, including calls from
+    bbs engine, where no session exists. With no arguments, the current working
+    directory is returned
+    """
+    import session
+    if (filename and not filename.startswith(os.path.sep)) or not filename:
+        # find apropriate relative filepath
+        try:
+            # called from user session
+            path = session.getsession().cwd
+        except KeyError:
+            # called from main engine daemon
+            path = os.path.curdir
+        if filename:
+            path = os.path.join(path, filename)
+    else:
+        path = filename
+    return os.path.normpath(path)
 
 def fopen(filepath, mode='rb'):
-  " return file descripter of file described by filepath, relative to session path "
-  return open(abspath(filepath),mode)
+    " return file descripter of file described by filepath, relative to session path "
+    return open(abspath(filepath),mode)
 
 def ropen(filename, mode='rb'):
-  import glob
-  " open random file, describing file listing using glob wildcards "
-  import random
-  return open(random.choice(glob.glob(abspath(filename))))
-
-
+    import glob
+    " open random file, describing file listing using glob wildcards "
+    import random
+    return open(random.choice(glob.glob(abspath(filename))))
