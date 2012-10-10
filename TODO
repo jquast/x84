@@ -58,6 +58,9 @@ flesh out fileserver ... zIPE's call.
   at least hook on_* methods
   file stats, ftpd admin door, etc.
 
+19:34  airwalk you need 1) gl like ftp support
+19:34  airwalk and 2) zipscript-c support
+
 
 must be compatible with the following clients,
 (or document any changes required, fonts, etc.):
