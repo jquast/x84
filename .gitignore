@@ -1,4 +1,5 @@
 data/*.sqlite3
+data/dopewars.*
 *.log
 *.pyc
 *.swp
