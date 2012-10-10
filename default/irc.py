@@ -129,14 +129,14 @@ def main():
     inputbar.partial = inputbar.edit = inputbar.interactive = True
 
     def refresh ():
-      echo (cls() + color())
-      buffer.refresh (); buffer.border ()
-      inputbar.clear (); inputbar.border ()
-      inputbar.fixate ()
-      art = fopen('art/irc.asc', 'r').readlines()
-      for y, data in enumerate(art):
-        echo (pos(10, y) + data)
-      echo (cursor_show())
+        echo (cls() + color())
+        buffer.refresh (); buffer.border ()
+        inputbar.clear (); inputbar.border ()
+        inputbar.fixate ()
+        art = fopen('art/irc.asc', 'r').readlines()
+        for y, data in enumerate(art):
+            echo (pos(10, y) + data)
+        echo (cursor_show())
 
     refresh ()
 
