@@ -390,7 +390,7 @@ class Terminal(object):
       If data is a bytestring, it is converted to unicode using encoding.
       """
       if isinstance(data, str):
-        data = data.decode (encoding)
+        data = data.decode (encoding, 'replace')
 
       def scan_keymap(text):
           for (keyseq, keycode) in self._keymap.iteritems():
