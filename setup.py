@@ -3,6 +3,9 @@
 Distribution module for the X/84 BBS
 """
 
+#pylint: disable=E0611,F0401
+# ?      No name 'core' in module 'distutils'
+# ?      Unable to import 'distutils.core'
 from distutils.core import setup
 
 setup(name         = 'X84',
@@ -29,4 +32,3 @@ setup(name         = 'X84',
       requires     = ['blessings', 'sauce', 'sqlitedict', 'xmodem'],
       scripts      = ['x84'],
 )
-
