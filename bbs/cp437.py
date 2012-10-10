@@ -58,20 +58,24 @@ CP437 = (
     u'\u00F7', u'\u2248', u'\u00B0', u'\u2219', u'\u00B7', u'\u221A',
     u'\u207F', u'\u00B2', u'\u25A0', u'\u00A0')
 
-# prepare static table. In python 3, str.maketrans() takes a dict of
-# exactly this form.
-CP437table = dict([(chr(i), CP437[i]) for i in range(255)])
+# prepare static table.
+# In python 3, str.maketrans() uses a dictionary of exactly this form.
+CP437TABLE = dict([(chr(i), CP437[i]) for i in range(255)])
 
 def fromCP437(text):
     """ Given a bytestring in IBM codepage 437, return a translated
         unicode string suitable for decoding to UTF-8.
     """
-    return u''.join([CP437table[byte] for byte in text])
+    return u''.join([CP437TABLE[byte] for byte in text])
 
-if __name__ == '__main__':
+def run():
     import sys
     if len(sys.argv) < 2:
-        print >>sys.stderr, '%s <file>' % (sys.argv[0],)
-        sys.exit(1)
+        sys.stderr.write('%s <file>\n' % (sys.argv[0],))
+        sys.exit (1)
     cptext = file(sys.argv[1]).read()
     print fromCP437(cptext)
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(run())
