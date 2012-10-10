@@ -3,5 +3,3 @@ xmodem
 sauce
 requests
 py-bcrypt
-pysendfile
-pyftpdlib
