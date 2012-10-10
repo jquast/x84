@@ -1,117 +1,103 @@
-# built-ins
-import copy
+"""
+Logging handler for x/84 BBS, http://github.com/jquast/x84
+"""
 import logging
-import multiprocessing
-import datetime
+import copy
 
-#from bbs.dbproxy import DBProxy
-#from bbs.session import getsession
+_last_line = ('', '', '', '', '', '')
 
-last_line1 = ('','','','','','')
-MAX_SIZE=10000 # N records to store (as openudb('eventlog'))
-MAX_STEP=100 # cut N lines every buffer trim
-
-class ColoredConsoleHandler(logging.StreamHandler):
-  def __init__(self, term):
-    self.term = term
-    logging.StreamHandler.__init__ (self)
-  el = None
-  fmt_txt = '%(levelname)s' \
-      '%(space)s%(filename)s%(colon)s%(lineno)s' \
-      '%(space)s%(processName)s%(threadName)s' \
+FMT_TXT = '%(levelname)s' \
+        '%(space)s%(filename)s%(colon)s%(lineno)s' \
+        '%(space)s%(processName)s%(threadName)s' \
         '%(sep)s%(prefix)s%(message)s'
 
-  def color_levelname (self, r):
-    r.levelname = '%s%s%s' % \
-        (self.term.bold_red if r.levelno >= 50 else \
-         self.term.bold_red if r.levelno >= 40 else \
-         self.term.bold_yellow if r.levelno >= 30 else \
-         self.term.bold_white if r.levelno >= 20 else \
-         self.term.yellow, r.levelname.title(), self.term.normal)
-    return r
-    #  (ansi.color(ansi.LIGHTRED) if r.levelno >= 50 \
-    #  else ansi.color(*ansi.LIGHTRED) if r.levelno >= 40 \
-    #  else ansi.color(*ansi.YELLOW) if r.levelno >= 30 \
-    #  else ansi.color(*ansi.WHITE),
-    #    r.levelname.title(),
-    #  ansi.color())
-    #return r
-
-  #def ins_handle(self, r):
-  #  try:
-  #    r.handle = '%s' % (getsession().handle + ' ' \
-  #        if hasattr(getsession(), 'handle') and getsession().handle \
-  #        else '')
-  #  except KeyError:
-  #    r.handle = ''
-  #  return r
-
-  def line_cmp(self, r):
-    return (r.levelname, r.levelname, r.filename, r.lineno, r.threadName)
-
-  def line_blank(self, r):
-    r.colon = r.space = r.sep = r.levelname \
-      = r.filename = r.lineno = r.threadName = ''
-    return r
-
-  def skip_repeat_line1(self, r):
-    global last_line1
-    cur_line1 = self.line_cmp(r)
-    if cur_line1 == last_line1 \
-    and last_line1[0].lower().strip() == 'error':
-      # avoid repeating unnecessarily,
-      r = self.line_blank(r)
-    last_line1 = cur_line1
-    return r
-
-  def transform(self, src_record):
-   src_record.colon = ':'
-   src_record.space = ' '
-   src_record.sep = ' - '
-   src_record.prefix = ''
-   return \
-     (self.color_levelname \
-       (self.skip_repeat_line1 \
-             (src_record)))
-
-  def emit(self, src_record):
-    # XXX hook in an event log database ... dont like this
-    #if self.el is None:
-    #  try:
-    #    self.el = bbs.db.openudb('eventlog')
-    #  except NameError, e:
-    #    pass
-
-    # trim database
-    #if self.el is not None and len(self.el) > MAX_SIZE:
-    #  largedb = copy.copy(self.el)
-    #  for k in sorted(largedb.keys())[:-(MAX_SIZE-MAX_STEP)]:
-    #    del self.el[k]
-
-    dst_record = self.transform \
-        (copy.copy(src_record))
-
-    # write db record
-#    if self.el is not None:
-#      self.el.__setitem__ \
-#          (datetime.datetime.now(), \
-#          '%s %s %s:%s %s %s' % \
-#            (dst_record.levelname, dst_record.handle,
-#             dst_record.filename, dst_record.lineno,
-#             dst_record.threadName, dst_record.getMessage(),))
-
-    # emit to console
-    logging.StreamHandler.emit \
-      (self, dst_record)
 
 def get_stderr(level=logging.INFO):
-  import sys
-  import blessings
-  term = blessings.Terminal(kind='ansi', stream=sys.stderr, force_styling=True)
-  stderr_format = logging.Formatter (ColoredConsoleHandler.fmt_txt)
-  wscons = ColoredConsoleHandler(term)
-  wscons.setFormatter (stderr_format)
-  level = level if level != None else logging.INFO # default
-  if level != None:
-    wscons.setLevel(level) # default level
-  return wscons
+    """
+    Return log handler suitable for logging to sys.stderr.
+    """
+    import sys
+    import blessings
+    term = blessings.Terminal(stream=sys.stderr, force_styling=True)
+    stderr_format = logging.Formatter (FMT_TXT)
+    wscons = ColoredConsoleHandler(term)
+    wscons.setFormatter (stderr_format)
+    level = level if level != None else logging.INFO # default
+    if level != None:
+        wscons.setLevel(level) # default level
+    return wscons
+
+
+def line_cmp(record):
+    """ Return tuple of levelname, filename, lineno, and threadName. """
+    return (record.levelname, record.filename,
+            record.lineno, record.threadName,
+            record.processName)
+
+
+def line_blank(record):
+    """ Blank out various redundant fields of a record. """
+    record.colon = record.space = record.sep = record.levelname \
+      = record.filename = record.lineno = record.threadName \
+      = record.processName = ''
+    return record
+
+
+def skip_repeat_line1(record):
+    """
+    If this record is very similar to the last record, blank out the
+    redundant bits. This especially makes tracebacks & etc. more readable.
+    """
+    #pylint: disable=W0603
+    #        Using the global statement
+    global _last_line
+    cur_line1 = line_cmp(record)
+    if cur_line1 == _last_line \
+    and _last_line[0].lower().strip() == 'error':
+        # avoid repeating unnecessarily,
+        record = line_blank(record)
+    _last_line = cur_line1
+    return record
+
+
+class ColoredConsoleHandler(logging.StreamHandler):
+    """
+    A stream handler that colors the levelname and avoids
+    printing too much processName, Info, Time, etc. for
+    very long errors such as traceback (last_line global)
+    """
+
+    def __init__(self, term):
+        self.term = term
+        logging.StreamHandler.__init__ (self)
+
+    def color_levelname (self, record):
+        """ Modify levelname field to include terminal color sequences.  """
+        record.levelname = '%s%s%s' % \
+            (self.term.bold_red if record.levelno >= 50 else \
+             self.term.bold_red if record.levelno >= 40 else \
+             self.term.bold_yellow if record.levelno >= 30 else \
+             self.term.bold_white if record.levelno >= 20 else \
+             self.term.yellow, record.levelname.title(), self.term.normal)
+        return record
+
+    def transform(self, src_record):
+        """ Return a modified log record """
+        src_record.colon = ':'
+        src_record.space = ' '
+        src_record.sep = ' - '
+        src_record.prefix = ''
+        return \
+          (self.color_levelname \
+            (skip_repeat_line1 \
+                  (src_record)))
+
+    def emit(self, src_record):
+        """ Emit record to console """
+        # transform
+        dst_record = self.transform \
+            (copy.copy(src_record))
+
+        # emit to console
+        logging.StreamHandler.emit \
+          (self, dst_record)
