@@ -1,49 +1,62 @@
+"""
+Database request handler for x/84 http://github.com/jquast/x84
+"""
 import threading
-import traceback
 import logging
 import os
-import sys
 import sqlitedict
-import bbs.ini
 logger = logging.getLogger(__name__)
-DATABASES = {}
-LOCK = threading.Lock()
+
+_lock = threading.Lock()
+_databases = {}
+
+def get_db(schema):
+    """
+    Returns a shared SqliteDict instance, creating a new one if not found
+    """
+    _lock.acquire()
+    if not schema in _databases:
+        assert schema.isalnum()
+        import bbs.ini
+        dbpath = os.path.join(bbs.ini.cfg.get('database','sqlite_folder'),
+            '%s.sqlite3' % (schema,),)
+        _databases[schema] = sqlitedict.SqliteDict(
+                dbpath, autocommit=True)
+    _lock.release ()
+    return _databases[schema]
 
 class DBHandler(threading.Thread):
-  """
-  This thread requires a client pipe, a database 'event' in string form
-  'db-schema', where 'schema' is a sqlite database name. 'data' is in the form
-  of (command, arguments), 'command' is a string of any method, and arguments
-  are optional arguments to that method. This database query is executed and
-  the result is sent back to the client pipe with the same 'event' string name
-  as received.
-  """
-  def __init__(self, pipe, event, data):
-    self.pipe = pipe
-    self.event = event
-    self.schema = event.split('-',1)[1]
-    self.cmd = data[0]
-    self.args = data[1]
-    threading.Thread.__init__ (self)
+    """
+    This handler receives a "database command", in the form of a dictionary
+    method name and its arguments, and the return value is sent to the session
+    pipe with the same 'event' name.
+    """
+    def __init__(self, pipe, event, data):
+        """ Arguments:
+              pipe: parent end of multiprocessing.Pipe()
+              event: database schema in form of string 'db-schema'
+              data: tuple of dictionary method and arguments
+        """
+        self.pipe = pipe
+        self.event = event
+        self.schema = event.split('-', 1)[1]
+        self.cmd = data[0]
+        self.args = data[1]
+        threading.Thread.__init__ (self)
 
-  def run(self):
-    global DATABASES
-    LOCK.acquire()
-    if not self.schema in DATABASES:
-      dbpath = os.path.join(bbs.ini.cfg.get('database','sqlite_folder'),
-          '%s.sqlite3' % (self.schema,),)
-      DATABASES[self.schema] = sqlitedict.SqliteDict(dbpath, autocommit=True)
-    db = DATABASES[self.schema]
-    LOCK.release ()
-    assert hasattr(db, self.cmd), \
-        "'%(_cmd)s' not a valid method of <type 'dict'>" % self
-    f = getattr(db, self.cmd)
-    assert callable(f), \
-        "'%(_cmd)s' not a valid method of <type 'dict'>" % self
-    logger.debug ('%s/%s(%s)', self.schema, self.cmd, self.args)
-    try:
-      result = f() if 0==len(self.args) else f(*self.args)
-      self.pipe.send ((self.event, result,))
-    except:
-      t, v, tb= sys.exc_info()
-      self.pipe.send (('exception', (t, v, traceback.format_tb(tb),)))
+    def run(self):
+        """
+        Execute database command and return results to session pipe.
+        """
+        dictdb = get_db(self.schema)
+        assert hasattr(dictdb, self.cmd), \
+            "'%(cmd)s' not a valid method of <type 'dict'>" % self
+        func = getattr(dictdb, self.cmd)
+        assert callable(func), \
+            "'%(cmd)s' not a valid method of <type 'dict'>" % self
+        logger.debug ('%s/%s(%s)', self.schema, self.cmd, self.args)
+        if 0 == len(self.args):
+            result = func()
+        else:
+            result = func(*self.args)
+        self.pipe.send ((self.event, result,))
