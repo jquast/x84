@@ -1,60 +1,75 @@
-telnet.py:
-  correctly negotiate the following:
-    STATUS, TSPEED, LFLOW
-
-message reader/browser
-(cheap) message editor
-find nvi -S .... nvi still lets you :r /etc/passwd,
-  and virus doesn't support unicode ..
-  sigh ..
-
-clients acquire and release named locks, w/timeout
+ROADMAP, 1.0:
+EASY
+* local.py -- telnetlib to self :-)
+* cleanup default/
+* cleanup bbs/
+* PEP-8 clean
+* revise pydoc / docstrings
+* script/ui/menu.py:
+      # make new menu
+      menu(paraclass)
+      # add choices
+      choices['c'] = "chat"
+      # update and refresh menu
+      menu.update(choices)
+   - a simple menu class that display's a user menu using
+     a readonly paraclass and a high split value by default.
+ ! + menu class takes user input, and listens to broadcast messages
+     such as chat invination or new mail and calls gosubs()!
+   - get user input like:
+      choice = menu.run()
+* cross-session paging -- basically allow sending
+  a script name + arguments to antoher session, forcing
+  that session to gosub() -- this would be used, for instance
+  by a sysop to break into chat,
+  or to request chat by another user,
+  or simply for fun
+* user editor + profile editor (edit self)
+* create wiki articles:
+  - custom matrix
+  - simple door game
+* TERM=unknown -- this should create an 'expert mode' bbs, with
+  no frills, no lightbars, no artwork, etc. -- for low bandwidth
+  terminals.
+* (cheap) message editor
+  simply use horizontal line editor, when you press return, it moves
+  to the next one... up arrows move to the previous one...
+* find a unicode editor -- modify nvi ??
+    nvi -S .... nvi still lets you :r /etc/passwd,
+    and virus doesn't support unicode ..
+* demonstrate xmodem protocol ...
+  allow upload of .plan file
+  allow download of bbs source code .
+* clients acquire and release named locks, w/timeout
   like for dosemu autoexec.bat doors, etc.
+* something wrong with pipe.send() in getpos()
+* also snuff getpos() queries from ttyrec !
+* properly implement STATUS in telnet.py ;/
+* also TFLOW and TSPEED
+* properly send GA when SGA is not negotiated
+HARD
+* message reader/browser
+  something akin to mutt's interface would be super.
+* bbs-scene.org bbs lister
+* demonstrate LORD dosemu game, esp. cp437 art translation!
+PARKING LOT
 
-support some dosemu game or something with cp437 charset,
-ensure it translates correclty..
-  and door.py can translate to utf-8 (and vice-versa? for alt+178's?)
+flesh out fileserver ... zIPE's call.
+  at least hook on_* methods
+  file stats, ftpd admin door, etc.
 
-something wrong with pipe.send() in getpos()
-also snuff getpos() queries from ttyrec !
 
-properly implement STATUS in telnet.py ;/
-
-terminal clients to test against:
-  OSX:
-   Terminal.app, iTerm2,
-  Windows:
+must be compatible with the following clients,
+(or document any changes required, fonts, etc.):
+OSX:
+   iTerm2
+   Terminal.app
+Windows:
    PuTTy
    SyncTerm
    mtel
    telnet (-t vtnt?)
-  BSD:
-   uxterm + telnet
+BSD, Linux, etc.
+   uxterm + bsdtelnet
 
-doc generation
-example of using xmodem protocol
-'expert' mode goes everywhere, a way to test low-fi terminals ..
-groupbase
-user editor: overhall
-bbs-scene.org bbs lister
-flesh out fileserver ... zIPE's call.
-  at least hook on_* methods
-  file stats, ftpd admin door, etc.
-bring weather up to date
-pickup/dropoff of global events
-? nntp support
-? zmodem support
 
-script/ui/menu.py:
-     # make new menu
-     menu(paraclass)
-     # add choices
-     choices['c'] = "chat"
-     # update and refresh menu
-     menu.update(choices)
-  - a simple menu class that display's a user menu using
-    a readonly paraclass and a high split value by default.
-! + menu class takes user input, and listens to broadcast messages
-    such as chat invination or new mail and calls gosubs()!
-  - get user input like:
-     choice = menu.run()
