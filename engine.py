@@ -1,185 +1,178 @@
-#!/usr/bin/env python2.6
+#!/usr/bin/env python
 """
-Scripting and session engine
+command-line launcher and main event loop for x/84
 """
+# Please place _ALL_ Metadata here. No need to duplicate this
+# in every .py file of the project -- except where individual scripts
+# are authored by someone other than the authors, licensing differs, etc.
+__author__ = "Johannes Lundberg, Jeffrey Quast"
+__copyright__ = "Copyright 2012"
+__credits__ = ["Johannes Lundberg", "Jeffrey Quast",
+               "Wijnand Modderman-Lenstra", "zipe", "spidy",
+               "Mercyful Fate",]
 __license__ = 'ISC'
+__version__ = '1.0rc1'
 __maintainer__ = 'Jeff Quast'
 __email__ = 'dingo@1984.ws'
-__status__ = 'Alpha'
-__version__ = '1.0rc1'
-# iteration #1, pybbs? 2001 jojo, dingo contributing, public domain
-# iteration #2, The Progressive (PRSV), 2004 jojo, dingo & maze contributing
-#               twisted for networking, zodb for database, ssh support ...
-# Copyright (C) 2004 Johannes Lundberg
-# This archive can be redistributed, unmodified or modified, in whatever
-# ways that may please you.
-#
-# THIS IS FREE SOFTWARE. USE AT YOUR OWN RISK. NO WARRANTY.
+__status__ = 'Development'
 
-# this is iteration #3, x/84, 2010-2012 dingo
+import sys
 
-def main (logger, logHandler, cfgFile='default.ini'):
-  """
-  x84 main entry point. The system begins and ends here.
-  """
-  import __builtin__, sys
-  real_import = __builtin__.__import__
-  def debug_import(name, locals=None, globals=None, fromlist=None, level=-1):
-    glob = globals or sys._getframe(1).f_globals
-    importer_name = glob and glob.get('__name__') or 'unknown'
-    logger.debug ('%s imports %s', importer_name, name)
-    return real_import(name, locals, globals, fromlist, level)
-  __builtin__.__import__ = debug_import
-  import traceback
-  import threading
+def main ():
+    """
+    x84 main entry point. The system begins and ends here.
 
-  import db
-
-  import terminal
-  terminal.logger.addHandler (logHandler)
-  terminal.logger.setLevel (logger.level)
-  logger.addHandler (logHandler)
-
-  import bbs.session
-  bbs.session.logger.addHandler (logHandler)
-  bbs.session.logger.setLevel (logger.level)
-  logger.addHandler (logHandler)
-
-  # load .ini file
-  import bbs.ini
-  bbs.ini.init (cfgFile)
-
-  # initialize scripting subsystem
-  import bbs.scripting
-  bbs.scripting.init (bbs.ini.cfg.get('session', 'scriptpath'))
-
-  # initialize telnet server
-  import telnet
-  telnet.logger.setLevel (logger.level)
-  telnet.logger.addHandler (logHandler)
-  telnet_port = int(bbs.ini.cfg.get('telnet', 'port'))
-  telnet_addr = bbs.ini.cfg.get('telnet', 'addr')
-  telnet_server = telnet.TelnetServer \
-      (port=telnet_port, address=telnet_addr,
-       on_connect=terminal.on_connect,
-       on_disconnect=terminal.on_disconnect,
-       on_naws=terminal.on_naws,
-       on_env=terminal.on_env,
-       timeout=0.01)
-  logger.info ('[telnet:%s] listening tcp', telnet_port)
-
-  #if bbs.ini.cfg.get('ftp', 'enabled', 'no'):
-  #  # initialize ftp server
-  #  import ftp
-  #  ftp.logger.addHandler (logHandler)
-  #  ftp_eventpipe = ftp.init()
-  #  #ftp_lock = threading.Lock()
-
-  # main event loop
-  eof_pipes = set()
-  while True:
-    event, data = (None, None)
-
-    # process telnet server i/o, byte buffers ..
-    telnet_server.poll()
-
-    # process ftp server i/o
-    #if bbs.ini.cfg.get('ftp', 'enabled', 'no') == 'yes':
-    #  if ftp_eventpipe.poll():
-    #    # ftp child process sent us a gift
-    #    event, data = ftp_eventpipe.recv()
-
-    for client, pipe, lock in terminal.registry[:]:
-      if not lock.acquire(False):
-        # this client currently 'locked', by POSHandler, likely.
-        continue
-      lock.release ()
-
-      # process telnet input as keypresses 'input' events,
-      if client.input_ready() and lock.acquire(False):
-        lock.release()
-        inp = client.get_input()
-        pipe.send (('input', inp))
-
-      # process bbs session i/o, requests from child processes,
-      if False == pipe.poll ():
-        # no session i/o to process, next client,
-        continue
-
-      try:
-        # session i/o sent from child process
-        event, data = pipe.recv()
-
-      except EOFError:
-        logger.info ('eof,')
-        terminal.registry.remove ((client, pipe, lock))
-        continue
-
-      if event == 'disconnect':
-        client.deactivate ()
-
-      elif event == 'output':
-        text, cp437 = data
-        if cp437 == True:
-          print repr(text)
-          client.send_str (bytes(text.encode('iso8859-1')))
-          # probobly should catch conversion errors,
-          # decode as iso8859-1, and try again ?
+    Command line arguments to engine.py:
+      -cfg: location of alternate configuration file
+        -v: enable DEBUG logging
+    """
+    #pylint: disable=R0914
+    #        Too many local variables (19/15)
+    import logging
+    import getopt
+    import terminal
+    import telnet
+    import bbs
+    import log
+    logger = logging.getLogger(__name__)
+    log_level = logging.INFO
+    cfg_filepath = 'default.ini'
+    try:
+        opts, tail = getopt.getopt(sys.argv[1:], "vc:", ('verbose', 'config'))
+    except getopt.GetoptError, err:
+        sys.stderr.write ('%s\n' % (err,))
+        return 1
+    for opt, arg in opts:
+        if opt in ('-v', '--verbose'):
+            log_level = logging.DEBUG
+        elif opt in ('-c', '--config'):
+            cfg_filepath = arg
         else:
-          assert cp437 == False
-          client.send_unicode (text)
+            assert False
+    assert 0 == len (tail), 'Unrecognized program arguments: %s' % (tail,)
+    logger.setLevel(log_level)
+    log_handler = log.get_stderr(level=log_level)
+    if logger.isEnabledFor(logging.DEBUG):
+        import __builtin__
+        real_import = __builtin__.__import__
+        def debug_import(name, my_locals=None, my_globals=None,
+            fromlist=None, level=-1):
+            """ a replacement for import that prints who imports what,
+                from python documentation example. only enabled when
+                the logger is at DEBUG or higher
+            """
+            #pylint: disable=W0212
+            #        Access to a protected member _getframe of a client class
+            glob = my_globals or sys._getframe(1).f_globals
+            importer_name = glob and glob.get('__name__') or 'unknown'
+            logger.debug ('%s imports %s', importer_name, name)
+            return real_import(name, my_locals, my_globals, fromlist, level)
+        __builtin__.__import__ = debug_import
 
-      # broadcast event to all other telnet clients,
-      elif event == 'global':
-        for (c,p,l) in terminal.registry:
-            if c != client:
-              p.send ((event, data,))
+    terminal.logger.addHandler (log_handler)
+    terminal.logger.setLevel (logger.level)
+    logger.addHandler (log_handler)
 
-      elif event == 'pos':
-        # assert 'timeout' parameter
-        assert type(data) in (float, int, type(None))
-        # 'pos' query: 'what is the cursor position ?'
-        # 'pos-reply' event is a callback mechanism
-        # data of (None, None) indicates timeout
-        t = terminal.POSHandler(pipe, client, lock,
-            reply_event='pos-reply', timeout=data)
-        t.start ()
+    bbs.session.logger.addHandler (log_handler)
+    bbs.session.logger.setLevel (logger.level)
+    logger.addHandler (log_handler)
 
-      elif event.startswith ('db-'):
-        # db query-> database dictionary method, callback
-        # with a matching ('db-*',) event. sqlite is used
-        # for now and is quick, but this prevents slow
-        # database queries from locking the i/o event loop.
-        t = db.DBHandler(pipe, event, data)
-        t.start ()
+    sys.stdout.write ('x/84 bbs ')
+    # load .ini file
+    bbs.ini.init (cfg_filepath)
 
-      elif event == 'env':
-        # data is dictionary of key, values
-        matches = set()
-        for key, value in data:
-          p.send ((event, (key, value),))
-      else:
-        assert 0, 'Unhandled event: %s' % ((event,data,),)
+    # initialize scripting subsystem
+    bbs.scripting.init (bbs.ini.cfg.get('session', 'scriptpath'))
 
+    # initialize telnet server
+    telnet.logger.setLevel (logger.level)
+    telnet.logger.addHandler (log_handler)
+    telnet_server = telnet.TelnetServer \
+        (port=int(bbs.ini.cfg.get('telnet', 'port')),
+            address=bbs.ini.cfg.get('telnet', 'addr'),
+            on_connect=terminal.on_connect,
+            on_disconnect=terminal.on_disconnect,
+            on_naws=terminal.on_naws,
+            timeout=0.01)
+    logger.info ('[telnet:%s] listening tcp', telnet_server.port)
+
+    # begin main event loop
+    _loop(logger, telnet_server)
+
+def _loop(logger, telnet_server):
+    """ Main event loop. Never returns. """
+    # pylint: disable=R0912
+    #         Too many branches (15/12)
+    import terminal
+    import db
+    # main event loop
+    while True:
+        # process telnet i/o
+        telnet_server.poll()
+        for client, pipe, lock in terminal.terminals():
+            if not lock.acquire(False):
+                continue
+            lock.release ()
+
+            # process telnet input (keypress sequences)
+            if client.input_ready() and lock.acquire(False):
+                lock.release()
+                inp = client.get_input()
+                pipe.send (('input', inp))
+
+            if lock.acquire(False):
+                # process bbs session i/o
+                lock.release ()
+                if not pipe.poll ():
+                    continue
+
+            try:
+                # session i/o sent from child process
+                event, data = pipe.recv()
+
+            except EOFError:
+                logger.error ('eof,')
+                terminal.unregister_terminal (client, pipe, lock)
+                continue
+
+            if event == 'disconnect':
+                client.deactivate ()
+
+            elif event == 'output':
+                text, is_cp437 = data
+                if not is_cp437:
+                    client.send_unicode (text)
+                else: # text has already been 'translated' to the apropriate
+                      # unichr(0)-unichr(255) as unicode -- encoding as
+                      # 'iso8859-1' will byte values intact as chr(0)-chr(255)
+                    bytestring = text.encode('iso8859-1', 'replace')
+                    client.send_str (bytestring)
+
+            elif event == 'global':
+                #pylint: disable=W0612
+                #         Unused variable 'o_lock'
+                for o_client, o_pipe, o_lock in terminal.terminals():
+                    if o_client == client:
+                        o_pipe.send ((event, data,))
+
+            elif event == 'pos':
+                assert type(data) in (float, int, type(None))
+                # assert 'timeout' parameter, 1, 1.0, or None
+                # 'pos' query: 'what is the cursor position ?'
+                # returns 'pos-reply' event as a callback
+                # mechanism, data of (None, None) indicates timeout,
+                # otherwise (y, x) is cursor position ..
+                thread = terminal.POSHandler(pipe, client, lock,
+                    reply_event='pos-reply', timeout=data)
+                thread.start ()
+
+            elif event.startswith ('db-'):
+                # db query-> database dictionary method, callback
+                # with a matching ('db-*',) event. sqlite is used
+                # for now and is quick, but this prevents slow
+                # database queries from locking the i/o event loop.
+                thread = db.DBHandler(pipe, event, data)
+                thread.start ()
 
 if __name__ == '__main__':
-  # TODO: Proper getopts
-  import sys
-  import logging
-  import log
-  logger = logging.getLogger(__name__)
-  logger.setLevel(logging.INFO)
-  sys.stdout.write ('x/84 bbs ')
-  log_level = logging.INFO
-  cfgFile = 'default.ini'
-  if '-v' in sys.argv:
-    sys.argv.remove('-v')
-    log_level = logging.DEBUG
-    logger.setLevel(log_level)
-  if '-cfg' in sys.argv:
-    cfgFile = sys.argv[sys.argv.index('-cfg')+1]
-    sys.argv.remove(cfgFile)
-    sys.argv.remove('-cfg')
-  logHandler = log.get_stderr(level=log_level)
-  sys.stdout.flush()
-  main (logger, logHandler, cfgFile)
+    sys.exit(main ())
