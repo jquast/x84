@@ -1,5 +1,6 @@
 ROADMAP, 1.0:
 EASY
+* sysop's door to launch ttyplay -p on live terminals
 * local.py -- telnetlib to self :-)
 * cleanup default/
 * cleanup bbs/
