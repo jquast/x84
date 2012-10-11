@@ -87,13 +87,13 @@ def main ():
     # initialize telnet server
     telnet.logger.setLevel (logger.level)
     telnet.logger.addHandler (log_handler)
-    telnet_server = telnet.TelnetServer \
-        (port=int(bbs.ini.cfg.get('telnet', 'port')),
-            address=bbs.ini.cfg.get('telnet', 'addr'),
-            on_connect=terminal.on_connect,
-            on_disconnect=terminal.on_disconnect,
-            on_naws=terminal.on_naws,
-            timeout=0.01)
+    addr_tup = (bbs.ini.cfg.get('telnet', 'addr'),
+        int(bbs.ini.cfg.get('telnet', 'port')),)
+    telnet_server = telnet.TelnetServer (
+        address_pair = addr_tup,
+        on_connect = terminal.on_connect,
+        on_disconnect = terminal.on_disconnect,
+        on_naws = terminal.on_naws)
     logger.info ('[telnet:%s] listening tcp', telnet_server.port)
 
     # begin main event loop
