@@ -130,8 +130,7 @@ class BlessedIPCTerminal(blessings.Terminal):
 
 def on_disconnect(client):
     """Discover the matching client in registry and remove it"""
-    logger.info ('Disconnected from telnet client %s:%s',
-        client.address, client.port)
+    logger.info ('%s Disconnected', client.addrport())
     for o_client, o_pipe, o_lock in terminals():
         if client == o_client:
             unregister_terminal (o_client, o_pipe, o_lock)
@@ -139,8 +138,7 @@ def on_disconnect(client):
 
 def on_connect(client):
     """Spawn a ConnectTelnetTerminal() thread for each new connection."""
-    logger.info ('Connection from telnet client %s:%s',
-        client.address, client.port)
+    logger.info ('%s Connected', client.addrport())
     thread = ConnectTelnetTerminal(client)
     thread.start ()
 
@@ -152,8 +150,9 @@ def on_naws(client):
     for cpl in terminals():
         if client == cpl[0]:
             o_client, o_pipe = cpl[0], cpl[1]
-            data = ('resize', (o_client.columns, o_client.rows),)
-            o_pipe.send (('refresh', data))
+            columns = int(o_client.env['COLUMNS'])
+            rows = int(o_client.env['LINES'])
+            o_pipe.send (('refresh', ('resize', (columns, rows),)))
             return True
 
 class ConnectTelnetTerminal (threading.Thread):
@@ -169,8 +168,8 @@ class ConnectTelnetTerminal (threading.Thread):
     TIME_POLL  = 0.10
     TTYPE_UNDETECTED = 'unknown'
     WINSIZE_TRICK = (
-          ('vt100', ('\x1b[6n'), re.compile('\033' + r"\[(\d+);(\d+)R")),
-          ('sun', ('\x1b[18t'), re.compile('\033' + r"\[8;(\d+);(\d+)t"))
+          ('vt100', ('\x1b[6n'), re.compile(chr(27) + r"\[(\d+);(\d+)R")),
+          ('sun', ('\x1b[18t'), re.compile(chr(27) + r"\[8;(\d+);(\d+)t"))
     ) # see: xresize.c from X11.org
 
 
@@ -233,7 +232,7 @@ class ConnectTelnetTerminal (threading.Thread):
         # this will set .rows, .columns if not LINES and COLUMNS
         self._try_naws ()
         # disable line-wrapping http://www.termsys.demon.co.uk/vtansi.htm
-        self.client.send_str (bytes('\033[7l'))
+        self.client.send_str (bytes(chr(27) + '[7l'))
 
 
     def run(self):
@@ -288,28 +287,25 @@ class ConnectTelnetTerminal (threading.Thread):
 
     def _try_naws(self):
         """Negotiate about window size (NAWS) telnet option (on)."""
-        if not None in (self.client.columns, self.client.rows,) \
-        and self.client.terminal_type != self.TTYPE_UNDETECTED:
-            logger.debug ('window size: %dx%d (unsolicited)',
-                    self.client.columns, self.client.rows,)
-            self.client.env['LINES'] = str(self.client.rows)
-            self.client.env['COLUMNS'] = str(self.client.columns)
+        if (self.client.env.get('LINES', None) is not None
+                and self.client.env.get('COLUMNS', None) is not None):
+            logger.debug ('window size: %sx%s (unsolicited)',
+                    self.client.env.get('COLUMNS'),
+                    self.client.env.get('LINES'),)
+        self.client.request_do_naws ()
+        self.client.socket_send() # push
+        st_time = time.time()
+        while (self.client.env.get('LINES', None) is None
+                and self.client.env.get('COLUMNS', None) is None
+                and self._timeleft(st_time)):
+            time.sleep (self.TIME_POLL)
+        if (self.client.env.get('LINES', None) is not None
+                and self.client.env.get('COLUMNS', None) is not None):
+            logger.info ('window size: %sx%s (negotiated)',
+                    self.client.env.get('COLUMNS'),
+                    self.client.env.get('LINES'))
             return
-        logger.debug('request-naws')
-        if None in (self.client.columns, self.client.rows,):
-            self.client.request_do_naws ()
-            self.client.socket_send() # push
-            st_time = time.time()
-            while None in (self.client.columns, self.client.rows,) \
-              and self._timeleft(st_time):
-                time.sleep (self.TIME_POLL)
-            if not None in (self.client.columns, self.client.rows,):
-                logger.info ('window size: %dx%d (negotiated)',
-                        self.client.columns, self.client.rows,)
-                self.client.env['LINES'] = str(self.client.rows)
-                self.client.env['COLUMNS'] = str(self.client.columns)
-                return
-            logger.debug ('failed: negotiate about window size')
+        logger.debug ('failed: negotiate about window size')
 
         # Try #2 ... this works for most any screen
         # send to client --> pos(999,999)
@@ -337,9 +333,9 @@ class ConnectTelnetTerminal (threading.Thread):
                 self.client.rows, self.client.columns = int(height), int(width)
                 logger.info ('window size: %dx%d (corner-query hack)',
                         self.client.columns, self.client.rows)
-                if self.client.terminal_type == self.TTYPE_UNDETECTED:
+                if self.client.env['TERM'] == 'unknown':
                     logger.warn ("env['TERM'] = %r by POS", kind)
-                    self.client.terminal_type = kind
+                    self.client.env['TERM'] = kind
                 self.client.env['LINES'] = height
                 self.client.env['COLUMNS'] = width
                 return
@@ -355,10 +351,10 @@ class ConnectTelnetTerminal (threading.Thread):
     def _try_ttype(self):
         """Negotiate terminal type (TTYPE) telnet option (on)."""
         from bbs import ini
-        detected = lambda: self.client.terminal_type != self.TTYPE_UNDETECTED
+        detected = lambda: self.client.env['TERM'] != 'unknown'
         if detected():
             logger.debug ('terminal type: %s (unsolicited)' %
-                (self.client.terminal_type,))
+                (self.client.env['TERM'],))
             return
         logger.debug ('request-terminal-type')
         self.client.request_ttype ()
@@ -368,35 +364,37 @@ class ConnectTelnetTerminal (threading.Thread):
             time.sleep (self.TIME_POLL)
         if detected():
             logger.debug ('terminal type: %s (negotiated)' %
-                (self.client.terminal_type,))
+                (self.client.env['TERM'],))
             return
         logger.debug ('failed: terminal type not determined.')
+        self.client.env['TERM'] = ini.cfg.get('session', 'default_ttype')
+        logger.debug ('terminal type: %s (default)', self.client.env['TERM'])
 
         # Try #2 - ... this is bullshit,
-        logger.debug('request answerback sequence')
-        self.client.get_input () # flush & toss input
-        self.client.send_str ('\005')  # send request termtype
-        self.client.socket_send () # push
-        st_time = time.time()
-        while not self.client.input_ready() and self._timeleft(st_time):
-            time.sleep (self.TIME_POLL)
-        if not self.client.input_ready():
-            logger.debug ('failed: answerback reply not receieved')
-            # set to cfg .ini if not detected
-            self.client.terminal_type = ini.cfg.get('session', 'default_ttype')
-            logger.debug ('terminal type: %s (default)',
-                    self.client.terminal_type)
-
-            st_time = time.time()
-            while self.client.idle() < self.TIME_PAUSE \
-            and self._timeleft(st_time):
-                time.sleep (self.TIME_POLL)
-            inp = self.client.get_input().lower()
-            self.client.terminal_type = inp.strip()
-            logger.debug ('terminal type: %s (answerback)',
-                    self.client.terminal_type,)
-            self.client.request_wont_echo ()
-            return
+        #logger.debug('request answerback sequence')
+        #self.client.get_input () # flush & toss input
+        #self.client.send_str (chr(5))  # send request termtype
+        #self.client.socket_send () # push
+        #st_time = time.time()
+        #while not self.client.input_ready() and self._timeleft(st_time):
+        #    time.sleep (self.TIME_POLL)
+        #if not self.client.input_ready():
+        #    logger.debug ('failed: answerback reply not receieved')
+        #    # set to cfg .ini if not detected
+        #    self.client.env['TERM'] = ini.cfg.get('session', 'default_ttype')
+        #    logger.debug ('terminal type: %s (default)',
+        #            self.client.terminal_type)
+        #
+        #    st_time = time.time()
+        #    while self.client.idle() < self.TIME_PAUSE \
+        #    and self._timeleft(st_time):
+        #        time.sleep (self.TIME_POLL)
+        #    inp = self.client.get_input().lower()
+        #    self.client.terminal_type = inp.strip()
+        #    logger.debug ('terminal type: %s (answerback)',
+        #            self.client.terminal_type,)
+        #    self.client.request_wont_echo ()
+        #    return
 
 
 class POSHandler(threading.Thread):
