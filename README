@@ -1,24 +1,22 @@
 Installation
 ============
 
-This software requires Python 2.6 or 2.7 and virtualenv.
+This software requires Python 2.6 or 2.7.
 
 # the installer will perform these commands,
 # as a human, you will do these yourself,
 
-curl -o virtualenv.py 'https://raw.github.com/pypa/virtualenv/master/virtualenv.py'
+curl -o /tmp/virtualenv.py 'https://raw.github.com/pypa/virtualenv/master/virtualenv.py'
 
 # for testing 2.6
-python2.6 virtualenv.py ENV26
+python2.6 /tmp/virtualenv.py ENV26
 . ENV26/bin/activate
 
 # for testing 2.7,
-python2.7 virtualenv.py ENV27
+python2.7 /tmp/virtualenv.py ENV27
 . ENV27/bin/activate
 
 pip install -r requirements.txt
-
-# we may freeze external dependencies ..
 
 
 Getting Started
@@ -66,7 +64,7 @@ Semi-compatible Clients (CP437)
 SyncTerm
 - Select cp437 when prompted by the bbs system (charset.py).
 
-Classic Unix
+Other 7-bit clients
 - Select cp437 when prompted by the bbs system (charset.py).
 - Use a font of cp437 encoding, such as 'Terminus'.
 
@@ -74,9 +72,9 @@ Classic Unix
 Monitoring
 ==========
 
-Sessions are recorded to ttyrecordings/ folder, and can be played with 'ttyplay'
-or compatible utility. The '-p' option can be used to monitor live sessions,
-analogous to 'tail -f'.
+Sessions are recorded to ttyrecordings/ folder, and can be played with
+'ttyplay' or compatible utility. The '-p' option can be used to monitor
+live sessions, analogous to 'tail -f'.
 
 
 Session Scripts
