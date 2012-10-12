@@ -17,7 +17,7 @@ import scripting
 logger = multiprocessing.get_logger()
 logger.setLevel(logging.DEBUG)
 mySession = None
-ASSERT_REWIND = False
+#ASSERT_REWIND = False
 
 def getsession():
     """Return session, after a .run() method has been called on any 1 instance.
@@ -229,6 +229,7 @@ class Session(object):
         assert mySession is None, 'run() cannot be called twice'
         mySession = self
         fallback_stack = self._script_stack
+        self.cwd = ini.cfg.get('session', 'scriptpath')
         while len(self._script_stack) > 0:
             logger.debug ('%s: script_stack is %s',
                 self.handle, self._script_stack)
@@ -439,16 +440,21 @@ class Session(object):
 
         current_path = os.path.dirname(self.script_filepath)
         if not current_path in sys.path:
-            sys.path.append (current_path)
-            logger.debug ('%s append to sys.path: %s', self.handle, current_path)
-
+            sys.path.insert (0, current_path)
+            logger.debug ('%s inserted to sys.path: %s',
+                    self.handle, current_path)
+# XXX
+        logger.info ('scripting.load(%s, %s)', self.cwd, self.script_name,)
         script = scripting.load(self.cwd, self.script_name)
+        print repr(script)
         for idx in bbs.__all__:
             setattr(script, idx, getattr(bbs, idx))
-        assert hasattr(script, 'main'), \
-            "%s: main() not found." % (self.script_name,)
-        assert callable(script.main), \
-            "%s: main not callable." % (self.script_name,)
+        if not hasattr(script, 'main'):
+            raise exception.ScriptError ("%s: main() not found." %
+                    (self.script_name,))
+        if not callable(script.main):
+            raise exception.ScriptError ("%s: main not callable." %
+                    (self.script_name,))
         prev_path = self.cwd \
             if self.cwd is not None else current_path
         self.cwd = current_path
@@ -569,12 +575,12 @@ class Session(object):
         # rewind to last length byte
         last_bp2 = struct.pack('<I', self._ttyrec_len_text)
         new_bp2 = struct.pack('<I', self._ttyrec_len_text +len_text)
-        if ASSERT_REWIND:
-            logger.debug ('re-writing timechunk: (%r;...%r%s' % (new_bp2,
-              text[:20], '...' if len(text) > 20 else '',))
-            self._fp_ttyrec.seek ((self._ttyrec_len_text +len(last_bp2)) *-1, 2)
-            chk = self._fp_ttyrec.read (len(last_bp2))
-            assert chk == last_bp2, 'should have %r; got %r' % (last_bp2, chk)
+#        if ASSERT_REWIND:
+#            logger.debug ('re-writing timechunk: (%r;...%r%s' % (new_bp2,
+#              text[:20], '...' if len(text) > 20 else '',))
+#            self._fp_ttyrec.seek ((self._ttyrec_len_text +len(last_bp2)) *-1, 2)
+#            chk = self._fp_ttyrec.read (len(last_bp2))
+#            assert chk == last_bp2, 'should have %r; got %r' % (last_bp2, chk)
         self._fp_ttyrec.seek ((self._ttyrec_len_text +len(last_bp2)) *-1, 2)
 
         # re-write length byte
