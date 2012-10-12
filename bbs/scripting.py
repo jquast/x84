@@ -1,8 +1,12 @@
 import os
 import sys
 import imp
+import multiprocessing
+import logging
 
 script_path = 'default/'
+logger = multiprocessing.get_logger()
+logger.setLevel(logging.DEBUG)
 
 def init(global_script_path):
     """
@@ -19,6 +23,7 @@ def chkmodpath(name, parent):
 
     cur = os.path.curdir
     if parent.startswith (cur):
+        logger.debug ('Trimming %s from %s', os.path.curdir, cur)
         parent = parent[len(cur):]
 
     name = name.replace('.', os.path.sep)
@@ -28,24 +33,28 @@ def chkmodpath(name, parent):
         name_a = os.path.join(parent, name)
         path_a = name_a + '.py'
         if os.path.exists (path_a):
+            logger.debug ('absolute path match: (%s, %s)', name_a, path_a)
             return (name_a, path_a)
 
     # as-is (path/X.py)
     name_r = os.path.join(parent, name)
     path_r = name_r + '.py'
     if os.path.exists(path_r):
+        logger.debug ('relative path match: (%s, %s)', name_r, path_r)
         return name_r, path_r
 
     # script-path relative
     name_l = os.path.join(script_path, name)
     path_l = name_l + '.py'
     if os.path.exists(path_l):
+        logger.debug ('script-path match: (%s, %s)', name_l, path_l)
         return name_l, path_l
 
     # kernel-path relative (./path/name.py)
-    name_g = os.path.join(os.path.join(os.path.curdir, parent), name)
+    #name_g = os.path.join(os.path.join(os.path.curdir, parent), name)
     path_g = name + '.py'
     if os.path.exists(path_g):
+        logger.debug ('kern-path match: (%s, %s)', name, path_g)
         return name, path_g
 
     raise LookupError, \
