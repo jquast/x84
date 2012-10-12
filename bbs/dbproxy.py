@@ -58,6 +58,10 @@ class DBProxy(object):
         return self.__proxy__ ('__setitem__', *args)
     __setitem__.__doc__ = dict.__setitem__.__doc__
 
+    def __delitem__(self, *args):
+        return self.__proxy__ ('__delitem__', *args)
+    __delitem__.__doc__ = dict.__delitem__.__doc__
+
     def get(self, *args):
         return self.__proxy__ ('get', *args)
     get.__doc__ = dict.get.__doc__
