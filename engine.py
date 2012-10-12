@@ -52,22 +52,22 @@ def main ():
     assert 0 == len (tail), 'Unrecognized program arguments: %s' % (tail,)
     logger.setLevel(log_level)
     log_handler = log.get_stderr(level=log_level)
-    if logger.isEnabledFor(logging.DEBUG):
-        import __builtin__
-        real_import = __builtin__.__import__
-        def debug_import(name, my_locals=None, my_globals=None,
-            fromlist=None, level=-1):
-            """ a replacement for import that prints who imports what,
-                from python documentation example. only enabled when
-                the logger is at DEBUG or higher
-            """
-            #pylint: disable=W0212
-            #        Access to a protected member _getframe of a client class
-            glob = my_globals or sys._getframe(1).f_globals
-            importer_name = glob and glob.get('__name__') or 'unknown'
-            logger.debug ('%s imports %s', importer_name, name)
-            return real_import(name, my_locals, my_globals, fromlist, level)
-        __builtin__.__import__ = debug_import
+#    if logger.isEnabledFor(logging.DEBUG):
+#        import __builtin__
+#        real_import = __builtin__.__import__
+#        def debug_import(name, my_locals=None, my_globals=None,
+#            fromlist=None, level=-1):
+#            """ a replacement for import that prints who imports what,
+#                from python documentation example. only enabled when
+#                the logger is at DEBUG or higher
+#            """
+#            #pylint: disable=W0212
+#            #        Access to a protected member _getframe of a client class
+#            glob = my_globals or sys._getframe(1).f_globals
+#            importer_name = glob and glob.get('__name__') or 'unknown'
+#            logger.debug ('%s imports %s', importer_name, name)
+#            return real_import(name, my_locals, my_globals, fromlist, level)
+#        __builtin__.__import__ = debug_import
 
     terminal.logger.addHandler (log_handler)
     terminal.logger.setLevel (logger.level)
