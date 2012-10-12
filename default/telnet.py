@@ -1,49 +1,56 @@
 """
-telnet client for X/84, http://1984.ws
-$Id: telnet.py,v 1.1 2010/01/02 07:34:43 dingo Exp $
-
+telnet client for X/84 BBS, https://github.com/jquast/x84/
 """
-__author__ = 'Jeffrey Quast <dingo@1984.ws>'
-__copyright__ = ['Copyright (c) 2010 Jeffrey Quast']
-__license__ = 'ISC'
-__url__ = 'http://1984.ws'
-
-deps = ['bbs']
-import telnetlib
-
+TIME_POLL = 0.05
 def main(host, port=None):
-    port = port and port or 23
-    session = getsession()
-    getsession().activity = 'telneting to %s' % (host,)
-    telnet = telnetlib.Telnet()
-    echo (cls())
-    echo ('\r\nTrying %s... ' % (host,))
+    """
+    Call script with argument host and optional argument port to connect to a
+    telnet server. ^] to exit.
+    """
+    import telnetlib
+    import sys
+    session, term = getsession(), getterminal()
+    session.activity = 'telneting to %s' % (host,)
+    port = port if port is not None else 23
+    telnet_client = telnetlib.Telnet()
+
+    echo (term.clear)
+    echo (u'\r\nTrying %s... ' % (host,))
     oflush ()
     try:
-        telnet.open (host, port)
+        telnet_client.open (host, port)
     except:
         type, value, tb = sys.exc_info ()
-        echo ('%s%s' % (color(*LIGHTRED), value))
-        echo ('\r\n\r\n%s%s' % (color(), 'press any key'))
+        echo (u'%s%s' % (color(*LIGHTRED), value))
+        echo (u'\r\n\r\n%s%s' % (color(), 'press any key'))
         getch ()
         return
-    echo ('\r\nConnected to %s.' % (host,))
-    echo ("\r\nEscape character is '^].'")
+
+    echo (u'\r\nConnected to %s.' % (host,))
+    echo (u"\r\nEscape character is '^].'")
     getch (1)
+
+    chk = session.enable_keycodes
+    session.enable_keycodes = False
     while True:
-        ch = getch (timeout=0.01)
+        inp = getch (timeout=TIME_POLL)
         try:
-            echo (telnet.read_very_eager())
-            if ch == '\035':
+            unistring = fromCP437(telnet_client.read_very_eager())
+            if 0 != len(unistring):
+                echo (unistring)
+            if inp == '\035':
                 # XXX implement a command set? ..
-                telnet.close()
-                echo ('\r\n%sConnection closed.' % (cl()+color(),))
-            elif ch:
-                telnet.write(ch)
+                telnet_client.close ()
+                echo (u'\r\n%sConnection closed.' % (term.clear_el +
+                    term.normal))
+            elif inp is not None:
+                telnet_client.write (inp)
         except:
-            type, value, tb = sys.exc_info ()
-            echo (color() + cl())
-            echo ('\r\n%s%s' % (cl()+color(*LIGHTRED), value))
+            exctype, value, tb = sys.exc_info ()
+            echo (u''.join((term.normal, term.clear_el,)))
+            echo (u''.join(('\r\n\r\n', term.bold_red, repr(value))))
             break
-    echo ('\r\n%s%s' % (cl()+color(), 'press any key'))
+    echo (u''.join(('\r\n\r\n', term.clear_el, term.normal, 'press any key')))
     getch ()
+    session.enable_keycodes = chk
+    return
