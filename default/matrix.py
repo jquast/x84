@@ -13,7 +13,6 @@ import sys
 
 TIMEOUT = 45
 CH_MASK_PASSWD = u'x'
-ALLOW_ANONYMOUS = True
 def main ():
     echo (u'\033(U') # switches to CP437 on some systems.
     # you may or may not want this; the art on this bbs does!
@@ -31,6 +30,7 @@ def main ():
     badanon_msg = u"\r\n  " + term.bright_red + u"'%s' login denied."
     max_user = int(ini.cfg.get('nua', 'max_user'))
     allow_apply = ini.cfg.get('nua', 'allow_apply') in ('yes',)
+    allow_anonymous = ini.cfg.get('matrix', 'enable_anonymous') == 'yes'
     topscript = ini.cfg.get('matrix', 'topscript')
     bbsname = ini.cfg.get('system', 'bbsname')
     status_auth = ''.join((
@@ -56,7 +56,7 @@ def main ():
         echo (u'\r\n\r\n')
         showfile('art/1984.asc')
         echo (u'\r\n\r\n')
-        if ALLOW_ANONYMOUS:
+        if allow_anonymous:
             echo (u"'anonymous' login enabled.\r\n")
         show_cur = term.normal_cursor
         if 0 != len(show_cur):
@@ -98,7 +98,7 @@ def main ():
 
         # this account name used to be about warez, not sql injections
         if handle.lower() == 'anonymous':
-            if ALLOW_ANONYMOUS:
+            if allow_anonymous:
                 goto (topscript, 'anonymous')
             denied (badanon_msg % (handle,))
             getch (0.8)

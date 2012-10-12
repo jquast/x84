@@ -39,6 +39,7 @@ def init(cfgFilepath='default.ini'):
     cfg.set('matrix', 'byecmds', 'exit logoff bye quit')
     cfg.set('matrix', 'script', 'matrix')
     cfg.set('matrix', 'topscript', 'top')
+    cfg.set('matrix', 'enable_anonymous', 'yes')
     cfg.add_section('database')
     cfg.set('database', 'sqlite_folder', 'data/')
     cfg.add_section('session')
