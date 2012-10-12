@@ -41,8 +41,8 @@ class LightClass (ansiwin.InteractiveAnsiWindow):
     # behavior
     moved = True
 
-    def __init__(self, h, w, y, x, xpad=0, ypad=0):
-        ansiwin.InteractiveAnsiWindow.__init__ (self, h, w, y, x)
+    def __init__(self, height, width, yloc, xloc, xpad=0, ypad=0):
+        ansiwin.InteractiveAnsiWindow.__init__ (self, height, width, yloc, xloc)
         from session import getsession
         self.content = []
         self.lastkey = ' '
@@ -50,7 +50,8 @@ class LightClass (ansiwin.InteractiveAnsiWindow):
         self.term = getsession().terminal
 
         # Drawing
-        self.visibleWidth, self.visibleHeight = self.w -(self.xpad*2), self.h -(self.ypad*2) # margins
+        self.visibleWidth, self.visibleHeight = (self.width -(self.xpad*2),
+                self.height -(self.ypad*2)) # margins
 
     def adjshift(self, value):
         """ adjust top visible row in list
@@ -85,11 +86,11 @@ class LightClass (ansiwin.InteractiveAnsiWindow):
         self.content.append (string)
         self.update (self.content, refresh)
 
-    def resize(self, h=-1, w=-1, y=-1, x=-1, refresh=True):
+    def resize(self, height=-1, width=-1, yloc=-1, xloc=-1, refresh=True):
         " Adjust visible bottom "
-        ansiwin.InteractiveAnsiWindow.resize (self, h, w, y, x)
+        ansiwin.InteractiveAnsiWindow.resize (self, height, width, yloc, xloc)
         # Drawing
-        self.visibleWidth, self.visibleHeight = self.w-2, self.h-1 # margins
+        self.visibleWidth, self.visibleHeight = self.width-2, self.height-1 # margins
 
         if refresh:
             # recalculate selection
