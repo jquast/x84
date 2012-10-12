@@ -225,7 +225,7 @@ def name_option(option):
     """
     values = ';?'.join([k for k, v in globals().iteritems()
         if option == v and k not in ('SEND', 'IS',)])
-    return values if values != '' else ord(option)
+    return values if values != '' else str(ord(option))
 
 def debug_option(func):
     """ This function is a decorator that debug prints the 'from' address for
@@ -730,7 +730,7 @@ class TelnetClient(object):
                 self.send_str (bytes(''.join( \
                     (IAC, SB, TTYPE, SEND, IAC, SE))))
         else:
-            logger.warn ('%s: unhandled will: %s (ignored).',
+            logger.warn ('%s: unhandled will: %r (ignored).',
                 self.addrport(), name_option(option))
 
     def _handle_wont (self, option):
@@ -794,12 +794,12 @@ class TelnetClient(object):
         term_str = bytestring.lower()
         prev_term = self.env.get('TERM', None)
         if prev_term is None:
-            logger.info ("env['TERM'] = %r", term_str,)
+            logger.info ("env['TERM'] = %r.", term_str,)
         elif prev_term != term_str:
-            logger.warn ("env['TERM'] = %r by TTYPE (TERM was %s)",
-                term_str, prev_term)
+            logger.info ("env['TERM'] = %r by TTYPE%s.", term_str,
+                    'was: %s' %(prev_term,) if prev_term != 'unknown' else '')
         else:
-            logger.debug ('.. ttype ignored (TERM already set)')
+            logger.debug ('TTYPE ignored (TERM already set).')
         self.env['TERM'] = term_str
 
     def _sb_env (self, bytestring):
@@ -809,13 +809,16 @@ class TelnetClient(object):
         breaks = list([idx for (idx, byte) in enumerate(bytestring)
             if byte in (chr(0), chr(3))])
         for start, end in zip(breaks, breaks[1:]):
-            logger.debug ('%r', bytestring[start+1:end])
+            #logger.debug ('%r', bytestring[start+1:end])
             pair = bytestring[start+1:end].split(chr(1))
             if len(pair) == 1:
-                if pair[0] in self.env:
+                if (pair[0] in self.env
+                        and pair[0] not in ('LINES', 'COLUMNS', 'TERM')):
                     logger.warn ("del env[%r]", pair[0])
                     del self.env[pair[0]]
             elif len(pair) == 2:
+                if pair[0] == 'TERM':
+                    pair[1] = pair[1].lower()
                 if (not pair[0] in self.env or (pair[0] == 'TERM' and
                     self.env['TERM'] == 'unknown')):
                     logger.info ('env[%r] = %r', pair[0], pair[1])
