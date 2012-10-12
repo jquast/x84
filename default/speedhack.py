@@ -272,13 +272,14 @@ def main(handle=None):
                     scorefile = ini.cfg.get('dopewars', 'scorefile')
                     logfile = ini.cfg.get('dopewars', 'logfile')
                     echo (u'\r\n\r\nLaunching dopewars server,\r\n')
-                    os.spawnl(os.P_NOWAIT, '/usr/local/bin/dopewars', 'dopewars',
-                      '--private-server',
-                      '--hostname=127.0.0.1',
-                      '--port=60387',
-                      '--scorefile=%s' % (scorefile,),
-                      '--pidfile=%s' % (pidfile,),
-                      '--logfile=%s' % (logfile,),)
+                    os.spawnl(os.P_NOWAIT, '/usr/local/bin/dopewars',
+                            'dopewars',
+                            '--private-server',
+                            '--hostname=127.0.0.1',
+                            '--port=60387',
+                            '--scorefile=%s' % (scorefile,),
+                            '--pidfile=%s' % (pidfile,),
+                            '--logfile=%s' % (logfile,),)
                 else:
                     echo (u'\r\n\r\ndopewars server already running,\r\n')
                 if session.user.is_sysop:
@@ -296,7 +297,7 @@ def main(handle=None):
                 session.enable_keycodes = True
                 if (0 != res):
                     echo (u'\r\nExit: %s' % (res,))
-                pak ()
+                    pak ()
                 refresh ()
 
             # change TERM type ...
@@ -334,4 +335,8 @@ def main(handle=None):
 
             elif str(choice) == '/':
                 gosub ('default/torus')
+                refresh ()
+
+            elif str(choice) == 'x':
+                gosub ('bbslist')
                 refresh ()
