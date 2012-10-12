@@ -50,7 +50,7 @@ def start_process(pipe, origin, env):
             columns=int(env.get('COLUMNS', '80')))
     new_session = bbs.session.Session (term, pipe, origin, env)
     new_session.run ()
-    logger.debug ('%s/%s end process', new_session.pid, new_session.handle)
+    logger.info('%s/%s end process', new_session.pid, new_session.handle)
     new_session.close ()
     pipe.send (('disconnect', ('process exit',)))
 
@@ -208,6 +208,7 @@ class ConnectTelnetTerminal (threading.Thread):
         #   Which translates to:
         # (IAC WILL ECHO) (IAC WILL SUPPRESS-GO-AHEAD)
         # (IAC DO SUPPRESS-GO-AHEAD).
+        time.sleep (0.25) # allow time for natural negotiation
         self.client.request_will_echo ()
         self.client.request_will_sga ()
         self.client.request_do_sga ()
@@ -220,9 +221,11 @@ class ConnectTelnetTerminal (threading.Thread):
             and time.time() -st_time < (0.25):
             time.sleep (self.TIME_POLL)
         time.sleep (self.TIME_POLL *2)
-        if 0 == self.client.bytes_received:
-            raise exception.ConnectionClosed (
-                    'telnet negotiation ignored by client')
+        # XXX
+        #if 0 == self.client.bytes_received:
+        #    raise exception.ConnectionClosed (
+        #            'telnet negotiation ignored by client')
+        # XXX
         # this will set .terminal_type if 'TERM'
         self._try_env ()
         # this will set .terminal_type if -still- undetected,
