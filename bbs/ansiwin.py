@@ -1,181 +1,247 @@
-# ideally ..
-#from curses import ACS_VLINE, ACS_HLINE
-#                   ACS_ULCORNER, ACS_URCORNER,
-#                   ACS_BLCORNER, ACS_BRCORNER
-from output import echo
-from strutils import ansilen
+"""
+ansiwin package for x/84 BBS http://github.com/jquast/x84
+"""
+from bbs.cp437 import CP437TABLE
+from bbs.session import getsession
+from bbs.strutils import ansilen
 
-class AnsiWindow:
-
-    def __init__(self, height, width, yloc, xloc, partial=False):
-        from session import getsession
-        self.height, self.width = height, width
-        self.yloc, self.xloc = yloc, xloc
-        self.partial = partial
-        self.terminal = getsession().terminal
-
-        self.glyphs = { \
-          'top-left':       '+',
-          'bot-left':       '+',
-          'top-right':      '+',
-          'bot-right':      '+',
-          'left-vertical':  '|',
-          'right-vertical': '|',
-          'top-horizontal': '-',
-          'bot-horizontal': '-',
-          'fill':           ' ',
-          'erase':          ' ', }
-
-        self.colors = { \
-          'highlight':  self.terminal.normal + self.terminal.red_reverse,
-          'ghostlight': self.terminal.normal + self.terminal.brown_reverse,
-          'lowlight':   self.terminal.normal,
-          'active':     self.terminal.normal + self.terminal.bold_blue,
-          'inactive':   self.terminal.normal + self.terminal.bold_white
+GLYPHSETS = { 'unknown':
+        { 'top-left': u'+',
+            'bot-left': u'+',
+            'top-right': u'+',
+            'bot-right': u'+',
+            'left-vert': u'|',
+            'right-vert': u'|',
+            'top-horiz': u'-',
+            'bot-horiz': u'-',
+            'fill': u' ',
+            'erase': u' ',
+            },
+        'thin': {
+            'top-left': CP437TABLE[unichr(218)],
+            'bot-left': CP437TABLE[unichr(192)],
+            'top-right': CP437TABLE[unichr(191)],
+            'bot-right': CP437TABLE[unichr(217)],
+            'left-vert': CP437TABLE[unichr(179)],
+            'right-vert': CP437TABLE[unichr(179)],
+            'top-horizontal': CP437TABLE[unichr(196)],
+            'bot-horizontal': CP437TABLE[unichr(196)],
+            'fill': u' ',
+            'erase': u' ',
+            },
+        'vert_thick': {
+            'top-left': CP437TABLE[unichr(213)],
+            'bot-left': CP437TABLE[unichr(211)],
+            'top-right': CP437TABLE[unichr(183)],
+            'bot-right': CP437TABLE[unichr(189)],
+            'left-vert': CP437TABLE[unichr(186)],
+            'right-vert': CP437TABLE[unichr(186)],
+            'top-horizontal': CP437TABLE[unichr(196)],
+            'bot-horizontal': CP437TABLE[unichr(196)],
+            'fill': u' ',
+            'erase': u' ',
+            },
         }
 
-        self.emptyGlyph = dict([(k, ' ') for k in \
-          'top-horizontal bot-horizontal right-vertical ' \
-          'left-vertical bot-left bot-right top-left top-right'.split()])
+class AnsiWindow(object):
+    """
+    The AnsiWindow base class provides position-relative window drawing
+    routines to terminal interfaces, such as pager windows, editors, and
+    lightbar lists.
+    """
+    #pylint: disable=R0902
+    #        Too many instance attributes (8/7)
+    _glyphs = dict()
+    _colors = dict()
 
-    def border(self, glyphs=None, color=None):
-        if color is not None:
-            echo (color)
-        if glyphs is None:
-            glyphs = self.glyphs.copy()
-            if self.partial:
-                glyphs['left-vertical'] = glyphs['right-vertical'] \
-                        = glyphs['fill']
+    def __init__(self, height, width, yloc, xloc):
+        self.height = height
+        self.width = width
+        self.yloc = yloc
+        self.xloc = xloc
+        self.init_theme ()
 
+    def init_theme(self):
+        """
+        This initializer sets glyphs and colors appropriate for a "theme",
+        override this method to create a common color and graphic set.
+        """
+        term = getsession().terminal
+        if term.number_of_colors != 0:
+            self.colors['border'] = term.cyan
+            self.colors['highlight'] = term.cyan + term.reverse
+            self.colors['lowlight'] = term.normal
+            self.colors['normal'] = term.normal
+        if getsession().env.get('TERM') == 'unknown':
+            self.glyphs = GLYPHSETS['unknown']
+        else:
+            self.glyphs = GLYPHSETS['thin']
+
+    @property
+    def glyphs(self):
+        """
+        Key table for unicode characters for draw routines.
+        """
+        return self._glyphs
+
+    @glyphs.setter
+    def glyphs(self, value):
+        #pylint: disable=E0102
+        #        method already defined line
+        #pylint: disable=C0111
+        #        Missing docstring
+        self._glyphs = value
+
+    @property
+    def colors(self):
+        """
+        Key table for terminal color sequences for draw routines.
+        """
+        return self._colors
+
+    @colors.setter
+    def colors(self, value):
+        #pylint: disable=E0102
+        #        method already defined line
+        #pylint: disable=C0111
+        #        Missing docstring
+        self._colors = value
+
+    def resize(self, height=None, width=None, yloc=None, xloc=None):
+        """
+        Adjust window dimensions.
+        """
+        assert (height, width, yloc, xloc) != (None, None, None, None)
+        if height is not None:
+            self.height = height
+        if width is not None:
+            self.width = width
+        if yloc is not None:
+            self.yloc = yloc
+        if xloc is not None:
+            self.xloc = xloc
+
+    def isinview(self):
+        """
+        Returns True if window is in view of the terminal window.
+        """
+        term = getsession().terminal
+        return (self.xloc > 0 and self.xloc +self.width -1 <= term.width
+            and self.yloc > 0 and self.yloc +self.height -1 <= term.height)
+
+    def iswithin(self, win):
+        """
+        Returns True if our window is within the bounds of window
+        """
+        return (self.yloc >= win.yloc
+            and self.yloc + self.height <= win.yloc + win.height
+            and self.xloc >= win.xloc
+            and self.xloc + self.width <= win.xloc + win.width)
+
+    def willfit(self, win):
+        """
+        Returns True if target window is within our bounds
+        """
+        return (win.yloc >= self.yloc
+            and win.yloc + win.height <= self.yloc + self.height
+            and win.xloc >= self.xloc
+            and win.xloc + win.w <= self.xloc + self.width)
+
+    def pos(self, xloc=-1, yloc=-1):
+        """
+        Returns terminal sequence to move cursor to window-relative position.
+        """
+        term = getsession().terminal
+        return term.move (yloc +self.yloc if yloc != None else 0,
+             xloc +self.xloc if xloc != None else 0)
+
+    def title(self, ansi_text):
+        """
+        Returns sequence that positions and displays unicode sequence
+        'ansi_text' at the title location of the window (it may be trimmed).
+        """
+        xloc = self.width / 2 - (min(ansilen(ansi_text) / 2, self.width / 2))
+        return self.pos(xloc=xloc, yloc=0) + ansi_text
+
+    def border(self):
+        """
+        Return a unicode sequence suitable for drawing a border of this window
+        using self.colors['border'] and glyphs: 'top-left', 'top-horiz',
+        'top-right', 'left-vert', 'right-vert', 'bot-left', 'bot-horiz', and
+        'bot-right'.
+        """
+        #pylint: disable=R0912
+        #        Too many branches (17/12)
+        ret = self.colors.get('border', u'')
+        thoriz = self.glyphs.get('top-horiz', u'') * (self.width - 2)
+        bhoriz = self.glyphs.get('bot-horiz', u'') * (self.width - 2)
+        topright = self.glyphs.get('top-right', u'')
+        botright = self.glyphs.get('bot-right', u'')
         for row in range(0, self.height):
             # top to bottom
             for col in range (0, self.width):
                 # left to right
                 if (col == 0) or (col == self.width - 1):
+                    ret += self.pos(col, row)
                     if (row == 0) and (col == 0):
                         # top left
-                        echo (self.pos(col, row) + glyphs['top-left'])
+                        ret += self.glyphs.get('top-left', u'')
                     elif (row == self.height - 1) and (col == 0):
                         # bottom left
-                        echo (self.pos(col, row) + glyphs['bot-left'])
+                        ret += self.glyphs.get('bot-left', u'')
                     elif (row == 0):
                         # top right
-                        echo (self.pos(col, row) + glyphs['top-right'])
+                        ret += self.glyphs.get('top-right', u'')
                     elif (row == self.height - 1):
                         # bottom right
-                        echo (self.pos(col, row) + glyphs['bot-right'])
-                    elif not self.partial and col == 0:
+                        ret += self.glyphs.get('bot-right', u'')
+                    elif col == 0:
                         # left vertical line
-                        echo (self.pos(col, row) + glyphs['left-vertical'])
-                    elif not self.partial and col == self.width - 1:
+                        ret += self.glyphs.get('left-vert', u'')
+                    elif col == self.width - 1:
                         # right vertical line
-                        echo (self.pos(col, row) + glyphs['right-vertical'])
+                        ret += self.glyphs.get('right-vert', u'')
                 elif (row == 0):
-                    echo (self.pos(col, row) + glyphs['top-horizontal'] \
-                            * (self.width - 2) + glyphs['top-right'])
-                    # top row
+                    # top row (column 1)
+                    if thoriz == u'':
+                        if topright != u'':
+                            # prepare for top-right, (horiz skipped)
+                            ret += self.pos(self.width -1, row)
+                    else:
+                        # horizontal line
+                        ret += thoriz
+                    # top-right,
+                    ret += topright
                     break
                 elif (row == self.height - 1):
-                    # bottom row
-                    echo (self.pos(col, row) + glyphs['bot-horizontal'] \
-                            * (self.width - 2) + glyphs['bot-right'])
+                    # bottom row (column 1)
+                    if bhoriz == u'':
+                        if botright != u'':
+                            # prepare for bot-right, (horiz skipped)
+                            ret += self.pos(self.width -1, row)
+                    else:
+                        # horizontal line
+                        ret += bhoriz
+                    # top-right,
+                    ret += botright
                     break
-        if color:
-            echo (self.terminal.normal)
+        ret += self.colors.get('border', u'')
+        return ret
 
-    def noborder(self):
-        self.border (glyphs=self.emptyGlyph, color=self.terminal.normal)
-
-    def highlight(self):
-        self.border (color=self.colors['active'])
-
-    def lowlight(self):
-        self.border (color=self.colors['inactive'])
-
-    def fill(self, ch=-1, eraseborder=False):
-        if eraseborder:
-            xloc, yloc, width, height = 0, 0, self.width, self.height
-        else:
-            xloc, yloc, width, height = 1, 1, self.width-2, self.height-1
-        if ch == -1:
-            ch = self.glyphs['fill']
-        for yloc in range(yloc, height):
-            echo (self.pos(xloc, yloc) + (ch * width))
-
-    def clean(self):
-        self.fill (ch=self.glyphs['erase'], eraseborder=True)
+    def erase(self):
+        """
+        Erase window contents (including border)
+        """
+        ret = self.pos(0, 0)
+        ret += u''.join([self.pos(xloc=0, yloc=y) + self.glyphs['erase']
+            for y in range(self.height)])
+        return ret
 
     def clear(self):
-        self.fill (ch=self.glyphs['erase'])
-
-    def resize(self, height=-1, width=-1, yloc=-1, xloc=-1):
-        if height != -1: self.height = height
-        if width != -1: self.width = width
-        if yloc != -1: self.yloc = yloc
-        if xloc != -1: self.xloc = xloc
-
-    def isinview(self):
-        return (self.xloc > 0
-                and self.xloc +self.width -1 <= getsession().width
-                and self.yloc > 0
-                and self.yloc +self.height -1 <= getsession().height)
-
-    def iswithin(self, win):
-        return (self.yloc >= win.yloc
-                and self.yloc + self.height <= win.yloc + win.height
-                and self.xloc >= win.xloc
-                and self.xloc + self.width <= win.xloc + win.width)
-
-    def willfit(self, win):
-        return (win.yloc >= self.yloc
-                and win.yloc + win.height <= self.yloc + self.height
-                and win.xloc >= self.xloc
-                and win.xloc + win.w <= self.xloc + self.width)
-
-    def pos(self, xloc=-1, yloc=-1):
-        return self.terminal.move \
-            (yloc +self.yloc if yloc != None else 0,
-             xloc +self.xloc if xloc != None else 0)
-
-    def title(self, text, align='top'):
-        if align in ['top', 'bottom']:
-            yloc = 0 if align == 'top' else self.height-1
-            xloc = self.width /2 -(ansilen(text) /2)
-            echo (self.pos(xloc, yloc) +text)
-
-        # hmm ...
-        elif align in ['left', 'right']:
-            y = self.height /2 -(len(text) /2)
-            if align == 'left': xloc = 0
-            if align == 'right': xloc = self.width
-            for num in range(0, len(text)):
-                echo (self.pos(xloc,yloc + num) + text[n])
-        else:
-            assert False
-
-class InteractiveAnsiWindow(AnsiWindow):
-    timeout = False
-    exit = False
-    interactive = False
-    debug = False
-    silent = False
-
-    KMAP = { \
-      'refresh': ['\014'],
-      'exit':    ['\030']
-    }
-
-    def bell(self, msg):
-        # TODO: print msg at status line
-        if not self.silent:
-            echo ('\a')
-        if self.debug:
-            print msg
-        return False
-
-    def process_keystroke(self, key):
-        if key in self.KMAP['refresh']: self.refresh ()
-        if key in self.KMAP['exit']:    self.exit = True
-
-    def run(self, key=None, timeout=None):
-        pass
+        """
+        Erase only window contents, border remains.
+        """
+        ret = self.pos(1, 1)
+        ret += u''.join([self.pos(xloc=1, yloc=y) + self.glyphs['erase']
+            for y in range(self.height -2)])
+        return ret

@@ -11,9 +11,9 @@ __license__ = "ISC"
 
 from output import echo
 from input import getch
-from ansiwin import InteractiveAnsiWindow
+#from ansiwin import InteractiveAnsiWindow
 
-class HorizEditor(InteractiveAnsiWindow):
+class HorizEditor(object):#InteractiveAnsiWindow):
 
     # horizontal shifting control
     shift, lastShift = 0, -1

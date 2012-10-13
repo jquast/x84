@@ -1,331 +1,411 @@
 """
-Lightbar user interface for X/84, http://1984.ws
-$Id: lightwin.py,v 1.5 2010/01/06 19:45:51 dingo Exp $
+lightwin package for x/84 BBS, http://github.com/jquast/x84
 """
 
-__author__ = 'Jeffrey Quast <dingo@1984.ws>'
-__copyright__ = ['Copyright (c) 2006, 2007, 2008, 2009 Jeffrey Quast']
-__license__ = 'ISC'
-__url__ = 'http://1984.ws'
+from bbs.ansiwin import AnsiWindow
+import logging
+import multiprocessing
+logger = multiprocessing.get_logger()
+logger.setLevel(logging.DEBUG)
 
-from output import echo
-from input import getch
-import ansiwin
-import curses
-import log
+NETHACK_KEYSET = { 'home': [u'y', ], 'end': [u'n', ], 'pgup': [u'h', ],
+'pgdown': [u'l', ], 'up': [u'k', ], 'down': [u'j', ], 'quit': [u'q', ], }
 
-class LightClass (ansiwin.InteractiveAnsiWindow):
-    KMAP = { \
-      'home':  ['y', curses.KEY_HOME],
-      'end':   ['n', curses.KEY_END],
-      'pgup':  ['h', curses.KEY_PPAGE],
-      'pgdown':['l', curses.KEY_NPAGE],
-      'up':    ['k', curses.KEY_UP],
-      'down':  ['j', curses.KEY_DOWN],
-      'quit':  ['q', curses.KEY_EXIT] \
-    }
+class LightClass (AnsiWindow):
+    """
+    This Windowing class offers a classic 'lightbar' interface.
 
-    alignment='left'
+    Instantiate with yloc, xloc, height, and width, then call the update method
+    with a list of unicode strings. send keycodes to process_keystroke () to
+    interactive with the 'lightbar'.
+    """
+    #pylint: disable=R0902
+    #         Too many instance attributes (15/7)
+    #pylint: disable=R0904
+    #         Too many public methods (29/20)
+    _alignment = 'left'
+    _vitem_idx = 0
+    _vitem_lastidx = 0
+    _vitem_shift = 0
+    _vitem_lastshift = 0
+    _items_len = 0
+    _xpadding = 0
+    _ypadding = 0
+    _moved = False
+    _quit = False
+    content = list()
+    keyset = dict
 
-    # user postion in the list
-    item, shift = 0, 0
-
-    # oitem and ishift are used as dirty flags
-    oitem, oshift = -1, -1
-    bottom = 0
-    selection = 0
-
-    # selection is the numeric position in list, not its' contents
-    byindex = False
-
-    # behavior
-    moved = True
-
-    def __init__(self, height, width, yloc, xloc, xpad=0, ypad=0):
-        ansiwin.InteractiveAnsiWindow.__init__ (self, height, width, yloc, xloc)
-        from session import getsession
-        self.content = []
-        self.lastkey = ' '
-        self.xpad, self.ypad = xpad, ypad
-        self.term = getsession().terminal
-
-        # Drawing
-        self.visibleWidth, self.visibleHeight = (self.width -(self.xpad*2),
-                self.height -(self.ypad*2)) # margins
-
-    def adjshift(self, value):
-        """ adjust top visible row in list
+    @property
+    def update(self, unicodelist=None):
         """
-        if self.shift != value:
-            self.oshift = self.shift
-            if self.debug: log.write ('lightstep', 'adjshift %i->%i' % (self.shift, value))
-            self.shift = value
-            self.moved = True
-
-    def adjitem(self, value):
-        """ adjust visible item in list
+        Replace content of lightbar with a unicode list.
         """
-        if self.item != value:
-            self.oitem = self.item
-            if self.debug: log.write ('lightstep', 'adjsitem %i->%i' % (self.item, value))
-            self.item = value
-            self.moved = True
+        if unicodelist is None:
+            unicodelist = [u'',]
+        self.content = unicodelist
+        self.position = (self.vitem_idx, self.vitem_shift)
 
-    def setselection(self):
-        # set selection to index
-        self.index = self.shift +self.item
-        if not self.content:
-            if self.debug: log.write ('lightstep', 'empty list in setselection()')
-            return
-        if self.byindex:
-            self.selection = self.index
-        else:
-            self.selection = self.content[self.index]
-
-    def add (self, string, refresh=True):
-        self.content.append (string)
-        self.update (self.content, refresh)
-
-    def resize(self, height=-1, width=-1, yloc=-1, xloc=-1, refresh=True):
-        " Adjust visible bottom "
-        ansiwin.InteractiveAnsiWindow.resize (self, height, width, yloc, xloc)
-        # Drawing
-        self.visibleWidth, self.visibleHeight = self.width-2, self.height-1 # margins
-
-        if refresh:
-            # recalculate selection
-            self.update (self.content, True)
-
-    def display_entry(self, ypos, entry, highlight=False):
-        """ display entry at ypos, high or unhighlighted
+    def refresh_row(self, ypos):
         """
-        echo (self.pos(self.xpad, self.ypad +ypos))
-        if highlight:
-            echo (self.colors['highlight'])
-        else:
-            echo (self.colors['lowlight'])
-        self.oitem, self.oshift = self.item, self.oshift
+        Return unicode byte sequence suitable for moving to location ypos of
+        window-relative row, and displaying any valid entry there, or using
+        glyphs['fill'] if out of bounds.
+        """
+        unibytes = u''
+        # moveto (ypos),
+        unibytes += self.pos(xloc=self.xpadding, yloc=self.ypadding + ypos)
+        entry = self.vitem_shift + ypos
         if entry >= len(self.content):
-            raise ValueError, "entry out of bounds in display_entry. entry=%s len(list)=%s" % (entry, len(self.content))
-        def align(s, n):
-            if self.alignment == 'left':
-                return s.ljust(n)
-            elif self.alignment == 'right':
-                return s.rjust(n)
-            elif self.alignment == 'center':
-                return s.center(n)
-            assert 0, 'invalid alignment: %(alignment)s' % self
-        echo (align(self.content[entry], self.visibleWidth))
-        echo (self.term.normal)
+            # out-of-bounds; empty window
+            return self.glyphs['fill'] * self._visible_width
+        # colorize,
+        unibytes += (self.colors['highlight'] if entry == self.index
+                else self.colors['lowlight'])
+        # justified text,
+        unibytes += self._align(self.content[entry], self._visible_width)
+        unibytes += self.colors['normal']
+        return unibytes
 
     def refresh (self):
-        """ display all viewable items in lightbar object.
-            loop entry as range(visible top to visible bottom)
-            set ypos as entry minus window shift
-            display entry at visible row ypos
         """
-        if self.debug: log.write ('lightstep', 'refresh idx: %s' % (repr(range(self.shift, self.bottom +self.shift))))
-        for n, entry in enumerate(range(self.shift, self.bottom +self.shift)):
-            ypos = entry -self.shift
-            if ypos == self.item:
-                self.display_entry(ypos, entry, highlight=True)
-            else:
-                self.display_entry(ypos, entry)
-
-        # clear remaining lines in window
-        y = self.bottom
-        while y < self.visibleHeight:
-            echo (self.pos(self.xpad, self.ypad+y) + self.glyphs['fill']*(self.visibleWidth))
-            y += 1
-        self.oshift = self.shift
-
-    def update(self, list, refresh=True):
-        """ Update list data, list, adjust selection position, self.item and self.shift,
-            and review bottom-most printable row index, self.bottom.
+        Refresh full lightbar window contents
         """
-        self.content, self.items = list, len(list)
-        if not self.items:
-            self.content = ['']
-        self.position (self.item, self.shift)
-        self.set_bottom ()
-        if refresh:
-            self.refresh ()
+        return u''.join(self.refresh_row (ypos) for ypos in
+                range(self._visible_bottom))
 
-    def set_bottom(self):
-        """ find visible self.bottom of list
+    def refresh_quick (self):
         """
-        obottom = self.bottom
-        if self.shift +(self.visibleHeight -1) > self.items:
-            # items fit within displayable window, set bottom to last item
-            self.bottom = self.items
-        else:
-            # items fit beyond window, set bottom to printable height
-            self.bottom = self.visibleHeight
-        if obottom != self.bottom and self.debug:
-            if self.debug: log.write ('lightstep',  'bottom %s -> %s' % (obottom, self.bottom))
-
-    def position(self, item, shift=0):
-        """ Move to specific position in window, item being the visible row
-            starting at 0 on top down to the bottom most visible position in
-            our viewing window. Shift being the number of rows shifted from
-            the top-post item to show this viewable slice.
-            If target item and shift position cannot be met exactly, first
-            boundschecking will truncate to ensure data selection is within range,
-            then window will be shifted to ensure the window is as full as possible,
-            while still retaining the desired y position
+        Redraw only the 'dirty' portions after a 'move' has occured unless
+        the page has shifted, then a full refresh is necessary.
         """
-        self.adjitem (item)
-        self.adjshift (shift)
+        unibytes = u''
+        if (self._vitem_lastshift != self.vitem_shift
+                and self._vitem_lastshift != - 1):
+            # page shift, refresh entire page
+            unibytes += self.refresh ()
+        elif self.moved:
+            if self._vitem_lastidx != -1:
+                # unlight old entry
+                unibytes += self.refresh_row (self._vitem_lastidx)
+                # highlight new entry
+                unibytes += self.refresh_row (self.vitem_idx)
+        return unibytes
 
-        # if selected item is out of range of
-        # new list, then move selection to end
-        # of current list
-        if self.shift and self.shift + self.item +1 > self.items:
-            if self.debug: log.write ('lightstepclass', 'pos-item out of range')
-            self.adjshift (self.items -self.visibleHeight +1)
-            self.adjitem (self.visibleHeight -2)
 
-        # if we are a shifted window, scroll up, while
-        # holding to our selection position,
-        # until bottom-most item is within visable range
-        while self.shift and self.shift + self.visibleHeight -1 > self.items:
-            if self.debug: log.dbeug ('lightstepclass', 'pos-scroll up')
-            self.adjshift (shift -1)
-            self.adjitem (self.item +1)
-
-        # when a window is not shiftable, ensure
-        # selection is less than total (truncate to last item)
-        # This loop occurs, for instance, if we are selecting the last item,
-        # and the list is truncated to a smaller length. We want to ensure
-        # the selection is on a valid item!
-        while self.item and self.item +self.shift >= self.items:
-            self.adjitem (self.item -1)
-        self.setselection()
-
-    def down(self):
-        """ move down one entry
+    def init_keystrokes(self):
         """
-        if self.item +self.shift +1 < self.items:
-            if self.debug: log.write ('lightstep', 'down-ok')
-            if self.item+1 < self.bottom:
-                if self.debug: log.write ('lightstep', 'down-move')
-                self.adjitem (self.item +1)
-            elif self.item < self.items:
-                if self.debug: log.write ('lightstep', 'down-scroll')
-                self.adjshift (self.shift +1)
-        else:
-            if self.debug: log.write ('lightstep', 'down-no')
-
-    def up(self):
-        """ move up one entry
+        This initializer sets glyphs and colors appropriate for a "theme",
+        override or inherit this method to create a common color and graphic
+        set.
         """
-        if self.item +self.shift >= 0:
-            if self.debug: log.write ('lightstep', 'up-ok')
-            if self.item >= 1:
-                if self.debug: log.write ('lightstep', 'up-move')
-                self.adjitem (self.item -1)
-            elif self.shift > 0:
-                if self.debug: log.write ('lightstep', 'up-scroll')
-                self.adjshift (self.shift -1)
-        else:
-            if self.debug: log.write ('lightstep', 'up-no')
-
-    def pagedown(self):
-        """ move down one page
-        """
-        if self.items < self.visibleHeight:
-            self.adjitem (self.items-1)
-        elif self.shift +self.visibleHeight < self.items -self.visibleHeight:
-            self.adjshift (self.shift +self.visibleHeight)
-        else:
-            if self.shift != self.items -self.visibleHeight:
-                # shift window to last page
-                self.adjshift (self.items -self.visibleHeight)
-            else:
-                # already at last page, goto end
-                self.end()
-
-    def pageup(self):
-        """ move up one page
-        """
-        if self.items < self.visibleHeight-1:
-            self.adjitem (0)
-        if self.shift -self.visibleHeight > 0:
-            self.adjshift (self.shift -self.visibleHeight)
-        else:
-            # shift window to first page
-            if self.shift != 0:
-                self.adjshift (0)
-            # already at first, goto home
-            else: self.home ()
-
-    def home(self):
-        """ move to first entry
-        """
-        if self.item != 0 or self.shift != 0:
-            self.adjitem (0)
-            self.adjshift (0)
-
-    def end(self):
-        """ move to last entry
-        """
-        if self.items < self.visibleHeight:
-            self.adjitem (self.items -1)
-        else:
-            self.adjshift (self.items -self.visibleHeight)
-            self.adjitem (self.visibleHeight -1)
+        from bbs.session import getsession
+        self.keyset = NETHACK_KEYSET
+        term = getsession().terminal
+        if u'' != term.KEY_HOME:
+            self.keyset['home'].append (
+                term.KEY_HOME)
+        if u'' != term.KEY_END:
+            self.keyset['end'].append (
+                term.KEY_END)
+        if u'' != term.KEY_PPAGE:
+            self.keyset['pageup'].append (
+                term.KEY_PPAGE)
+        if u'' != term.KEY_NPAGE:
+            self.keyset['pagedown'].append (
+                term.KEY_NPAGE)
+        if u'' != term.KEY_UP:
+            self.keyset['up'].append (
+                term.KEY_KEY_UP)
+        if u'' != term.KEY_DOWN:
+            self.keyset['down'].append (
+                term.KEY_DOWN)
+        if u'' != term.KEY_EXIT:
+            self.keyset['quit'].append (
+                term.KEY_EXIT)
 
     def process_keystroke(self, key):
-        """ Process the keystroke received by run method and take action.
         """
-        if key in self.KMAP['home']: self.home ()
-        elif key in self.KMAP['end']: self.end ()
-        elif key in self.KMAP['pgup']: self.pageup ()
-        elif key in self.KMAP['pgdown']: self.pagedown ()
-        elif key in self.KMAP['up']: self.up ()
-        elif key in self.KMAP['down']: self.down ()
-        elif key in self.KMAP['quit']: self.exit = True
+        Process the keystroke received by run method and take action.
+        """
+        self._quit = False
+        self._moved = False
+        if key in self.keyset['home']:
+            self._home ()
+        elif key in self.keyset['end']:
+            self._end ()
+        elif key in self.keyset['pgup']:
+            self._pageup ()
+        elif key in self.keyset['pgdown']:
+            self._pagedown ()
+        elif key in self.keyset['up']:
+            self._up ()
+        elif key in self.keyset['down']:
+            self._down ()
+        elif key in self.keyset['quit']:
+            self._quit = True
 
-    def run (self, key=None, timeout=None):
-        self.lastkey = None
-        self.moved = False
-        self.timeout = False
-        self.exit = False
+    @property
+    def moved(self):
+        """
+        Returns: True if last call to process_keystroke() caused a new entry to
+        be selected.
 
-        def chkrefresh ():
-            if self.oshift != self.shift and self.oshift != -1:
-                if self.debug: log.write ('lightstep', 'oshift: %s, shift: %s' % (self.oshift, self.shift))
-                # page shift, refresh entire page
-                self.refresh ()
-            elif self.moved:
-                if self.oitem != -1:
-                    # unlight old entry
-                    self.display_entry (self.oitem, self.oitem +self.shift)
-                # highlight new entry
-                self.display_entry (self.item, self.item +self.shift, highlight=True)
+        The caller can send keystrokes and check this flag to indicate wether
+        the current selection should be re-examined.
+        """
+        return self._moved
 
-        while True:
-            # check for and refresh before reading key
-            chkrefresh ()
-            if not key or not self.interactive:
-                key = getch(timeout)
-                if key == None:
-                    self.timeout = True
-                else:
-                    self.process_keystroke (key)
-            else:
-                self.process_keystroke (key)
-            self.lastkey = key
+    @property
+    def quit(self):
+        """
+        Returns: True if a terminating or quit character was handled by
+        process_keystroke(), such as the escape key, or 'q' by default.
+        """
+        return self._quit
 
-            self.setselection()
-            # returns
-            if key in [curses.KEY_ENTER]:
-                return self.selection
-            elif self.exit:
-                return False
-            if self.interactive:
-                # check for and refresh before return
-                chkrefresh ()
-                break
-            key = ''
-        return None
+    @property
+    def index(self):
+        """
+        Selected index of self.content
+        """
+        return self.vitem_shift + self.vitem_idx
+
+    @property
+    def selection(self):
+        """
+        Selected content of self.content by index
+        """
+        return self.content[self.index]
+
+    @property
+    def last_index(self):
+        """
+        Previously selected index of self.content
+        """
+        return self._vitem_lastshift + self._vitem_lastidx
+
+    @property
+    def position(self):
+        """
+        Returns tuple pair (item, shift). 'item' being the listed index from
+        top of window, and 'shift' being the number of items scrolled.
+        """
+        return (self.vitem_idx, self.vitem_shift)
+
+    @position.setter
+    def position(self, pos_tuple):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self.vitem_idx, self.vitem_shift = pos_tuple
+        self._chk_bounds ()
+
+    @property
+    def vitem_idx(self):
+        """
+        Index of selected item relative by index to only the length of the list
+        that is visible, without accounting for scrolled content.
+        """
+        #pylint: disable=C0111
+        #         Missing docstring
+        return self._vitem_idx
+
+    @vitem_idx.setter
+    def vitem_idx(self, value):
+        #pylint: disable=C0111
+        #        Missing docstring
+        if self._vitem_idx != value:
+            self._vitem_lastidx = self._vitem_idx
+            logger.debug ('vitem_idx %d->%d', self._vitem_idx, value)
+            self._vitem_idx = value
+            self.moved = True
+
+    @property
+    def vitem_shift(self):
+        """
+        Index of top-most item in viewable window, non-zero when scrolled.
+        This value effectively represents the number of items not in view
+        due to paging.
+        """
+        #pylint: disable=C0111
+        #         Missing docstring
+        return self._vitem_shift
+
+    @vitem_shift.setter
+    def vitem_shift(self, value):
+        #pylint: disable=C0111
+        #        Missing docstring
+        if self._vitem_shift != value:
+            self._vitem_lastshift = self._vitem_shift
+            self._vitem_shift = value
+            self.moved = True
+
+    def _chk_bounds (self):
+        """
+        Shift pages and selection until a selection is within bounds
+        """
+        # if selected item is out of range of new list, then scroll to last
+        # page, and move selection to end of screen,
+        if self.vitem_shift and self.index +1 > len(self.content):
+            logger.warn ('vshift %d; vidx %d( index %d ) out of range for %d.',
+                    self.vitem_shift, self.vitem_idx, self.index,
+                    len(self.content))
+            self.vitem_shift = len(self.content) - self._visible_height + 1
+            self.vitem_idx = self._visible_height - 2
+
+        # if we are a shifted window, shift 1 line up while keeping our
+        # lightbar position until the bottom-most item is within visable range.
+        while (self.vitem_shift and self.vitem_shift + self._visible_height - 1
+                > len(self.content)):
+            self.vitem_shift -= 1
+            self.vitem_idx += 1
+
+        # When a window is not shiftable, ensure selection is less than
+        # total items. (truncate to last item)
+        while self.vitem_idx > 0 and self.index >= len(self.content):
+            self.vitem_idx -= 1
+
+    def _down(self):
+        """
+        Move selection down one row.
+        """
+        if self.index >= len(self.content):
+            return
+        if self.vitem_idx + 1 < self._visible_bottom:
+            self.vitem_idx += 1
+        elif self.vitem_idx < len(self.content):
+            self.vitem_shift += 1
+
+    def _up(self):
+        """
+        Move selection up one row.
+        """
+        if 0 == self.index:
+            return
+        elif self.vitem_idx >= 1:
+            self.vitem_idx -= 1
+        elif self.vitem_shift > 0:
+            self.vitem_shift -= 1
+
+    def _pagedown(self):
+        """
+        Move selection down one page.
+        """
+        if len(self.content) < self._visible_height:
+            self.vitem_idx = len(self.content) - 1
+        elif (self.vitem_shift + self._visible_height < len(self.content)
+                -self._visible_height):
+            self.vitem_shift = self.vitem_shift + self._visible_height
+        elif self.vitem_shift != len(self.content) - self._visible_height:
+            # shift window to last page
+            self.vitem_shift = len(self.content) - self._visible_height
+        else:
+            # already at last page, goto end
+            self._end ()
+
+    def _pageup(self):
+        """
+        Move selection up one page.
+        """
+        if len(self.content) < self._visible_height - 1:
+            self.vitem_idx = 0
+        if self.vitem_shift - self._visible_height > 0:
+            self.vitem_shift = self.vitem_shift - self._visible_height
+        elif self.vitem_shift > 0:
+            self.vitem_shift = 0
+        else:
+            # already at first page, goto home
+            self._home ()
+
+    def _home(self):
+        """
+        Move selection to the very top and first entry of the list.
+        """
+        if (0, 0) != (self.vitem_idx, self.vitem_shift):
+            self.vitem_idx = 0
+            self.vitem_shift = 0
+
+    def _end(self):
+        """
+        Move selection to the very last and final entry of the list.
+        """
+        if len(self.content) < self._visible_height:
+            self.vitem_idx = len(self.content) - 1
+        else:
+            self.vitem_shift = len(self.content) -self._visible_height
+            self.vitem_idx = self._visible_height - 1
+
+    @property
+    def xpadding(self):
+        """
+        Horizontal padding of window border
+        """
+        #pylint: disable=C0111
+        #         Missing docstring
+        return self._xpadding
+
+    @xpadding.setter
+    def xpadding(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self._xpadding = value
+
+    @property
+    def ypadding(self):
+        """
+        Horizontal padding of window border
+        """
+        return self._ypadding
+
+    @ypadding.setter
+    def ypadding(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self._ypadding = value
+
+    @property
+    def alignment(self):
+        """
+        Justification of text content. One of 'left', 'right', or 'center'.
+        """
+        return self._alignment
+
+    @alignment.setter
+    def alignment(self, value):
+        # pylint: disable=C0111
+        #         Missing docstring
+        assert value in ('left', 'right', 'center')
+        self._alignment = value
+
+    def _align(self, text, width):
+        """
+        justify text to width according to alignment prperty
+        """
+        return (text.rjust if self.alignment == 'right' else
+                text.ljust if self.alignment == 'left' else
+                text.center)(width)
+
+    @property
+    def _visible_width(self):
+        """
+        Visible width of lightbar after accounting for horizontal padding.
+        """
+        return self.width - (self.xpadding * 2)
+
+    @property
+    def _visible_height(self):
+        """
+        Visible height of lightbar after accounting for vertical padding.
+        """
+        return self.height - (self.ypadding * 2)
+
+    @property
+    def _visible_bottom(self):
+        """
+        Visible bottom-most item of lightbar.
+        """
+        if self.vitem_shift + (self._visible_height -1) > len(self.content):
+            return len(self.content)
+        else:
+            return self._visible_height
+

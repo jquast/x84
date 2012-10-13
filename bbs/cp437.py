@@ -60,7 +60,7 @@ CP437 = (
 
 # prepare static table.
 # In python 3, str.maketrans() uses a dictionary of exactly this form.
-CP437TABLE = dict([(chr(i), CP437[i]) for i in range(255)])
+CP437TABLE = dict([(unichr(i), CP437[i]) for i in range(255)])
 
 def fromCP437(text):
     """ Given a bytestring in IBM codepage 437, return a translated
