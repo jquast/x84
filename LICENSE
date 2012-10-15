@@ -1,8 +1,11 @@
-Copyright (c) 2012, Jeffrey Quast <dingo@1984.ws>
+All source code (c) 2012 Jeffrey Quast <dingo@1984.ws> unless otherwise noted.
 
 Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies.
 
 THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-telnet.py is derived from 'miniboa', Copyright 2009 Jim Storch
-Licensed under the Apache License, Version 2.0 (the "License")
+'telnet.py' derived from 'miniboa', (c) 2009 Jim Storch <jimstorch@gmail.com>
+Licensed under the Apache License, Version 2.0 (the "License").
+
+'default/cp437.py' (c) 2009-2012 Wijnand Modderman-Lenstra <maze@pyth0n.org>,
+Licensed under the MIT License.

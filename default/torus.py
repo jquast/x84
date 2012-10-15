@@ -1,6 +1,6 @@
 def main():
     from math import cos, sin, pi
-    #blocks = fromCP437(''.join(chr(176),chr(166),chr(178),chr(220),chr(223))
+    #blocks = from_cp437(''.join(chr(176),chr(166),chr(178),chr(220),chr(223))
     blocks = ".,-~:;=!*#$@"
     term = getterminal()
     # www.a1k0n.net/2011/07/20/donut-math.html

@@ -35,7 +35,7 @@ def main(host, port=None):
     while True:
         inp = getch (timeout=TIME_POLL)
         try:
-            unistring = fromCP437(telnet_client.read_very_eager())
+            unistring = from_cp437(telnet_client.read_very_eager())
             if 0 != len(unistring):
                 echo (unistring)
             if inp == '\035':

@@ -340,8 +340,6 @@ class LightClass (AnsiWindow):
         """
         Horizontal padding of window border
         """
-        #pylint: disable=C0111
-        #         Missing docstring
         return self._xpadding
 
     @xpadding.setter

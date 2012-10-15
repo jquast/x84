@@ -1,5 +1,10 @@
+"""
+ansiwin package for x/84 BBS http://github.com/jquast/x84
+"""
+import multiprocessing
 import termios
 import select
+import logging
 import struct
 import fcntl
 import pty
@@ -7,54 +12,70 @@ import sys
 import re
 import os
 
+from bbs.session import getsession
+from bbs.exception import ConnectionTimeout
+from bbs.output import echo
+from bbs.cp437 import CP437
+from bbs.ini import cfg
+
 PATTERN_EIO = re.compile('Errno 5')
+logger = multiprocessing.get_logger()
+logger.setLevel(logging.DEBUG)
 
 class Door(object):
-    POLL = 0.02
-    BLOCKSIZE = 1920
+    """
+    Spawns a subprocess and pipes input and output over bbs session.
+    """
+    #pylint: disable=R0902,R0903
+    #        Too many instance attributes (8/7)
+    #        Too few public methods (1/2)
+    time_ipoll = 0.05
+    time_opoll = 0.05
+    blocksize = 7680
+    timeout = 1984
     master_fd = None
     decode_cp437 = False
-    pid = None
     _TAP = False # for debugging
 
-    def __init__(self, cmd='/bin/uname', args=(),
-        lang=u'en_US.UTF-8', term=None, path=None,
-        decode_cp437=False):
+    def __init__(self, cmd='/bin/uname', args=(), lang=u'en_US.UTF-8',
+            term=None, path=None):
         """
         cmd, args = argv[0], argv[1:]
         lang, term, and path become LANG, TERM, and PATH environment
         variables. when term is None, the session terminal type is used.
-        When path is None, the .ini 'path' value of [door] is used.
-
-        When decode_cp437 is True, the door is presumed to be in CP437
-        encoding and high-bit characters are mapped to their utf8-equivalent
-        glyph.
+        When path is None, the .ini 'path' value of section [door] is used.
         """
-        from session import getsession
-        import ini
+        #pylint: disable=R0913
+        #        Too many arguments (7/5)
         self.cmd = cmd
         self.args = (self.cmd,) + args
         self.lang = lang
-        self.term = term if term is not None else \
-            getsession().terminal.terminal_type
-        self.path = path if path is not None else \
-            ini.cfg.get('door', 'path')
-        self.decode_cp437 = True
+        self.term = term if term is not None else getsession().env.get('TERM')
+        self.path = path if path is not None else cfg.get('door', 'path')
 
     def run(self):
-        from session import getsession, logger
+        """
+        Begin door execution. pty.fork() is called, child process
+        calls execvpe() while the parent process pipes telnet session
+        IPC data to and from the slave pty until child process exits.
+        """
         try:
-            self.pid, self.master_fd = pty.fork()
+            pid, self.master_fd = pty.fork()
         except OSError, err:
             logger.error ('OSError in pty.fork(): %s', err)
             return
 
+        lines = str(getsession().terminal.height)
+        columns = str(getsession().terminal.width)
+
         # subprocess
-        if self.pid == pty.CHILD:
+        if pid == pty.CHILD:
             sys.stdout.flush ()
             env = { u'LANG': self.lang,
                     u'TERM': self.term,
                     u'PATH': self.path,
+                    u'LINES': lines,
+                    u'COLUMNS': columns,
                     u'HOME': os.getenv('HOME') }
             try:
                 os.execvpe(self.cmd, self.args, env)
@@ -70,7 +91,7 @@ class Door(object):
 
         # execute self._loop() and catch all i/o and o/s errors
         try:
-            logger.info ('exec/%s: %s', self.pid, ' '.join(self.args))
+            logger.info ('exec/%s: %s', pid, ' '.join(self.args))
             self._loop()
         except IOError, err:
             logger.error ('IOError: %s', err)
@@ -78,75 +99,56 @@ class Door(object):
             # match occurs on read() after child closed sys.stdout. (ok)
             if PATTERN_EIO.search (str(err)) is None:
                 # otherwise log as an error,
-                logger.error ('OSError: %s', e)
+                logger.error ('OSError: %s', err)
 
         getsession().enable_keycodes = chk_keycodes
 
         # retrieve return code
-        (self.pid, status) = os.waitpid (self.pid, 0)
+        (pid, status) = os.waitpid (pid, 0)
         res = status >> 8
 
         if res != 0:
-            logger.warn ('child %s has non-zero exit code: %s',
-                    self.pid, res)
+            logger.warn ('child %s has non-zero exit code: %s', pid, res)
         else:
-            logger.info ('%s child %s exit %s.', self.cmd, self.pid, res)
+            logger.info ('%s child %s exit %s.', self.cmd, pid, res)
 
         os.close (self.master_fd)
         return res
 
     def _loop(self):
-        from session import getsession, logger
-        from output import echo
-        from cp437 import CP437
-
-        # signal window size to child pty, untested XXX
+        """
+        Poll input and outpout of ptys, raising exception.ConnectionTimeout
+        when session idle time exceeds self.timeout.
+        """
         term = getsession().terminal
-        fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ,
-            struct.pack('HHHH', term.height, term.width, 0, 0))
-
         while True:
-            #pylint: disable=W0612
-            #        Unused variable 'wfds'
-            #        Unused variable 'xfds'
+            # block up to self.time_opoll for screen output
             rlist = (self.master_fd,)
-            # block up to self.POLL for screen output
-            (rfds, wfds, xfds) = select.select (rlist, (), (), self.POLL)
-            if self.master_fd in rfds:
-                data = os.read(self.master_fd, self.BLOCKSIZE)
+            ret_tuple = select.select (rlist, (), (), self.time_opoll)
+            if self.master_fd in ret_tuple[0]:
+                data = os.read(self.master_fd, self.blocksize)
                 if 0 == len(data):
-                    logger.debug ('read 0 bytes from masterfd')
-                    return
+                    break
                 if self._TAP:
                     logger.debug ('<-- %r', data)
-                if self.decode_cp437:
-                    echo (u''.join((CP437[ord(ch)] for ch in data)))
-                else: # utf8 only supported here ...
-                    echo (data.decode('utf8'))
+                echo (u''.join((CP437[ord(ch)] for ch in data)) if
+                        self.decode_cp437 else data.decode('utf8'))
 
-            # self.POLL for keyboard input,
-            event, data = getsession().read_event (('refresh','input'), self.POLL)
-            if (None, None) == (event, data):
-                continue # no input
-
-            # handle resize event by propigating to ioctl to child pty
-            if event == 'refresh':
+            # block up to self.time_ipoll for keyboard input
+            event, data = getsession().read_event (
+                    ('refresh','input'), timeout=self.time_ipoll)
+            if ((None, None) == (event, data)
+                    and getsession().idle > self.timeout):
+                raise ConnectionTimeout ('timeout in door %r', self.args,)
+            elif event == 'refresh':
                 if data[0] == 'resize':
-                    # XXX i haven't seen this work yet,
                     logger.debug ('send TIOCSWINSZ: %dx%d',
                             term.width, term.height)
                     fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ,
-                        struct.pack('HHHH',
-                            int(term.height), int(term.width), 0, 0))
-                continue
-
-            if event == 'input':
+                            struct.pack('HHHH', term.height, term.width, 0, 0))
+            elif event == 'input':
                 if self._TAP:
                     logger.debug ('--> %r' % (data,))
-
                 while 0 != len(data):
-                    n = os.write(self.master_fd, data)
-                    data = data[n:]
-                continue
-
-            assert False, 'unhandled event, data: %s, %r' % (event, data,)
+                    n_written = os.write(self.master_fd, data)
+                    data = data[n_written:]

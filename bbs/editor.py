@@ -1,174 +1,350 @@
 """
-Horizontal Line Editor class for X/84 BBS, http://1984.ws
-$Id: editor.py,v 1.1 2009/05/18 01:24:16 dingo Exp $
-
-A single line editor that scrolls horizontally
-
+editor package for X/84 BBS, http://github.com/jquast/x84
 """
-__author__ = "Jeffrey Quast <dingo@1984.ws>"
-__copyright__ = "Copyright (c) 2006, 2007, 2009 Jeffrey Quast <dingo@1984.ws>"
-__license__ = "ISC"
+from bbs.ansiwin import AnsiWindow
+from bbs.session import getsession
+import logging
+import multiprocessing
+logger = multiprocessing.get_logger()
+logger.setLevel(logging.DEBUG)
 
-from output import echo
-from input import getch
-#from ansiwin import InteractiveAnsiWindow
+PC_KEYSET = { 'refresh': [unichr(12),],
+              'backspace': [unichr(8), unichr(127),],
+              'enter': [u'\r',],
+              'exit': [unichr(27),],
+              }
 
-class HorizEditor(object):#InteractiveAnsiWindow):
+class HorizEditor(AnsiWindow):
+    """
+    A single line editor that scrolls horizontally
+    """
+    #pylint: disable=R0902,R0904
+    #        Too many instance attributes (14/7)
+    #        Too many public methods (33/20)
+    _horiz_shift = 0
+    _horiz_pos = 0
 
-    # horizontal shifting control
-    shift, lastShift = 0, -1
+    _enable_scrolling = False
+    _horiz_lastshift = 0
+    _scroll_pct = 35.0
+    _margin_pct = 20.0
+    _carriage_returned = False
+    _max_length = 0
+    _xpadding = 1
+    _quit = False
+    _bell = False
+    _trim_char = '$ '
+    keyset = dict()
+    content = u''
 
-    # limit user input to this length
-    maxlen = 0
-
-    # becomes True when return is pressed
-    enter = False
-
-    # cursor position within ansi window
-    col = 0
-
-    # scroll horizontally by this amount as a relative percent of visible window
-    shiftPercent = 35
-
-    def __init__(self, width, yloc, xloc, xpad=0, maxlen=0):
-        self.content = ''
-        self.xpad = xpad
-        self.maxlen = maxlen
-        # calculate self.visibleWidth
-        self.adjwidth (width)
-        InteractiveAnsiWindow.__init__ (self, height=3, width=width, yloc=yloc,
-                xloc=xloc)
-        self.KMAP = { \
-          'refresh': [self.terminal.KEY_REFRESH],
-          'erase':   [self.terminal.KEY_BACKSPACE],
-          'enter':   [self.terminal.KEY_ENTER],
-          'exit':    [self.terminal.KEY_EXIT]
-        }
-
-    def adjwidth(self, width):
-        """ Adjust the window width and recalculate visibleWidth.
-            @var width: New window width.
+    @property
+    def position(self):
         """
-        self.w = width
-        self.visibleWidth = self.w -(self.xpad *2)
-        self.shiftCol = int(float(self.visibleWidth)*(self.shiftPercent*.01))
-
-    def data(self):
-        """ @return: Data in content buffer as one string, each row joined by newline """
-        return self.content
-
-    def writeString(self, data, col=-1):
-        """ Echo string to pager window.
-            @var data: String
-            @var col: Column. Default of -1 is active column.
+        Tuple of shift amount and column position of line editor.
         """
-        if col == -1:
-            col = self.col
-        echo (self.pos(xloc=self.xpad +col, yloc=1) +data)
+        return (self._horiz_shift, self._horiz_pos)
 
-    def update(self, data='', refresh=True):
-        """ Update content buffer.
-            @var refresh: Set to refresh on update.
-            @return: True when refreshed.
+    @property
+    def eol(self):
         """
-        self.content = ''
-        self.col, self.shift = 0, 0
-        for ch in data:
-            self.add (ch)
-        if refresh: self.refresh ()
-
-    def add(self, ch, refresh=True):
-        """ Add character to content buffer, scroll as necessary.
-            @var ch: Character to add.
+        Return True when end of line is reached and no more input can be
+        accepted.
         """
-        if self.maxlen and len(self.content) == self.maxlen:
-            return self.bell ('character maximum reached')
+        if self.enable_scrolling:
+            if not self.max_length:
+                return False # infinite scrolling
+            return len(self.content) >= self.max_length
+        if len(self.content) >= self.max_length:
+            return True
+        if self.content >= self._visible_width:
+            return True
+        return False
 
-        self.content += ch
-        if self.col >= (self.visibleWidth):
-            self.shift += self.shiftCol
-            self.col -= self.shiftCol-1
-            if refresh:
-                self.refresh ()
-        else:
-            if refresh:
-                self.fixate (-1)
-                self.writeString(ch)
-            self.col += 1
-
-    def erase(self):
-        """ Remove character from end of content buffer, scroll as necessary.
+    @property
+    def trim_char(self):
         """
-        if not len(self.content):
-            return self.bell ('at left margin')
-        self.content = self.content[:-1]
-        if self.shift and self.col < (self.visibleWidth -self.shiftCol):
-            self.shift -= self.shiftCol
-            self.col += self.shiftCol
-            self.refresh ()
-            self.col -= 1
-        else:
-            self.col -= 1
-        self.fixate ()
-        self.writeString(' \b')
+        When scrolling, this unicode string is prefixed to the line to indicate
+        it has been shifted (and you are missing out on some text!)
+        """
+        return self._trim_char
+
+    @trim_char.setter
+    def trim_char(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self._trim_char = value
+
+    @property
+    def bell(self):
+        """
+        Returns True when user nears margin and bell has been sounded and
+        carriage has not yet been returned.
+        """
+        return int(float(self._visible_width) * (float(self.scroll_pct) * .01))
+
+    @bell.setter
+    def bell(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self._bell = value
+
+    @property
+    def carriage_returned(self):
+        """
+        Returns True when last keystroke caused carriage to be returned.
+        (KEY_ENTER was pressed)
+        """
+        return self._carriage_returned
+
+    @property
+    def quit(self):
+        """
+        Returns: True if a terminating or quit character was handled by
+        process_keystroke(), such as the escape key, or 'q' by default.
+        """
+        return self._quit
+
+    @property
+    def enable_scrolling(self):
+        """
+        Enable horizontal scrolling of line editor.
+        Otherwise, input is limited to visible width.
+        """
+        return self._enable_scrolling
+
+    @enable_scrolling.setter
+    def enable_scrolling(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self._enable_scrolling = value
+
+    @property
+    def is_scrolled(self):
+        """
+        Returns True if the horizontal editor is in a scrolled state.
+        """
+        return self._horiz_shift > 0
+
+    @property
+    def scroll_amt(self):
+        """
+        Returns number of columns horizontal editor will scroll, calculated by
+        scroll_pct.
+        """
+        return int(float(self._visible_width) * (float(self.scroll_pct) * .01))
+
+    @property
+    def margin_amt(self):
+        """
+        Returns number of columns from right-edge that the horizontal editor
+        signals bell=True, indicating that the end is near and the carriage
+        should be returned.
+        """
+        return int(float(self._visible_width) * (float(self.margin_pct) * .01))
+
+    @property
+    def scroll_pct(self):
+        """
+        Number of columns, as a percentage of its total visible width, that
+        will be scrolled when a user reaches the margin and enable_scrolling
+        is True. Default is 35.
+        """
+        return self._scroll_pct
+
+    @scroll_pct.setter
+    def scroll_pct(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self._scroll_pct = float(value)
+
+    @property
+    def margin_pct(self):
+        """
+        Number of columns away from input length limit, as a percentage of its
+        total visible width, that will alarm the bell. This simulates the bell
+        of a typewriter as a signaling mechanism. Default is 20.
+        """
+        # .. unofficially; intended to be used be a faked multi-line editor, by
+        # using the bell as a wrap signal to instantiate another line editor
+        # and 'return the carriage'
+        return self._margin_pct
+
+    @margin_pct.setter
+    def margin_pct(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self._margin_pct = float(value)
+
+    @property
+    def max_length(self):
+        """
+        Maximum line length. This also limits infinite scrolling when
+        enable_scrolling is True. When unset, the maximum length is the
+        visible width of the window.
+        """
+        return self._max_length or self._visible_width
+
+    @max_length.setter
+    def max_length(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self._max_length = value
+
+    @property
+    def xpadding(self):
+        """
+        Horizontal padding of window border
+        """
+        return self._xpadding
+
+    @xpadding.setter
+    def xpadding(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self._xpadding = value
+
+    @property
+    def _visible_width(self):
+        """
+        The visible width of the editor window after padding.
+        """
+        #pylint: disable=C0111
+        #         Missing docstring
+        return self.width -(self._xpadding *2)
+
+
+    #def resize(self, height=None, width=None, yloc=None, xloc=None):
+    #    AnsiWindow.resize(self, height, width, yloc, xloc)
+
+    def init_keystrokes(self):
+        """
+        This initializer sets glyphs and colors appropriate for a "theme",
+        override or inherit this method to create a common color and graphic
+        set.
+        """
+        self.keyset = PC_KEYSET
+        term = getsession().terminal
+        if u'' != term.KEY_REFRESH:
+            self.keyset['refresh'].append (
+                term.KEY_REFRESH)
+        if u'' != term.KEY_BACKSPACE:
+            self.keyset['backspace'].append (
+                term.KEY_BACKSPACE)
+        if u'' != term.KEY_ENTER:
+            self.keyset['enter'].append (
+                term.KEY_ENTER)
+        if u'' != term.KEY_EXIT:
+            self.keyset['quit'].append (
+                term.KEY_EXIT)
+
+    def process_keystroke(self, keystroke):
+        """
+        Process the keystroke received by run method and take action.
+        """
+        self._quit = False
+        if keystroke in self.keyset['refresh']:
+            return self.refresh ()
+        elif keystroke in self.keyset['backspace']:
+            return self.backspace ()
+        elif keystroke in self.keyset['enter']:
+            self._enter ()
+            return u''
+        elif keystroke in self.keyset['quit']:
+            self._quit = True
+            return u''
+        elif type(keystroke) is int:
+            term = getsession().terminal
+            logger.debug ('invalid key, %s', term.keyname(keystroke))
+            return u''
+        return self.add (keystroke)
+
+    def fixate(self, x_adjust=0):
+        """
+        Return terminal sequence suitable for placing cursor at current
+        position in window. Set x_adjust to -1 to position cursor 'on' the last
+        character, or 0 for 'after' (default).
+        """
+        xpos = self._xpadding + self._horiz_pos + x_adjust
+        return self.pos(xloc=xpos, yloc=1)
 
     def refresh(self):
-        """ Refresh window.
-            @var startCol: Refresh only from this column
         """
-        from bbs.session import getsession
+        Return unicode sequence suitable for refreshing the entire line and
+        placing the cursor.
+        """
         term = getsession().terminal
-        echo (term.normal)
-        nextSeq, c = 0, 0
-        data = self.data()
-        self.lastShift = self.shift
-        for n in range(len(data)):
-            if c > (self.visibleWidth -self.shiftCol):
-                # shift window horizontally by self.shiftCol characters
-                c -= self.shiftCol
-                self.shift += self.shiftCol
-        data = data[self.shift:]
-        self.writeString (data +(self.visibleWidth -len(data))*self.glyphs['erase'], 0)
-        self.fixate ()
+        self._horiz_lastshift = self._horiz_shift
+        self._horiz_shift = 0
+        # re-detect how far we should scroll horizontally,
+        col_pos = 0
+        #pylint: disable=W0612
+        #        Unused variable 'loop_cnt'
+        for loop_cnt in range(len(self.content)):
+            if col_pos > (self._visible_width - self.scroll_amt):
+                # shift window horizontally
+                self._horiz_shift += self.scroll_amt
+                col_pos -= self.scroll_amt
+        scroll = self._horiz_shift - len(self.trim_char)
+        data = self.trim_char + self.content[scroll:]
+        eeol = (self.glyphs.get('erase', u' ')
+                * (self._visible_width - len(data)))
+        return ( term.normal + data + eeol + self.fixate )
 
-    def fixate(self, mode=0):
-        """ Fixate cursor at current position in window,
-            @var mode: set to -1 for position on last character,
-                       or 0 for after last character.
-            @return: True
+    def _enter(self):
         """
-        echo (self.pos(xloc=self.xpad +self.col +mode, yloc=1))
-        return True
+        Return key was pressed, mark self.return_carriage True, and otherwise
+        do nothing. The caller should check this variable.
+        """
+        self._carriage_returned = True
 
-    def process_keystroke(self, key):
-        """ Process the keystroke received by run method and take action.
+    def backspace(self):
         """
-        if key in self.KMAP['refresh']:   self.refresh ()
-        elif key in self.KMAP['exit']:    self.exit = True
-        elif key in self.KMAP['erase']:   self.erase ()
-        elif key in self.KMAP['enter']:   self.enter = True
-        else:
-            self.add (key)
+        Remove character from end of content buffer, scroll as necessary.
+        """
+        if 0 == len(self.content):
+            return u''
+        rstr = u''
+        self.content = self.content[:-1]
+        if self.is_scrolled:
+            if self._horiz_pos < (self._visible_width - self.scroll_amt):
+                # shift left,
+                self._horiz_shift -= self.scroll_amt
+                self._horiz_pos += self.scroll_amt
+                rstr += self.refresh ()
+        rstr += self.fixate(-1)
+        rstr += ' \b'
+        self._horiz_pos -= 1
+        return rstr
 
-    def run(self, key=None, timeout=None):
-        """ The entry point for working with the pager window.
-            @var key:
-              pass in optional keystroke, otherwise it is read from input.
-            @var timeout:
-              return None after that time elapsed, or block indefinitely if unset.
+    @property
+    def update(self, unicodestring=u''):
         """
-        self.enter, self.timeout, self.exit = False, False, False
-        while True:
-            if self.lastShift == -1:
-                self.refresh ()
-                self.fixate ()
-            if not key:
-                key = getch (timeout)
-                self.timeout = (not key) # Boolean: True if we timed out
-            self.lastkey = key
-            self.process_keystroke (key)
-            if self.interactive:
-                return key
-            if self.exit or self.enter:
-                break
-            key = None
+        Replace text content with new unicode string. When unicodestring is
+        none, the content buffer is reset.
+        """
+        self._horiz_shift = 0
+        self._horiz_pos = 0
+        self.content = u''
+        for u_chr in unicodestring:
+            self.add (u_chr)
+
+    def add(self, u_chr):
+        """
+        Returns output sequence necessary to add a character to content buffer.
+        An empty content buffer is returned if no data could be inserted.
+        sequences for re-displaying the full input line are returned when the
+        character addition caused the window to scroll horizontally.
+        Otherwise, the input is simply returned to be displayed ('local echo').
+        """
+        if self.eol:
+            return u''
+        # append to input
+        self.content += u_chr
+        if self._horiz_pos >= (self._visible_width):
+            # we have to scroll to display this output,
+            self._horiz_shift += self.scroll_amt
+            self._horiz_pos -= self.scroll_amt - 1
+            return self.refresh ()
+        # return character appended
+        self._horiz_pos += 1
+        return u_chr

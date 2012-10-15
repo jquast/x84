@@ -50,6 +50,7 @@ EASY
 * also TFLOW and TSPEED
 * properly send GA when SGA is not negotiated
 HARD
+* graffiti app example, a simple ansi editor, but save screen buffer to database, and share updates with other nodes via global() events, so you can watch others deface...
 * message reader/browser
   something akin to mutt's interface would be super.
 * bbs-scene.org bbs lister

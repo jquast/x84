@@ -1,7 +1,7 @@
-from dbproxy import DBSessionProxy
+from dbproxy import DBProxy
 import bcrypt
 
-db = DBSessionProxy('userbase')
+db = DBProxy('userbase')
 
 import logging
 logger = logging.getLogger(__name__)

@@ -9,8 +9,8 @@ __copyright__ = ['Copyright (c) 2007 Jeffrey Quast']
 __license__ = 'ISC'
 
 import time
-from dbproxy import DBSessionProxy
-db = DBSessionProxy('msgbase')
+from dbproxy import DBProxy
+db = DBProxy('msgbase')
 
 def addmsg(msg):
     msg.send ()

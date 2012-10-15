@@ -182,7 +182,7 @@ def main ():
                 xloc=x, xpad=1, maxlen=MAX_INPUT)
             comment.partial = True
             comment.interactive = True
-            echo (''.join([term.move(y+1, x) + fromCP437(line) \
+            echo (''.join([term.move(y+1, x) + from_cp437(line) \
                 for y, line in enumerate(art)]))
             statusline ()
             redraw_msgs ()

@@ -15,9 +15,9 @@ from input import getch
 from output import echo
 from strutils import ansilen, chkseq, seqc
 #from ansi import color
-from ansiwin import InteractiveAnsiWindow
+from ansiwin import AnsiWindow
 
-class ParaClass(InteractiveAnsiWindow):
+class ParaClass(AnsiWindow):
     # represents the visible width and height, which may be smaller than the
     # AnsiWindow.w and AnsiWindow.h due to xpad and ypad respectively
     visibleWidth, visibleHeight = 0, 0
@@ -56,7 +56,7 @@ class ParaClass(InteractiveAnsiWindow):
     debug = False
 
     def __init__(self, h, w, y, x, xpad=0, ypad=0):
-        InteractiveAnsiWindow.__init__ (self, h, w, y, x)
+        AnsiWindow.__init__ (self, h, w, y, x)
         self.content = []
         self.xpad, self.ypad = xpad, ypad
         self.adjheight(h) # calculate self.visibleHeight

@@ -232,16 +232,14 @@ class AnsiWindow(object):
         """
         Erase window contents (including border)
         """
-        ret = self.pos(0, 0)
-        ret += u''.join([self.pos(xloc=0, yloc=y) + self.glyphs['erase']
-            for y in range(self.height)])
-        return ret
+        return self.pos(0, 0) + u''.join([self.pos(xloc=0, yloc=y) +
+            self.glyphs.get('erase', u'') for y in range(self.height)])
 
     def clear(self):
         """
         Erase only window contents, border remains.
         """
         ret = self.pos(1, 1)
-        ret += u''.join([self.pos(xloc=1, yloc=y) + self.glyphs['erase']
+        ret += u''.join([self.pos(xloc=1, yloc=y) + self.glyphs('erase', u'')
             for y in range(self.height -2)])
         return ret

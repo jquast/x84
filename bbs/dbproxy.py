@@ -2,45 +2,42 @@
 Database proxy helper for X/84.
 """
 
-def _sendfunc(event, data):
-    from session import getsession
-    return getsession().send_event(event, data)
-
-def _recvfunc(events):
-    from session import getsession
-    event, data = getsession().read_event(events)
-    assert event in events
-    return data
-
-
-
 class DBProxy(object):
     """
-      Provide dictionary-like object interface with sendfunc() and recvfunc()
-      wrappers, intended for IPC pipe data transfers. Sub-processes to the main
-      process (FTP server) use DBProxy directly with their own send and recv
-      wrappers. Session runtimes use the derived class DBSessionProxy.
+    Provide dictionary-like object interface via IPC pipe data transfers.
     """
-    def __init__(self, schema, send_f, recv_f):
+    #pylint: disable=C0111
+    #        Missing docstring
+
+    def __init__(self, schema):
         """ @schema: database key
-            @send_f: callable receiving arguments (u'event', (u'data',))
-            @recv_f: callable receiving arguments ((u'event',))
         """
         self.schema = schema
-        self.send_f = send_f
-        self.recv_f = recv_f
+
+    def __proxy_iter__(self, method, *args):
+        """
+        Proxy a method that returns a data type supporting __iter__ by yielding
+        its IPC event data values until StopIteration is sent.
+        """
+        from bbs.session import getsession
+        event = 'db-%s' % (self.schema,)
+        getsession().send_event (event, (method, args))
+        while True:
+            event, data = getsession().read_event (events=(event,))
+            if data is StopIteration:
+                raise StopIteration()
+            yield data
 
     def __proxy__(self, method, *args):
         """
-        Proxy a method name and its arguments via
-          send.sendfunc(dbkey, (method, args,)).
+        Proxy a method name and its arguments, then block
+        until a response is received.
         """
-        #from session import logger
+        from bbs.session import getsession
         event = 'db-%s' % (self.schema,)
-        # if tap ...
-        #logger.debug ('%s (%s (%s, %s))', self.send_f, event, method, args)
-        self.send_f (event, (method, args,))
-        return self.recv_f((event,))
+        getsession().send_event (event, (method, args))
+        event, data = getsession().read_event (events=(event,))
+        return data
 
     def __cmp__(self, *args):
         return self.__proxy__ ('__cmp__', *args)
@@ -90,6 +87,18 @@ class DBProxy(object):
         return self.__proxy__ ('items')
     items.__doc__ = dict.items.__doc__
 
+    def iteritems(self):
+        return self.__proxy_iter__ ('iteritems')
+    iteritems.__doc__ = dict.iteritems.__doc__
+
+    def iterkeys(self):
+        return self.__proxy_iter__ ('iterkeys')
+    iterkeys.__doc__ = dict.iterkeys.__doc__
+
+    def itervalues(self):
+        return self.__proxy_iter__ ('itervalues')
+    itervalues.__doc__ = dict.itervalues.__doc__
+
     def keys(self):
         return self.__proxy__ ('keys')
     keys.__doc__ = dict.keys.__doc__
@@ -101,11 +110,3 @@ class DBProxy(object):
     def popitem(self):
         return self.__proxy__ ('popitem')
     popitem.__doc__ = dict.popitem.__doc__
-
-
-class DBSessionProxy(DBProxy):
-    """
-    Provide database proxy suitable for use with BBS Sessions.
-    """
-    def __init__(self, schema):
-        DBProxy.__init__(self, schema, send_f=_sendfunc, recv_f=_recvfunc)

@@ -10,6 +10,15 @@
 # (c) 2009-2012 Wijnand Modderman-Lenstra <maze@pyth0n.org>
 #               MIT License
 #
+"""
+IBM Codepage 437 to Unicode mapping helper. A utf-8 terminal can be used to
+call this script directly with an ANSI art graphic filename as argument, and a
+UTF-8 encoded version of that art will be printed to standard out.
+"""
+__author__ = "Wijnand Modderman-Lenstra"
+__copyright__ = "Copyright 2009-2012"
+__license__ = 'MIT'
+__email__ = 'maze@pyth0n.org'
 
 # CP437 is a tuple of length 256, mapping equivalent unicode
 # characters for each CP437 chr(n), where n is index of CP437.
@@ -62,19 +71,22 @@ CP437 = (
 # In python 3, str.maketrans() uses a dictionary of exactly this form.
 CP437TABLE = dict([(unichr(i), CP437[i]) for i in range(255)])
 
-def fromCP437(text):
+def from_cp437(text):
     """ Given a bytestring in IBM codepage 437, return a translated
         unicode string suitable for decoding to UTF-8.
     """
     return u''.join([CP437TABLE[byte] for byte in text])
 
 def run():
+    """
+    encode filepath of command-line argument 1 and display to stdout
+    """
     import sys
     if len(sys.argv) < 2:
         sys.stderr.write('%s <file>\n' % (sys.argv[0],))
         sys.exit (1)
     cptext = file(sys.argv[1]).read()
-    print fromCP437(cptext)
+    print (from_cp437(cptext))
     return 0
 
 if __name__ == '__main__':

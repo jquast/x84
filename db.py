@@ -59,4 +59,13 @@ class DBHandler(threading.Thread):
             result = func()
         else:
             result = func(*self.args)
-        self.pipe.send ((self.event, result,))
+
+        try:
+            iter_result = iter(obj)
+        except TypeError:
+            self.pipe.send ((self.event, result,))
+            return
+
+        for result in iterator:
+            self.pipe.send ((self.event, result,))
+        self.pipe.send ((self.event, StopIteration,))

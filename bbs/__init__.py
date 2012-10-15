@@ -12,9 +12,9 @@ import ini
 from exception import Disconnect, Goto, ConnectionTimeout
 from strutils import chompn, asctime, timeago, ansilen
 from strutils import chkseq, seqp, seqc, maxanswidth
-from cp437 import fromCP437
+from cp437 import from_cp437
 from door import Door
-from dbproxy import DBSessionProxy
+from dbproxy import DBProxy
 from userbase import User, getuser, finduser, userexist, authuser, listusers
 from session import getsession, logger
 from fileutils import abspath, fopen, ropen
@@ -30,7 +30,7 @@ from sauce import SAUCE
 __all__ = [
     'ConnectionTimeout',
     'Door',
-    'fromCP437',
+    'from_cp437',
     'logger',
     'maxanswidth',
     'chompn',
@@ -40,7 +40,7 @@ __all__ = [
     'chkseq',
     'seqp',
     'seqc',
-    'DBSessionProxy',
+    'DBProxy',
     'User',
     'finduser',
     'userexist',
@@ -170,7 +170,7 @@ def showfile (filename, bps=0, pause=0.1, cleansauce=True,
 
     data = chompn(SAUCE(fobj).__str__() if cleansauce else fobj.read())
     if file_encoding == 'cp437':
-        data = fromCP437(data)
+        data = from_cp437(data)
     else:
         data = data.decode(file_encoding)
     if 0 == bps:

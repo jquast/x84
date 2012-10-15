@@ -1,16 +1,22 @@
 """
- Configuration for x/84 BBS
+ Configuration for x/84 BBS, https://github.com/jquast/x84/
 """
 
 import ConfigParser
-import threading
 import sys
 import os
-cfg = None
 
-def init(cfgFilepath='default.ini'):
+cfg = None # singleton ..
+
+def init(cfg_filepath='default.ini'):
+    """
+    Set system-wide defaults, then open .ini file specified by cfg_filepath and
+    overlay any replacement settings or additional settings specified there.
+    """
+    #pylint: disable=R0915
+    #        Too many statements (57/50)
     global cfg
-    sys.stdout.write (',load %s...' % (cfgFilepath,))
+    sys.stdout.write (',load %s...' % (cfg_filepath,))
     sys.stdout.flush ()
     # start with default values,
     cfg = ConfigParser.SafeConfigParser()
@@ -76,14 +82,14 @@ def init(cfgFilepath='default.ini'):
     cfg.set('dopewars', 'logfile', 'data/dopewars.log')
     sys.stdout.write ('ok')
     sys.stdout.flush ()
-    if not os.path.exists(cfgFilepath):
+    if not os.path.exists(cfg_filepath):
         # write only if not exists;
         # otherwise just go with it.
-        sys.stdout.write ('- %s does not exist; writing. -' % (cfgFilepath,))
-        fp = open(cfgFilepath, 'wb')
-        cfg.write (fp)
-        fp.close ()
+        sys.stdout.write ('- %s does not exist; writing. -' % (cfg_filepath,))
+        fptr = open(cfg_filepath, 'wb')
+        cfg.write (fptr)
+        fptr.close ()
     else:
-        # that is, read in all the real .ini values (above values are overwrriten)
-        cfg.read (cfgFilepath)
+        # that is, read in all the real .ini values and replace
+        cfg.read (cfg_filepath)
     sys.stdout.write ('ok (%i items).\n' % (len(cfg.sections()),))
