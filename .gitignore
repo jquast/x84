@@ -9,3 +9,5 @@ ENV27
 default.ini
 virtualenv.py
 ttyrecordings
+
+.DS_Store
