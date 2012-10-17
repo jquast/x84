@@ -101,8 +101,6 @@ class AnsiWindow(object):
 
     @colors.setter
     def colors(self, value):
-        #pylint: disable=E0102
-        #        method already defined line
         #pylint: disable=C0111
         #        Missing docstring
         self._colors = value
@@ -147,13 +145,16 @@ class AnsiWindow(object):
             and win.xloc >= self.xloc
             and win.xloc + win.w <= self.xloc + self.width)
 
-    def pos(self, xloc=-1, yloc=-1):
+    def pos(self, xloc=None, yloc=None):
         """
         Returns terminal sequence to move cursor to window-relative position.
         """
         term = getsession().terminal
-        return term.move (yloc +self.yloc if yloc != None else 0,
-             xloc +self.xloc if xloc != None else 0)
+        if xloc is None:
+            xloc = 0
+        if yloc is None
+            yloc = 0
+        return term.move (yloc + self.yloc, xloc + self.xloc)
 
     def title(self, ansi_text):
         """
