@@ -1,86 +1,78 @@
-from curses.ascii import isprint
-from session import getsession, logger
-from output import echo
-
-def sendch (keycode):
-    """
-    Given a keycode (integer), return any matching unicode string
-    that is a suitable multi-byte char sequence, such as '\033OD' for KEY.LEFT
-    """
-    term = getsession().terminal
-    # TODO: What is needed is a keycode object type, that retains
-    # its string value,
-    if keycode == term.KEY_ENTER:
-        val = unicode(u'\r')
-    elif keycode == term.KEY_BACKSPACE:
-        val = unicode(chr(127))
-    else:
-        # XXX not ideal; lookup order is first-match, which might
-        # be whack to the underlying program, unless it is ncurses?
-        table = term._keymap
-        try:
-            val = (seq for (seq, code) in table.iteritems() if
-                code == keycode).next()
-        except StopIteration:
-            raise KeyError, keycode
-    logger.debug ('sendch: %r -> %r', term.keyname(keycode), val)
-    return val
+"""
+input package for X/84 BBS, https://github.com/jquast/x84
+"""
+import bbs.session
+import bbs.output
 
 def getch(timeout=None):
-    event, data = getsession().read_event(events=['input'], timeout=timeout)
+    """
+    Retrieve a keystroke from 'input' queue, blocking forever or, when
+    specified, None when timeout has elapsed.
+    """
+    event, data = bbs.session.getsession().read_event(
+            events=('input',), timeout=timeout)
     return data
 
 def getpos(timeout=None):
-    """Return current terminal position as (y,x). (Blocking)"""
-    logger.debug ("query ('pos', %f)", float('inf') if timeout is None else timeout)
-    getsession().send_event('pos', timeout,) # ask for cursor position
-    event, data = getsession().read_event(events=['pos-reply'], timeout=timeout)
+    """
+    Return current terminal position as (y,x). (Blocking). This is used in
+    only rare circumstances, it is more likely you would want to use
+    term.save and term.restore cursor.
+    """
+    bbs.session.getsession().send_event('pos', timeout)
+    event, data = bbs.session.getsession().read_event(
+            events=['pos-reply'], timeout=timeout)
     return data[0]
 
-def readline(width, value = u'', hidden = u'', paddchar = u' ', events = [
-    'input'], timeout = None, interactive = False, silent = False):
-    (value, event, data) = readlineevent(width, value, hidden, paddchar, events, timeout, interactive, silent)
+# deprecate here, down
+
+def readline(width, value=u'', hidden=u'', paddchar=u' ', events=('input',),
+        timeout=None, interactive=False, silent=False):
+    (value, event, data) = readlineevent(
+            width, value, hidden, paddchar, events, timeout,
+            interactive, silent)
     return value
 
-def readlineevent(width, value = u'', hidden = u'', paddchar = u' ', events = [
-    'input'], timeout = None, interactive = False, silent = False):
-    term = getsession().terminal
+def readlineevent(width, value=u'', hidden=u'', paddchar=u' ',
+        events=('input',), timeout=None, interactive=False, silent=False):
+    import warnings
+    warnings.warn('deprecated', DeprecationWarning, 2)
+    # please stop using this ...
+    term = bbs.session.getsession().terminal
 
     if not hidden and value:
-        echo (value)
+        bbs.output.echo (value)
     elif value:
-        echo (hidden *len(value))
+        bbs.output.echo (hidden *len(value))
 
     while 1:
-        event, char = getsession().read_event(events, timeout)
+        event, data = bbs.session.getsession().read_event(events, timeout)
 
         # pass-through non-input data
         if event != 'input':
-            data = char
             return (value, event, data)
 
-        data = None
-        if char == term.KEY_EXIT:
-            return (None, 'input', data)
+        if data == term.KEY_EXIT:
+            return (None, 'input', None) # ugh
 
-        elif char == term.KEY_ENTER:
-            return (value, 'input', u'\n')
+        elif data == term.KEY_ENTER:
+            return (value, 'input', term.KEY_ENTER) # ugh
 
-        elif char == term.KEY_BACKSPACE:
+        elif data == term.KEY_BACKSPACE:
             if len(value) > 0:
                 value = value [:-1]
-                echo (u'\b' + paddchar + u'\b')
+                bbs.output.echo (u'\b' + paddchar + u'\b')
 
-        elif isinstance(char, int):
+        elif isinstance(data, int):
             pass # unhandled keycode ...
 
-        elif len(value) < width and isprint(ord(char)):
-            value += char
+        elif len(value) < width:
+            value += data
             if hidden:
-                echo (hidden)
+                bbs.output.echo (hidden)
             else:
-                echo (char)
+                bbs.output.echo (data)
         elif not silent:
-            echo (u'\a')
+            bbs.output.echo (u'\a')
         if interactive:
             return (value, 'input', None)
