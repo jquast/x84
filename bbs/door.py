@@ -13,10 +13,10 @@ import re
 import os
 
 from bbs.session import getsession
-from bbs.exception import ConnectionTimeout
-from bbs.output import echo
-from bbs.cp437 import CP437
-from bbs.ini import cfg
+import bbs.exception
+import bbs.output
+import bbs.cp437
+import bbs.ini
 
 PATTERN_EIO = re.compile('Errno 5')
 logger = multiprocessing.get_logger()
@@ -50,8 +50,14 @@ class Door(object):
         self.cmd = cmd
         self.args = (self.cmd,) + args
         self.lang = lang
-        self.term = term if term is not None else getsession().env.get('TERM')
-        self.path = path if path is not None else cfg.get('door', 'path')
+        if term is None:
+            self.term = getsession().env.get('TERM')
+        else:
+            self.term = term
+        if path is None:
+            self.path = bbs.ini.cfg.get('door', 'path')
+        else:
+            self.path = path
 
     def run(self):
         """
@@ -117,7 +123,7 @@ class Door(object):
 
     def _loop(self):
         """
-        Poll input and outpout of ptys, raising exception.ConnectionTimeout
+        Poll input and outpout of ptys, raising bbs.exception.ConnectionTimeout
         when session idle time exceeds self.timeout.
         """
         term = getsession().terminal
@@ -131,15 +137,16 @@ class Door(object):
                     break
                 if self._TAP:
                     logger.debug ('<-- %r', data)
-                echo (u''.join((CP437[ord(ch)] for ch in data)) if
-                        self.decode_cp437 else data.decode('utf8'))
+                bbs.output.echo (u''.join((bbs.cp437.CP437[ord(ch)] for ch in
+                    data)) if self.decode_cp437 else data.decode('utf8'))
 
             # block up to self.time_ipoll for keyboard input
             event, data = getsession().read_event (
                     ('refresh','input'), timeout=self.time_ipoll)
             if ((None, None) == (event, data)
                     and getsession().idle > self.timeout):
-                raise ConnectionTimeout ('timeout in door %r', self.args,)
+                raise bbs.exception.ConnectionTimeout ('timeout in door %r',
+                        self.args,)
             elif event == 'refresh':
                 if data[0] == 'resize':
                     logger.debug ('send TIOCSWINSZ: %dx%d',
