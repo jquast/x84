@@ -1,182 +1,192 @@
-" A two-state horizontal lightbar for 'The Progressive' BBS. "
-__author__ = "Jeffrey Quast <dingo@1984.ws>"
-__contributors__ = []
-__copyright__ = "Copyright (c) 2008 Jeffrey Quast"
-__version__ = "$Id: leftright.py,v 1.3 2009/05/31 16:12:05 dingo Exp $"
-__license__ = "ISC"
+"""
+leftright package for X/84 BBS, https://github.com/jquast/x84
+"""
+import bbs.session
+import bbs.ansiwin
 
-from session import getsession
-from output import echo
-from input import getch
+import math
+import logging
+import multiprocessing
+from __future__ import division
+
+logger = multiprocessing.get_logger()
+logger.setLevel(logging.DEBUG)
+
+VI_KEYSET = { 'refresh': [unichr(12),],
+              'toggle': [u' ',]
+              'left': [u'hj',],
+              'right': [u'kl',],
+              'enter': [u'\r',],
+              'exit': [unichr(27), u'q'],
+              }
 
 
-class LeftRightClass:
-    LEFT, RIGHT = 1, 2
+class Selector(bbs.ansiwin.AnsiWindow):
     """
-    A two-state horizontal lightbar.
-
-    @ivar timeout: number of seconds to poll for input.
-    @ivar interactive: run() returns immediately when interactive, otherwise
-      only when a selection is made.
-    @ivar exit: an escape sequence made by user.
-    @ivar laststate: prior state since last change, used to detect refresh.
-    @ivar state: current state, set default state in init().
-    @ivar lastkey: last keypress.
-    @ivar x: left-most screen position.
-    @ivar y: vertical screen position.
-    @ivar highlight: color sequence for selected value.
-    @ivar lowlight: color sequence for unselected value.
-    @ivar left_text: string sequence displayed for left entry.
-    @ivar right_text: string sequence displayed for right entry.
+    A two-state horizontal lightbar interface.
     """
+    _left = u'Left'
+    _right = u'Right'
+    _selection = _left
+    _width = None
+    _moved = False
+    keyset = dict()
 
-    timeout     = False
-    interactive = False
-    exit        = False
-    laststate   = -1
-    lastkey     = None
-    left_text   = ' Left '
-    right_text  = ' Right '
-
-    def __init__(self, xypos, state=None):
+    def __init__(self, yloc, xloc, width=None):
         """
-        @param xypos: screen xy position as tuple
-        @param state: starting position
+        Set screen position of Selector UI and optional display width. If
+        unset, a suitable width of medium padding is used.
         """
-        self.x, self.y = xypos
-        self.state = state if state is not None else self.RIGHT
-        self.terminal = getsession().terminal
-        self.highlight = self.terminal.reverse
-        self.lowlight = self.terminal.normal
+        self.xloc = xloc
+        self.yloc = xloc
+        if width is None:
+            width = 2 * (len(self._left) + len(self._right))
+        bbs.ansiwin.AnsiWindow.__init__(self,
+                height=1, width=width, yloc=yloc, xloc=xloc)
+        self.init_theme ()
+        self.init_keystrokes ()
 
-    def refresh(self, setState=-1):
-        " redraw, optionaly set state (LEFT or RIGHT) "
-        if setState == -1:
-            state = self.state
-        else:
-            state = setState
+    def init_theme (self):
+        term = bbs.session.getsession().terminal
+        self.colors ['selected'] = term.reverse
+        self.colors ['unselected'] = term.normal
 
-        if state == self.LEFT:
-            leftattr,rightattr = self.highlight,self.lowlight
-        elif state == self.RIGHT:
-            leftattr,rightattr = self.lowlight,self.highlight
-        else:
-            raise StandardError, "illegal argument, %s, must be LEFT or RIGHT" % state
-        echo (self.terminal.move(self.y, self.x) \
-            + self.terminal.normal \
-            + leftattr + self.left_text \
-            + rightattr + self.right_text \
-            + self.terminal.normal)
-        self.state = state
+    def init_keystrokes (self):
+        """
+        add application keys (left, right) to keyset.
+        """
+        self.keyset = VI_KEYSET
+        term = bbs.session.getsession().terminal
+        if u'' != term.KEY_REFRESH:
+            self.keyset['refresh'].append (
+                term.KEY_REFRESH)
+        if u'' != term.KEY_LEFT:
+            self.keyset['left'].append (
+                term.KEY_LEFT)
+        if u'' != term.KEY_RIGHT:
+            self.keyset['right'].append (
+                term.KEY_RIGHT)
+        if u'' != term.KEY_ENTER:
+            self.keyset['enter'].append (
+                term.KEY_ENTER)
+        if u'' != term.KEY_EXIT:
+            self.keyset['quit'].append (
+                term.KEY_EXIT)
 
-    def clear(self):
-        " erase "
-        echo (self.terminal.move(self.y, self.x) + self.terminal.normal \
-          + ' '*(len(self.left_text)+len(self.right_text)))
+    def process_keystroke(self, keystroke):
+        """
+        Process a keystroke, toggling self.selection and returning string
+        suitable for refresh when changed.
+        """
+        self._moved = False
+        if keystroke in self.keyset['refresh']:
+            return self.refresh ()
+        elif keystroke in self.keyset['left']:
+            return self.move_left ()
+        elif keystroke in self.keyset['right']:
+            return self.move_right ()
+        elif keystroke in self.keyset['toggle']:
+            return self.toggle ()
+        elif keystroke in self.keyset['quit']:
+            self._quit = True
+            return u''
+        elif type(keystroke) is int:
+            term = getsession().terminal
+            logger.debug ('invalid key, %s', term.keyname(keystroke))
+            return u''
+        return self.add (keystroke)
 
-    def right(self):
-        " set state to right "
-        if self.state != self.RIGHT:
-            self.refresh(self.RIGHT)
-            self.moved = True
+    @property
+    def moved(self):
+        """
+        Returns: True if last call to process_keystroke() caused a new entry to
+        be selected. The caller can send keystrokes and check this flag to
+        indicate wether the current selection should be re-examined.
+        """
+        return self._moved
 
+    @property
+    def selection(self):
+        """
+        Current selection.
+        """
+        return self._selection
+
+    @selection.setter
+    def selection(self, value):
+        assert value in (self._left, self._right)
+        if self._selection != value:
+            self._moved = True
+            self._selection = value
+
+    @property
     def left(self):
-        " set state to left "
-        if self.state != self.LEFT:
-            self.refresh(self.LEFT)
-            self.moved = True
+        """
+        Left-side value
+        """
+        return self._left
 
-    def isright(self):
-        """
-        test lightbar state for right position.
-        @return: return True if state is right.
-        """
-        return (self.state == self.RIGHT)
+    @left.setter
+    def left(self, value):
+        self._left = value
 
-    def isleft(self):
+    @property
+    def right(self):
         """
-        test lightbar state for left position.
-        @return: return True if state is left.
+        Right-side value
         """
-        return (self.state == self.LEFT)
+        return self._right
 
-    def flip(self):
+    @right.setter
+    def right(self, value):
+        self._right = value
+
+    def refresh(self):
         """
-        Flip the lightbar state, changing to left when right,
-        and right when left.
+        Return terminal sequence suitable for re-drawing left/right menubar.
         """
-        if self.isright():
-            self.left()
+        rstr = self.pos(0, 0)
+        attrs = ([self.colors['selected'], self.colors['unselected'])
+        a_left = 0 if self.selection == self.left else 1
+        a_right = 1 if self.selection == self.left else 0
+        rstr += a_left + self.left.center(math.ceil(self.width / 2))
+        rstr += a_right + self.right.center(math.floor(self.width / 2)))
+        return rstr
+
+    def move_right(self):
+        """
+        Force state to right, returning unicode string suitable for refresh.
+        If state is unchanged, an empty string is returned.
+        """
+        if self.selection != self.right:
+            self.selection = self.right
+            return self.refresh ()
+        return u''
+
+    def move_left(self):
+        """
+        Force state to left, returning unicode string suitable for refresh.
+        If state is unchanged, an empty string is returned.
+        """
+        if self.selection != self.left:
+            self.selection = self.left
+            return self.refresh ()
+        return u''
+
+    def toggle(self):
+        """
+        Toggle selection and return unicode string suitable for refresh.
+        """
+        if self.selection == self.left:
+            self.selection = self.right
         else:
-            self.right()
+            self.selection = self.left
+        return self.refresh ()
 
-    def run(self, key=None, timeout=None):
-        """ an action method for leftright bar:
-            - set key as optional user keystroke
-            - set interactive when passing keystroke
-            - unset interactive to retrieve user input within timeout when key is None
-            - set timeout value to return None after that time elapsed
-            - unset timeout to wait for user input indefinitly when not interactive
+    @property
+    def quit(self):
         """
-        self.moved = False
-        while True:
-            # check for refresh
-            if self.laststate != self.state:
-                self.refresh ()
-            self.laststate = self.state
-
-            # read from input
-            if not key:
-                key = getch(timeout)
-                self.lastkey = key
-                if key == None:
-                    self.timeout = True
-
-            # act on key
-            if key in ['\t', ' ']:
-                self.flip()
-            elif key in ['h', self.terminal.KEY_LEFT]:
-                self.left ()
-            elif key in ['l', self.terminal.KEY_RIGHT]:
-                self.right ()
-            elif key in ['q', self.terminal.KEY_EXIT]:
-                self.exit = True
-            elif key in [self.terminal.KEY_ENTER, 'y', 'n']:
-                # yes is on left side
-                if key == 'y' or (key == self.terminal.KEY_ENTER and self.isleft()):
-                    self.left ()
-                # and no on right
-                elif key == 'n' or (key == self.terminal.KEY_ENTER and self.isright()):
-                    self.right ()
-                return self.state # selection was made
-            if self.interactive or self.exit:
-                return None # no selection was made or user exit
-            key = ''
-
-
-class YesNoClass(LeftRightClass):
-    YES, NO     = 1, 2
-    " A horizontal yes/no lightbar "
-    left_text   = '  Yes  '
-    right_text  = '  No  '
-    def __init__(self, xypos, state=None):
+        Returns: True if a terminating or quit character was handled by
+        process_keystroke(), such as the escape key, or 'q' by default.
         """
-        @param xypos: screen xy position as tuple
-        @param state: state, default=YES
-        """
-        LeftRightClass.__init__(self, xypos,
-            state if state is not None else self.YES)
-
-
-class PrevNextClass(LeftRightClass):
-    PREV, NEXT  = 1, 2
-    " A horizontal previous/next lightbar "
-    left_text  = '<- pREV  '
-    right_text = ' nEXT ->'
-    def __init__(self, xypos, state=None):
-        """
-        @param xypos: screen xy position as tuple
-        @param state: state, default=NEXT
-        """
-        LeftRightClass.__init__(self, xypos,
-            state if state is not None else self.NEXT)
+        return self._quit
