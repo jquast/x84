@@ -1,8 +1,8 @@
 """
 editor package for X/84 BBS, http://github.com/jquast/x84
 """
-from bbs.ansiwin import AnsiWindow
-from bbs.session import getsession
+import bbs.ansiwin
+import bbs.session
 import logging
 import multiprocessing
 logger = multiprocessing.get_logger()
@@ -14,7 +14,7 @@ PC_KEYSET = { 'refresh': [unichr(12),],
               'exit': [unichr(27),],
               }
 
-class HorizEditor(AnsiWindow):
+class HorizEditor(bbs.ansiwin.AnsiWindow):
     """
     A single line editor that scrolls horizontally
     """
@@ -223,7 +223,7 @@ class HorizEditor(AnsiWindow):
         set.
         """
         self.keyset = PC_KEYSET
-        term = getsession().terminal
+        term = bbs.session.getsession().terminal
         if u'' != term.KEY_REFRESH:
             self.keyset['refresh'].append (
                 term.KEY_REFRESH)
@@ -253,7 +253,7 @@ class HorizEditor(AnsiWindow):
             self._quit = True
             return u''
         elif type(keystroke) is int:
-            term = getsession().terminal
+            term = bbs.session.getsession().terminal
             logger.debug ('invalid key, %s', term.keyname(keystroke))
             return u''
         return self.add (keystroke)
@@ -272,7 +272,7 @@ class HorizEditor(AnsiWindow):
         Return unicode sequence suitable for refreshing the entire line and
         placing the cursor.
         """
-        term = getsession().terminal
+        term = bbs.session.getsession().terminal
         self._horiz_lastshift = self._horiz_shift
         self._horiz_shift = 0
         # re-detect how far we should scroll horizontally,
