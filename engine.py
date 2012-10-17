@@ -34,7 +34,7 @@ def main ():
     import telnet
     import bbs
     import log
-    logger = logging.getLogger(__name__)
+    root_logger = logging.getLogger()
     log_level = logging.INFO
     cfg_filepath = 'default.ini'
     try:
@@ -50,8 +50,10 @@ def main ():
         else:
             assert False
     assert 0 == len (tail), 'Unrecognized program arguments: %s' % (tail,)
-    logger.setLevel(log_level)
-    log_handler = log.get_stderr(level=log_level)
+
+#    logging.basicConfig (level=log_level)
+#
+#    log_handler = log.get_stderr(level=log_level)
 #    if logger.isEnabledFor(logging.DEBUG):
 #        import __builtin__
 #        real_import = __builtin__.__import__
@@ -69,16 +71,15 @@ def main ():
 #            return real_import(name, my_locals, my_globals, fromlist, level)
 #        __builtin__.__import__ = debug_import
 
-    terminal.logger.addHandler (log_handler)
-    terminal.logger.setLevel (logger.level)
-    logger.addHandler (log_handler)
+#    terminal.logger.addHandler (log_handler)
+#    terminal.logger.setLevel (logger.level)
+#    logger.addHandler (log_handler)
 
-    bbs.session.logger.addHandler (log_handler)
-    bbs.session.logger.setLevel (logger.level)
-    logger.addHandler (log_handler)
+#    bbs.session.logger.addHandler (log_handler)
+#    bbs.session.logger.setLevel (logger.level)
+#    logger.addHandler (log_handler)
 
-    sys.stdout.write ('x/84 bbs ')
-    # load .ini file
+    logger.info ('x/84 bbs, loading configuration %r', cfg_filepath)
     bbs.ini.init (cfg_filepath)
 
     # initialize scripting subsystem

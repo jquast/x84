@@ -1,13 +1,13 @@
 """
 leftright package for X/84 BBS, https://github.com/jquast/x84
 """
+from __future__ import division
 import bbs.session
 import bbs.ansiwin
 
 import math
 import logging
 import multiprocessing
-from __future__ import division
 
 logger = multiprocessing.get_logger()
 logger.setLevel(logging.DEBUG)

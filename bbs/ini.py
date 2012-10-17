@@ -2,23 +2,33 @@
  Configuration for x/84 BBS, https://github.com/jquast/x84/
 """
 
-import ConfigParser
-import sys
-import os
+import logging.config
+import os.path
 
-cfg = None # singleton ..
 
-def init(cfg_filepath='default.ini'):
+#import logging.config
+#import os.path
+#import ConfigParser
+#import sys
+
+#cfg = None # singleton ..
+
+def init(cfg_bbs='data/default.ini', cfg_log='data/logging.ini'):
     """
-    Set system-wide defaults, then open .ini file specified by cfg_filepath and
-    overlay any replacement settings or additional settings specified there.
+    Set system-wide defaults, then open and overlay .ini files.
     """
+    logging.config.fileConfig (cfg_log)
+
+
     #pylint: disable=R0915
     #        Too many statements (57/50)
-    global cfg
-    sys.stdout.write (',load %s...' % (cfg_filepath,))
-    sys.stdout.flush ()
+    #if
+    #global cfg
+    #LOGGING_CONF=os.path.join(os.path.dirname(__filename__), 'logging.ini')
+    #sys.stdout.write (',load %s...' % (cfg_filepath,))
+    #sys.stdout.flush ()
     # start with default values,
+
     cfg = ConfigParser.SafeConfigParser()
     cfg.add_section('system')
     cfg.set('system', 'bbsname', 'x/84')
