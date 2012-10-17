@@ -128,7 +128,6 @@ class LightClass (AnsiWindow):
         """
         Process the keystroke received by run method and take action.
         """
-        self._quit = False
         self._moved = False
         if key in self.keyset['home']:
             self._home ()
@@ -149,10 +148,8 @@ class LightClass (AnsiWindow):
     def moved(self):
         """
         Returns: True if last call to process_keystroke() caused a new entry to
-        be selected.
-
-        The caller can send keystrokes and check this flag to indicate wether
-        the current selection should be re-examined.
+        be selected. The caller can send keystrokes and check this flag to
+        indicate wether the current selection should be re-examined.
         """
         return self._moved
 
