@@ -152,7 +152,7 @@ class AnsiWindow(object):
         term = getsession().terminal
         if xloc is None:
             xloc = 0
-        if yloc is None
+        if yloc is None:
             yloc = 0
         return term.move (yloc + self.yloc, xloc + self.xloc)
 

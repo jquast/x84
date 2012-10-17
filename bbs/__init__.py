@@ -22,7 +22,7 @@ from output import echo, oflush, delay
 from input import getch, getpos, readline, readlineevent
 from ansiwin import AnsiWindow
 from editor import HorizEditor
-from leftright import LeftRightClass, YesNoClass, PrevNextClass
+from leftright import Selector
 from lightwin import LightClass
 from pager import ParaClass
 from sauce import SAUCE
@@ -50,9 +50,7 @@ __all__ = [
     'ini',
     'AnsiWindow',
     'HorizEditor',
-    'LeftRightClass',
-    'YesNoClass',
-    'PrevNextClass',
+    'Selector',
     'LightClass',
     'ParaClass',
     'disconnect',

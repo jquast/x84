@@ -1,19 +1,19 @@
 """
 leftright package for X/84 BBS, https://github.com/jquast/x84
 """
+from __future__ import division
 import bbs.session
 import bbs.ansiwin
 
 import math
 import logging
 import multiprocessing
-from __future__ import division
 
 logger = multiprocessing.get_logger()
 logger.setLevel(logging.DEBUG)
 
 VI_KEYSET = { 'refresh': [unichr(12),],
-              'toggle': [u' ',]
+              'toggle': [u' ',],
               'left': [u'hj',],
               'right': [u'kl',],
               'enter': [u'\r',],
@@ -146,11 +146,11 @@ class Selector(bbs.ansiwin.AnsiWindow):
         Return terminal sequence suitable for re-drawing left/right menubar.
         """
         rstr = self.pos(0, 0)
-        attrs = ([self.colors['selected'], self.colors['unselected'])
+        #attrs = ([self.colors['selected'], self.colors['unselected'])
         a_left = 0 if self.selection == self.left else 1
         a_right = 1 if self.selection == self.left else 0
         rstr += a_left + self.left.center(math.ceil(self.width / 2))
-        rstr += a_right + self.right.center(math.floor(self.width / 2)))
+        rstr += a_right + self.right.center(math.floor(self.width / 2))
         return rstr
 
     def move_right(self):
