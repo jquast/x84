@@ -1,4 +1,4 @@
-import multiprocessing
+#import multiprocessing
 import traceback
 import itertools
 import logging
@@ -14,10 +14,8 @@ import ini
 import exception
 import scripting
 
-logger = multiprocessing.get_logger()
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger()
 mySession = None
-#ASSERT_REWIND = False
 
 def getsession():
     """Return session, after a .run() method has been called on any 1 instance.
@@ -81,10 +79,10 @@ class Session(object):
         self.env = dict(('TERM', terminal.kind),) if env is None else env
         self._script_stack = [(ini.cfg.get('matrix','script'),)]
         self._script_stack = list(((ini.cfg.get('matrix','script'),),))
-        self._tap_input = ini.cfg.get('session','tap_input') in ('yes', 'on')
-        self._tap_output = ini.cfg.get('session','tap_output') in ('yes', 'on')
+        self._tap_input = ini.cfg.get('session','tap_input', 'no') in ('yes', 'on')
+        self._tap_output = ini.cfg.get('session','tap_output', 'no') in ('yes', 'on')
         self._ttylog_folder = ini.cfg.get('session', 'ttylog_folder')
-        self._record_tty = ini.cfg.get('session', 'record_tty') in ('yes','on')
+        self._record_tty = ini.cfg.get('session', 'record_tty', 'yes') in ('yes','on')
         self._ttyrec_folder = ini.cfg.get('session', 'ttylog_folder')
         self._buffer = dict()
         self._source = source
@@ -563,9 +561,6 @@ class Session(object):
             bp2 = struct.pack('<I', len_text)
             # write
             self._fp_ttyrec.write (bp1 + bp2 + text)
-#      if ASSERT_REWIND:
-#        logger.debug ('writing timechunk: (%r;%r;%r%s' % \
-#            (bp1, bp2, text[:20], '...' if len(text) > 20 else '',))
             self._ttyrec_sec = sec
             self._ttyrec_usec = usec
             self._ttyrec_len_text = len_text
@@ -575,12 +570,6 @@ class Session(object):
         # rewind to last length byte
         last_bp2 = struct.pack('<I', self._ttyrec_len_text)
         new_bp2 = struct.pack('<I', self._ttyrec_len_text +len_text)
-#        if ASSERT_REWIND:
-#            logger.debug ('re-writing timechunk: (%r;...%r%s' % (new_bp2,
-#              text[:20], '...' if len(text) > 20 else '',))
-#            self._fp_ttyrec.seek ((self._ttyrec_len_text +len(last_bp2)) *-1, 2)
-#            chk = self._fp_ttyrec.read (len(last_bp2))
-#            assert chk == last_bp2, 'should have %r; got %r' % (last_bp2, chk)
         self._fp_ttyrec.seek ((self._ttyrec_len_text +len(last_bp2)) *-1, 2)
 
         # re-write length byte
@@ -592,3 +581,27 @@ class Session(object):
         self._ttyrec_len_text = self._ttyrec_len_text + len_text
         self._fp_ttyrec.flush ()
         """ Yes. """
+
+class IPCLogHandler(logging.Handler):
+    """
+    Log handler that sends the log up the 'event pipe' :-)
+    """
+    def __init__(self, pipe):
+        logging.Handler.__init__(self)
+        self.pipe = pipe
+    def emit(self, record):
+        """
+        emit log record via IPC pipe
+        """
+        try:
+            e_inf = record.exc_info
+            if e_inf:
+                # side-effect: sets record.exc_text
+                dummy = self.format(record)
+                record.exc_info = None
+            self.pipe.send (('logger', record))
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except:
+            self.handleError (record)
+
