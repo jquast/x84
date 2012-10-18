@@ -6,7 +6,7 @@ AUTOMSG_LENGTH = 40
 
 def main():
     import time
-    db = DBSessionProxy('automsg')
+    db = DBProxy('automsg')
     session = getsession()
     term = session.terminal
     expert = session.user.get('expert', False) \
