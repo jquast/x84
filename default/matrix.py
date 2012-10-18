@@ -106,7 +106,7 @@ def main ():
             continue
         handle = handle.decode(session.encoding)
 
-        if not DBSessionProxy('userbase').has_key(handle):
+        if not DBProxy('userbase').has_key(handle):
             #remain exactly where you are
             #make no move, until you are ordered
             #now we can see you. -i#
