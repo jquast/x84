@@ -9,11 +9,15 @@ import socket
 import threading
 import time
 import re
+
 import blessings
+
+logger = logging.getLogger()
 
 # global list of (TelnetClient, multiprocessing.Pipe, threading.Lock)
 # this is a shared global variable across threads.
 _registry = list ()
+
 def register_terminal(client, pipe, lock):
     """
     Register a (client, pipe, lock,) terminal
@@ -32,10 +36,6 @@ def terminals():
     """
     return _registry
 
-        #registry.append ((self.client, parent_conn, lock))
-logger = logging.getLogger(__name__)
-logger.setLevel (logging.DEBUG)
-
 def start_process(pipe, origin, env):
     """
     A multiprocessing.Process target. Arguments:
@@ -44,12 +44,25 @@ def start_process(pipe, origin, env):
         env: dictionary of client environment variables
     """
     import bbs.session
+    # now that we are a sub-process, our root handler has dangerously forked
+    # file descriptors. we re-address our root logging handler to redirect up
+    # the IPC pipe as a even named 'logging'
+    root = logging.getLogger()
+    ipc_handler = bbs.session.IPCLogHandler (pipe)
+    root.addHandler (ipc_handler)
+
+    # curses is initialized for the first time. telnet negotiation did its best
+    # to determine the TERM. The default, 'unknown', is equivalent to a dumb
+    # terminal.
     term = BlessedIPCTerminal (stream=IPCStream(pipe),
-            terminal_type=env.get('TERM','unknown'),
+            terminal_type=env.get('TERM', 'unknown'),
             rows=int(env.get('LINES', '24')),
             columns=int(env.get('COLUMNS', '80')))
+
+    # spawn and begin a new session
     new_session = bbs.session.Session (term, pipe, origin, env)
     new_session.run ()
+
     logger.info('%s/%s end process', new_session.pid, new_session.handle)
     new_session.close ()
     pipe.send (('disconnect', ('process exit',)))
@@ -74,6 +87,7 @@ class IPCStream(object):
 
 
 class BlessedIPCTerminal(blessings.Terminal):
+    # TODO: Adopt blessings and clean out the glue
     """
       Furthermore, .rows and .columns no longer queries using termios routines.
       They must be managed by another procedure.
@@ -83,6 +97,7 @@ class BlessedIPCTerminal(blessings.Terminal):
         # patch in a .rows and .columns static property.
         # this property updated by engine.py poll routine (?)
         self.rows, self.columns = rows, columns
+
         try:
             blessings.Terminal.__init__ (self,
                 kind=terminal_type, stream=stream, force_styling=True)
@@ -105,7 +120,9 @@ class BlessedIPCTerminal(blessings.Terminal):
             self.kind = default_ttype
 
     def keyname(self, keycode):
-        """Return any matching keycode name for a given keycode."""
+        """
+        Return any matching keycode name for a given keycode.
+        """
         try:
             return (a for a in dir(self) if a.startswith('KEY_') and keycode ==
                 getattr(self, a)).next ()
@@ -114,22 +131,30 @@ class BlessedIPCTerminal(blessings.Terminal):
 
     @property
     def terminal_type(self):
-        """terminal type identifier, ala TERM environment."""
+        """
+        Terminal type identifier, ala TERM environment.
+        """
         return self.kind
 
     @terminal_type.setter
     def terminal_type(self, value):
-        """terminal type identifier, ala TERM environment."""
+        """
+        Terminal type identifier, ala TERM environment.
+        """
         if value != self.kind:
             self.kind = value
             logger.warn ('TERM=%s; cannot re-initialize curses', value,)
 
     def _height_and_width(self):
-        """Return a tuple of (terminal height, terminal width)."""
+        """
+        Return a tuple of (terminal height, terminal width).
+        """
         return self.rows, self.columns
 
 def on_disconnect(client):
-    """Discover the matching client in registry and remove it"""
+    """
+    Discover the matching client in registry and remove it.
+    """
     logger.info ('%s Disconnected', client.addrport())
     for o_client, o_pipe, o_lock in terminals():
         if client == o_client:
@@ -137,15 +162,18 @@ def on_disconnect(client):
             return True
 
 def on_connect(client):
-    """Spawn a ConnectTelnetTerminal() thread for each new connection."""
+    """
+    Spawn a ConnectTelnetTerminal() thread for each new connection.
+    """
     logger.info ('%s Connected', client.addrport())
     thread = ConnectTelnetTerminal(client)
     thread.start ()
 
 def on_naws(client):
-    """On a NAWS event, check if client is yet registered in registry and
-       send the pipe a refresh event. This is the same thing as ^L to the
-       'userland', but should indicate also that the window sizes are checked.
+    """
+    On a NAWS event, check if client is yet registered in registry and send the
+    pipe a refresh event. This is the same thing as ^L to the 'userland', but
+    should indicate also that the window sizes are checked`.
     """
     for cpl in terminals():
         if client == cpl[0]:
@@ -179,13 +207,14 @@ class ConnectTelnetTerminal (threading.Thread):
 
 
     def _spawn_session(self):
-        """ Spawn a subprocess, avoiding GIL and forcing all shared data over a
-            pipe. Previous versions of x/84 and prsv were single process,
-            thread-based, and shared variables.
+        """
+        Spawn a subprocess, avoiding GIL and forcing all shared data over a
+        pipe. Previous versions of x/84 and prsv were single process,
+        thread-based, and shared variables.
 
-            All IPC communication occurs through the bi-directional pipe.
-            The server end (engine.py) polls the parent end of a pipe,
-            while the client (session.py) polls the child.
+        All IPC communication occurs through the bi-directional pipe.  The
+        server end (engine.py) polls the parent end of a pipe, while the client
+        (session.py) polls the child.
         """
         parent_conn, child_conn = multiprocessing.Pipe()
         lock = threading.Lock()
@@ -199,7 +228,6 @@ class ConnectTelnetTerminal (threading.Thread):
         """
         This method is called after the connection is initiated.
         """
-        from bbs import exception
         # Writing Server Applications (TCP/SOCK_STREAM): How can I read only one
         #   character at a time?
         # According to Roger Espel Llima (espel@drakkar.ens.fr), you can
@@ -221,12 +249,6 @@ class ConnectTelnetTerminal (threading.Thread):
             and time.time() -st_time < (0.25):
             time.sleep (self.TIME_POLL)
         time.sleep (self.TIME_POLL *2)
-        # XXX
-        #if 0 == self.client.bytes_received:
-        #    raise exception.ConnectionClosed (
-        #            'telnet negotiation ignored by client')
-        # XXX
-        # this will set .terminal_type if 'TERM'
         self._try_env ()
         # this will set .terminal_type if -still- undetected,
         # or otherwise overwrite it if it is detected different,
@@ -236,11 +258,17 @@ class ConnectTelnetTerminal (threading.Thread):
         self._try_naws ()
         # disable line-wrapping http://www.termsys.demon.co.uk/vtansi.htm
         self.client.send_str (bytes(chr(27) + '[7l'))
-
+        # This denied telnetlib.py,
+        #time.sleep (0.15)
+        #if 0 == self.client.bytes_received:
+        #    raise exception.ConnectionClosed (
+        #            'telnet negotiation ignored by client')
 
     def run(self):
-        """Negotiate and inquire about terminal type, telnet options,
-        window size, and tcp socket options before spawning a new session."""
+        """
+        Negotiate and inquire about terminal type, telnet options, window size,
+        and tcp socket options before spawning a new session.
+        """
         from bbs import exception
         try:
             self._set_socket_opts ()
@@ -256,19 +284,23 @@ class ConnectTelnetTerminal (threading.Thread):
     def _timeleft(self, st_time):
         """
         Returns True when difference of current time and st_time is below
-        TIME_WAIT
+        TIME_WAIT.
         """
         return bool(time.time() -st_time < self.TIME_WAIT)
 
 
     def _set_socket_opts(self):
-        """Set socket non-blocking and enable TCP KeepAlive"""
+        """
+        Set socket non-blocking and enable TCP KeepAlive.
+        """
         self.client.sock.setblocking (0)
         self.client.sock.setsockopt (socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
 
 
     def _try_env(self):
-        """ Try to snarf out some environment variables from unix machines """
+        """
+        Try to snarf out some environment variables from unix machines.
+        """
         #pylint: disable=W0212
         # Access to a protected member _check_remote_option of a client class
 
@@ -289,7 +321,9 @@ class ConnectTelnetTerminal (threading.Thread):
 
 
     def _try_naws(self):
-        """Negotiate about window size (NAWS) telnet option (on)."""
+        """
+        Negotiate about window size (NAWS) telnet option (on).
+        """
         if (self.client.env.get('LINES', None) is not None
                 and self.client.env.get('COLUMNS', None) is not None):
             logger.debug ('window size: %sx%s (unsolicited)',
@@ -352,7 +386,9 @@ class ConnectTelnetTerminal (threading.Thread):
 
 
     def _try_ttype(self):
-        """Negotiate terminal type (TTYPE) telnet option (on)."""
+        """
+        Negotiate terminal type (TTYPE) telnet option (on).
+        """
         from bbs import ini
         detected = lambda: self.client.env['TERM'] != 'unknown'
         if detected():
