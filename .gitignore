@@ -1,13 +1,13 @@
 data/*.sqlite3
 data/dopewars.*
+data/default.ini
+data/logging.ini
 *.log
 *.pyc
 *.swp
 *~
 ENV26
 ENV27
-default.ini
 virtualenv.py
 ttyrecordings
-
 .DS_Store
