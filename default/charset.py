@@ -15,10 +15,13 @@ def main():
         u"necessary. %s is preferred, otherwse only %s is supported. " \
         u"Press return to accept selection." % (choice_1txt, choice_1,
             choice_2txt,)
+    bar_width = max(8, (term.width/2) -10)
+    selector = Selector (yloc=term.height-1, xloc=5, width=bar_width)
+    selector.left = choice_1txt
+    selector.right = choice_2txt
+    selector.selection = choice_1txt
 
     def refresh(enc):
-        # set session encoding
-        enc = choice_1 if enc is None else enc
         getsession().encoding = enc
         if enc == 'cp437':
             # ESC %@ goes back from UTF-8 to ISO 2022 in case UTF-8 had been entered
@@ -38,49 +41,34 @@ def main():
         showfile (artfile)
         echo (term.normal + u'\r\n\r\n')
         echo (u'\r\n'.join(textwrap.wrap(enc_prompt, term.width-3)) + u'\r\n')
+        echo (selector.refresh ())
 
-        # create left/right encoding selector
-        state = LeftRightClass.LEFT if enc == choice_1 else LeftRightClass.RIGHT
-        bar_width = max(8, (term.width/2) -10)
-        lb = LeftRightClass ((5, term.height-1), state)
-        lb.left_text  = choice_1txt.center(bar_width)
-        lb.right_text = choice_2txt.center(bar_width)
-        lb.interactive = True
-        lb.laststate = lb.state
-        lb.refresh ()
-        return lb
+    if user.get('charset', None) is None:
+        # user has no preferred charset, use session-detected/bbs-default
+        senc = session.encoding
+    else:
+        senc = user.get('charset')
 
-    # start with preferred charset
-    senc = session.encoding if user.get('charset', None) is None \
-        else user.get('charset')
-    lightbar = refresh (senc)
+    refresh (choice_1txt) # default is 'utf8'
 
-    toss = getch (0.5)
     while True:
         (ev, data) = readevent(('input','refresh',),
             int(ini.cfg.get('session','timeout')))
         if (ev, data) == (None, None):
             raise ConnectionTimeout ('timeout selecting character set')
         if ev == 'input':
-            state = lightbar.run (data)
-            if lightbar.exit:
-                return
-            elif state is not None:
+            if data in (u'\r', term.KEY_ENTER):
                 # return was pressed
-                senc = choice_1 if state == LeftRightClass.LEFT else choice_2
-                if lightbar.state != lightbar.laststate:
-                    lightbar = refresh (senc)
-                user.set ('charset', senc)
+                set_enc = choice_1 if lb.selection == lb.left else choice_2
+                user.set ('charset', set_enc)
                 user.save ()
-                echo (u"\r\n\r\n'%s' is now your preferred charset.\r\n" % \
-                    (user.get('charset'),))
+                echo (u"\r\n\r\n'%s' is now your preferred charset.\r\n" %
+                        (user.get('charset'),))
                 return
-            elif lightbar.state != lightbar.laststate:
-                # lightbar was moved
-                new_enc = choice_1 \
-                    if lightbar.state == LeftRightClass.LEFT else choice_2
-                lightbar = refresh (new_enc)
-        if ev == 'refresh' or lightbar.state != lightbar.laststate:
+            echo (selector.process_keystroke (data))
+            if lightbar.quit:
+                return
+        if ev == 'refresh' or lightbar.moved:
         # re-locate lightbar; re-display art & prompt
-            lightbar = refresh(session.encoding)
+            refresh(session.encoding)
             lightbar.state = lightbar.laststate
