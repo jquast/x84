@@ -28,6 +28,8 @@ def getpos(timeout=None):
 
 def readline(width, value=u'', hidden=u'', paddchar=u' ', events=('input',),
         timeout=None, interactive=False, silent=False):
+    import warnings
+    warnings.warn('deprecated', DeprecationWarning, 2)
     (value, event, data) = readlineevent(
             width, value, hidden, paddchar, events, timeout,
             interactive, silent)
