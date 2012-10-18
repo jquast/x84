@@ -49,7 +49,7 @@ def main():
     else:
         senc = user.get('charset')
 
-    refresh (choice_1txt) # default is 'utf8'
+    refresh (choice_1) # default is 'utf8'
 
     while True:
         (ev, data) = readevent(('input','refresh',),
@@ -59,16 +59,16 @@ def main():
         if ev == 'input':
             if data in (u'\r', term.KEY_ENTER):
                 # return was pressed
-                set_enc = choice_1 if lb.selection == lb.left else choice_2
+                set_enc = choice_1 if selector.selection == selector.left else choice_2
                 user.set ('charset', set_enc)
                 user.save ()
                 echo (u"\r\n\r\n'%s' is now your preferred charset.\r\n" %
                         (user.get('charset'),))
                 return
             echo (selector.process_keystroke (data))
-            if lightbar.quit:
-                return
-        if ev == 'refresh' or lightbar.moved:
+            #if selector.quit:
+            #    return
+        if ev == 'refresh' or selector.moved:
         # re-locate lightbar; re-display art & prompt
             refresh(session.encoding)
-            lightbar.state = lightbar.laststate
+            #selector.state = selector.laststate
