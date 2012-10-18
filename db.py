@@ -31,7 +31,7 @@ class DBHandler(threading.Thread):
     method name and its arguments, and the return value is sent to the session
     pipe with the same 'event' name.
     """
-    def __init__(self, pipe, event, data):
+    def __init__(self, pipe, event, data, iterable=False):
         """ Arguments:
               pipe: parent end of multiprocessing.Pipe()
               event: database schema in form of string 'db-schema'
@@ -39,7 +39,7 @@ class DBHandler(threading.Thread):
         """
         self.pipe = pipe
         self.event = event
-        self.schema = event.split('-', 1)[1]
+        self.schema = event[3:]
         self.cmd = data[0]
         self.args = data[1]
         threading.Thread.__init__ (self)
@@ -59,13 +59,15 @@ class DBHandler(threading.Thread):
             result = func()
         else:
             result = func(*self.args)
-
-        try:
-            iter_result = iter(obj)
-        except TypeError:
-            self.pipe.send ((self.event, result,))
+        if self.event[2] == '=':
+            # wrap iteratable with special marker,
+            self.pipe.send ((self.event, (None, 'StartIteration'),))
+            for item in iter(result):
+                self.pipe.send ((self.event, item,))
+            self.pipe.send ((self.event, (None, StopIteration,),))
             return
-
-        for result in iterator:
+        elif self.event[2] == '-':
             self.pipe.send ((self.event, result,))
-        self.pipe.send ((self.event, StopIteration,))
+        else:
+            assert False
+
