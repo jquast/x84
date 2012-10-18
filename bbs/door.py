@@ -1,7 +1,6 @@
 """
 ansiwin package for x/84 BBS http://github.com/jquast/x84
 """
-import multiprocessing
 import termios
 import select
 import logging
@@ -19,8 +18,7 @@ import bbs.cp437
 import bbs.ini
 
 PATTERN_EIO = re.compile('Errno 5')
-logger = multiprocessing.get_logger()
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger()
 
 class Door(object):
     """
