@@ -301,6 +301,12 @@ def main(handle=None):
                 refresh ()
 
             # change TERM type ...
+            elif str(choice).lower() == 'u':
+                gosub ('charset')
+                pak ()
+                refresh ()
+
+            # change TERM type ...
             elif str(choice).lower() == 'c':
                 echo (u'\r\n TERM: ')
                 TERM = readline (30).strip()
