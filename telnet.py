@@ -36,8 +36,9 @@ import time
 import sys
 import os
 import logging
-logger = logging.getLogger(__name__)
-logger.setLevel (logging.DEBUG)
+
+import bbs.exception
+logger = logging.getLogger()
 
 #--[ Telnet Options ]----------------------------------------------------------
 from telnetlib import LINEMODE, NAWS, NEW_ENVIRON, ENCRYPT
@@ -47,7 +48,6 @@ from telnetlib import SE, NOP, DM, BRK, IP, AO, AYT, EC, EL, GA, SB
 IS      = chr(0)        # Sub-process negotiation IS command
 SEND    = chr(1)        # Sub-process negotiation SEND command
 NEGOTIATE_STATUS = (ECHO, SGA, LINEMODE, TTYPE, NAWS, NEW_ENVIRON,)
-from bbs import exception
 
 class TelnetServer(object):
     """
@@ -85,7 +85,7 @@ class TelnetServer(object):
             self.server_socket.bind(address_pair)
             self.server_socket.listen(self.LISTEN_BACKLOG)
         except socket.error, err:
-            logger.error ('Unable to bind: %s', err,)
+            logger.error ('Unable to bind: %s', err)
             sys.exit (1)
 
     def client_count(self):
@@ -149,7 +149,7 @@ class TelnetServer(object):
         for client in recv_ready:
             try:
                 client.socket_recv ()
-            except exception.ConnectionClosed, err:
+            except bbs.exception.ConnectionClosed, err:
                 logger.debug ('%s connection closed: %s.',
                         client.addrport(), err)
                 client.deactivate()
@@ -160,7 +160,7 @@ class TelnetServer(object):
         for client in slist:
             try:
                 client.socket_send ()
-            except exception.ConnectionClosed, err:
+            except bbs.exception.ConnectionClosed, err:
                 logger.debug ('%s connection closed: %s.',
                         client.addrport(), err)
                 client.deactivate()
@@ -420,7 +420,7 @@ class TelnetClient(object):
         """
         Called by TelnetServer.poll() when send data is ready.  Send any
         data buffered, trim self.send_buffer to bytes sent, and return
-        number of bytes sent. exception.ConnectionClosed may be raised.
+        number of bytes sent. bbs.exception.ConnectionClosed may be raised.
         """
         sent = 0
         ready_bytes = bytes(''.join(self.send_buffer))
@@ -431,7 +431,7 @@ class TelnetClient(object):
         try:
             sent = self.sock.send(ready_bytes)
         except socket.error, err:
-            raise exception.ConnectionClosed (
+            raise bbs.exception.ConnectionClosed (
                     'socket send %d:%s' % (err[0], err[1],))
         assert sent > 0
         #self.bytes_sent += sent
@@ -443,16 +443,16 @@ class TelnetClient(object):
         Called by TelnetServer.poll() when recv data is ready.  Read any
         data on socket, processing telnet commands, and buffering all
         other bytestrings to self.recv_buffer.  If data is not received,
-        or the connection is closed, exception.ConnectionClosed is raised.
+        or the connection is closed, bbs.exception.ConnectionClosed is raised.
         """
         recv = 0
         try:
             data = self.sock.recv (self.BLOCKSIZE_RECV)
             recv = len(data)
             if 0 == recv:
-                raise exception.ConnectionClosed ('Client closed connection')
+                raise bbs.exception.ConnectionClosed ('Requested by client')
         except socket.error, err:
-            raise exception.ConnectionClosed (
+            raise bbs.exception.ConnectionClosed (
                     'socket errorno %d: %s' % (err[0], err[1],))
         self.bytes_received += recv
         self.last_input_time = time.time()
@@ -484,7 +484,7 @@ class TelnetClient(object):
                 self.telnet_sb_buffer.fromstring (byte)
                 ## Sanity check on length
                 if len(self.telnet_sb_buffer) >= self.SB_MAXLEN:
-                    raise exception.ConnectionClosed (
+                    raise bbs.exception.ConnectionClosed (
                             'sub-negotiation buffer filled')
             else:
                 ## Just a normal NVT character
@@ -676,7 +676,7 @@ class TelnetClient(object):
         if self._check_reply_pending(option):
             self._note_reply_pending(option, False)
         if option == ECHO:
-            raise exception.ConnectionClosed \
+            raise bbs.exception.ConnectionClosed \
                 ('Refuse WILL ECHO by client, closing connection.')
         elif option == NAWS:
             if self._check_remote_option(NAWS) is not True:
