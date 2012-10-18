@@ -140,7 +140,7 @@ def init_log_ini ():
     cfg_log.add_section('formatter_default')
     cfg_log.set('formatter_default', 'format',
             '%(levelname)s %(filename)s:%(lineno)s '
-            '%(processName)s%(threadName)s - s%(message)s')
+            '%(processName)s%(threadName)s - %(message)s')
     cfg_log.set('formatter_default', 'class', 'logging.Formatter')
 
     cfg_log.add_section('handlers')
