@@ -16,78 +16,51 @@ __maintainer__ = 'Jeff Quast'
 __email__ = 'dingo@1984.ws'
 __status__ = 'Development'
 
+import logging
 import sys
+
+logger = logging.getLogger()
 
 def main ():
     """
     x84 main entry point. The system begins and ends here.
 
     Command line arguments to engine.py:
-      -cfg: location of alternate configuration file
-        -v: enable DEBUG logging
+      --config= location of alternate configuration file
+      --logger= location of alternate logging.ini file
+      --verbose enables DEBUG logging .
     """
     #pylint: disable=R0914
     #        Too many local variables (19/15)
-    import logging
     import getopt
+
     import terminal
     import telnet
-    import bbs
-    import log
-    root_logger = logging.getLogger()
-    log_level = logging.INFO
-    cfg_filepath = 'default.ini'
+    import bbs.ini
+
+    cfg_bbsfile = 'data/default.ini'
+    cfg_logfile = 'data/logging.ini'
     try:
-        opts, tail = getopt.getopt(sys.argv[1:], "vc:", ('verbose', 'config'))
+        opts, tail = getopt.getopt(sys.argv[1:], ":", ('config', 'logger',))
     except getopt.GetoptError, err:
         sys.stderr.write ('%s\n' % (err,))
         return 1
     for opt, arg in opts:
-        if opt in ('-v', '--verbose'):
-            log_level = logging.DEBUG
-        elif opt in ('-c', '--config'):
-            cfg_filepath = arg
-        else:
-            assert False
+        if opt in ('--config',):
+            cfg_bbsfile = arg
+        elif opt in ('--logger',):
+            cfg_logfile = arg
     assert 0 == len (tail), 'Unrecognized program arguments: %s' % (tail,)
 
-#    logging.basicConfig (level=log_level)
-#
-#    log_handler = log.get_stderr(level=log_level)
-#    if logger.isEnabledFor(logging.DEBUG):
-#        import __builtin__
-#        real_import = __builtin__.__import__
-#        def debug_import(name, my_locals=None, my_globals=None,
-#            fromlist=None, level=-1):
-#            """ a replacement for import that prints who imports what,
-#                from python documentation example. only enabled when
-#                the logger is at DEBUG or higher
-#            """
-#            #pylint: disable=W0212
-#            #        Access to a protected member _getframe of a client class
-#            glob = my_globals or sys._getframe(1).f_globals
-#            importer_name = glob and glob.get('__name__') or 'unknown'
-#            logger.debug ('%s imports %s', importer_name, name)
-#            return real_import(name, my_locals, my_globals, fromlist, level)
-#        __builtin__.__import__ = debug_import
-
-#    terminal.logger.addHandler (log_handler)
-#    terminal.logger.setLevel (logger.level)
-#    logger.addHandler (log_handler)
-
-#    bbs.session.logger.addHandler (log_handler)
-#    bbs.session.logger.setLevel (logger.level)
-#    logger.addHandler (log_handler)
-
-    logger.info ('x/84 bbs, loading configuration %r', cfg_filepath)
-    bbs.ini.init (cfg_filepath)
+    # load .ini files
+    bbs.ini.init (cfg_bbsfile, cfg_logfile)
+    logger.info ('loaded configuration')
 
     # initialize scripting subsystem
     bbs.scripting.init (bbs.ini.cfg.get('session', 'scriptpath'))
+    logger.info ('scripting intialized')
 
-    # initialize telnet server
-    telnet.logger.setLevel (logger.level)
-    telnet.logger.addHandler (log_handler)
+    # start telnet server
     addr_tup = (bbs.ini.cfg.get('telnet', 'addr'),
         int(bbs.ini.cfg.get('telnet', 'port')),)
     telnet_server = telnet.TelnetServer (
@@ -95,21 +68,23 @@ def main ():
         on_connect = terminal.on_connect,
         on_disconnect = terminal.on_disconnect,
         on_naws = terminal.on_naws)
-    logger.info ('[telnet:%s] listening tcp', telnet_server.port)
 
     # begin main event loop
-    _loop(logger, telnet_server)
+    _loop (telnet_server)
 
-def _loop(logger, telnet_server):
+def _loop(telnet_server):
     """ Main event loop. Never returns. """
     # pylint: disable=R0912
     #         Too many branches (15/12)
     import terminal
     import db
+
+    logger.info ('listening %s/tcp', telnet_server.port)
+
     # main event loop
     while True:
         # process telnet i/o
-        telnet_server.poll()
+        telnet_server.poll ()
         for client, pipe, lock in terminal.terminals():
             if not lock.acquire(False):
                 continue
@@ -139,6 +114,9 @@ def _loop(logger, telnet_server):
             if event == 'disconnect':
                 client.deactivate ()
 
+            if event == 'logger':
+                logger.handle (data)
+
             elif event == 'output':
                 text, is_cp437 = data
                 if not is_cp437:
@@ -167,13 +145,14 @@ def _loop(logger, telnet_server):
                     reply_event='pos-reply', timeout=data)
                 thread.start ()
 
-            elif event.startswith ('db-'):
+            if event.startswith('db'):
                 # db query-> database dictionary method, callback
                 # with a matching ('db-*',) event. sqlite is used
                 # for now and is quick, but this prevents slow
                 # database queries from locking the i/o event loop.
                 thread = db.DBHandler(pipe, event, data)
                 thread.start ()
+
 
 if __name__ == '__main__':
     sys.exit(main ())
