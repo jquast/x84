@@ -1,12 +1,11 @@
 import os
 import sys
 import imp
-import multiprocessing
+#import multiprocessing
 import logging
 
 script_path = 'default/'
-logger = multiprocessing.get_logger()
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger()
 
 def init(global_script_path):
     """
@@ -26,7 +25,8 @@ def chkmodpath(name, parent):
         logger.debug ('Trimming %s from %s', os.path.curdir, cur)
         parent = parent[len(cur):]
 
-    name = name.replace('.', os.path.sep)
+    #fxp = '/../'
+    #name = name.replace('.', os.path.sep)
 
     # absolute path
     if parent.startswith (os.path.sep):
