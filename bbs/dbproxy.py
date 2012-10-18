@@ -20,7 +20,7 @@ class DBProxy(object):
         its IPC event data values until StopIteration is sent.
         """
         from bbs.session import getsession
-        event = 'db-%s' % (self.schema,)
+        event = 'db=%s' % (self.schema,)
         getsession().send_event (event, (method, args))
         while True:
             event, data = getsession().read_event (events=(event,))
