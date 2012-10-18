@@ -4,9 +4,7 @@ lightwin package for x/84 BBS, http://github.com/jquast/x84
 
 from bbs.ansiwin import AnsiWindow
 import logging
-import multiprocessing
-logger = multiprocessing.get_logger()
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger()
 
 NETHACK_KEYSET = { 'home': [u'y', ], 'end': [u'n', ], 'pgup': [u'h', ],
 'pgdown': [u'l', ], 'up': [u'k', ], 'down': [u'j', ], 'quit': [u'q', ], }
