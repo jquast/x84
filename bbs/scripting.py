@@ -25,9 +25,6 @@ def chkmodpath(name, parent):
         logger.debug ('Trimming %s from %s', os.path.curdir, cur)
         parent = parent[len(cur):]
 
-    #fxp = '/../'
-    #name = name.replace('.', os.path.sep)
-
     # absolute path
     if parent.startswith (os.path.sep):
         name_a = os.path.join(parent, name)
