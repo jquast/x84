@@ -22,7 +22,7 @@ def main ():
     color1 = term.bold_white
     color2 = term.bold_green
     color3 = term.bold_blue
-    udb = DBSessionProxy('oneliner')
+    udb = DBProxy('oneliner')
     chk_yesno = (term.KEY_ENTER, term.KEY_LEFT, term.KEY_RIGHT,
         'y', 'n', 'Y', 'N', 'h', 'l', 'H', 'L',)
     window, comment = None, None
