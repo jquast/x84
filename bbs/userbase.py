@@ -1,11 +1,10 @@
-from dbproxy import DBProxy
+import logging
+import dbproxy
 import bcrypt
 
-db = DBProxy('userbase')
+db = dbproxy.DBProxy('userbase')
 
-import logging
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger = logging.getLogger()
 
 def listusers():
     """
