@@ -7,7 +7,7 @@ def main():
     dirty=True
     lightbar=False
     bbslist=[]
-    udb = DBSessionProxy('bbslist')
+    udb = DBProxy('bbslist')
     bbsname=host=port=software=sysop=ratings=comments=None
     while True:
         if dirty or not lightbar:
