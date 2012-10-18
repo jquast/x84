@@ -3,7 +3,7 @@ import time
 
 def main(recordonly=False):
     session, term = getsession(), getterminal()
-    udb = DBSessionProxy('lastcallers')
+    udb = DBProxy('lastcallers')
     session.activity = 'Viewing Last Callers'
 
     for u in listusers():
