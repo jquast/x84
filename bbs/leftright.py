@@ -7,10 +7,8 @@ import bbs.ansiwin
 
 import math
 import logging
-import multiprocessing
 
-logger = multiprocessing.get_logger()
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger()
 
 VI_KEYSET = { 'refresh': [unichr(12),],
               'toggle': [u' ',],
@@ -70,7 +68,7 @@ class Selector(bbs.ansiwin.AnsiWindow):
             self.keyset['enter'].append (
                 term.KEY_ENTER)
         if u'' != term.KEY_EXIT:
-            self.keyset['quit'].append (
+            self.keyset['exit'].append (
                 term.KEY_EXIT)
 
     def process_keystroke(self, keystroke):
@@ -87,14 +85,12 @@ class Selector(bbs.ansiwin.AnsiWindow):
             return self.move_right ()
         elif keystroke in self.keyset['toggle']:
             return self.toggle ()
-        elif keystroke in self.keyset['quit']:
+        elif keystroke in self.keyset['exit']:
             self._quit = True
             return u''
-        elif type(keystroke) is int:
-            term = getsession().terminal
-            logger.debug ('invalid key, %s', term.keyname(keystroke))
-            return u''
-        return self.add (keystroke)
+        term = getsession().terminal
+        logger.debug ('invalid key, %s', term.keyname(keystroke))
+        return u''
 
     @property
     def moved(self):
