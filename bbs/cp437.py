@@ -75,7 +75,7 @@ def from_cp437(text):
     """ Given a bytestring in IBM codepage 437, return a translated
         unicode string suitable for decoding to UTF-8.
     """
-    return u''.join([CP437TABLE[byte] for byte in text])
+    return u''.join([CP437[ord(byte)] for byte in text])
 
 def run():
     """
