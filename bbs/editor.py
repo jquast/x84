@@ -4,9 +4,7 @@ editor package for X/84 BBS, http://github.com/jquast/x84
 import bbs.ansiwin
 import bbs.session
 import logging
-import multiprocessing
-logger = multiprocessing.get_logger()
-logger.setLevel(logging.DEBUG)
+logger = logging.getLogger()
 
 PC_KEYSET = { 'refresh': [unichr(12),],
               'backspace': [unichr(8), unichr(127),],
