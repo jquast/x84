@@ -159,10 +159,19 @@ class AnsiWindow(object):
     def title(self, ansi_text):
         """
         Returns sequence that positions and displays unicode sequence
-        'ansi_text' at the title location of the window (it may be trimmed).
+        'ansi_text' at the title location of the window.
         """
         xloc = self.width / 2 - (min(ansilen(ansi_text) / 2, self.width / 2))
         return self.pos(xloc=xloc, yloc=0) + ansi_text
+
+    def footer(self, ansi_text):
+        """
+        Returns sequence that positions and displays unicode sequence
+        'ansi_text' at the bottom edge of the window.
+        """
+        xloc = self.width / 2 - (min(ansilen(ansi_text) / 2, self.width / 2))
+        return self.pos(xloc=xloc, yloc=self.height) + ansi_text
+
 
     def border(self):
         """
