@@ -13,15 +13,19 @@ Installation
 This software requires Python_ 2.6 or 2.7.
 
 * Install virtualenv,
+
 ``curl -o /tmp/virtualenv.py 'https://raw.github.com/pypa/virtualenv/master/virtualenv.py'``
 
 * Create virtualenv for installing 3rd party packages,
+
 ``python2.7 /tmp/virtualenv.py ENV27``
 
 * Activate environment (prompt will change)
+
 ``. ENV27/bin/activate``
 
 * Install all third-party modules
+
 ``pip install -r requirements.txt``
 
 
@@ -29,12 +33,15 @@ Getting Started
 ===============
 
 * Activate environment (prompt will change)
+
 ``. ENV27/bin/activate``
 
 * Execute bbs engine
+
 ``python engine.py``
 
 * Optional command line arguments,
+
  ``--config=`` alternate bbs configuration filepath
  ``--logger=`` alternate logging configuration filepath
 
@@ -160,7 +167,7 @@ bbslist.py
 Users post and vote and leave comments for other bbs systems. Also allows this system to be used as a gateway to other systems, using telnet.py_.
 
 weather.py
----------
+----------
 
 An example of using the various user interface elements to display the local weather report.
 
@@ -193,7 +200,7 @@ An irc channel, '#prsv' on efnet, is available for development discussion.
 A development-based bbs board is planned.
 
 References
-``````````
+----------
 
 .. _miniboa: https://code.google.com/p/miniboa/
 .. _blessings: http://pypi.python.org/pypi/blessings
