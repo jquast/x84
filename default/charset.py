@@ -1,8 +1,8 @@
 """
 This script helps the user select between cp437 and utf8 encoding.
 """
-import textwrap
 def main():
+    import textwrap
     session, term = getsession(), getterminal()
     user = session.user
     artfile = 'art/plant.ans'
