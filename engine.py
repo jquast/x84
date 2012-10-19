@@ -53,11 +53,9 @@ def main ():
 
     # load .ini files
     bbs.ini.init (cfg_bbsfile, cfg_logfile)
-    logger.info ('loaded configuration')
 
-    # initialize scripting subsystem
+    # initialize scripting system path from .ini value
     bbs.scripting.init (bbs.ini.cfg.get('session', 'scriptpath'))
-    logger.info ('scripting intialized')
 
     # start telnet server
     addr_tup = (bbs.ini.cfg.get('telnet', 'addr'),
@@ -68,8 +66,14 @@ def main ():
         on_disconnect = terminal.on_disconnect,
         on_naws = terminal.on_naws)
 
-    # begin main event loop
-    _loop (telnet_server)
+    try:
+        # begin main event loop
+        _loop (telnet_server)
+    except KeyboardInterrupt:
+        for client in telnet_server.clients.values():
+            client.deactivate ()
+        telnet_server.poll ()
+        raise SystemExit
 
 def _loop(telnet_server):
     """ Main event loop. Never returns. """
