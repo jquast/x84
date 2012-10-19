@@ -45,11 +45,12 @@ def start_process(pipe, origin, env):
     """
     import bbs.session
     # now that we are a sub-process, our root handler has dangerously forked
-    # file descriptors. we re-address our root logging handler to redirect up
-    # the IPC pipe as a even named 'logging'
+    # file descriptors. we remove any existing handlers, and re-address our root
+    # logging handler to an IPC event pipe, named 'logging'.
     root = logging.getLogger()
-    ipc_handler = bbs.session.IPCLogHandler (pipe)
-    root.addHandler (ipc_handler)
+    for hdlr in root.handlers:
+        root.removeHandler (hdlr)
+    root.addHandler (bbs.session.IPCLogHandler (pipe))
 
     # curses is initialized for the first time. telnet negotiation did its best
     # to determine the TERM. The default, 'unknown', is equivalent to a dumb
@@ -61,7 +62,10 @@ def start_process(pipe, origin, env):
 
     # spawn and begin a new session
     new_session = bbs.session.Session (term, pipe, origin, env)
-    new_session.run ()
+    try:
+        new_session.run ()
+    except KeyboardInterrupt:
+        raise SystemExit
 
     logger.info('%s/%s end process', new_session.pid, new_session.handle)
     new_session.close ()
