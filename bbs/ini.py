@@ -36,8 +36,8 @@ def init(cfg_bbsfile='data/default.ini', cfg_logfile='data/logging.ini'):
             root.error ('%s', err)
             save_err = True
     if not save_err:
-        root.info ('loading %s', cfg_logfile)
         logging.config.fileConfig (cfg_logfile)
+        root.info ('loaded %s', cfg_logfile)
 
     # load defaults, overlay filepath
     cfg_bbs = init_bbs_ini ()
@@ -47,8 +47,8 @@ def init(cfg_bbsfile='data/default.ini', cfg_logfile='data/logging.ini'):
         except IOError, err:
             root.error ('%s', err)
     else:
-        root.info ('loading %s', cfg_bbsfile)
         cfg_bbs.read (cfg_bbsfile)
+        root.info ('loaded %s', cfg_bbsfile)
     cfg = cfg_bbs
 
 
