@@ -30,28 +30,31 @@ class Selector(bbs.ansiwin.AnsiWindow):
     _moved = False
     keyset = dict()
 
-    def __init__(self, yloc, xloc, width=None):
+    def __init__(self, yloc, xloc, width, left, right):
         """
-        Set screen position of Selector UI and optional display width. If
-        unset, a suitable width of medium padding is used.
+        Set screen position of Selector UI and optional display width.
+        If unset, a suitable width of medium padding of the text size, along
+        with a horizontally-centered location is used.
         """
-        self.xloc = xloc
-        self.yloc = xloc
-        if width is None:
-            width = 2 * (len(self._left) + len(self._right))
+        self.left = left
+        self.right = right
         bbs.ansiwin.AnsiWindow.__init__(self,
                 height=1, width=width, yloc=yloc, xloc=xloc)
         self.init_theme ()
         self.init_keystrokes ()
 
     def init_theme (self):
+        """
+        Initialize colors['selected'] and colors['unselected'].
+        """
         term = bbs.session.getsession().terminal
         self.colors ['selected'] = term.reverse
         self.colors ['unselected'] = term.normal
 
     def init_keystrokes (self):
         """
-        add application keys (left, right) to keyset.
+        Merge curses-detected application keys into a VI_KEYSET-formatted
+        keyset, for keys 'refresh', 'left', 'right', 'enter', and 'exit'.
         """
         self.keyset = VI_KEYSET
         term = bbs.session.getsession().terminal
@@ -145,8 +148,9 @@ class Selector(bbs.ansiwin.AnsiWindow):
         attrs = (self.colors['selected'], self.colors['unselected'])
         a_left = attrs[0] if self.selection == self.left else attrs[1]
         a_right = attrs[1] if self.selection == self.left else attrs[0]
-        rstr += a_left + self.left.center(int(math.ceil(self.width / 2)))
-        rstr += a_right + self.right.center(int(math.floor(self.width / 2)))
+        u_left = self.left.center(int(math.ceil(self.width / 2)))
+        u_right = self.right.center(int(math.floor(self.width / 2)))
+        rstr += a_left + u_left + a_right + u_right
         return rstr
 
     def move_right(self):
