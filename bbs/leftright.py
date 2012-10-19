@@ -23,21 +23,16 @@ class Selector(bbs.ansiwin.AnsiWindow):
     """
     A two-state horizontal lightbar interface.
     """
-    _left = u'Left'
-    _right = u'Right'
-    _selection = _left
-    _width = None
     _moved = False
     keyset = dict()
 
     def __init__(self, yloc, xloc, width, left, right):
         """
-        Set screen position of Selector UI and optional display width.
-        If unset, a suitable width of medium padding of the text size, along
-        with a horizontally-centered location is used.
+        Set screen position of Selector UI and display width of both. The
+        highlighted selection is displayed using the self.highlight attribute,
+        in order (left, right). The default selection is left.
         """
-        self.left = left
-        self.right = right
+        self._left = self._selection = left
         bbs.ansiwin.AnsiWindow.__init__(self,
                 height=1, width=width, yloc=yloc, xloc=xloc)
         self.init_theme ()
