@@ -24,6 +24,7 @@ class Selector(bbs.ansiwin.AnsiWindow):
     A two-state horizontal lightbar interface.
     """
     _moved = False
+    _quit = False
     keyset = dict()
 
     def __init__(self, yloc, xloc, width, left, right):
@@ -33,6 +34,7 @@ class Selector(bbs.ansiwin.AnsiWindow):
         in order (left, right). The default selection is left.
         """
         self._left = self._selection = left
+        self._right = right
         bbs.ansiwin.AnsiWindow.__init__(self,
                 height=1, width=width, yloc=yloc, xloc=xloc)
         self.init_theme ()
