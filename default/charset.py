@@ -19,13 +19,14 @@ def main():
         Instantiate a new selector, dynamicly for the window size.
         """
         width = max(30, (term.width/2) - 10)
-        xloc = min(0, (term.width/2)-bar_width)
+        xloc = min(0, (term.width/2)-width)
         selector = Selector (yloc=term.height-1, xloc=xloc, width=width,
                 left='utf8', right='cp437')
         selector.selection = selection
         return selector
 
     def refresh(sel):
+        flushevent ('refresh')
         if sel.selection == 'utf8':
             # ESC %G activates UTF-8 with an unspecified implementation
             # level from ISO 2022 in a way that allows to go back to
@@ -47,7 +48,7 @@ def main():
         echo (sel.refresh ())
 
     selector = get_selector ('utf8')
-    refresh ()
+    refresh (selector)
     while True:
         ch = getch ()
         if ch == term.KEY_ENTER:
@@ -55,6 +56,7 @@ def main():
             session.user.save ()
             echo (u"\r\n\r\n'%s' is now your preferred encoding.\r\n"
                     % (session.encoding,))
+            getch (1.0)
             return
         else:
             selector.process_keystroke (ch)
@@ -65,7 +67,9 @@ def main():
             if selector.moved:
                 # set and refresh art in new encoding
                 session.encoding = selector.selection
-                refresh ()
+                refresh (selector)
+
         if readevent('refresh', 0) is not None:
             # instantiate a new selector in case the window size has changed.
             selector = get_selector (session.encoding)
+            refresh (selector)
