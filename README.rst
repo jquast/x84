@@ -53,40 +53,39 @@ Connecting
 
 
 Compatible Clients (UTF-8)
-============================
+==========================
 
-Basically any UTF-8 client is compatible, but some fonts do art better than others. For mac systems, 'Andale Mono' works flawlessly.
+Any UTF-8 client is compatible, but some fonts do art better than others. For mac systems, 'Andale Mono' works flawlessly.
 
 iTerm
 -----
-- Menu item iTerm -> Preferences,
-  section Profiles, select 'Text' tab,
-  chose 'Andale Mono' font.
+Menu item iTerm -> Preferences, section Profiles, select 'Text' tab, chose 'Andale Mono' font.
  
 PuTTy
 -----
-- Under preference item Window -> Translation,
-  option 'Remote character set',
-  change 'iso8859-1' to 'UTF-8'.
+Under preference item Window -> Translation, option 'Remote character set', change 'iso8859-1' to 'UTF-8'.
 
 Terminal.app
 ------------
- - Menu item Terminal -> Preferences,
-   chose profile 'Pro', (Font Andale Mono),
-   enable 'use bright colors for bold text'.
+Menu item Terminal -> Preferences, chose profile 'Pro', (Font Andale Mono), enable 'use bright colors for bold text'.
 
 uxterm
+------
+todo .. bright blink, 256, etc..
 
 
 Semi-compatible Clients (CP437)
 =================================
 
 SyncTerm, mtel
-- Select cp437 when prompted by the bbs system (charset.py).
+--------------
 
-Other 7-bit clients (netrunner? windows?)
-- Select cp437 when prompted by the bbs system (charset.py).
-- Use a font of cp437 encoding, such as **Terminus**.
+Select cp437 when prompted by the bbs system (charset.py).
+
+Other 7-bit clients
+-------------------
+
+Select cp437 when prompted by the bbs system (charset.py).  Use a font of cp437 encoding, such as *Terminus*.
 
 
 Monitoring
