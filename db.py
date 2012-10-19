@@ -20,8 +20,8 @@ def get_db(schema):
         import bbs.ini
         dbpath = os.path.join(bbs.ini.cfg.get('database','sqlite_folder'),
             '%s.sqlite3' % (schema,),)
-        _databases[schema] = sqlitedict.SqliteDict(
-                dbpath, autocommit=True)
+        _databases[schema] = sqlitedict.SqliteDict(filename=dbpath,
+                tablename='unnamed', autocommit=True)
     _lock.release ()
     return _databases[schema]
 
