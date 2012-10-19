@@ -21,7 +21,6 @@ from fileutils import abspath, fopen, ropen
 from output import echo, oflush, delay
 from input import getch, getpos, readline, readlineevent, LineEditor, ScrollingEditor
 from ansiwin import AnsiWindow
-from editor import HorizEditor
 from leftright import Selector
 from lightwin import LightClass
 from pager import ParaClass
@@ -51,7 +50,6 @@ __all__ = [
     'listusers',
     'ini',
     'AnsiWindow',
-    'HorizEditor',
     'Selector',
     'LightClass',
     'ParaClass',
