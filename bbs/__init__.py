@@ -127,11 +127,17 @@ def broadcastevent(event, data):
     return getsession().send_event('global', (getsession().pid, event, data))
 
 
-def readevent(events = ['input'], timeout = None):
+def readevents(events=('input',), timeout=None):
     """
-    Poll for and read an event from the main bbs engine.
+    Poll for first available Session event.
     """
     return getsession().read_event(events, timeout)
+
+def readevent(event='input', timeout=None):
+    """
+    Poll for Session event.
+    """
+    return getsession().read_event((event,), timeout)
 
 
 def flushevent(event = 'input', timeout = -1):
