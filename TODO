@@ -1,5 +1,6 @@
 ROADMAP, 1.0:
 EASY
+* ensure you can have a login name of [some-japanese-characters]
 * sysop's door to launch ttyplay -p on live terminals
 * lolcat-like xterm-256color rainbow effect to demo colors
 * local.py -- telnetlib to self :-)
