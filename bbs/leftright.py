@@ -145,8 +145,8 @@ class Selector(bbs.ansiwin.AnsiWindow):
         attrs = (self.colors['selected'], self.colors['unselected'])
         a_left = attrs[0] if self.selection == self.left else attrs[1]
         a_right = attrs[1] if self.selection == self.left else attrs[0]
-        rstr += a_left + self.left.center(math.ceil(self.width / 2))
-        rstr += a_right + self.right.center(math.floor(self.width / 2))
+        rstr += a_left + self.left.center(int(math.ceil(self.width / 2)))
+        rstr += a_right + self.right.center(int(math.floor(self.width / 2)))
         return rstr
 
     def move_right(self):
