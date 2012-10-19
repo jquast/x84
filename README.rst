@@ -41,8 +41,8 @@ Getting Started
 ``python engine.py``
 
 Optional command line arguments,
- ``--config=`` alternate bbs configuration filepath
- ``--logger=`` alternate logging configuration filepath
+``--config=`` alternate bbs configuration filepath
+``--logger=`` alternate logging configuration filepath
 
 Connecting
 ==========
