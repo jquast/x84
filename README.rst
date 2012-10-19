@@ -5,7 +5,7 @@ x/84 is a python-languaged telnet daemon for modern utf8 terminals. Based on min
 
 A default 'bbs board' is provided in style of renegade, ami/x. This provides some doors for bbs-scene_.org API's such as 'one liners' and 'bbs listers', a telnet-out gateway that translates CP437 to UTF8, messaging, supports example doors dopewars_ and nethack_.
 
-   *x/84 is still in development, we welcome any patches and contributions.*
+*x/84 is still in development, we welcome any patches and contributions.*
 
 Installation
 ============
