@@ -129,7 +129,7 @@ def main ():
         chk = session._tap_input # <-- save
         session._tap_input = False
         le = LineEditor(max_pass)
-        le.hidden = 'x'
+        le.hidden = u'x'
         password = le.read ()
         session._tap_input = chk # restore -->
 
