@@ -847,7 +847,7 @@ class TelnetClient(object):
         else:
             self.env['LINES'] = str(rows)
             self.env['COLUMNS'] = str(columns)
-            logger.info ('%s: window size is %sx%s',
+            logger.debug ('%s: window size is %sx%s',
                     self.addrport(), columns, rows)
             if self.on_naws is not None:
                 self.on_naws (self)
