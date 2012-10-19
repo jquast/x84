@@ -171,7 +171,9 @@ class Session(object):
     @property
     def cwd(self):
         """Current working directory."""
-        return self._cwd if self._cwd is not None else '.'
+        return (os.path.realpath(self._cwd) + os.path.sep
+                if self._cwd is not None
+                else os.path.curdur + os.path.sep)
 
     @cwd.setter
     def cwd(self, value):
@@ -441,10 +443,9 @@ class Session(object):
             sys.path.insert (0, current_path)
             logger.debug ('%s inserted to sys.path: %s',
                     self.handle, current_path)
-# XXX
-        logger.info ('scripting.load(%s, %s)', self.cwd, self.script_name,)
+
+        logger.debug ('scripting.load(%s, %s)', self.cwd, self.script_name,)
         script = scripting.load(self.cwd, self.script_name)
-        print repr(script)
         for idx in bbs.__all__:
             setattr(script, idx, getattr(bbs, idx))
         if not hasattr(script, 'main'):
