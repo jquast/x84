@@ -12,19 +12,19 @@ Installation
 
 This software requires Python_ 2.6 or 2.7.
 
-* Install virtualenv,
+1. Install virtualenv,
 
 ``curl -o /tmp/virtualenv.py 'https://raw.github.com/pypa/virtualenv/master/virtualenv.py'``
 
-* Create virtualenv for installing 3rd party packages,
+2. Create virtualenv for installing 3rd party packages,
 
 ``python2.7 /tmp/virtualenv.py ENV27``
 
-* Activate environment (prompt will change)
+3. Activate environment (prompt will change)
 
 ``. ENV27/bin/activate``
 
-* Install all third-party modules
+4. Install all third-party modules
 
 ``pip install -r requirements.txt``
 
@@ -32,16 +32,15 @@ This software requires Python_ 2.6 or 2.7.
 Getting Started
 ===============
 
-* Activate environment (prompt will change)
+1. Activate environment (prompt will change)
 
 ``. ENV27/bin/activate``
 
-* Execute bbs engine
+2. Execute bbs engine
 
 ``python engine.py``
 
-* Optional command line arguments,
-
+Optional command line arguments,
  ``--config=`` alternate bbs configuration filepath
  ``--logger=`` alternate logging configuration filepath
 
@@ -198,9 +197,6 @@ Support
 An irc channel, '#prsv' on efnet, is available for development discussion.
 
 A development-based bbs board is planned.
-
-References
-----------
 
 .. _miniboa: https://code.google.com/p/miniboa/
 .. _blessings: http://pypi.python.org/pypi/blessings
