@@ -19,7 +19,7 @@ from userbase import User, getuser, finduser, userexist, authuser, listusers
 from session import getsession, logger
 from fileutils import abspath, fopen, ropen
 from output import echo, oflush, delay
-from input import getch, getpos, readline, readlineevent
+from input import getch, getpos, readline, readlineevent, LineEditor, ScrollingEditor
 from ansiwin import AnsiWindow
 from editor import HorizEditor
 from leftright import Selector
@@ -28,6 +28,8 @@ from pager import ParaClass
 from sauce import SAUCE
 
 __all__ = [
+    'LineEditor',
+    'ScrollingEditor',
     'ConnectionTimeout',
     'Door',
     'from_cp437',
