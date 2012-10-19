@@ -28,7 +28,6 @@ def main ():
     Command line arguments to engine.py:
       --config= location of alternate configuration file
       --logger= location of alternate logging.ini file
-      --verbose enables DEBUG logging .
     """
     #pylint: disable=R0914
     #        Too many local variables (19/15)
