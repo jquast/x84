@@ -56,7 +56,7 @@ def main(recordonly=False):
                 term.normal, term.bold_red, term.normal,
                 term.bold_red, term.normal, term.bold_white,
                 term.normal)
-        p.title (footer, 'bottom')
+        p.footer (footer)
         p.update (data)
         p.interactive = True
         return p
@@ -67,7 +67,7 @@ def main(recordonly=False):
     #  return
 
     pager = refresh_highdef()
-    while pager.exit is False:
+    while pager.quit is False:
         event, data = readevent(('input', 'refresh', 'login'), timeout=None)
         if event in ['refresh', 'login']:
             # in the event of a window refresh (or screen resize),
