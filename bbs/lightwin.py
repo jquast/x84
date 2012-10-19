@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger()
 
 NETHACK_KEYSET = { 'home': [u'y', ], 'end': [u'n', ], 'pgup': [u'h', ],
-'pgdown': [u'l', ], 'up': [u'k', ], 'down': [u'j', ], 'quit': [u'q', ], }
+'pgdown': [u'l', ], 'up': [u'k', ], 'down': [u'j', ], 'exit': [u'q', ], }
 
 class LightClass (AnsiWindow):
     """
@@ -119,7 +119,7 @@ class LightClass (AnsiWindow):
             self.keyset['down'].append (
                 term.KEY_DOWN)
         if u'' != term.KEY_EXIT:
-            self.keyset['quit'].append (
+            self.keyset['exit'].append (
                 term.KEY_EXIT)
 
     def process_keystroke(self, key):
@@ -139,7 +139,7 @@ class LightClass (AnsiWindow):
             self._up ()
         elif key in self.keyset['down']:
             self._down ()
-        elif key in self.keyset['quit']:
+        elif key in self.keyset['exit']:
             self._quit = True
 
     @property
