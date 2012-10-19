@@ -78,8 +78,10 @@ def _loop(telnet_server):
     #         Too many branches (15/12)
     import terminal
     import db
+    import bbs.ini
 
     logger.info ('listening %s/tcp', telnet_server.port)
+    client_timeout = int(bbs.ini.cfg.get('session', 'timeout', '1984'))
 
     # main event loop
     while True:
@@ -95,6 +97,12 @@ def _loop(telnet_server):
                 lock.release()
                 inp = client.get_input()
                 pipe.send (('input', inp))
+
+            # kick off idle users
+            if client.idle() > client_timeout:
+                logger.info ('%s timeout.', client.addrport())
+                client.deactive ()
+                continue
 
             if lock.acquire(False):
                 # process bbs session i/o
