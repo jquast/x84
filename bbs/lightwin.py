@@ -2,14 +2,14 @@
 lightwin package for x/84 BBS, http://github.com/jquast/x84
 """
 
-from bbs.ansiwin import AnsiWindow
+import bbs.ansiwin
 import logging
 logger = logging.getLogger()
 
 NETHACK_KEYSET = { 'home': [u'y', ], 'end': [u'n', ], 'pgup': [u'h', ],
 'pgdown': [u'l', ], 'up': [u'k', ], 'down': [u'j', ], 'exit': [u'q', ], }
 
-class LightClass (AnsiWindow):
+class Lightbar (bbs.ansiwin.AnsiWindow):
     """
     This Windowing class offers a classic 'lightbar' interface.
 
