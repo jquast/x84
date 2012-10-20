@@ -132,7 +132,7 @@ def readevent(event='input', timeout=None):
     """
     Poll for Session event.
     """
-    return getsession().read_event((event,), timeout)
+    return getsession().read_event((event,), timeout)[1]
 
 def sleep (seconds):
     """
@@ -154,8 +154,7 @@ def flushevents(events = ['input'], timeout = -1):
     return [flushevent(e, timeout) for e in events]
 
 
-def showfile (filename, bps=0, pause=0.1, cleansauce=True,
-        file_encoding='cp437'):
+def showfile (filename, cleansauce=True, file_encoding='cp437'):
     """
     Display a file to the user. This is different from a echo(open().read()) in
     several ways:
@@ -178,15 +177,4 @@ def showfile (filename, bps=0, pause=0.1, cleansauce=True,
     else:
         data = data.decode(file_encoding)
     if 0 == bps:
-        echo (chompn(data))
-        echo (getterminal().normal)
-        return
-
-    # display at a timed speed; re-expereince the pace of 9600bps ...
-    cpp = int((float(bps)/8) *pause)
-    for num, char in enumerate(data):
-        if 0 == (num % cpp):
-            getsession().read_event(events=['input'], timeout=pause)
-        echo (char)
-
-
+        return chompn(data) + getterminal().normal
