@@ -22,9 +22,11 @@ class DBProxy(object):
         from bbs.session import getsession
         event = 'db=%s' % (self.schema,)
         getsession().send_event (event, (method, args))
+        event, data = getsession().read_event (events=(event,))
+        assert (None, 'StartIteration') == data
         while True:
             event, data = getsession().read_event (events=(event,))
-            if data is StopIteration:
+            if data == (None, StopIteration):
                 raise StopIteration()
             yield data
 
