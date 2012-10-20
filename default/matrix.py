@@ -62,7 +62,7 @@ def main ():
                 Door (uname, args=('-a',)).run()
                 break
         echo (u'\r\n')
-        showfile('art/1984.asc')
+        echo (showfile('art/1984.asc'))
         echo (u'\r\n')
         if allow_anonymous:
             echo (anon_allowed_msg)
