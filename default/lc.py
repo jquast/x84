@@ -42,15 +42,15 @@ def main(record_only=False):
         padd_origin = ini.cfg.getint('nua','max_origin') +1
         padd_timeago = 12
         padd_ncalls = 13
-        for (timeago, handle) in lc_inorder:
+        for (lcall, handle) in lc_inorder:
             user = getuser(handle)
             rstr += (handle.ljust(padd_handle) +
                     user.location.ljust(padd_origin) +
-                    ('%s ago' % (timeago,)).rjust (padd_timeago) +
+                    ('%s ago' % (timeago(lcall),)).rjust (padd_timeago) +
                     ('   Calls: %s' % (user.calls,)).ljust (padd_ncalls))
         return rstr
 
-    def get_pager():
+    def get_pager(lc):
         pager = Pager(height=min(term.height - 20, 4), width=67,
                 xloc=5, yloc=14)
         pager.xpadding = 2
@@ -78,20 +78,20 @@ def main(record_only=False):
         return rstr
 
     last_callers = lc_retrieve ()
+    logger.info (last_callers)
     dirty = True
     while True:
         if (session.env.get('TERM') == 'unknown' or term.number_of_colors == 0
                 or term.height < 20 or term.width < 70):
             return dummy_pager(last_callers)
         if None != readevent('refresh', timeout=0):
-            pager = get_pager()
             dirty = True
             continue
         if dirty:
-            pager = get_pager()
+            pager = get_pager(last_callers)
             echo (redraw(pager))
             dirty = False
         inp = getch()
         echo (pager.process_keystroke (inp))
-        if pager.quit == False:
+        if pager.quit == True:
             break
