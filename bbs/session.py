@@ -447,7 +447,10 @@ class Session(object):
         logger.debug ('scripting.load(%s, %s)', self.cwd, self.script_name,)
         script = scripting.load(self.cwd, self.script_name)
         for idx in bbs.__all__:
-            setattr(script, idx, getattr(bbs, idx))
+            try:
+                setattr(script, idx, getattr(bbs, idx))
+            except AttributeError, err:
+                logger.error (err)
         if not hasattr(script, 'main'):
             raise exception.ScriptError ("%s: main() not found." %
                     (self.script_name,))
