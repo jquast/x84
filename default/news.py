@@ -19,9 +19,8 @@ def main():
         """
         flushevent ('refresh')
         art = fopen('art/news.asc').readlines()
-        art_width = maxanswidth(art)
+        art_width = max([len(Ansi(line)) for line in art])
         echo (term.move (0,0) + term.clear + '\r\n\r\n')
-
         if expert:
             if term.width > art_width +2:
                 echo ('\r\n'.join (art,))
@@ -31,14 +30,10 @@ def main():
 
         # initialize and display pager border
         align_x = min(1, (term.width/2) -(art_width/2))+4
-        p= ParaClass(h=term.height -len(art) -4,
-                     w=art_width +4,
-                     y=len(art)+3,
-                     x=align_x,
-                     xpad=2, ypad=1)
-        p.interactive = True
-        p.partial = True
-        p.highlight ()
+        p= Pager(height=term.height -len(art) -4, width=art_width +4,
+                yloc=len(art)+3, xloc=align_x)
+        p.padding = 2
+        p.ypadding = 1
 
         # overlay ascii art
         for y, line_txt in enumerate(art):
@@ -53,13 +48,13 @@ def main():
             echo (line_txt.lstrip() + '\r\n')
 
         # now fill pager window with content & refresh
-        p.update (text, refresh=True)
+        echo (p.update (text))
         echo (term.move (0,0))
         echo ('%dx%d' % (term.width, term.height,))
         return p
 
     try:
-        news_content = open(NEWS_PATH).readlines()
+        news_content = '\n'.join(open(NEWS_PATH).readlines())
     except IOError:
         news_content = '%s not found -- no news :)\n' \
             % (abspath(NEWS_PATH,))
@@ -69,7 +64,7 @@ def main():
     t = 0
     while 0 != len(news_content):
         t -= time.time()
-        event, data = readevent(('refresh', 'input',), 0.1)
+        event, data = readevents (('refresh', 'input',), 0.1)
         t += time.time()
         if (None, None) == (event, data):
             if t > TIMEOUT:
@@ -98,4 +93,4 @@ def main():
                 if data in (term.KEY_DOWN, term.KEY_ENTER):
                     news_content = news_content[1:]
             else:
-                pager.run (data)
+                echo (pager.process_keystroke (data))
