@@ -182,7 +182,7 @@ class AnsiWindow(object):
         """
         #pylint: disable=R0912
         #        Too many branches (17/12)
-        ret = self.colors.get('border', u'')
+        rstr = self.colors.get('border', u'')
         thoriz = self.glyphs.get('top-horiz', u'') * (self.width - 2)
         bhoriz = self.glyphs.get('bot-horiz', u'') * (self.width - 2)
         topright = self.glyphs.get('top-right', u'')
@@ -192,51 +192,51 @@ class AnsiWindow(object):
             for col in range (0, self.width):
                 # left to right
                 if (col == 0) or (col == self.width - 1):
-                    ret += self.pos(col, row)
+                    rstr += self.pos(col, row)
                     if (row == 0) and (col == 0):
                         # top left
-                        ret += self.glyphs.get('top-left', u'')
+                        rstr += self.glyphs.get('top-left', u'')
                     elif (row == self.height - 1) and (col == 0):
                         # bottom left
-                        ret += self.glyphs.get('bot-left', u'')
+                        rstr += self.glyphs.get('bot-left', u'')
                     elif (row == 0):
                         # top right
-                        ret += self.glyphs.get('top-right', u'')
+                        rstr += self.glyphs.get('top-right', u'')
                     elif (row == self.height - 1):
                         # bottom right
-                        ret += self.glyphs.get('bot-right', u'')
+                        rstr += self.glyphs.get('bot-right', u'')
                     elif col == 0:
                         # left vertical line
-                        ret += self.glyphs.get('left-vert', u'')
+                        rstr += self.glyphs.get('left-vert', u'')
                     elif col == self.width - 1:
                         # right vertical line
-                        ret += self.glyphs.get('right-vert', u'')
+                        rstr += self.glyphs.get('right-vert', u'')
                 elif (row == 0):
                     # top row (column 1)
                     if thoriz == u'':
                         if topright != u'':
                             # prepare for top-right, (horiz skipped)
-                            ret += self.pos(self.width -1, row)
+                            rstr += self.pos(self.width -1, row)
                     else:
                         # horizontal line
-                        ret += thoriz
+                        rstr += thoriz
                     # top-right,
-                    ret += topright
+                    rstr += topright
                     break
                 elif (row == self.height - 1):
                     # bottom row (column 1)
                     if bhoriz == u'':
                         if botright != u'':
                             # prepare for bot-right, (horiz skipped)
-                            ret += self.pos(self.width -1, row)
+                            rstr += self.pos(self.width -1, row)
                     else:
                         # horizontal line
-                        ret += bhoriz
+                        rstr += bhoriz
                     # top-right,
-                    ret += botright
+                    rstr += botright
                     break
-        ret += self.colors.get('border', u'')
-        return ret
+        rstr += self.colors.get('border', u'')
+        return rstr
 
     def erase(self):
         """
@@ -249,7 +249,7 @@ class AnsiWindow(object):
         """
         Erase only window contents, border remains.
         """
-        ret = self.pos(1, 1)
-        ret += u''.join([self.pos(xloc=1, yloc=y) + self.glyphs('erase', u'')
+        rstr = self.pos(1, 1)
+        rstr += u''.join([self.pos(xloc=1, yloc=y) + self.glyphs('erase', u'')
             for y in range(self.height -2)])
-        return ret
+        return rstr
