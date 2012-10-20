@@ -3,7 +3,7 @@ ansiwin package for x/84 BBS http://github.com/jquast/x84
 """
 from bbs.cp437 import CP437TABLE
 from bbs.session import getsession
-from bbs.strutils import ansilen
+from bbs.output import Ansi
 
 GLYPHSETS = { 'unknown':
         { 'top-left': u'+',
@@ -161,7 +161,7 @@ class AnsiWindow(object):
         Returns sequence that positions and displays unicode sequence
         'ansi_text' at the title location of the window.
         """
-        xloc = self.width / 2 - (min(ansilen(ansi_text) / 2, self.width / 2))
+        xloc = self.width / 2 - (min(len(Ansi(ansi_text)) / 2, self.width / 2))
         return self.pos(xloc=xloc, yloc=0) + ansi_text
 
     def footer(self, ansi_text):
@@ -169,7 +169,7 @@ class AnsiWindow(object):
         Returns sequence that positions and displays unicode sequence
         'ansi_text' at the bottom edge of the window.
         """
-        xloc = self.width / 2 - (min(ansilen(ansi_text) / 2, self.width / 2))
+        xloc = self.width / 2 - (min(len(Ansi(ansi_text)) / 2, self.width / 2))
         return self.pos(xloc=xloc, yloc=self.height) + ansi_text
 
 
