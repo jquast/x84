@@ -1,503 +1,531 @@
 """
-Pager class for X/84 BBS, http://1984.ws
-$Id: pager.py,v 1.4 2010/01/06 19:45:52 dingo Exp $
-
-This is used to display data in a scrollable AnsiWindow region. It handles
-newline, word, and hard character breaks.
-
+Pager class for x/84, http://github.com/jquast/x84/
 """
-__author__ = "Jeffrey Quast <dingo@1984.ws>"
-__copyright__ = "Copyright (c) 2006, 2007, 2009 Jeffrey Quast <dingo@1984.ws>"
-__license__ = "ISC"
+import textwrap
 
-import curses
-from input import getch
-from output import echo
-from strutils import ansilen, chkseq, seqc
-#from ansi import color
-from ansiwin import AnsiWindow
+import bbs.output
+import bbs.ansiwin
 
-class ParaClass(AnsiWindow):
-    # represents the visible width and height, which may be smaller than the
-    # AnsiWindow.w and AnsiWindow.h due to xpad and ypad respectively
-    visibleWidth, visibleHeight = 0, 0
+NETHACK_KEYSET = {
+'home': [u'y', ],
+'end': [u'n', ],
+'pgup': [u'h', u'K'],
+'pgdown': [u'l', u'J'],
+'up': [u'k', ],
+'down': [u'j', ],
+'exit': [u'q', u'Q', unichr(3), unichr(27)],
+}
 
-    # padd content buffer column or rows, by xpad or ypad resptively
-    xpad, ypad = 0, 0
+class Pager(bbs.ansiwin.AnsiWindow):
 
-    # represents the row in the content buffer displayed at the top of the window
-    top = 0
+    _xpadding = 0
+    _ypadding = 0
+    _col = 0
+    _row = 0
+    _position = 0
+    _position_last = 0
+    _moved = False
+    _quit = False
+    content = list()
+    keyset = dict
 
-    # used to check if movement occured, requiring refresh
-    lastTop = 0
+    @property
+    def moved(self):
+        return self._position != self._position_last
 
-    # col and row represent the x and y cursor position
-    col, row = 0, 0
-
-    # when digits are entered, they are queued and passed as an argument
-    # to some movements, such as 10G for 'goto line #10'
-    numAction = -1
-
-    # default action keymap, each action contains a list of
-    # keys that trigger that action.
-    KMAP = { \
-      'refresh': ['\014'],
-      'goto':    ['G'],
-      'gotopct': ['%'],
-      'exit':    [curses.KEY_EXIT, 'q', 'Q'],
-      'up':      [curses.KEY_UP, 'k'],
-      'down':    [curses.KEY_DOWN, 'j'],
-      'end':     [curses.KEY_END, 'L'],
-      'home':    [curses.KEY_HOME, 'H'],
-      'pgup':    [curses.KEY_PPAGE, curses.KEY_LEFT, 'h', 'K', 'b'],
-      'pgdown':  [curses.KEY_NPAGE, curses.KEY_RIGHT, 'l', 'J', ' ', 'f'] \
-    }
-
-    debug = False
-
-    def __init__(self, h, w, y, x, xpad=0, ypad=0):
-        AnsiWindow.__init__ (self, h, w, y, x)
-        self.content = []
-        self.xpad, self.ypad = xpad, ypad
-        self.adjheight(h) # calculate self.visibleHeight
-        self.adjwidth(w)  # calculate self.visibleWidth
-
-    def changeRow(self, data, row=-1):
-        """ Replace row.
-            @data: Data that replaces
-            @row: Target row to replace with data.
+    @property
+    def quit(self):
         """
-        if row == -1:
-            row = self.row
-        while self.top +row >= len(self.content):
-            self.content.append ('')
-        self.content[self.top +row] = data
-
-    def adjheight(self, height):
-        """ Adjust the window height and recalculate visibleHeight.
-            @var height: New window height.
+        Returns: True if a terminating or quit character was handled by
+        process_keystroke(), such as the escape key, or 'q' by default.
         """
-        self.h = height
-        self.visibleHeight = self.h -(self.ypad *2)
+        return self._quit
 
-    def adjwidth(self, width):
-        """ Adjust the window width and recalculate visibleWidth.
-            @var width: New window width.
+    @property
+    def position_last(self):
         """
-        self.w = width
-        self.visibleWidth = self.w -(self.xpad *2)
+        Previous position before last move
+        """
+        return self._position_last
 
-    def getRow(self, row=-1):
-        """ Retreive row from buffer.
-            @var row: Target row. Default of -1 returns active row.
-            @return: String of characters at target row.
+    @property
+    def position(self):
         """
-        if row == -1:
-            row = self.row
-        try:
-            return self.content[self.top + row]
-        except:
-            raise ValueError, "Value out of range, top:%s, row:%s" % (self.top, row)
+        Returns the row in the content buffer displayed at top of window.
+        """
+        return self._position
 
-    def writeString(self, data, col=-1, row=-1):
-        """ Echo string to pager window.
-            @var data: String
-            @var col: Column. Default of -1 is active column.
-            @var row: Row. Default of -1 is active row.
-        """
-        if row == -1:
-            row = self.row
-        if col == -1:
-            col = self.col
-        echo (self.pos(self.xpad +col, self.ypad +row) +data)
+    @position.setter
+    def position(self, pos):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self._position_last = self.position
+        self._position = pos
+        if self.position < 0:
+            self.position = 0
+        bottom = max(0,len(self.content) - len(self._visible_height))
+        if self.position > bottom:
+           self.position = bottom
 
-    def add(self, data='', refresh=True, scrollToBottom=True):
-        """ Lines wrap to new row at newlines, or word
-            breaks at margin. If no spaces occur, a hard wrap occurs at margin.
-            @var data: New buffer content as single string, containing newlines for row breaks.
-            @var refresh: Set to False to disable drawing when complete
-            @var scrollToBottom: Set to True to scroll to bottom after refresh
+    @property
+    def _visible_width(self):
         """
-        saveTop = self.top
-        self.top = 0
+        Visible width of lightbar after accounting for horizontal padding.
+        """
+        return self.width - (self.xpadding * 2)
+
+    @property
+    def _visible_height(self):
+        """
+        Visible height of lightbar after accounting for vertical padding.
+        """
+        return self.height - (self.ypadding * 2)
+
+    @property
+    def xpadding(self):
+        """
+        Horizontal padding of window border
+        """
+        return self._xpadding
+
+    @xpadding.setter
+    def xpadding(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self._xpadding = value
+
+    @property
+    def ypadding(self):
+        """
+        Horizontal padding of window border
+        """
+        return self._ypadding
+
+    @ypadding.setter
+    def ypadding(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self._ypadding = value
+
+
+    def init_keystrokes(self):
+        """
+        This initializer sets glyphs and colors appropriate for a "theme",
+        override or inherit this method to create a common color and graphic
+        set.
+        """
+        from bbs.session import getsession
+        self.keyset = NETHACK_KEYSET
+        term = getsession().terminal
+        if u'' != term.KEY_HOME:
+            self.keyset['home'].append (term.KEY_HOME)
+        if u'' != term.KEY_END:
+            self.keyset['end'].append (term.KEY_END)
+        if u'' != term.KEY_PPAGE:
+            self.keyset['pageup'].append (term.KEY_PPAGE)
+        if u'' != term.KEY_NPAGE:
+            self.keyset['pagedown'].append (term.KEY_NPAGE)
+        if u'' != term.KEY_UP:
+            self.keyset['up'].append (term.KEY_KEY_UP)
+        if u'' != term.KEY_DOWN:
+            self.keyset['down'].append (term.KEY_DOWN)
+        if u'' != term.KEY_EXIT:
+            self.keyset['exit'].append (term.KEY_EXIT)
+
+    def process_keystroke(self, keystroke):
+        """
+        Process the keystroke received by run method and return terminal
+        sequence suitable for refreshing when that keystroke modifies the
+        window.
+        """
+        if keystroke in self.keyset['refresh']:
+            return self.refresh ()
+        elif keystroke in self.keyset['up']:
+            return self._up ()
+        elif keystroke in self.keyset['down']:
+            return self._down ()
+        elif keystroke in self.keyset['home']:
+            return self._home ()
+        elif keystroke in self.keyset['end']:
+            return self._end ()
+        elif keystroke in self.keyset['pgup']:
+            return self._pgup ()
+        elif keystroke in self.keyset['pgdown']:
+            return self._pgdown ()
+        elif keystroke in self.keyset['exit']:
+            self._quit = True
+            return u''
+        return u''
+
+    def _home(self):
+        """
+        Scroll to top.
+        """
+        self.position = 0
+        if self.moved:
+            return self.refresh ()
+        return u''
+
+    def _end(self, silent=False):
+        """
+        Scroll to bottom.
+        """
+        self.position = len(self.content) - self._visible_height
+        if self.moved:
+            return self.refresh ()
+        return u''
+
+    def _pgup(self, num=1):
+        """
+        Scroll up ``num`` pages.
+        """
+        self.position -= (num * (self._visible_height))
+        return self.refresh() if self.moved else u''
+
+    def _pgdown(self, num=1):
+        """
+        Scroll down ``num`` pages.
+        """
+        self.position += (num * (self._visible_height))
+        return self.refresh() if self.moved else u''
+
+    def _down(self, num=1):
+        """
+        Scroll down ``num`` rows.
+        """
+        self.position -= num
+        return self.refresh() if self.moved == True else u''
+
+    def _up(self, num=1):
+        """
+        Scroll up ``num`` rows.
+        """
+        self.position += num
+        return self.refresh() if self.moved == True else u''
+
+    def refresh(self, start_row=0):
+        """
+        Return unicode string suitable for refreshing pager window, starting at
+        row ``start_row``.
+        """
+        term = bbs.session.getsession().terminal
+        rstr = u''
+        row = 0
+        visc = self.content[self.position:self.position + self._visible_height]
+        for row, line in enumerate(visc):
+            if row < start_row:
+                continue
+            rstr += self.pos (row, self.xpadding)
+            rstr += line
+        while row < self._visible_height -1:
+            # clear to end of window
+            row += 1
+            rstr += self.pos (row, self.xpadding)
+            rstr += u' ' * self._visible_width
+        rstr += term.normal
+        return rstr
+
+    def update(self, unibytes):
+        """
+        Update content buffer with new unicode bytes. If unichr(27) (escape) is
+        found in unibytes, it is processed according as ansi art.
+        """
+        if unichr(27) in unibytes:
+            self._update_ansi (unibytes)
+        else:
+            # standard ascii uses the python 'textwrap' module :D
+            self.content = textwrap.wrap(unibytes, self._visible_width)
+        return self.refresh()
+
+    def _update_ansi(self, unibytes=u''):
+        """
+        Update content buffer with new ansi art.
+        """
+        save_pos = self.position
+        self.position = 0
         row = len(self.content)
-        remaining = ''
-
+        remaining = u''
         # replace all of the ansi.right(n) sequences with
-        # erase to prevent 'bleeding' when scrolling
-        data = seqc(data, ch=self.glyphs['erase'])
+        # ' ' to prevent 'bleeding' over 'ghost' glyphs when
+        # scrolling (at the cost of some extra bytes).
+        unibytes = bbs.output.Ansi(unibytes).seq_fill()
 
-        while data.strip() or remaining.strip():
-            nlset = [(x, z) for x, z in [(data.find(seq), seq) for seq in ['\r\n','\n']] if x != -1]
-            if not nlset:
-                nlpos, nlseq = -1, ''
+        # my own, ansi-safe textwrap ..
+        while unibytes.strip() or remaining.strip():
+            nlset = [(x, z) for x, z in [(unibytes.find(seq), seq) for seq in
+                ['\r\n','\n']] if x != -1]
+            if 0 == len(nlset):
+                nlp, nlseq = -1, u''
             else:
-                nlpos, nlseq = min(nlset)
-            newline = nlpos != -1
-            if newline and ansilen(data[:nlpos], max=self.visibleWidth+1) <= self.visibleWidth:
-                remaining = data[nlpos+len(nlseq):] +remaining
-                data = data[:nlpos]
+                nlp, nlseq = min(nlset)
+            newline = nlp!= -1
+            if (newline and max(self._visible_width + 1,
+                len(bbs.output.Ansi(unibytes[:nlp]))) <= self._visible_width):
+                remaining = unibytes[nlp + len(nlseq):] + remaining
+                unibytes = unibytes[:nlp]
             else:
                 newline = False
-            if newline or ansilen(data, max=self.visibleWidth+1) <= self.visibleWidth:
-                # write data to content  buffer
-                self.changeRow(data, row)
-                data = remaining
-                remaining = ''
+            if (newline or max(self._visible_width + 1,
+                len(bbs.output.Ansi(unibytes))) <= self._visible_width):
+                # write unibytes to content  buffer
+                while row >= len(self.content):
+                    self.content.append (u'')
+                self.content[row] = unibytes
+                unibytes = remaining
+                remaining = u''
                 row += 1
                 continue
-
-            wordbreak = data[1:].find(' ') != -1
-            pos, nextSeq, c = 0, 0, 0
+            wordbreak = unibytes[1:].find(' ') != -1
+            pos = 0
+            nxt = 0
+            col = 0
             while True:
                 if wordbreak:
                     # break at nearest word to margin
-                    npos = data[pos+1:].find(' ')
+                    npos = unibytes[pos+1:].find(' ')
                     if npos == -1:
                         break
-                    if ansilen(data[:pos +npos +1]) >= self.visibleWidth-1:
+                    if (len(bbs.output.Ansi(unibytes[:pos + npos + 1]))
+                            >= self._visible_width-1):
                         pos += 1 # forward past ' '
                         break
                     pos += npos +1
                 else:
                     # break on margin
-                    if nextSeq <= pos:
-                        nextSeq = pos +chkseq(data[pos:])
-                    if nextSeq <= pos:
-                        c += 1
-                        if c == self.visibleWidth -1:
+                    if nxt <= pos:
+                        nxt = pos + bbs.output.Ansi(unibytes[pos:]).seqlen()
+                    if nxt <= pos:
+                        col += 1
+                        if col == self._visible_width -1:
                             break
                     pos += 1
-            remaining = data[pos:] + remaining
-            data = data[:pos]
-        self.top = saveTop
-        if refresh:
-            if scrollToBottom:
-                self.end (silent=True)
-            self.refresh ()
+            remaining = unibytes[pos:] + remaining
+            unibytes = unibytes[:pos]
+        self.position = save_pos
+        return self.refresh ()
 
-    def update(self, data='', refresh=True, scrollToBottom=False):
-        """ Update content buffer.
-            @var data: New buffer content as single string, containing newlines for row breaks.
-            @var refresh: Set to False to disable drawing when complete
-            @var scrollToBottom: Set to True to scroll to bottom after refresh
-        """
-        self.adjscroll (0)
-        self.row, self.top = 0, 0
-        self.content = []
-        self.add (data, refresh, scrollToBottom)
+#    def update_row(self, unibytes, row=None):
+#        """
+#        Replace current row, or specified by index ``row``.
+#        """
+#        if row is None:
+#            row = self._row
+#        while self.position + row >= len(self.content):
+#            self.content.append (u'')
+#        self.content[self.position + row] = unibytes
+#
+#    def writeString(self, data, col=-1, row=-1):
+#        """ Echo string to pager window.
+#            @var data: String
+#            @var col: Column. Default of -1 is active column.
+#            @var row: Row. Default of -1 is active row.
+#        """
+#        if row == -1:
+#            row = self._row
+#        if col == -1:
+#            col = self._col
+#        echo (self.pos(self.xpadding +col, self.ypadding +row) +data)
+#
+#
+#    def getRow(self, row=-1):
+#        """ Retreive row from buffer.
+#            @var row: Target row. Default of -1 returns active row.
+#            @return: String of characters at target row.
+#        """
+#        if row == -1:
+#            row = self._row
+#        try:
+#            return self.content[self.position + row]
+#        except:
+#            raise ValueError, "Value out of range, top:%s, row:%s" % (self.position, row)
+#
 
-    def drawRow(self, row=-1):
-        """ Draw visual row in buffer
-            @var: Draw this row. Default of -1 draws current row.
-        """
-        if row == -1:
-            row = self.row
-        dataline = self.getRow(row)
-        self.writeString(dataline
-            +self.glyphs['erase']*(self.visibleWidth-ansilen(dataline)), 0, row)
+#    def update(self, data=u'', scrollToBottom=False):
+#        """ Update content buffer.
+#            @var data: New buffer content as single string, containing newlines for row breaks.
+#            @var scrollToBottom: Set to True to scroll to bottom after refresh
+#        """
+#        self.position = 0
+#        self._row = 0
+#        self.content = []
+#        return self.add (data, scrollToBottom)
+#
+#    def drawRow(self, row):
+#        """ Draw visual row in buffer
+#            @var: Draw this row. Default of -1 draws current row.
+#        """
+#        dataline = self.content[row]
+#        self.writeString(dataline
+#            +self.glyphs['erase']*(self._visible_width-ansilen(dataline)), 0, row)
+#
+#    def data(self):
+#        """ @return: Data in content buffer as one string, each row joined by newline """
+#        return '\n'.join(self.content)
+#
 
-    def data(self):
-        """ @return: Data in content buffer as one string, each row joined by newline """
-        return '\n'.join(self.content)
-
-    def refresh(self, startRow=0):
-        """ Refresh window.
-            @var startRow: Refresh only from this visible row on
-        """
-        #echo (self.terminal.normal)
-        row = 0
-        for row, line in enumerate(self.content[self.top : self.top +self.visibleHeight]):
-            if row < startRow:
-                continue
-            self.drawRow (row)
-        while row < self.visibleHeight -1:
-            # clear to end of window
-            row += 1
-            self.writeString(self.glyphs['erase']*self.visibleWidth, 0, row)
-        self.lastTop = self.top
-        return True
-
-    def scrollIndicator(self):
-        """ returns one of '', '-', '+', or '+/-' to indicate scroll availability """
-        # XXX for now, only return '+/-'
-        if len(self.content) >self.visibleHeight:
-            return '+/-'
-        return ''
-
-    def adjscroll(self, row):
-        """ Adjust scroll position.
-            @var row: Row number representing position in buffer to display at top of visible window.
-            @return True: if scroll position is changed
-        """
-        self.lastTop = self.top
-        # bounds checking
-        while row < 0:
-            row += 1
-        while row > len(self.content) -1:
-            row -= 1
-        if self.top != row:
-            self.top = row
-            self.row = self.top +self.row
-            return True
-        return False
-
-    def up(self, n=-1):
-        """ Scroll up by row.
-            @var n: Number of rows. Default of -1 moves one row.
-            @return: True if not at top
-        """
-        if n == -1: n=1
-        if self.top > 0 and self.adjscroll(self.top -n):
-            return self.refresh ()
-        self.bell ('cannot scroll up: at beginning')
-        return False
-
-    def down(self, n=-1):
-        """ Scroll down by row.
-            @var n: Number of rows. Default of -1 moves one row.
-            @return: True if not at bottom
-        """
-        if n == -1: n=1
-        if self.top < len(self.content) -self.visibleHeight:
-            self.adjscroll(self.top +n)
-            return self.refresh()
-        return self.bell ('cannot scroll down: at bottom')
-
-    def gotopct(self, n=-1):
-        """ Goto location of buffer by relative percent.
-            @var n: value as percent, ie: 50% == int(50).
-            @return: True if window is scrolled.
-        """
-        if n == -1:
-            return self.bell ('Must specify digit for goto-percent')
-        return self.goto(int((len(self.content)-1)*(float(n)*.01)))
-
-    def goto(self, n=-1):
-        """ Goto line number.
-            @var: Destination line. Default of -1 moves to end.
-            @return: True if window is scrolled.
-        """
-        if n == -1:
-            return self.end ()
-        if n >= 0 and n <= len(self.content)-1:
-            if n > len(self.content) -self.visibleHeight:
-                n = len(self.content) -self.visibleHeight
-            if self.adjscroll (n):
-                return self.refresh ()
-        else:
-            return self.end ()
-        return False
-
-    def home(self, silent=True):
-        """ Scroll to top.
-            @return True if window is scrolled.
-        """
-        if self.top > 0 and self.adjscroll(0):
-            return self.refresh ()
-        return not silent or self.bell ('cannot home: at beginning')
-
-    def end(self, silent=False):
-        """ Scroll to bottom.
-            @return: True if window is scrolled.
-        """
-        if (len(self.content) -self.visibleHeight < 0):
-            self.adjscroll (0)
-            return self.refresh ()
-        elif (self.adjscroll (len(self.content) -self.visibleHeight)):
-            return self.refresh ()
-        if not silent:
-            return self.bell ('cannot end: at bottom')
-        return False
-
-    def pgup(self, n=-1):
-        """ Scroll up by page.
-            @var n: Number of pages. Default of -1 scrolls one page.
-            @return: True if window is scrolled.
-        """
-        if n == -1: n=1
-        if self.top > self.visibleHeight +1 and self.adjscroll(n *(self.top -self.visibleHeight +1)):
-            return self.refresh ()
-        elif self.top > 0 and self.adjscroll (0):
-            return self.refresh ()
-        self.bell ('cannot page up: at beginning')
-        return False
-
-    def pgdown(self, n=-1):
-        """ Scroll down by page.
-            @var n: Number of pages. Default of -1 scrolls one page.
-            @return: True if window is scrolled.
-        """
-        if n == -1: n=1
-        if (self.top < len(self.content) -1 -((self.visibleHeight -1)*2) \
-          and self.adjscroll(n *(self.top +self.visibleHeight -1))):
-            return self.refresh ()
-        elif (self.top < len(self.content) -1 -self.visibleHeight +1 \
-          and self.adjscroll( n*(len(self.content) -1 -self.visibleHeight +1))):
-            return self.refresh ()
-        self.bell ('cannot page down: at bottom')
-        return False
-
-    def fixate(self, mode=0):
-        """ Fixate cursor at current position in window,
-            @var mode: set to -1 for position on last character,
-                       or 0 for after last character.
-            @return: True
-        """
-        echo (self.pos(self.xpad +self.col +mode, self.ypad +self.row))
-        return True
-
-    def adjcursor_x(self, column):
-        """ Adjust position of cursor to value of column.
-            @return: True if position is changed
-        """
-        end = ansilen(self.getRow())
-        if column > end:
-            # out of x range, force cursor to end of line
-            column = end
-        elif column < 0:
-            column = 0
-        if column != self.col:
-            self.col = column
-            return True
-        return False
-
-    def adjcursor_y(self, row):
-        """ Adjust position of cursor to value of row.
-            @return: True if position is changed or window is scrolled.
-        """
-        adjusted = False
-        while row >= self.visibleHeight:
-            row -= 1
-            self.adjscroll (self.top +1)
-            adjusted = True
-        while row < 0:
-            row += 1
-            self.adjscroll (self.top -1)
-            adjusted = True
-        if row != self.row:
-            self.row = row
-            # call adjcursor_x, to ensure we are within bounds
-            self.adjcursor_x (self.col)
-            return True
-        return adjusted
-
-    def cursor_left(self, n=1):
-        """ position cursor one column left.
-            @return: True if not already at left margin.
-        """
-        if self.adjcursor_x (self.col +(n *-1)):
-            return self.fixate ()
-        return self.bell('cannot move left: at left margin')
-
-    def cursor_right(self, n=1):
-        """ position cursor one column right.
-            @return: True if not already at right margin.
-        """
-        if self.adjcursor_x (self.col +n):
-            return self.fixate ()
-        return self.bell('cannot move right: at right margin')
-
-    def cursor_home(self):
-        """ position cursor at far left margin.
-            @return: True if not already at left margin.
-        """
-        if self.adjcursor_x (0):
-            return self.fixate()
-        return self.bell('cannot move home: at left margin')
-
-    def cursor_end(self):
-        """ position cursor at far right margin.
-            @return: True if not already at right margin.
-        """
-        if self.adjcursor_x (ansilen(self.getRow())):
-            return self.fixate()
-        return self.bell('cannot move end: at right margin')
-
-    def cursor_up(self, n=-1):
-        """ position cursor one row up
-            @return: True on success
-        """
-        if n == -1: n=1
-        if self.adjcursor_y (self.row +(n *-1)):
-            self.adjcursor_x (self.col)
-            if self.lastTop != self.top:
-                self.refresh ()
-            return self.fixate ()
-        return self.bell('cannot move up: at top')
-
-    def cursor_down(self, n=-1):
-        """ position cursor one row down
-            @return: True on success
-        """
-        if n == -1: n=1
-        if self.adjcursor_y (self.row +n):
-            self.adjcursor_x (self.col)
-            if self.lastTop != self.top:
-                self.refresh ()
-            return self.fixate ()
-        return self.bell('cannot move down: at bottom')
-
-    def cursor_pgup(self, n=-1):
-        """ position cursor one page up.
-            @return: True on success.
-        """
-        if n == -1: n=1
-        if self.pgup(n) or self.adjcursor_y (0):
-            return self.fixate ()
-        return False
-
-    def cursor_pgdown(self, n=-1):
-        """ position cursor one page down.
-            @return: True on success.
-        """
-        if n == -1: n=1
-        if self.pgdown(n) \
-        or self.adjcursor_y (self.visibleHeight -1):
-            return self.fixate ()
-        return False
-
-    def process_keystroke(self, key):
-        """ Process the keystroke received by run method and take action.
-        """
-        if self.debug and key == '\003':
-            print self.data()
-        if   key in self.KMAP['refresh']: self.refresh ()
-        elif key in self.KMAP['goto']:    self.goto    (self.numAction)
-        elif key in self.KMAP['gotopct']: self.gotopct (self.numAction)
-        elif key in self.KMAP['up']:      self.up      (self.numAction)
-        elif key in self.KMAP['down']:    self.down    (self.numAction)
-        elif key in self.KMAP['home']:    self.home    (silent=False)
-        elif key in self.KMAP['end']:     self.end     (silent=False)
-        elif key in self.KMAP['pgup']:    self.pgup    (self.numAction)
-        elif key in self.KMAP['pgdown']:  self.pgdown  (self.numAction)
-        elif key in self.KMAP['exit']:    self.exit = True
-        else:
-            if self.debug:
-                print 'edit: throwing out key: ' +str(ord(key))
-        # start numAction over
-        self.numAction = -1
-
-    def run(self, key=None, timeout=None):
-        """ The entry point for working with the pager window.
-            @var key:
-              pass in optional keystroke, otherwise it is read from input.
-            @var timeout:
-              return None after that time elapsed, or block indefinitely if unset.
-        """
-        self.timeout, self.exit = False, False
-        while True:
-            if self.lastTop == -1:
-                self.refresh ()
-                self.fixate ()
-            if not key:
-                key = getch (timeout)
-                self.timeout = (not key) # Boolean: True if we timed out
-            self.lastkey = key
-            self.process_keystroke (key)
-            if self.interactive:
-                return key
-            if self.exit:
-                return
-            key = None
-        return
+#
+#    def scrollIndicator(self):
+#        """ returns one of '', '-', '+', or '+/-' to indicate scroll availability """
+#        # XXX for now, only return '+/-'
+#        if len(self.content) >self._visible_height:
+#            return '+/-'
+#        return ''
+#    def fixate(self, mode=0):
+#        """ Fixate cursor at current position in window,
+#            @var mode: set to -1 for position on last character,
+#                       or 0 for after last character.
+#            @return: True
+#        """
+#        echo (self.pos(self.xpadding +self._col +mode, self.ypadding +self._row))
+#        return True
+#
+#    def adjcursor_x(self, column):
+#        """ Adjust position of cursor to value of column.
+#            @return: True if position is changed
+#        """
+#        end = ansilen(self.getRow())
+#        if column > end:
+#            # out of x range, force cursor to end of line
+#            column = end
+#        elif column < 0:
+#            column = 0
+#        if column != self._col:
+#            self._col = column
+#            return True
+#        return False
+#
+#    def adjcursor_y(self, row):
+#        """ Adjust position of cursor to value of row.
+#            @return: True if position is changed or window is scrolled.
+#        """
+#        adjusted = False
+#        while row >= self._visible_height:
+#            row -= 1
+#            self.adjscroll (self.position +1)
+#            adjusted = True
+#        while row < 0:
+#            row += 1
+#            self.adjscroll (self.position -1)
+#            adjusted = True
+#        if row != self._row:
+#            self._row = row
+#            # call adjcursor_x, to ensure we are within bounds
+#            self.adjcursor_x (self._col)
+#            return True
+#        return adjusted
+#
+#    def cursor_left(self, n=1):
+#        """ position cursor one column left.
+#            @return: True if not already at left margin.
+#        """
+#        if self.adjcursor_x (self._col +(n *-1)):
+#            return self.fixate ()
+#        return self.bell('cannot move left: at left margin')
+#
+#    def cursor_right(self, n=1):
+#        """ position cursor one column right.
+#            @return: True if not already at right margin.
+#        """
+#        if self.adjcursor_x (self._col +n):
+#            return self.fixate ()
+#        return self.bell('cannot move right: at right margin')
+#
+#    def cursor_home(self):
+#        """ position cursor at far left margin.
+#            @return: True if not already at left margin.
+#        """
+#        if self.adjcursor_x (0):
+#            return self.fixate()
+#        return self.bell('cannot move home: at left margin')
+#
+#    def cursor_end(self):
+#        """ position cursor at far right margin.
+#            @return: True if not already at right margin.
+#        """
+#        if self.adjcursor_x (ansilen(self.getRow())):
+#            return self.fixate()
+#        return self.bell('cannot move end: at right margin')
+#
+#    def cursor_up(self, n=-1):
+#        """ position cursor one row up
+#            @return: True on success
+#        """
+#        if n == -1: n=1
+#        if self.adjcursor_y (self._row +(n *-1)):
+#            self.adjcursor_x (self._col)
+#            if self.position_last != self.position:
+#                self.refresh ()
+#            return self.fixate ()
+#        return self.bell('cannot move up: at top')
+#
+#    def cursor_down(self, n=-1):
+#        """ position cursor one row down
+#            @return: True on success
+#        """
+#        if n == -1: n=1
+#        if self.adjcursor_y (self._row +n):
+#            self.adjcursor_x (self._col)
+#            if self.position_last != self.position:
+#                self.refresh ()
+#            return self.fixate ()
+#        return self.bell('cannot move down: at bottom')
+#
+#    def cursor_pgup(self, n=-1):
+#        """ position cursor one page up.
+#            @return: True on success.
+#        """
+#        if n == -1: n=1
+#        if self.pgup(n) or self.adjcursor_y (0):
+#            return self.fixate ()
+#        return False
+#
+#    def cursor_pgdown(self, n=-1):
+#        """ position cursor one page down.
+#            @return: True on success.
+#        """
+#        if n == -1: n=1
+#        if self.pgdown(n) \
+#        or self.adjcursor_y (self._visible_height -1):
+#            return self.fixate ()
+#        return False
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+##XXX
+#    def run(self, key=None, timeout=None):
+#        """ The entry point for working with the pager window.
+#            @var key:
+#              pass in optional keystroke, otherwise it is read from input.
+#            @var timeout:
+#              return None after that time elapsed, or block indefinitely if unset.
+#        """
+#        self.timeout, self.exit = False, False
+#        while True:
+#            if self.position_last == -1:
+#                self.refresh ()
+#                self.fixate ()
+#            if not key:
+#                key = getch (timeout)
+#                self.timeout = (not key) # Boolean: True if we timed out
+#            self.lastkey = key
+#            self.process_keystroke (key)
+#            if self.interactive:
+#                return key
+#            if self.exit:
+#                return
+#            key = None
+#        return
+#
+#
+#
