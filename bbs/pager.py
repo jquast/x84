@@ -14,7 +14,7 @@ NETHACK_KEYSET = {
         'pgdown': [u'l', u'J'],
         'up': [u'k', ],
         'down': [u'j', ],
-        'exit': [u'q', u'Q', unichr(3)],
+        'exit': [u'q', u'Q'],
         }
 
 class Pager(bbs.ansiwin.AnsiWindow):
@@ -67,7 +67,7 @@ class Pager(bbs.ansiwin.AnsiWindow):
         self._position = pos
         if self.position < 0:
             self.position = 0
-        bottom = max(0,len(self.content) - len(self._visible_height))
+        bottom = max(0, len(self.content) - self._visible_height)
         if self.position > bottom:
            self.position = bottom
 
