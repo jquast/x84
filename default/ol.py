@@ -170,8 +170,9 @@ def main ():
                       + term.normal + '\r\n\r\npress any key...')
                 getch ()
             art = fopen('art/wall.ans').readlines()
-            mw = min(maxanswidth(art), term.width -6)
-            x = max(3, (term.width/2) - (maxanswidth(art)/2) -2)
+            mw = min(max([len(Ansi(line)) for line in art]), term.width - 6)
+            x = max(3, (term.width / 2) - (max([len(Ansi(line)) for line in
+                art]) / 2) - 2)
             yn = YesNoClass([x+mw-17, term.height-4])
             yn.interactive = True
             yn.highlight = term.green_reverse
