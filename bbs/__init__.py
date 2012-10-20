@@ -7,40 +7,36 @@ scripts. It is as if the statement:
 
 Is implied for all session scripts.
 """
-import msgbase # FIX, work on msging...
-import ini
-from exception import Disconnect, Goto, ConnectionTimeout
-from strutils import chompn, asctime, timeago, ansilen
-from strutils import chkseq, seqp, seqc, maxanswidth
-from cp437 import from_cp437
-from door import Door
-from dbproxy import DBProxy
-from userbase import User, getuser, finduser, userexist, authuser, listusers
-from session import getsession, logger
-from fileutils import abspath, fopen, ropen
-from output import echo, oflush, delay
-from input import getch, getpos, readline, readlineevent, LineEditor, ScrollingEditor
-from ansiwin import AnsiWindow
-from leftright import Selector
-from lightwin import LightClass
-from pager import ParaClass
-from sauce import SAUCE
+import msgbase
+import bbs.ini
+ini = bbs.ini
+from bbs.exception import Disconnect, Goto, ConnectionTimeout
+from bbs.cp437 import from_cp437
+from bbs.door import Door
+from bbs.dbproxy import DBProxy
+from bbs.userbase import User, getuser, finduser
+from bbs.userbase import userexist, authuser, listusers
+from bbs.session import getsession, logger
+from bbs.fileutils import abspath, fopen, ropen
+from bbs.leftright import Selector
+from bbs.lightwin import Lightbar
+from bbs.pager import Pager
+from bbs.ansiwin import AnsiWindow
+from bbs.output import echo, timeago, Ansi, chompn
+from bbs.input import getch, getpos, readline, readlineevent
+from bbs.input import LineEditor, ScrollingEditor
+import sauce
+SAUCE = sauce.SAUCE
 
 __all__ = [
+    'Ansi',
     'LineEditor',
     'ScrollingEditor',
     'ConnectionTimeout',
     'Door',
     'from_cp437',
     'logger',
-    'maxanswidth',
-    'chompn',
-    'asctime',
     'timeago',
-    'ansilen',
-    'chkseq',
-    'seqp',
-    'seqc',
     'DBProxy',
     'User',
     'finduser',
@@ -51,8 +47,8 @@ __all__ = [
     'ini',
     'AnsiWindow',
     'Selector',
-    'LightClass',
-    'ParaClass',
+    'Lightbar',
+    'Pager',
     'disconnect',
     'goto',
     'gosub',
@@ -66,8 +62,7 @@ __all__ = [
     'gethandle',
     'getch',
     'getpos',
-    'delay',
-    'oflush',
+    'sleep',
     'echo',
     'abspath',
     'fopen',
@@ -139,6 +134,11 @@ def readevent(event='input', timeout=None):
     """
     return getsession().read_event((event,), timeout)
 
+def sleep (seconds):
+    """
+    Block session for seconds, meanwhile, buffers events
+    """
+    getsession().read_event ((), seconds)
 
 def flushevent(event = 'input', timeout = -1):
     """
@@ -172,13 +172,13 @@ def showfile (filename, bps=0, pause=0.1, cleansauce=True,
       if '*' in filename or '?' in filename \
         else fopen(filename, 'rb')
 
-    data = chompn(SAUCE(fobj).__str__() if cleansauce else fobj.read())
+    data = SAUCE(fobj).__str__() if cleansauce else fobj.read()
     if file_encoding == 'cp437':
         data = from_cp437(data)
     else:
         data = data.decode(file_encoding)
     if 0 == bps:
-        echo (data)
+        echo (chompn(data))
         echo (getterminal().normal)
         return
 
@@ -188,3 +188,5 @@ def showfile (filename, bps=0, pause=0.1, cleansauce=True,
         if 0 == (num % cpp):
             getsession().read_event(events=['input'], timeout=pause)
         echo (char)
+
+
