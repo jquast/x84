@@ -11,7 +11,7 @@ def listusers():
     Return list of user record instances by iterating over all handle keys,
     users without a password are discluded unless allUsers is set to True.
     """
-    return db.values ()
+    return db.itervalues ()
 
 def finduser(handle):
     """Given handle, discover and return matching database key."""
