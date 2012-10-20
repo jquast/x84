@@ -7,17 +7,17 @@ import bbs.output
 import bbs.ansiwin
 
 NETHACK_KEYSET = {
-'home': [u'y', ],
-'end': [u'n', ],
-'pgup': [u'h', u'K'],
-'pgdown': [u'l', u'J'],
-'up': [u'k', ],
-'down': [u'j', ],
-'exit': [u'q', u'Q', unichr(3), unichr(27)],
-}
+        'refresh': [unichr(12), ],
+        'home': [u'y', ],
+        'end': [u'n', ],
+        'pgup': [u'h', u'K'],
+        'pgdown': [u'l', u'J'],
+        'up': [u'k', ],
+        'down': [u'j', ],
+        'exit': [u'q', u'Q', unichr(3)],
+        }
 
 class Pager(bbs.ansiwin.AnsiWindow):
-
     _xpadding = 0
     _ypadding = 0
     _col = 0
@@ -26,8 +26,12 @@ class Pager(bbs.ansiwin.AnsiWindow):
     _position_last = 0
     _moved = False
     _quit = False
-    content = list()
-    keyset = dict
+    content = list ()
+    keyset = dict ()
+
+    def __init__(self, height, width, yloc, xloc):
+        bbs.ansiwin.AnsiWindow.__init__ (self, height, width, yloc, xloc)
+        self.init_keystrokes ()
 
     @property
     def moved(self):
@@ -122,9 +126,9 @@ class Pager(bbs.ansiwin.AnsiWindow):
         if u'' != term.KEY_END:
             self.keyset['end'].append (term.KEY_END)
         if u'' != term.KEY_PPAGE:
-            self.keyset['pageup'].append (term.KEY_PPAGE)
+            self.keyset['pgup'].append (term.KEY_PPAGE)
         if u'' != term.KEY_NPAGE:
-            self.keyset['pagedown'].append (term.KEY_NPAGE)
+            self.keyset['pgdown'].append (term.KEY_NPAGE)
         if u'' != term.KEY_UP:
             self.keyset['up'].append (term.KEY_KEY_UP)
         if u'' != term.KEY_DOWN:
