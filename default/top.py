@@ -21,7 +21,7 @@ def main(login_handle=None):
 
     # ?quick login
     echo (term.move (0, 0) + term.normal + term.clear)
-    echo ('\r\n\r\nQuick login? [yn] ')
+    echo (u'\r\nQuick login? [yn] ')
     while True:
         k = getch()
         if k in ('y', 'Y', 'q'):
