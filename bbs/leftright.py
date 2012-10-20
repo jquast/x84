@@ -15,7 +15,7 @@ VI_KEYSET = { 'refresh': [unichr(12),],
               'left': [u'hj',],
               'right': [u'kl',],
               'enter': [u'\r',],
-              'exit': [unichr(27), u'q'],
+              'exit': [u'q', u'Q', unichr(3)],
               }
 
 
