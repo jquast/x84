@@ -55,6 +55,7 @@ __all__ = [
     'sendevent',
     'broadcastevent',
     'readevent',
+    'readevents',
     'flushevent',
     'flushevents',
     'getsession',
@@ -176,5 +177,4 @@ def showfile (filename, cleansauce=True, file_encoding='cp437'):
         data = from_cp437(data)
     else:
         data = data.decode(file_encoding)
-    if 0 == bps:
-        return chompn(data) + getterminal().normal
+    return chompn(data) + getterminal().normal
