@@ -42,7 +42,7 @@ def main():
             assert False, "Only encodings 'utf8' and 'cp437' supported."
         # clear & display art
         echo (term.move (0,0) + term.normal + term.clear)
-        showfile (artfile)
+        echo (showfile (artfile))
         echo (term.normal + u'\r\n\r\n')
         echo (u'\r\n'.join(textwrap.wrap(enc_prompt, term.width-3)) + u'\r\n')
         echo (sel.refresh ())
