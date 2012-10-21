@@ -169,7 +169,7 @@ def main():
         rstr += buf.update ('\n'.join(content))
         inputbar.colors['border'] = term.bright_black
         rstr += inputbar.border()
-        art = fopen('art/irc-header.asc', 'r').readlines()
+        art = fopen('art/irc', 'r').readlines()
         for y, data in enumerate(art):
             echo (term.move(y, 10) + data)
         rstr += term.normal_cursor
