@@ -90,10 +90,10 @@ class LineEditor(object):
             rstr += self.highlight
             rstr += ' '*self.width
             rstr += '\b'*self.width
-        if self.hidden == False:
-            rstr += self.content
-        else:
+        if self.hidden:
             rstr += self.hidden * len(self.content)
+        else:
+            rstr += self.content
         return rstr
 
     def read(self):
@@ -119,10 +119,10 @@ class LineEditor(object):
                     bbs.output.echo (u'\b \b')
             elif type(inp) is not int and ord(inp) >= 32:
                 self.content += inp
-                if self.hidden == False:
-                    bbs.output.echo (inp)
-                else:
+                if self.hidden:
                     bbs.output.echo (self.hidden)
+                else:
+                    bbs.output.echo (inp)
 
 
 class ScrollingEditor(bbs.ansiwin.AnsiWindow):
