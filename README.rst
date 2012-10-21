@@ -18,11 +18,11 @@ This software requires Python_ 2.6 or 2.7.
 
 2. Create virtualenv for installing 3rd party packages,
 
-``python2.7 /tmp/virtualenv.py ENV27``
+``python2.7 /tmp/virtualenv.py ENV``
 
 3. Activate environment (prompt will change)
 
-``. ENV27/bin/activate``
+``. ENV/bin/activate``
 
 4. Install all third-party modules
 
@@ -34,7 +34,7 @@ Getting Started
 
 1. Activate environment (prompt will change)
 
-``. ENV27/bin/activate``
+``. ENV/bin/activate``
 
 2. Execute bbs engine
 
