@@ -56,8 +56,7 @@ def main():
     while True:
         ch = getch ()
         if ch == term.KEY_ENTER:
-            session.user.set ('charset', session.encoding)
-            session.user.save ()
+            session.user['charset'] = session.encoding
             echo (u"\r\n\r\n'%s' is now your preferred encoding.\r\n"
                     % (session.encoding,))
             getch (1.0)
