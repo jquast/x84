@@ -1,3 +1,5 @@
-newuser.asc - used in nua.py as banner
 1984.asc - used in matrix.py as a banner
+nua.asc - used in nua.py as banner
+lc.asc used in lc.py as banner
+irc.asc used in irc.py as banner
 plant.ans - used in charset.py as demo
