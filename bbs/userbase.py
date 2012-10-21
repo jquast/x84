@@ -32,7 +32,7 @@ def find_user(handle):
 
 class Group(object):
     """
-    A simple group record object with properties 'name', and 'members'.
+    A simple group record object with properties name', and 'members'.
     Use methods 'add' and 'remove' to add and remove users by handle,
     and 'save' to persist to disk (and other bbs sessions).
     """
@@ -158,6 +158,24 @@ class User(object):
         (salt, hashed) = self.password
         return hashed == bcrypt.hashpw(try_pass, salt)
 
+    def __setitem__(self, key, value):
+        #pylint: disable=C0111,
+        #        Missing docstring
+        bbs.dbproxy.DBProxy('userattr')[self.handle][key] = value
+    __setitem__.__doc__ = dict.__setitem__.__doc__
+
+    def __getitem__(self, key):
+        #pylint: disable=C0111,
+        #        Missing docstring
+        return bbs.dbproxy.DBProxy('userattr')[self.handle][key]
+    __getitem__.__doc__ = dict.__getitem__.__doc__
+
+    def get(self, key, default=None):
+        #pylint: disable=C0111,
+        #        Missing docstring
+        return bbs.dbproxy.DBProxy('userattr')[self.handle].get(key, default)
+    get.__doc__ = dict.get.__doc__
+
     @property
     def groups(self):
         """
@@ -188,8 +206,10 @@ class User(object):
         assert (None, None) != self.password, ('password must be set')
         assert self.handle != u'anonymous', ('anonymous user my not be saved.')
         udb = bbs.dbproxy.DBProxy('userbase')
+        adb = bbs.dbproxy.DBProxy('userattr')
         gdb = bbs.dbproxy.DBProxy('groupbase')
         udb.acquire ()
+        adb.acquire ()
         gdb.acquire ()
         if 0 == len(udb) and self.is_sysop is False:
             logger.warn ('%s: First new user becomes sysop.', self.handle)
@@ -197,6 +217,7 @@ class User(object):
         udb[self.handle] = self
         self._apply_groups (gdb)
         udb.release ()
+        adb.release ()
         gdb.release ()
 
     def delete(self):
