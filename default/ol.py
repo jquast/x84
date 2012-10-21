@@ -169,7 +169,7 @@ def main ():
                 echo (term.bold_red + 'Screen size too small to display oneliners' \
                       + term.normal + '\r\n\r\npress any key...')
                 getch ()
-            art = fopen('art/wall.ans').readlines()
+            art = fopen('art/ol.ans').readlines()
             mw = min(max([len(Ansi(line)) for line in art]), term.width - 6)
             x = max(3, (term.width / 2) - (max([len(Ansi(line)) for line in
                 art]) / 2) - 2)
