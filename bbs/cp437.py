@@ -86,7 +86,7 @@ def run():
         sys.stderr.write('%s <file>\n' % (sys.argv[0],))
         sys.exit (1)
     cptext = file(sys.argv[1]).read()
-    print (from_cp437(cptext))
+    sys.stdout.write (from_cp437(cptext).encode('utf8'))
     return 0
 
 if __name__ == '__main__':
