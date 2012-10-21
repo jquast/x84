@@ -18,7 +18,8 @@ try:
 except ImportError:
     class IOUnsupportedOperation(Exception):
         """
-        dummy exception to take of Python 3's ``io.UnsupportedOperation`` in Python 2
+        dummy exception to take of Python 3's ``io.UnsupportedOperation`` in
+        Python 2.
         """
 
 
@@ -83,13 +84,13 @@ class Terminal(object):
             stream = sys.__stdout__
         try:
             stream_descriptor = (stream.fileno() if hasattr(stream, 'fileno')
-                                                 and callable(stream.fileno)
-                                 else None)
+                    and callable(stream.fileno) else None)
         except IOUnsupportedOperation:
             stream_descriptor = None
 
         self.stream = stream
-        self.is_a_tty = stream_descriptor is not None and os.isatty(stream_descriptor)
+        self.is_a_tty = (stream_descriptor is not None
+                and os.isatty(stream_descriptor))
         self._does_styling = ((self.is_a_tty or force_styling) and
                               force_styling is not None)
 
@@ -115,9 +116,10 @@ class Terminal(object):
             # after sucessful setupterm(), a _keymap of keyboard sequences to
             # curses capability names can be constructed, this creates things
             # such as self.KEY_ENTER (..)
-            self._keymap = dict([(curses.tigetstr(cap).decode('utf-8'), keycode) for
-                (keycode,cap) in curses.has_key._capability_names.iteritems()
-                if curses.tigetstr(cap) is not None])
+            self._keymap = dict([(curses.tigetstr(cap).decode('utf-8'),
+                keycode) for (keycode,cap) in
+                curses.has_key._capability_names.iteritems() if
+                curses.tigetstr(cap) is not None])
 
             # various terminal default sequences mappings
             self._keymap.update ([
@@ -223,7 +225,7 @@ class Terminal(object):
         -R``) work. If a stream representing a terminal was passed in, return
         the dimensions of that terminal. If there somehow is no controlling
         terminal, return ``None``. (Thus, you should check that ``is_a_tty`` is
-        true before doing any math on the result.)
+        True before doing any math on the result.)
 
         """
         return self._height_and_width()[0]
@@ -347,7 +349,6 @@ class Terminal(object):
         # access to it.
         colors = curses.tigetnum('colors')
         # Returns -1 if no color support, -2 if no such cap.
-        #self.__dict__['colors'] = ret  # Cache it. It's not changing. (Doesn't work.)
         return colors if colors >= 0 else 0
 
     def _resolve_formatter(self, attr):
@@ -372,7 +373,9 @@ class Terminal(object):
                 return ParametrizingString(self._resolve_capability(attr))
 
     def _resolve_capability(self, atom):
-        """Return a terminal code for a capname or a sugary name, or an empty Unicode.
+        """
+        Return a terminal code for a capname or a sugary name, or an empty
+        Unicode.
 
         The return value is always Unicode, because otherwise it is clumsy
         (especially in Python 3) to concatenate with real (Unicode) strings.
@@ -429,7 +432,9 @@ class Terminal(object):
           return '<unknown %r>' % (value,)
 
     def _resolve_color(self, color):
-        """Resolve a color like red or on_bright_green into a callable capability."""
+        """
+        Resolve a color like red or on_bright_green into a callable capability.
+        """
         # TODO: Does curses automatically exchange red and blue and cyan and
         # yellow when a terminal supports setf/setb rather than setaf/setab?
         # I'll be blasted if I can find any documentation. The following
@@ -466,7 +471,8 @@ def derivative_colors(colors):
                [('on_bright_' + c) for c in colors])
 
 
-COLORS = set(['black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white'])
+COLORS = set(['black', 'red', 'green', 'yellow', 'blue',
+    'magenta', 'cyan', 'white'])
 COLORS.update(derivative_colors(COLORS))
 COMPOUNDABLES = (COLORS |
                  set(['bold', 'underline', 'reverse', 'blink', 'dim', 'italic',
@@ -474,7 +480,10 @@ COMPOUNDABLES = (COLORS |
 
 
 class ParametrizingString(unicode):
-    """A Unicode string which can be called to parametrize it as a terminal capability"""
+    """
+    A Unicode string which can be called to parametrize it as a terminal
+    capability.
+    """
     def __new__(cls, formatting, normal=None):
         """Instantiate.
 
@@ -535,7 +544,9 @@ class FormattingString(unicode):
 
 
 class NullCallableString(unicode):
-    """A dummy class to stand in for ``FormattingString`` and ``ParametrizingString``
+    """
+    A dummy class to stand in for ``FormattingString`` and
+    ``ParametrizingString``.
 
     A callable bytestring that returns an empty Unicode when called with an int
     and the arg otherwise. We use this when there is no tty and so all
