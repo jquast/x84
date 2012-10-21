@@ -51,11 +51,11 @@ def main ():
     bbs.ini.init (cfg_bbsfile, cfg_logfile)
 
     # initialize scripting system path from .ini value
-    bbs.scripting.init (bbs.ini.cfg.get('session', 'scriptpath'))
+    bbs.scripting.init (bbs.ini.CFG.get('session', 'scriptpath'))
 
     # start telnet server
-    addr_tup = (bbs.ini.cfg.get('telnet', 'addr'),
-        int(bbs.ini.cfg.get('telnet', 'port')),)
+    addr_tup = (bbs.CFG.cfg.get('telnet', 'addr'),
+        int(bbs.ini.CFG.get('telnet', 'port')),)
     telnet_server = telnet.TelnetServer (
         address_pair = addr_tup,
         on_connect = terminal.on_connect,
@@ -88,7 +88,7 @@ def _loop(telnet_server):
 
     logger = logging.getLogger()
     logger.info ('listening %s/tcp', telnet_server.port)
-    client_timeout = int(bbs.ini.cfg.get('session', 'timeout', '1984'))
+    client_timeout = int(bbs.ini.CFG.get('session', 'timeout', '1984'))
     locks = dict ()
     # main event loop
     while True:
