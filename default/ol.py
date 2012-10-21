@@ -136,7 +136,7 @@ def main ():
     lock = threading.Lock()
     t = None
     session.activity = 'Reading one-liners'
-    if ini.cfg.has_section('bbs-scene'):
+    if ini.CFG.has_section('bbs-scene'):
         t = FetchUpdates(queue, lock, HISTORY)
         t.start ()
         session.activity = 'Reading bbs-scene 1liners'
