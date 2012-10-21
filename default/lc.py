@@ -26,26 +26,22 @@ def main(record_only=False):
     session.activity = u'Viewing last callers'
 
     def lc_retrieve():
-        # open the database,
-        udb = DBProxy('lastcallers')
-        # always re-calculate the full call log :-) expensive ..
-        for user in listusers():
-            udb[user.handle] = user.lastcall
-        lc_inorder = (reversed(sorted([(v,k)
-                for (k,v) in udb.iteritems()
-                if k is not None and finduser(k) is not None])))
         rstr = u''
-        padd_handle = ini.CFG.getint('nua','max_user') +1
-        padd_origin = ini.CFG.getint('nua','max_origin') +1
-        padd_timeago = 12
+        udb = dict ()
+        for handle in list_users():
+            user = get_user(handle)
+            udb[(user.lastcall, handle)] = (user.calls, user.location)
+        padd_handle = ini.CFG.getint('nua', 'max_user') + 1
+        padd_loc = ini.CFG.getint('nua', 'max_location') + 1
+        padd_lcall = 12
         padd_ncalls = 13
-        for (lcall, handle) in lc_inorder:
-            user = getuser(handle)
-            rstr += (handle.ljust(padd_handle) +
-                    user.location.ljust(padd_origin) +
-                    ('%s ago' % (timeago(lcall),)).rjust (padd_timeago) +
-                    ('   Calls: %s' % (user.calls,)).ljust (padd_ncalls) +
-                    '\n')
+        for ((lcall, handle), (ncalls, location)) in (
+                reversed(sorted(udb.items()))):
+            rstr += ( handle.ljust(padd_handle)
+                    + location.ljust(padd_loc)
+                    + ('%s ago' % (timeago(lcall),)).rjust (padd_lcall)
+                    + ('   Calls: %s' % (ncalls,)).ljust (padd_ncalls)
+                    + '\n')
         return rstr.rstrip()
 
     def get_pager(lc):
@@ -60,7 +56,7 @@ def main(record_only=False):
     def redraw(pager):
         rstr = u''
         rstr += term.move(0, 0) + term.normal + term.clear
-        rstr += showcp437 ('art/lc.asc')
+        rstr += showcp437 ('default/art/lc.asc')
         footer = ('%s-%s (q)uit %s-%s' % (
             term.bold_white, term.normal,
             term.bold_white, term.normal)
