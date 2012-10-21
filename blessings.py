@@ -1,3 +1,8 @@
+"""
+(c) 2012 Erik Rose
+MIT Licensed
+https://github.com/erikrose/blessings
+"""
 import curses.has_key
 import contextlib
 import platform
