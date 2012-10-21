@@ -173,7 +173,7 @@ class Ansi(unicode):
 
     def anspadd(self):
         """
-         S.anspadd() -> integer
+         S.anspadd() --> integer
 
         Returns int('nn') in CSI sequence \\033[nnC for use with replacing
         ansi.right(nn) with printable characters. prevents bleeding in
@@ -186,7 +186,7 @@ class Ansi(unicode):
 
     def decode_pipe(self):
         """
-        S.decode_pipe() -> unicode
+        S.decode_pipe() --> unicode
 
         Return new terminal sequence, replacing 'pipe codes', such as u'|03'
         with this terminals equivalent attribute sequence.
