@@ -34,6 +34,11 @@ class Ansi(unicode):
     A unicode class that is poorly aware of the effect ansi sequences have on
     length.
     """
+# pylint: disable=R0904,R0924
+#         Too many public methods (45/20)
+#         Badly implemented Container, implements __getitem__,
+#           __len__ but not __delitem__, __setitem__.
+
     def __len__(self):
         """
         Return the printed length of a string that contains (some types) of
@@ -66,6 +71,9 @@ class Ansi(unicode):
         unhealthy for padding, that is, its effects on the terminal window
         position are indeterminate.
         """
+        #pylint: disable=R0911,R0912
+        #        Too many return statements (20/6)
+        #        Too many branches (23/12)
         slen = unicode.__len__(self)
         if 0 == slen:
             return False
@@ -91,34 +99,34 @@ class Ansi(unicode):
             return False
         elif self[2] == '?':
             # CSI + '?25(h|l)' # show|hide
-            p2 = 3
-            while (self[p2].isdigit()):
-                p2 += 1
-            if not self[p2] in u'hl':
+            ptr2 = 3
+            while (self[ptr2].isdigit()):
+                ptr2 += 1
+            if not self[ptr2] in u'hl':
                 # ? followed illegaly, UNKNOWN
                 return False
             return False
         elif not self[2].isdigit():
             # illegal nondigit in seq
             return False
-        p2 = 2
-        while (self[p2].isdigit()):
-            p2 += 1
+        ptr2 = 2
+        while (self[ptr2].isdigit()):
+            ptr2 += 1
         # multi-attribute SGR '[01;02(..)'(m|H)
         n_tries = 0
-        while p2 < slen and self[p2] == ';' and n_tries < 64:
+        while ptr2 < slen and self[ptr2] == ';' and n_tries < 64:
             n_tries += 1
-            p2 += 1
+            ptr2 += 1
             try:
-                while (self[p2].isdigit()):
-                    p2 += 1
-                if self[p2] == 'H':
+                while (self[ptr2].isdigit()):
+                    ptr2 += 1
+                if self[ptr2] == 'H':
                     # 'H' pos,
                     return True
-                elif self[p2] == 'm':
+                elif self[ptr2] == 'm':
                     # 'm' color;attr
                     return False
-                elif self[p2] == ';':
+                elif self[ptr2] == ';':
                     # multi-attribute SGR
                     continue
             except IndexError:
@@ -126,15 +134,15 @@ class Ansi(unicode):
                 return False
             # illegal multi-attribtue SGR
             return False
-        if p2 >= slen:
+        if ptr2 >= slen:
             # unfinished sequence, hrm ..
             return False
-        elif self[p2] in u'ABCDEFGJKSTH':
+        elif self[ptr2] in u'ABCDEFGJKSTH':
             # single attribute,
             # up, down, right, left, bnl, bpl,
             # pos, cls, cl, pgup, pgdown
             return True
-        elif self[p2] == 'm':
+        elif self[ptr2] == 'm':
             # normal
             return False
         # illegal single value, UNKNOWN
@@ -151,16 +159,16 @@ class Ansi(unicode):
         """
         nxt = 0
         rstr = u''
-        for n in range(0,unicode.__len__(self)):
-            cs = self[n:].seqlen()
-            if cs:
-                clen = Ansi(self[n:]).anspadd
-                nxt = n + cs
+        for idx in range(0, unicode.__len__(self)):
+            seq_left = self[idx:].seqlen()
+            if seq_left:
+                clen = Ansi(self[idx:]).anspadd
+                nxt = idx + seq_left
                 rstr += u' ' * (clen)
-            elif cs and Ansi(self[n:]).is_movement():
-                nxt = n + cs
-            elif nxt <= n:
-                rstr += self[n]
+            elif seq_left and Ansi(self[idx:]).is_movement():
+                nxt = idx + seq_left
+            elif nxt <= idx:
+                rstr += self[idx]
         return rstr
 
     def anspadd(self):
@@ -205,6 +213,9 @@ class Ansi(unicode):
         of bytes until sequence is complete. Use as a 'next' pointer to skip past
         sequences.
         """
+        #pylint: disable=R0911,R0912
+        #        Too many return statements (19/6)
+        #        Too many branches (22/12)
         slen = unicode.__len__(self)
         if 0 == slen:
             return 0 # empty string
@@ -231,40 +242,40 @@ class Ansi(unicode):
                 return 0
             elif self[2] == '?':
                 # CSI + '?25(h|l)' # show|hide
-                p2 = 3
-                while (self[p2].isdigit()):
-                    p2 += 1
-                if not self[p2] in u'hl':
+                ptr2 = 3
+                while (self[ptr2].isdigit()):
+                    ptr2 += 1
+                if not self[ptr2] in u'hl':
                     # ? followed illegaly, UNKNOWN
                     return 0
-                return p2 + 1
+                return ptr2 + 1
             # SGR
             elif self[2].isdigit():
-                p2 = 2
-                while (self[p2].isdigit()):
-                    p2 += 1
+                ptr2 = 2
+                while (self[ptr2].isdigit()):
+                    ptr2 += 1
 
                 # multi-attribute SGR '[01;02(..)'(m|H)
-                while self[p2] == ';':
-                    p2 += 1
+                while self[ptr2] == ';':
+                    ptr2 += 1
                     try:
-                        while (self[p2].isdigit()):
-                            p2 += 1
+                        while (self[ptr2].isdigit()):
+                            ptr2 += 1
                     except IndexError:
                         return 0
-                    if self[p2] in u'Hm':
-                        return p2 + 1
-                    elif self[p2] == ';':
+                    if self[ptr2] in u'Hm':
+                        return ptr2 + 1
+                    elif self[ptr2] == ';':
                         # multi-attribute SGR
                         continue
                     # 'illegal multi-attribute sgr'
                     return 0
                 # single attribute SGT '[01(A|B|etc)'
-                if self[p2] in u'ABCDEFGJKSTHm':
+                if self[ptr2] in u'ABCDEFGJKSTHm':
                     # single attribute,
                     # up/down/right/left/bnl/bpl,pos,cls,cl,
                     # pgup,pgdown,color,attribute.
-                    return p2 +1
+                    return ptr2 + 1
                 # illegal single value
                 return 0
             # illegal nondigit
@@ -310,10 +321,13 @@ def chompn (unibytes):
     trailing \\n and \\r characters, and replaces single \\r's with \\r\\n
     """
     unibytes = unibytes.rstrip()
-    def cr(num, glyph, ubytes):
-        if num < len(ubytes) and glyph == u'\x0a' and ubytes[num + 1] != u'\x0d':
+    def cbreak(num, glyph, ubytes):
+        #pylint: disable=C0111
+        #        Missing docstring
+        if (num < len(ubytes) and glyph == u'\x0a'
+                and ubytes[num + 1] != u'\x0d'):
             return u'\x0a\x0d'
         else:
             return glyph
-    return u''.join([cr(idx, glyph, unibytes)
+    return u''.join([cbreak(idx, glyph, unibytes)
         for idx, glyph in enumerate(unibytes)])

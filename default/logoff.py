@@ -60,7 +60,7 @@ def main():
             else idx
         t, nick, msg = automsgs[idx]
         artnick = ''.join((term.blue_reverse, nick \
-            .rjust(int(ini.cfg.get('nua', 'max_user'))),))
+            .rjust(int(ini.CFG.get('nua', 'max_user'))),))
         artmsg = ''.join((term.cyan_reverse, '/', term.blue_reverse, '%d' % (idx,),
           term.normal, ': ', term.cyan_reverse, msg \
             .ljust(AUTOMSG_LENGTH),))

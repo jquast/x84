@@ -8,16 +8,16 @@ import struct
 import fcntl
 import pty
 import sys
-import re
 import os
 
-from bbs.session import getsession
+import bbs.session
 import bbs.exception
 import bbs.output
 import bbs.cp437
 import bbs.ini
 
-PATTERN_EIO = re.compile('Errno 5')
+#pylint: disable=C0103
+#        Invalid name "logger" for type constant (should match
 logger = logging.getLogger()
 
 class Door(object):
@@ -49,11 +49,11 @@ class Door(object):
         self.args = (self.cmd,) + args
         self.lang = lang
         if term is None:
-            self.term = getsession().env.get('TERM')
+            self.term = bbs.session.getsession().env.get('TERM')
         else:
             self.term = term
         if path is None:
-            self.path = bbs.ini.cfg.get('door', 'path')
+            self.path = bbs.ini.CFG.get('door', 'path')
         else:
             self.path = path
 
@@ -69,8 +69,8 @@ class Door(object):
             logger.error ('OSError in pty.fork(): %s', err)
             return
 
-        lines = str(getsession().terminal.height)
-        columns = str(getsession().terminal.width)
+        lines = str(bbs.session.getsession().terminal.height)
+        columns = str(bbs.session.getsession().terminal.width)
 
         # subprocess
         if pid == pty.CHILD:
@@ -90,8 +90,8 @@ class Door(object):
         # typically, return values from 'input' events are translated keycodes,
         # such as terminal.KEY_ENTER. However, when executing a sub-door, we
         # disable this by setting session.enable_keycodes = False
-        chk_keycodes = getsession().enable_keycodes
-        getsession().enable_keycodes = False
+        chk_keycodes = bbs.session.getsession().enable_keycodes
+        bbs.session.getsession().enable_keycodes = False
 
         # execute self._loop() and catch all i/o and o/s errors
         try:
@@ -101,11 +101,11 @@ class Door(object):
             logger.error ('IOError: %s', err)
         except OSError, err:
             # match occurs on read() after child closed sys.stdout. (ok)
-            if PATTERN_EIO.search (str(err)) is None:
+            if 'Errno 5' not in str(err):
                 # otherwise log as an error,
                 logger.error ('OSError: %s', err)
 
-        getsession().enable_keycodes = chk_keycodes
+        bbs.session.getsession().enable_keycodes = chk_keycodes
 
         # retrieve return code
         (pid, status) = os.waitpid (pid, 0)
@@ -124,7 +124,7 @@ class Door(object):
         Poll input and outpout of ptys, raising bbs.exception.ConnectionTimeout
         when session idle time exceeds self.timeout.
         """
-        term = getsession().terminal
+        term = bbs.session.getsession().terminal
         while True:
             # block up to self.time_opoll for screen output
             rlist = (self.master_fd,)
@@ -139,10 +139,10 @@ class Door(object):
                     data)) if self.decode_cp437 else data.decode('utf8'))
 
             # block up to self.time_ipoll for keyboard input
-            event, data = getsession().read_event (
-                    ('refresh','input'), timeout=self.time_ipoll)
+            event, data = bbs.session.getsession().read_events (
+                    events=('refresh','input'), timeout=self.time_ipoll)
             if ((None, None) == (event, data)
-                    and getsession().idle > self.timeout):
+                    and bbs.session.getsession().idle > self.timeout):
                 raise bbs.exception.ConnectionTimeout ('timeout in door %r',
                         self.args,)
             elif event == 'refresh':

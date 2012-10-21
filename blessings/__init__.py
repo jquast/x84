@@ -83,6 +83,7 @@ class Terminal(object):
         except IOUnsupportedOperation:
             stream_descriptor = None
 
+        self.stream = stream
         self.is_a_tty = stream_descriptor is not None and isatty(stream_descriptor)
         self._does_styling = ((self.is_a_tty or force_styling) and
                               force_styling is not None)
@@ -107,26 +108,13 @@ class Terminal(object):
               setattr(self, attr, getattr(curses, attr))
 
             # after sucessful setupterm(), a _keymap of keyboard sequences to
-            # curses capability names can be constructed, where those capability
-            # strings return non-None
-            self._keymap = dict([(tigetstr(cap).decode('utf-8'), keycode) \
-                for (keycode,cap) in curses.has_key._capability_names.iteritems() \
-                    if tigetstr(cap) is not None])
+            # curses capability names can be constructed, this creates things
+            # such as self.KEY_ENTER (..)
+            self._keymap = dict([(tigetstr(cap).decode('utf-8'), keycode) for
+                (keycode,cap) in curses.has_key._capability_names.iteritems()
+                if tigetstr(cap) is not None])
 
-            #self._keymap.update ([(tigetstr(cap), keycode) for (cap, keycode) in (
-            #    ('kcuu1', self.KEY_UP),  ('kcud1',self.KEY_DOWN),
-            #    ('kcuf1',self.KEY_RIGHT),('kcub1',self.KEY_LEFT),
-            #    ('kpp',  self.KEY_PPAGE),('knp',  self.KEY_NPAGE),
-            #    ('khome',self.KEY_HOME), ('kend', self.KEY_END),
-            #    ('kdch1',self.KEY_DEL),  ('kf1',  self.KEY_F1),
-            #    ('kf2',  self.KEY_F2),   ('kf3',  self.KEY_F3),
-            #    ('kf4',  self.KEY_F4),   ('kf5',  self.KEY_F5),
-            #    ('kf6',  self.KEY_F6),   ('kf7',  self.KEY_F7),
-            #    ('kf8',  self.KEY_F8),   ('kf9',  self.KEY_F9),
-            #    ('kf10',  self.KEY_F10),  ('kf11',  self.KEY_F11),) \
-            #        if tigetstr(cap) is not None])
-
-            # various terminal default sequences
+            # various terminal default sequences mappings
             self._keymap.update ([
                 ("\r",     self.KEY_ENTER),
                 ("\n",     self.KEY_ENTER),
@@ -150,8 +138,6 @@ class Terminal(object):
                 ("\033?t", self.KEY_LEFT),
                 ("\033[H", self.KEY_HOME),
                 ("\033[F", self.KEY_END),])
-
-        self.stream = stream
 
     # Sugary names for commonly-used capabilities, intended to help avoid trips
     # to the terminfo man page and comments in your code:

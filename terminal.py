@@ -12,29 +12,31 @@ import re
 
 import blessings
 
+#pylint: disable=C0103
+#        Invalid name "logger" for type constant
 logger = logging.getLogger()
 
 # global list of (TelnetClient, multiprocessing.Pipe, threading.Lock)
 # this is a shared global variable across threads.
-_registry = list ()
+TERMINALS = list ()
 
 def register_terminal(client, pipe, lock):
     """
     Register a (client, pipe, lock,) terminal
     """
-    _registry.append ((client, pipe, lock,))
+    TERMINALS.append ((client, pipe, lock,))
 
 def unregister_terminal(client, pipe, lock):
     """
     Unregister a (client, pipe, lock,) terminal
     """
-    _registry.remove ((client, pipe, lock,))
+    TERMINALS.remove ((client, pipe, lock,))
 
 def terminals():
     """
     Returns list of (client, pipe, lock,) of all registered terminal sessions.
     """
-    return _registry
+    return TERMINALS
 
 def start_process(pipe, origin, env):
     """

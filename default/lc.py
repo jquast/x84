@@ -21,25 +21,22 @@ def dummy_pager(last_callers):
                 nonstop = True
     return
 
-
 def main(record_only=False):
     session, term = getsession(), getterminal()
     session.activity = u'Viewing last callers'
-    logger.info ('OH HAI')
 
     def lc_retrieve():
+        # open the database,
         udb = DBProxy('lastcallers')
+        # always re-calculate the full call log :-) expensive ..
         for user in listusers():
-            logger.info ('xyzzy %r', user)
             udb[user.handle] = user.lastcall
-            logger.info ('next')
-        logger.info ('end')
         lc_inorder = (reversed(sorted([(v,k)
                 for (k,v) in udb.iteritems()
                 if k is not None and finduser(k) is not None])))
         rstr = u''
-        padd_handle = ini.cfg.getint('nua','max_user') +1
-        padd_origin = ini.cfg.getint('nua','max_origin') +1
+        padd_handle = ini.CFG.getint('nua','max_user') +1
+        padd_origin = ini.CFG.getint('nua','max_origin') +1
         padd_timeago = 12
         padd_ncalls = 13
         for (lcall, handle) in lc_inorder:
@@ -47,24 +44,22 @@ def main(record_only=False):
             rstr += (handle.ljust(padd_handle) +
                     user.location.ljust(padd_origin) +
                     ('%s ago' % (timeago(lcall),)).rjust (padd_timeago) +
-                    ('   Calls: %s' % (user.calls,)).ljust (padd_ncalls))
-        return rstr
+                    ('   Calls: %s' % (user.calls,)).ljust (padd_ncalls) +
+                    '\n')
+        return rstr.rstrip()
 
     def get_pager(lc):
         pager = Pager(height=min(term.height - 20, 4), width=67,
                 xloc=5, yloc=14)
         pager.xpadding = 2
         pager.ypadding = 1
-        logger.info ('x')
-        pager.update (last_callers)
-        logger.info ('z')
+        pager.colors['border'] = term.red
+        pager.update (lc)
         return pager
 
     def redraw(pager):
         rstr = u''
         rstr += term.move(0, 0) + term.normal + term.clear
-        rstr += pager.refresh ()
-        rstr += term.move(0, 0) + term.normal
         rstr += showfile ('art/lc.ans')
         footer = ('%s-%s (q)uit %s-%s' % (
             term.bold_white, term.normal,
@@ -75,20 +70,19 @@ def main(record_only=False):
                 term.bold_red, term.normal, term.bold_white, term.normal))
         rstr += pager.border ()
         rstr += pager.footer (footer)
+        rstr += pager.refresh ()
         return rstr
 
-    last_callers = lc_retrieve ()
-    logger.info (last_callers)
+    lcalls_txt = lc_retrieve ()
     dirty = True
     while True:
         if (session.env.get('TERM') == 'unknown' or term.number_of_colors == 0
                 or term.height < 20 or term.width < 70):
-            return dummy_pager(last_callers)
+            return dummy_pager(lcalls_txt)
         if None != readevent('refresh', timeout=0):
             dirty = True
-            continue
         if dirty:
-            pager = get_pager(last_callers)
+            pager = get_pager(lcalls_txt)
             echo (redraw(pager))
             dirty = False
         inp = getch()

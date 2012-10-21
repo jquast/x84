@@ -6,7 +6,7 @@ import logging.config
 import os.path
 import ConfigParser
 
-cfg = None
+CFG = None
 
 def init(cfg_bbsfile='data/default.ini', cfg_logfile='data/logging.ini'):
     """
@@ -15,7 +15,6 @@ def init(cfg_bbsfile='data/default.ini', cfg_logfile='data/logging.ini'):
     the file 'cfg_bbsfile' exists, those settings are merged. Logfile settings
     are also loaded from 'cfg_filepath'.
     """
-    global cfg
     root = logging.getLogger()
     def write_cfg(cfg, filepath):
         """
@@ -49,7 +48,10 @@ def init(cfg_bbsfile='data/default.ini', cfg_logfile='data/logging.ini'):
     else:
         cfg_bbs.read (cfg_bbsfile)
         root.info ('loaded %s', cfg_bbsfile)
-    cfg = cfg_bbs
+    #pylint: disable=W0603
+    #        Using the global statement
+    global CFG
+    CFG = cfg_bbs
 
 
 def init_bbs_ini ():
@@ -97,10 +99,11 @@ def init_bbs_ini ():
     cfg_bbs.add_section('nua')
     cfg_bbs.set('nua', 'script', 'nua')
     cfg_bbs.set('nua', 'min_user', '3')
+    cfg_bbs.set('nua', 'min_pass', '4')
     cfg_bbs.set('nua', 'max_user', '11')
     cfg_bbs.set('nua', 'max_pass', '16')
-    cfg_bbs.set('nua', 'max_email', '30')
-    cfg_bbs.set('nua', 'max_origin', '24')
+    cfg_bbs.set('nua', 'max_email', '50')
+    cfg_bbs.set('nua', 'max_location', '24')
     cfg_bbs.set('nua', 'allow_apply', 'yes')
     cfg_bbs.set('nua', 'invalid_handles', ' '.join \
         ((cfg_bbs.get('matrix','byecmds'),

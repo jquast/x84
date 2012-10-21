@@ -5,25 +5,28 @@ import threading
 import logging
 import os
 import sqlitedict
+#pylint: disable=C0103
+#        Invalid name "logger" for type constant
 logger = logging.getLogger(__name__)
 
-_lock = threading.Lock()
-_databases = {}
+# prevent race condition on instantiation of new databases
+LOCK = threading.Lock()
+DATABASES = {}
 
 def get_db(schema):
     """
     Returns a shared SqliteDict instance, creating a new one if not found
     """
-    _lock.acquire()
-    if not schema in _databases:
+    LOCK.acquire()
+    if not schema in DATABASES:
         assert schema.isalnum()
         import bbs.ini
         dbpath = os.path.join(bbs.ini.cfg.get('database','sqlite_folder'),
             '%s.sqlite3' % (schema,),)
-        _databases[schema] = sqlitedict.SqliteDict(filename=dbpath,
+        DATABASES[schema] = sqlitedict.SqliteDict(filename=dbpath,
                 tablename='unnamed', autocommit=True)
-    _lock.release ()
-    return _databases[schema]
+    LOCK.release ()
+    return DATABASES[schema]
 
 class DBHandler(threading.Thread):
     """
@@ -31,11 +34,13 @@ class DBHandler(threading.Thread):
     method name and its arguments, and the return value is sent to the session
     pipe with the same 'event' name.
     """
-    def __init__(self, pipe, event, data, iterable=False):
+    def __init__(self, pipe, event, data):
         """ Arguments:
               pipe: parent end of multiprocessing.Pipe()
-              event: database schema in form of string 'db-schema'
-              data: tuple of dictionary method and arguments
+              event: database schema in form of string 'db-schema' or
+                  'db=schema'. When '-' is used, the result is returned as a
+                  single transfer. When '=', an iterable is yielded and the
+                  data is transfered via the IPC pipe as a stream.
         """
         self.pipe = pipe
         self.event = event

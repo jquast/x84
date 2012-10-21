@@ -38,6 +38,9 @@ import os
 import logging
 
 import bbs.exception
+
+#pylint: disable=C0103
+#        Invalid name "logger" for type constant
 logger = logging.getLogger()
 
 #--[ Telnet Options ]----------------------------------------------------------
@@ -610,11 +613,11 @@ class TelnetClient(object):
         self.send_str (bytes(''.join((IAC, SB, STATUS, IS))))
         for opt in NEGOTIATE_STATUS:
             local_status = self._check_local_option(opt)
-            if local_status == True:
+            if local_status:
                 logger.debug ('local status, DO %s',
                         name_option(opt))
                 self.send_str(bytes(''.join((DO, opt))))
-            elif local_status == False:
+            elif local_status:
                 logger.debug ('local status, DONT %s',
                         name_option(opt))
                 self.send_str(bytes(''.join((DONT, opt))))
@@ -623,11 +626,11 @@ class TelnetClient(object):
                 logger.debug ('local status, UNKNOWN %s (not sent)',
                         name_option(opt))
             remote_status = self._check_remote_option(opt)
-            if remote_status == True:
+            if remote_status:
                 logger.debug ('remote status, DO %s',
                         name_option(opt))
                 self.send_str(bytes(''.join((DO, opt))))
-            elif remote_status == False:
+            elif remote_status:
                 logger.debug ('remote status, DONT %s',
                         name_option(opt))
                 self.send_str(bytes(''.join((DONT, opt))))

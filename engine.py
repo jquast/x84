@@ -16,11 +16,6 @@ __maintainer__ = 'Jeff Quast'
 __email__ = 'dingo@1984.ws'
 __status__ = 'Development'
 
-import logging
-import sys
-
-logger = logging.getLogger()
-
 def main ():
     """
     x84 main entry point. The system begins and ends here.
@@ -32,6 +27,7 @@ def main ():
     #pylint: disable=R0914
     #        Too many local variables (19/15)
     import getopt
+    import sys
 
     import terminal
     import telnet
@@ -76,16 +72,24 @@ def main ():
         raise SystemExit
 
 def _loop(telnet_server):
-    """ Main event loop. Never returns. """
-    # pylint: disable=R0912
+    """
+    Main event loop. Never returns.
+    """
+    # pylint: disable=R0912,R0914,R0915
     #         Too many branches (15/12)
+    #         Too many local variables (24/15)
+    #         Too many statements (73/50)
+    import logging
+    import time
+
     import terminal
     import db
     import bbs.ini
 
+    logger = logging.getLogger()
     logger.info ('listening %s/tcp', telnet_server.port)
     client_timeout = int(bbs.ini.cfg.get('session', 'timeout', '1984'))
-
+    locks = dict ()
     # main event loop
     while True:
         # process telnet i/o
@@ -104,7 +108,9 @@ def _loop(telnet_server):
             # kick off idle users
             if client.idle() > client_timeout:
                 logger.info ('%s timeout.', client.addrport())
-                client.deactive ()
+                pipe.send (('exception', (
+                    bbs.exception.ConnectionTimeout, None,)))
+                client.deactivate ()
                 continue
 
             if lock.acquire(False):
@@ -113,28 +119,26 @@ def _loop(telnet_server):
                 if not pipe.poll ():
                     continue
 
+            # session i/o sent from child process
             try:
-                # session i/o sent from child process
                 event, data = pipe.recv()
-
             except EOFError:
-                logger.error ('eof,')
-                terminal.unregister_terminal (client, pipe, lock)
+                client.deactivate ()
                 continue
 
             if event == 'disconnect':
                 client.deactivate ()
 
-            if event == 'logger':
+            elif event == 'logger':
                 logger.handle (data)
 
             elif event == 'output':
-                text, is_cp437 = data
-                if not is_cp437:
+                text, cp437 = data
+                if not cp437:
                     client.send_unicode (text)
-                else: # text has already been 'translated' to the apropriate
-                      # unichr(0)-unichr(255) as unicode -- encoding as
-                      # 'iso8859-1' will byte values intact as chr(0)-chr(255)
+                    continue
+                else:
+                    # disguise cp437 as ios8859-1 so bytes remain unmolested
                     bytestring = text.encode('iso8859-1', 'replace')
                     client.send_str (bytestring)
 
@@ -142,12 +146,11 @@ def _loop(telnet_server):
                 #pylint: disable=W0612
                 #         Unused variable 'o_lock'
                 for o_client, o_pipe, o_lock in terminal.terminals():
-                    if o_client == client:
+                    if o_client != client:
                         o_pipe.send ((event, data,))
 
             elif event == 'pos':
                 assert type(data) in (float, int, type(None))
-                # assert 'timeout' parameter, 1, 1.0, or None
                 # 'pos' query: 'what is the cursor position ?'
                 # returns 'pos-reply' event as a callback
                 # mechanism, data of (None, None) indicates timeout,
@@ -156,7 +159,7 @@ def _loop(telnet_server):
                     reply_event='pos-reply', timeout=data)
                 thread.start ()
 
-            if event.startswith('db'):
+            elif event.startswith('db'):
                 # db query-> database dictionary method, callback
                 # with a matching ('db-*',) event. sqlite is used
                 # for now and is quick, but this prevents slow
@@ -164,6 +167,28 @@ def _loop(telnet_server):
                 thread = db.DBHandler(pipe, event, data)
                 thread.start ()
 
+            elif event.startswith('lock'):
+                # fine-grained lock acquire and release, non-blocking
+                method, timeout = data
+                if method == 'acquire':
+                    if not event in locks:
+                        locks[event] = time.time ()
+                        pipe.send ((event, True,))
+                        logger.debug ('(%r, %r) granted', event, method)
+                    elif (timeout is not None
+                            and time.time() - locks[event] > timeout):
+                        pipe.send ((event, True,))
+                        logger.warn ('(%r, %r) stale', event, method)
+                    else:
+                        pipe.send ((event, False,))
+                        logger.warn ('(%r, %r) failed to acquire',
+                                event, method)
+                elif method == 'release':
+                    if not event in locks:
+                        logger.warn ('(%s, %s) missing', event, method)
+                    else:
+                        del locks[event]
+                        logger.debug ('(%s, %s) removed', event, data)
 
 if __name__ == '__main__':
-    sys.exit(main ())
+    exit(main ())
