@@ -60,6 +60,8 @@ class AnsiWindow(object):
         self.yloc = yloc
         self.xloc = xloc
         self.init_theme ()
+        self._xpadding = 1
+        self._ypadding = 1
 
     def init_theme(self):
         """
@@ -104,6 +106,46 @@ class AnsiWindow(object):
         #pylint: disable=C0111
         #        Missing docstring
         self._colors = value
+
+    @property
+    def xpadding(self):
+        """
+        Horizontal padding of window border
+        """
+        return self._xpadding
+
+    @xpadding.setter
+    def xpadding(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self._xpadding = value
+
+    @property
+    def ypadding(self):
+        """
+        Horizontal padding of window border
+        """
+        return self._ypadding
+
+    @ypadding.setter
+    def ypadding(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self._ypadding = value
+
+    @property
+    def _visible_height(self):
+        """
+        The visible height of the editor window after vertical padding.
+        """
+        return self.height - (self._ypadding * 2)
+
+    @property
+    def _visible_width(self):
+        """
+        Visible width of lightbar after accounting for horizontal padding.
+        """
+        return self.width - (self._xpadding * 2)
 
     def resize(self, height=None, width=None, yloc=None, xloc=None):
         """
