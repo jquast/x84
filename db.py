@@ -45,8 +45,9 @@ class DBHandler(threading.Thread):
         self.pipe = pipe
         self.event = event
         self.schema = event[3:]
-        self.cmd = data[0]
-        self.args = data[1]
+        self.table = data[0]
+        self.cmd = data[1]
+        self.args = data[2]
         threading.Thread.__init__ (self)
 
     def run(self):
