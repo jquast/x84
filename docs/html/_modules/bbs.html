@@ -1,0 +1,254 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>bbs &mdash; x/84 1.0rc3 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0rc3',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <link rel="top" title="x/84 1.0rc3 documentation" href="../index.html" />
+    <link rel="up" title="Module code" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">x/84 1.0rc3 documentation</a> &raquo;</li>
+          <li><a href="index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for bbs</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">bbs module for X/84 BBS https://github.com/jquast/x84</span>
+<span class="sd">everything in the bbs package is exported as a global to all bbs session</span>
+<span class="sd">scripts. It is as if the statement:</span>
+
+<span class="sd">    from bbs import *</span>
+
+<span class="sd">Is implied for all session scripts.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">bbs.ini</span> <span class="kn">as</span> <span class="nn">ini</span>
+<span class="kn">from</span> <span class="nn">bbs.selector</span> <span class="kn">import</span> <span class="n">Selector</span>
+<span class="kn">from</span> <span class="nn">bbs.lightbar</span> <span class="kn">import</span> <span class="n">Lightbar</span>
+<span class="kn">from</span> <span class="nn">bbs.editor</span> <span class="kn">import</span> <span class="n">LineEditor</span><span class="p">,</span> <span class="n">ScrollingEditor</span>
+<span class="kn">from</span> <span class="nn">bbs.input</span> <span class="kn">import</span> <span class="n">getch</span>
+
+<span class="kn">from</span> <span class="nn">bbs.exception</span> <span class="kn">import</span> <span class="n">Disconnect</span><span class="p">,</span> <span class="n">Goto</span><span class="p">,</span> <span class="n">ConnectionTimeout</span>
+<span class="kn">from</span> <span class="nn">bbs.cp437</span> <span class="kn">import</span> <span class="n">from_cp437</span>
+<span class="kn">from</span> <span class="nn">bbs.door</span> <span class="kn">import</span> <span class="n">Door</span>
+<span class="kn">from</span> <span class="nn">bbs.dbproxy</span> <span class="kn">import</span> <span class="n">DBProxy</span>
+<span class="kn">from</span> <span class="nn">bbs.userbase</span> <span class="kn">import</span> <span class="n">list_users</span><span class="p">,</span> <span class="n">get_user</span><span class="p">,</span> <span class="n">find_user</span><span class="p">,</span> <span class="n">User</span><span class="p">,</span> <span class="n">Group</span>
+<span class="kn">from</span> <span class="nn">bbs.session</span> <span class="kn">import</span> <span class="n">getsession</span><span class="p">,</span> <span class="n">getterminal</span><span class="p">,</span> <span class="n">logger</span>
+<span class="kn">from</span> <span class="nn">bbs.scripting</span> <span class="kn">import</span> <span class="n">abspath</span><span class="p">,</span> <span class="n">fopen</span><span class="p">,</span> <span class="n">ropen</span>
+<span class="kn">from</span> <span class="nn">bbs.pager</span> <span class="kn">import</span> <span class="n">Pager</span>
+<span class="kn">from</span> <span class="nn">bbs.ansiwin</span> <span class="kn">import</span> <span class="n">AnsiWindow</span>
+<span class="kn">from</span> <span class="nn">bbs.output</span> <span class="kn">import</span> <span class="n">echo</span><span class="p">,</span> <span class="n">timeago</span><span class="p">,</span> <span class="n">Ansi</span><span class="p">,</span> <span class="n">chompn</span>
+<span class="c"># from bbs.input import getpos</span>
+<span class="kn">import</span> <span class="nn">sauce</span>
+<span class="n">SAUCE</span> <span class="o">=</span> <span class="n">sauce</span><span class="o">.</span><span class="n">SAUCE</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="s">&#39;Ansi&#39;</span><span class="p">,</span>
+    <span class="s">&#39;LineEditor&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ScrollingEditor&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ConnectionTimeout&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Door&#39;</span><span class="p">,</span>
+    <span class="s">&#39;from_cp437&#39;</span><span class="p">,</span>
+    <span class="s">&#39;logger&#39;</span><span class="p">,</span>
+    <span class="s">&#39;timeago&#39;</span><span class="p">,</span>
+    <span class="s">&#39;DBProxy&#39;</span><span class="p">,</span>
+    <span class="s">&#39;User&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Group&#39;</span><span class="p">,</span>
+    <span class="s">&#39;list_users&#39;</span><span class="p">,</span>
+    <span class="s">&#39;find_user&#39;</span><span class="p">,</span>
+    <span class="s">&#39;get_user&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ini&#39;</span><span class="p">,</span>
+    <span class="s">&#39;AnsiWindow&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Selector&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Lightbar&#39;</span><span class="p">,</span>
+    <span class="s">&#39;Pager&#39;</span><span class="p">,</span>
+    <span class="s">&#39;disconnect&#39;</span><span class="p">,</span>
+    <span class="s">&#39;goto&#39;</span><span class="p">,</span>
+    <span class="s">&#39;gosub&#39;</span><span class="p">,</span>
+    <span class="s">&#39;sendevent&#39;</span><span class="p">,</span>
+    <span class="s">&#39;broadcastevent&#39;</span><span class="p">,</span>
+    <span class="s">&#39;readevent&#39;</span><span class="p">,</span>
+    <span class="s">&#39;readevents&#39;</span><span class="p">,</span>
+    <span class="s">&#39;flushevent&#39;</span><span class="p">,</span>
+    <span class="s">&#39;flushevents&#39;</span><span class="p">,</span>
+    <span class="s">&#39;getsession&#39;</span><span class="p">,</span>
+    <span class="s">&#39;getterminal&#39;</span><span class="p">,</span>
+    <span class="s">&#39;gethandle&#39;</span><span class="p">,</span>
+    <span class="s">&#39;getch&#39;</span><span class="p">,</span>
+    <span class="s">&#39;sleep&#39;</span><span class="p">,</span>
+    <span class="s">&#39;echo&#39;</span><span class="p">,</span>
+    <span class="s">&#39;abspath&#39;</span><span class="p">,</span>
+    <span class="s">&#39;fopen&#39;</span><span class="p">,</span>
+    <span class="s">&#39;ropen&#39;</span><span class="p">,</span>
+    <span class="s">&#39;showcp437&#39;</span><span class="p">,</span>
+    <span class="s">&#39;SAUCE&#39;</span><span class="p">,]</span>
+
+
+<div class="viewcode-block" id="gethandle"><a class="viewcode-back" href="../bbs.html#bbs.gethandle">[docs]</a><span class="k">def</span> <span class="nf">gethandle</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Return user handle of this session.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">getsession</span><span class="p">()</span><span class="o">.</span><span class="n">handle</span>
+
+</div>
+<div class="viewcode-block" id="disconnect"><a class="viewcode-back" href="../bbs.html#bbs.disconnect">[docs]</a><span class="k">def</span> <span class="nf">disconnect</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Disconnect the session</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">raise</span> <span class="n">Disconnect</span><span class="p">(</span><span class="s">&#39;disconnect&#39;</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="goto"><a class="viewcode-back" href="../bbs.html#bbs.goto">[docs]</a><span class="k">def</span> <span class="nf">goto</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Switch to another bbs script, with arguments. Do not return.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">raise</span> <span class="n">Goto</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="gosub"><a class="viewcode-back" href="../bbs.html#bbs.gosub">[docs]</a><span class="k">def</span> <span class="nf">gosub</span><span class="p">(</span><span class="o">*</span><span class="n">arg</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Switch to another bbs script, with arguments. Returns script return value.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c">#pylint: disable=W0142</span>
+    <span class="c">#        Used * or ** magic</span>
+    <span class="k">return</span> <span class="n">getsession</span><span class="p">()</span><span class="o">.</span><span class="n">runscript</span><span class="p">(</span><span class="o">*</span><span class="p">(</span><span class="n">arg</span><span class="p">[</span><span class="mi">0</span><span class="p">],)</span> <span class="o">+</span> <span class="n">arg</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+</div>
+<div class="viewcode-block" id="sendevent"><a class="viewcode-back" href="../bbs.html#bbs.sendevent">[docs]</a><span class="k">def</span> <span class="nf">sendevent</span><span class="p">(</span><span class="n">pid</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Send an event to the main bbs engine.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">getsession</span><span class="p">()</span><span class="o">.</span><span class="n">send_event</span><span class="p">(</span><span class="s">&#39;event&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">pid</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">data</span><span class="p">))</span>
+
+</div>
+<div class="viewcode-block" id="broadcastevent"><a class="viewcode-back" href="../bbs.html#bbs.broadcastevent">[docs]</a><span class="k">def</span> <span class="nf">broadcastevent</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Broadcast an event to all other sessions.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">getsession</span><span class="p">()</span><span class="o">.</span><span class="n">send_event</span><span class="p">(</span><span class="s">&#39;global&#39;</span><span class="p">,</span> <span class="p">(</span><span class="n">getsession</span><span class="p">()</span><span class="o">.</span><span class="n">pid</span><span class="p">,</span> <span class="n">event</span><span class="p">,</span> <span class="n">data</span><span class="p">))</span>
+
+</div>
+<div class="viewcode-block" id="readevents"><a class="viewcode-back" href="../bbs.html#bbs.readevents">[docs]</a><span class="k">def</span> <span class="nf">readevents</span><span class="p">(</span><span class="n">events</span><span class="o">=</span><span class="p">(</span><span class="s">&#39;input&#39;</span><span class="p">,),</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Poll for first available Session event.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">getsession</span><span class="p">()</span><span class="o">.</span><span class="n">read_events</span><span class="p">(</span><span class="n">events</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="readevent"><a class="viewcode-back" href="../bbs.html#bbs.readevent">[docs]</a><span class="k">def</span> <span class="nf">readevent</span><span class="p">(</span><span class="n">event</span><span class="o">=</span><span class="s">&#39;input&#39;</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Poll for Session event.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">getsession</span><span class="p">()</span><span class="o">.</span><span class="n">read_event</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="sleep"><a class="viewcode-back" href="../bbs.html#bbs.sleep">[docs]</a><span class="k">def</span> <span class="nf">sleep</span> <span class="p">(</span><span class="n">seconds</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Block session for seconds, meanwhile, buffers events</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">getsession</span><span class="p">()</span><span class="o">.</span><span class="n">read_events</span> <span class="p">((),</span> <span class="n">seconds</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="flushevent"><a class="viewcode-back" href="../bbs.html#bbs.flushevent">[docs]</a><span class="k">def</span> <span class="nf">flushevent</span><span class="p">(</span><span class="n">event</span> <span class="o">=</span> <span class="s">&#39;input&#39;</span><span class="p">,</span> <span class="n">timeout</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Remove any data for specified event buffered from the main bbs engine.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">getsession</span><span class="p">()</span><span class="o">.</span><span class="n">flush_event</span><span class="p">(</span><span class="n">event</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="flushevents"><a class="viewcode-back" href="../bbs.html#bbs.flushevents">[docs]</a><span class="k">def</span> <span class="nf">flushevents</span><span class="p">(</span><span class="n">events</span> <span class="o">=</span> <span class="p">(</span><span class="s">&#39;input&#39;</span><span class="p">,),</span> <span class="n">timeout</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Remove any data for specified events buffered from the main bbs engine.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">flushevent</span><span class="p">(</span><span class="n">evt</span><span class="p">,</span> <span class="n">timeout</span><span class="p">)</span> <span class="k">for</span> <span class="n">evt</span> <span class="ow">in</span> <span class="n">events</span><span class="p">]</span>
+</div>
+<div class="viewcode-block" id="showcp437"><a class="viewcode-back" href="../bbs.html#bbs.showcp437">[docs]</a><span class="k">def</span> <span class="nf">showcp437</span> <span class="p">(</span><span class="n">filepattern</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Display a cp437 artfile relative to current script path, trimming SAUCE</span>
+<span class="sd">    data and translating cp437 to utf8. A glob pattern can be used, such as</span>
+<span class="sd">    &#39;art/login*.ans&#39;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c"># this is for ansi art, really. if you&#39;re not doing that, use .read() and</span>
+    <span class="c"># such. this is overkill u kno?</span>
+    <span class="c"># when unspecified, session interprets charset of file</span>
+    <span class="c"># open a random file if &#39;*&#39; or &#39;?&#39; is used in filename (glob matching)</span>
+    <span class="n">fobj</span> <span class="o">=</span> <span class="n">ropen</span><span class="p">(</span><span class="n">filepattern</span><span class="p">,</span> <span class="s">&#39;rb&#39;</span><span class="p">)</span> \
+      <span class="k">if</span> <span class="s">&#39;*&#39;</span> <span class="ow">in</span> <span class="n">filepattern</span> <span class="ow">or</span> <span class="s">&#39;?&#39;</span> <span class="ow">in</span> <span class="n">filepattern</span> \
+        <span class="k">else</span> <span class="n">fopen</span><span class="p">(</span><span class="n">filepattern</span><span class="p">,</span> <span class="s">&#39;rb&#39;</span><span class="p">)</span>
+    <span class="n">term</span> <span class="o">=</span> <span class="n">getterminal</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">chompn</span><span class="p">(</span><span class="n">from_cp437</span><span class="p">(</span><span class="n">SAUCE</span><span class="p">(</span><span class="n">fobj</span><span class="p">)</span><span class="o">.</span><span class="n">__str__</span><span class="p">()))</span> <span class="o">+</span> <span class="n">term</span><span class="o">.</span><span class="n">normal</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../index.html">x/84 1.0rc3 documentation</a> &raquo;</li>
+          <li><a href="index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, Jeff Quast, Johannes Lundberg, Wijnand Modderman-Lenstra.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>
