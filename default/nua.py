@@ -151,4 +151,4 @@ def main (handle=u''):
         set_password (user)
         if prompt_ok ():
             user.save ()
-            goto (topscript)
+            goto (topscript, user.handle)
