@@ -18,7 +18,7 @@ def main():
             otherwise a pager object refreshed with text.
         """
         flushevent ('refresh')
-        art = fopen('art/news.asc').readlines()
+        art = fopen('default/art/news.asc').readlines()
         art_width = max([len(Ansi(line)) for line in art])
         echo (term.move (0,0) + term.clear + '\r\n\r\n')
         if expert:
@@ -45,7 +45,7 @@ def main():
                 if len(line_txt) == 1 \
                 else align_x +x
             echo (term.move (y+4, x))
-            echo (line_txt.lstrip() + '\r\n')
+            echo (line_txt.lstrip() + u'\r\n')
 
         # now fill pager window with content & refresh
         echo (p.update (text))
