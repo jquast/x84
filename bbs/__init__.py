@@ -7,24 +7,23 @@ scripts. It is as if the statement:
 
 Is implied for all session scripts.
 """
-import msgbase
-import bbs.ini
-ini = bbs.ini
+import bbs.ini as ini
+from bbs.selector import Selector
+from bbs.lightbar import Lightbar
+from bbs.editor import LineEditor, ScrollingEditor
+from bbs.input import getch
+
 from bbs.exception import Disconnect, Goto, ConnectionTimeout
 from bbs.cp437 import from_cp437
 from bbs.door import Door
 from bbs.dbproxy import DBProxy
-from bbs.userbase import User, getuser, finduser
-from bbs.userbase import userexist, authuser, listusers
-from bbs.session import getsession, logger
-from bbs.fileutils import abspath, fopen, ropen
-from bbs.leftright import Selector
-from bbs.lightwin import Lightbar
+from bbs.userbase import list_users, get_user, find_user, User, Group
+from bbs.session import getsession, getterminal, logger
+from bbs.scripting import abspath, fopen, ropen
 from bbs.pager import Pager
 from bbs.ansiwin import AnsiWindow
 from bbs.output import echo, timeago, Ansi, chompn
-from bbs.input import getch, getpos, readline, readlineevent
-from bbs.input import LineEditor, ScrollingEditor
+# from bbs.input import getpos
 import sauce
 SAUCE = sauce.SAUCE
 
@@ -39,11 +38,10 @@ __all__ = [
     'timeago',
     'DBProxy',
     'User',
-    'finduser',
-    'userexist',
-    'authuser',
-    'getuser',
-    'listusers',
+    'Group',
+    'list_users',
+    'find_user',
+    'get_user',
     'ini',
     'AnsiWindow',
     'Selector',
@@ -62,23 +60,13 @@ __all__ = [
     'getterminal',
     'gethandle',
     'getch',
-    'getpos',
     'sleep',
     'echo',
     'abspath',
     'fopen',
     'ropen',
-    'showfile',
-    'readline',
-    'readlineevent',
-    'msgbase',
+    'showcp437',
     'SAUCE',]
-
-def getterminal():
-    """
-    Return blessings terminal instace of this session.
-    """
-    return getsession().terminal
 
 
 def gethandle():
@@ -106,8 +94,9 @@ def gosub(*arg):
     """
     Switch to another bbs script, with arguments. Returns script return value.
     """
+    #pylint: disable=W0142
+    #        Used * or ** magic
     return getsession().runscript(*(arg[0],) + arg[1:])
-
 
 def sendevent(pid, event, data):
     """
@@ -127,19 +116,19 @@ def readevents(events=('input',), timeout=None):
     """
     Poll for first available Session event.
     """
-    return getsession().read_event(events, timeout)
+    return getsession().read_events(events, timeout)
 
 def readevent(event='input', timeout=None):
     """
     Poll for Session event.
     """
-    return getsession().read_event((event,), timeout)[1]
+    return getsession().read_event(event, timeout)
 
 def sleep (seconds):
     """
     Block session for seconds, meanwhile, buffers events
     """
-    getsession().read_event ((), seconds)
+    getsession().read_events ((), seconds)
 
 def flushevent(event = 'input', timeout = -1):
     """
@@ -148,33 +137,24 @@ def flushevent(event = 'input', timeout = -1):
     return getsession().flush_event(event, timeout)
 
 
-def flushevents(events = ['input'], timeout = -1):
+def flushevents(events = ('input',), timeout = -1):
     """
     Remove any data for specified events buffered from the main bbs engine.
     """
-    return [flushevent(e, timeout) for e in events]
+    return [flushevent(evt, timeout) for evt in events]
 
-
-def showfile (filename, cleansauce=True, file_encoding='cp437'):
+def showcp437 (filepattern):
     """
-    Display a file to the user. This is different from a echo(open().read()) in
-    several ways:
-        1. by default, it presumes the file is in CP437 encoding, and
-        translates to requivalent unicode bytes. CP437 encoding is used for
-        "ansi art".
-        2. it is possible to simulate a bits-per-second speed
+    Display a cp437 artfile relative to current script path, trimming SAUCE
+    data and translating cp437 to utf8. A glob pattern can be used, such as
+    'art/login*.ans'
     """
     # this is for ansi art, really. if you're not doing that, use .read() and
     # such. this is overkill u kno?
     # when unspecified, session interprets charset of file
     # open a random file if '*' or '?' is used in filename (glob matching)
-    fobj = ropen(filename, 'rb') \
-      if '*' in filename or '?' in filename \
-        else fopen(filename, 'rb')
-
-    data = SAUCE(fobj).__str__() if cleansauce else fobj.read()
-    if file_encoding == 'cp437':
-        data = from_cp437(data)
-    else:
-        data = data.decode(file_encoding)
-    return chompn(data) + getterminal().normal
+    fobj = ropen(filepattern, 'rb') \
+      if '*' in filepattern or '?' in filepattern \
+        else fopen(filepattern, 'rb')
+    term = getterminal()
+    return chompn(from_cp437(SAUCE(fobj).__str__())) + term.normal
