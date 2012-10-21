@@ -59,6 +59,7 @@ class AnsiWindow(object):
         self.width = width
         self.yloc = yloc
         self.xloc = xloc
+        self.glyphs = dict()
         self.init_theme ()
         self._xpadding = 1
         self._ypadding = 1
@@ -151,7 +152,6 @@ class AnsiWindow(object):
         """
         Adjust window dimensions.
         """
-        assert (height, width, yloc, xloc) != (None, None, None, None)
         if height is not None:
             self.height = height
         if width is not None:
@@ -292,6 +292,6 @@ class AnsiWindow(object):
         Erase only window contents, border remains.
         """
         rstr = self.pos(1, 1)
-        rstr += u''.join([self.pos(xloc=1, yloc=y) + self.glyphs('erase', u'')
+        rstr += u''.join([self.pos(xloc=1, yloc=y) + self.glyphs.get('erase', u'')
             for y in range(self.height -2)])
         return rstr
