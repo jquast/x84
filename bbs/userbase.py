@@ -183,10 +183,9 @@ class User(object):
         """
         Save user record to databases.
         """
-        assert type(self.handle) is unicode and len(self.handle) > 0, (
-                'handle must be of non-zero length and of type unicode')
-        assert (None, None) != self.password, (
-                'password must be set')
+        assert type(self.handle) is unicode, ('handle must be unicode')
+        assert len(self.handle) > 0, ('handle must be non-zero length')
+        assert (None, None) != self.password, ('password must be set')
         assert self.handle != u'anonymous', ('anonymous user my not be saved.')
         udb = bbs.dbproxy.DBProxy('userbase')
         gdb = bbs.dbproxy.DBProxy('groupbase')
