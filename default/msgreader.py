@@ -52,7 +52,7 @@ def main(msgs):
 
     def refresh():
         echo (cls())
-        #showfile ('art/editor.ans')
+        #showcp437 ('art/editor.ans')
         echo (color())
         echo (pos(5,1) + cl() + 'From: ' + msg.author)
         echo (pos(5,2) + cl() + 'To: '+ str(msg.recipient))

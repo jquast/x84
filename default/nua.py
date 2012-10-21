@@ -139,7 +139,7 @@ def main (handle=u''):
     topscript = ini.CFG.get('matrix', 'topscript')
 
     # display art and msg_header as banner
-    echo (term.clear + term.normal + showfile(artfile))
+    echo (term.clear + term.normal + showcp437(artfile))
     echo (u'\r\n\r\n' + term.reverse + msg_header.center (term.width))
 
     # create new user record for manipulation

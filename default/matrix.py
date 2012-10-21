@@ -128,7 +128,7 @@ def main ():
     echo (term.normal + u'\r\nConnected to %s, see %s for source\r\n' % (
         bbsname, __url__))
     uname ()
-    echo (u'\r\n' + showfile('art/1984.asc') + u'\r\n')
+    echo (u'\r\n' + showcp437('default/art/1984.asc') + u'\r\n')
     if allow_anonymous:
         echo (anon_allowed_msg)
     for n in range(0, max_tries):

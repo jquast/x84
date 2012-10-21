@@ -77,7 +77,7 @@ def main():
         """
         flushevent ('refresh')
         echo (term.move(0,0) + term.clear)
-        showfile ('art/1984.asc')
+        showcp437 ('art/1984.asc')
         idx = refresh_automsg (-1 if idx is None else idx)
         refresh_prompt (prompt_msg)
         return idx

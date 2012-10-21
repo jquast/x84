@@ -60,7 +60,7 @@ def main(record_only=False):
     def redraw(pager):
         rstr = u''
         rstr += term.move(0, 0) + term.normal + term.clear
-        rstr += showfile ('art/lc.ans')
+        rstr += showcp437 ('art/lc.ans')
         footer = ('%s-%s (q)uit %s-%s' % (
             term.bold_white, term.normal,
             term.bold_white, term.normal)

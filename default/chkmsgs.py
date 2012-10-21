@@ -5,7 +5,7 @@ def main():
     term = session.terminal
 
     echo (term.move(0,0) + term.clear + term.normal)
-    showfile ('art/msgs.asc')
+    showcp437 ('art/msgs.asc')
 
     # check for new private messages
     echo ('\r\n\r\n  Checking for private messages... ')
