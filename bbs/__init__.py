@@ -149,12 +149,9 @@ def showcp437 (filepattern):
     data and translating cp437 to utf8. A glob pattern can be used, such as
     'art/login*.ans'
     """
-    # this is for ansi art, really. if you're not doing that, use .read() and
-    # such. this is overkill u kno?
-    # when unspecified, session interprets charset of file
-    # open a random file if '*' or '?' is used in filename (glob matching)
     fobj = ropen(filepattern, 'rb') \
       if '*' in filepattern or '?' in filepattern \
         else fopen(filepattern, 'rb')
     term = getterminal()
     return chompn(from_cp437(SAUCE(fobj).__str__())) + term.normal
+
