@@ -137,7 +137,7 @@ class Session(object):
         """
         Returns User handle.
         """
-        return self._user.handle
+        return self.user.handle
 
     @property
     def user(self):
@@ -543,7 +543,7 @@ class Session(object):
         """
         assert self._fp_ttyrec is None, ('already recording')
         if dst is None:
-            dst = self._user.handle if hasattr(self, '_user') else 'None'
+            dst = self.user.handle
         self._ttyrec_fname = dst
         # acquire tty recording lock
         while True:
