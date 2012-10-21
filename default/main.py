@@ -15,8 +15,8 @@ def main():
     def refresh():
         " refresh main menu screen "
         getsession().activity = 'Main Menu'
-        echo (u''.join((term.normal, term.normal_cursor, term.clear, '\rn')))
-        echo (showcp437 ('art/main_alt.asc'))
+        echo (u''.join((term.normal, term.normal_cursor, term.clear, '\r\n')))
+        echo (showcp437 ('default/art/main.asc'))
         echo (u'\r\n\r\n > ')
     def sorry():
         echo (u'\r\n\r\n  ' + term.bright_red + u'Sorry')
