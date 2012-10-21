@@ -1,71 +1,9 @@
 ROADMAP, 1.0:
-EASY
-* email password reset
+TESTING
 * ensure you can have a login name of [some-japanese-characters]
-* sysop's door to launch ttyplay -p on live terminals
-* lolcat-like xterm-256color rainbow effect to demo colors
-* local.py -- telnetlib to self :-)
-* cleanup default/
-* cleanup bbs/
-* PEP-8 clean
-* revise pydoc / docstrings
-* script/ui/menu.py:
-      # make new menu
-      menu(paraclass)
-      # add choices
-      choices['c'] = "chat"
-      # update and refresh menu
-      menu.update(choices)
-   - a simple menu class that display's a user menu using
-     a readonly paraclass and a high split value by default.
- ! + menu class takes user input, and listens to broadcast messages
-     such as chat invination or new mail and calls gosubs()!
-   - get user input like:
-      choice = menu.run()
-* cross-session paging -- basically allow sending
-  a script name + arguments to antoher session, forcing
-  that session to gosub() -- this would be used, for instance
-  by a sysop to break into chat,
-  or to request chat by another user,
-  or simply for fun
-* user editor + profile editor (edit self)
-* create wiki articles:
-  - custom matrix
-  - simple door game
 * TERM=unknown -- this should create an 'expert mode' bbs, with
   no frills, no lightbars, no artwork, etc. -- for low bandwidth
   terminals.
-* (cheap) message editor
-  simply use horizontal line editor, when you press return, it moves
-  to the next one... up arrows move to the previous one...
-* find a unicode editor -- modify nvi ??
-    nvi -S .... nvi still lets you :r /etc/passwd,
-    and virus doesn't support unicode ..
-* demonstrate xmodem protocol ...
-  allow upload of .plan file
-  allow download of bbs source code .
-* clients acquire and release named locks, w/timeout
-  like for dosemu autoexec.bat doors, etc.
-* something wrong with pipe.send() in getpos()
-* also snuff getpos() queries from ttyrec !
-* properly implement STATUS in telnet.py ;/
-* also TFLOW and TSPEED
-* properly send GA when SGA is not negotiated
-HARD
-* graffiti app example, a simple ansi editor, but save screen buffer to database, and share updates with other nodes via global() events, so you can watch others deface...
-* message reader/browser
-  something akin to mutt's interface would be super.
-* bbs-scene.org bbs lister
-* demonstrate LORD dosemu game, esp. cp437 art translation!
-PARKING LOT
-
-flesh out fileserver ... zIPE's call.
-  at least hook on_* methods
-  file stats, ftpd admin door, etc.
-
-19:34  airwalk you need 1) gl like ftp support
-19:34  airwalk and 2) zipscript-c support
-
 
 must be compatible with the following clients,
 (or document any changes required, fonts, etc.):
@@ -80,4 +18,50 @@ Windows:
 BSD, Linux, etc.
    uxterm + bsdtelnet
 
+SOON
+* cross-session paging -- basically allow sending
+  a script name + arguments to antoher session, forcing
+  that session to gosub() -- this would be used, for instance
+  by a sysop to break into chat,
+  or to request chat by another user,
+  or simply for fun; use term.exit_fullscreen;
 
+DOCS
+* create wiki articles:
+  - custom matrix
+  - simple door game
+
+EASY
+* properly send GA when SGA is not negotiated
+* email password reset to new random gibberish
+* sysop's door to launch ttyplay -p on live terminals
+* local.py; wrap default/telnet.py / -- telnetlib to self :-)
+* pylint-complete default/
+* user editor + profile editor (edit self)
+* (cheap) vertical message editor; simply use horizontal line editor,
+  when you press return, it moves to the next one... up arrows move
+  to the previous one... cheap.
+* find a unicode editor -- modify nvi ??
+    nvi -S .... nvi still lets you :r /etc/passwd,
+    and virus doesn't support unicode ..
+* demonstrate xmodem protocol ...
+  allow upload/download of .plan file;
+  allow download of bbs source code .
+
+HARD
+* github integration, + repositories, notifications of commits .. ?
+* properly implement STATUS in telnet.py ;/
+* graffiti app example, a simple ansi editor, but save screen buffer to database, and share updates with other nodes via global() events, so you can watch others deface...
+* message reader/browser
+  something akin to mutt's interface would be super.
+* bbs-scene.org bbs lister
+* demonstrate LORD dosemu game, esp. cp437 art translation!
+
+PARKING LOT
+
+flesh out fileserver ... zIPE's call.
+  at least hook on_* methods
+  file stats, ftpd admin door, etc.
+
+19:34  airwalk you need 1) gl like ftp support
+19:34  airwalk and 2) zipscript-c support
