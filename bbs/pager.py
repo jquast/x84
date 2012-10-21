@@ -170,14 +170,18 @@ class Pager(bbs.ansiwin.AnsiWindow):
         Scroll down ``num`` rows.
         """
         self.position -= num
-        return self.refresh() if self.moved == True else u''
+        if self.moved:
+            return self.refresh ()
+        return u''
 
     def _up(self, num=1):
         """
         Scroll up ``num`` rows.
         """
         self.position += num
-        return self.refresh() if self.moved == True else u''
+        if self.moved:
+            return self.refresh ()
+        return u''
 
     def refresh(self, start_row=0):
         """
