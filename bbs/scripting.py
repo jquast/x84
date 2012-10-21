@@ -94,7 +94,7 @@ def fopen(filepath, mode='rb'):
     """
     Return wrap to io.open using script-relative filepath and mode of 'rb'.
     """
-    return io.open(abspath(filepath), mode)
+    return open(abspath(filepath), mode)
 
 def ropen(filename, mode='rb'):
     """
@@ -102,4 +102,4 @@ def ropen(filename, mode='rb'):
     """
     import glob
     import random
-    return io.open(random.choice(glob.glob(abspath(filename))), mode)
+    return open(random.choice(glob.glob(abspath(filename))), mode)
