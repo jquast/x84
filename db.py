@@ -21,7 +21,7 @@ def get_db(schema):
     if not schema in DATABASES:
         assert schema.isalnum()
         import bbs.ini
-        dbpath = os.path.join(bbs.ini.cfg.get('database','sqlite_folder'),
+        dbpath = os.path.join(bbs.ini.CFG.get('database','sqlite_folder'),
             '%s.sqlite3' % (schema,),)
         DATABASES[schema] = sqlitedict.SqliteDict(filename=dbpath,
                 tablename='unnamed', autocommit=True)
