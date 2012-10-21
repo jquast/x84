@@ -201,10 +201,10 @@ class User(object):
         """
         Save user record to databases.
         """
-        assert type(self.handle) is unicode, ('handle must be unicode')
-        assert len(self.handle) > 0, ('handle must be non-zero length')
-        assert (None, None) != self.password, ('password must be set')
-        assert self.handle != u'anonymous', ('anonymous user my not be saved.')
+        assert type(self._handle) is unicode, ('handle must be unicode')
+        assert len(self._handle) > 0, ('handle must be non-zero length')
+        assert (None, None) != self._password, ('password must be set')
+        assert self._handle != 'anonymous', ('anonymous user my not be saved.')
         udb = bbs.dbproxy.DBProxy('userbase')
         adb = bbs.dbproxy.DBProxy('userattr')
         gdb = bbs.dbproxy.DBProxy('groupbase')
@@ -215,6 +215,7 @@ class User(object):
             logger.warn ('%s: First new user becomes sysop.', self.handle)
             self.group_add (u'sysop')
         udb[self.handle] = self
+        adb[self.handle] = dict()
         self._apply_groups (gdb)
         udb.release ()
         adb.release ()
