@@ -18,21 +18,23 @@ class DBProxy(object):
     results via IPC pipe transfer.
     """
 
-    def __init__(self, schema):
+    def __init__(self, schema, table='unnamed'):
         """
         Arguments:
             schema: database key, to become basename of .sqlite3 files.
         """
         self.schema = schema
+        self.table = table
 
     def __proxy_iter__(self, method, *args):
         """
         Iterable proxy for dictionary methods called over IPC pipe.
         """
         event = 'db=%s' % (self.schema,)
-        bbs.session.getsession().send_event (event, (method, args))
+        bbs.session.getsession().send_event (event, (self.table, method, args))
         data = bbs.session.getsession().read_event (event)
-        assert (None, 'StartIteration') == data
+        assert (None, 'StartIteration') == data, (
+                'iterable proxy used on non-iterable method.')
         while True:
             data = bbs.session.getsession().read_event (event)
             if data == (None, StopIteration):
@@ -44,7 +46,7 @@ class DBProxy(object):
         Proxy for dictionary methods called over IPC pipe.
         """
         event = 'db-%s' % (self.schema,)
-        bbs.session.getsession().send_event (event, (method, args))
+        bbs.session.getsession().send_event (event, (self.table, method, args))
         return bbs.session.getsession().read_event (event)
 
     def acquire(self, timeout=None):
@@ -53,7 +55,8 @@ class DBProxy(object):
         obtained. When timeout is not None, return False if lock cannot be
         acquired after timeout has elapsed in seconds.
         """
-        timeout = float('inf') if timeout is None else timeout
+        if timeout is None:
+            timeout = float('inf')
         event = 'lock-%s' % (self.schema,)
         stime = time.time ()
         while time.time() - stime < timeout:
