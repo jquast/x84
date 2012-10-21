@@ -498,8 +498,6 @@ class Session(object):
             logger.warn ('failed to acquire ttyrec lock')
             time.sleep (0.6)
         self.rotate_recordings (dst)
-        os.rename (os.path.join(self._ttylog_folder, '%s.0'%(src,)),
-            os.path.join(self._ttylog_folder, '%s.0'%(dst,)))
         # release tty recording lock
         self.send_event('lock-ttyrec', ('release', None))
 
