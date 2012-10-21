@@ -1,2 +1,3 @@
+newuser.asc - used in nua.py as banner
 1984.asc - used in matrix.py as a banner
-plant.ans - used in charset.py
+plant.ans - used in charset.py as demo
