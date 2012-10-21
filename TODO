@@ -1,4 +1,5 @@
 ROADMAP, 1.0:
+
 TESTING
 * ensure you can have a login name of [some-japanese-characters]
 * TERM=unknown -- this should create an 'expert mode' bbs, with
@@ -49,6 +50,7 @@ EASY
   allow download of bbs source code .
 
 HARD
+* setup.py creates us an 'x84' binary that 'just works',
 * github integration, + repositories, notifications of commits .. ?
 * properly implement STATUS in telnet.py ;/
 * graffiti app example, a simple ansi editor, but save screen buffer to database, and share updates with other nodes via global() events, so you can watch others deface...
