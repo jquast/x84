@@ -1,5 +1,17 @@
-1984.asc - used in matrix.py as a banner
-nua.asc - used in nua.py as banner
-lc.asc used in lc.py as banner
-irc.asc used in irc.py as banner
-plant.ans - used in charset.py as demo
+artfile            used by script    author
+-------            --------------    -----------
+1984.asc ......... matrix.py ....... spidy!food
+irc.asc .......... irc.py .......... spidy!food
+lc.asc ........... lc.py ........... spidy!food
+main.asc ......... main.py ......... spidy!food
+msgs.asc ......... top.py .......... spidy!food 
+news.asc ......... news.py ......... spidy!food
+nua.asc .......... nua.py .......... spidy!food
+ol.ans ........... ol.py ........... xzip!impure
+online.asc ....... online.py ....... spidy!food
+plant-256.ans .... charset.py ...... ?!?
+plant.ans ........ charset.py ...... ?!?
+sense.ans ........            ...... sense 25?
+test.ans .........            ...... ?!?
+ueditor.asc ...... ueditor.py ...... spidy!food
+userlist.asc ..... userlist.py ..... spidy!food
