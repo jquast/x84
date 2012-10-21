@@ -161,7 +161,11 @@ class User(object):
     def __setitem__(self, key, value):
         #pylint: disable=C0111,
         #        Missing docstring
-        bbs.dbproxy.DBProxy('userattr')[self.handle][key] = value
+        attrs = bbs.dbproxy.DBProxy('userattr')[self.handle]
+        attrs.__setitem__(key, value)
+        bbs.dbproxy.DBProxy('userattr')[self.handle] = attrs
+        # there could be a race condition with the same user .. oh well :p
+        logger.info ('%s[%s] set', self.handle, key)
     __setitem__.__doc__ = dict.__setitem__.__doc__
 
     def __getitem__(self, key):
