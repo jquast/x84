@@ -54,7 +54,7 @@ def main ():
     bbs.scripting.init (bbs.ini.CFG.get('session', 'scriptpath'))
 
     # start telnet server
-    addr_tup = (bbs.CFG.cfg.get('telnet', 'addr'),
+    addr_tup = (bbs.ini.CFG.get('telnet', 'addr'),
         int(bbs.ini.CFG.get('telnet', 'port')),)
     telnet_server = telnet.TelnetServer (
         address_pair = addr_tup,
