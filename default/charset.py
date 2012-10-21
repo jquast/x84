@@ -9,7 +9,11 @@ of 'cp437' for encoding translation.
 def main():
     import textwrap
     session, term = getsession(), getterminal()
-    artfile = 'art/plant.ans'
+    if term.number_of_colors == 256:
+        artfile = 'art/plant-256.ans'
+    else:
+        artfile = 'art/plant.ans'
+
     enc_prompt = u"Press left/right until artwork looks best. Clients " \
             "should select utf8 encoding, older clients or clients with " \
             "appropriate 8-bit fontsets can select cp437."
