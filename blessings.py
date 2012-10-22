@@ -26,7 +26,8 @@ except ImportError:
 __all__ = ['Terminal']
 
 
-if ('3', '0', '0') <= platform.python_version_tuple() < ('3', '2', '2+'):  # Good till 3.2.10
+if ('3', '0', '0') <= platform.python_version_tuple() < ('3', '2', '2+'):
+    # Good till 3.2.10
     # Python 3.x < 3.2.3 has a bug in which tparm() erroneously takes a string.
     raise ImportError('Blessings needs Python 3.2.3 or greater for Python 3 '
                       'support due to http://bugs.python.org/issue10570.')
@@ -211,7 +212,8 @@ class Terminal(object):
         Return values are always Unicode.
 
         """
-        resolution = self._resolve_formatter(attr) if self._does_styling else NullCallableString()
+        resolution = (self._resolve_formatter(attr) if self._does_styling
+                else NullCallableString())
         setattr(self, attr, resolution)  # Cache capability codes.
         return resolution
 
@@ -577,9 +579,9 @@ def split_into_formatters(compound):
     merged_segs = []
     # These occur only as prefixes, so they can always be merged:
     mergeable_prefixes = ['on', 'bright', 'on_bright']
-    for s in compound.split('_'):
+    for spx in compound.split('_'):
         if merged_segs and merged_segs[-1] in mergeable_prefixes:
-            merged_segs[-1] += '_' + s
+            merged_segs[-1] += '_' + spx
         else:
-            merged_segs.append(s)
+            merged_segs.append(spx)
     return merged_segs
