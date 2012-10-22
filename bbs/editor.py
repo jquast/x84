@@ -150,6 +150,7 @@ class ScrollingEditor(bbs.ansiwin.AnsiWindow):
     def __init__(self, width, yloc, xloc):
         bbs.ansiwin.AnsiWindow.__init__(self, height=1,
                 width=width, yloc=yloc, xloc=xloc)
+    __init__.__doc__ = bbs.ansiwin.AnsiWindow.__init__.__doc__
 
     @property
     def position(self):
@@ -351,7 +352,7 @@ class ScrollingEditor(bbs.ansiwin.AnsiWindow):
         character, or 0 for 'after' (default).
         """
         xpos = self._xpadding + self._horiz_pos + x_adjust
-        return self.pos(xloc=xpos, yloc=1)
+        return self.pos(xpos, 1)
 
     def refresh(self):
         """
