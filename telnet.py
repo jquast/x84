@@ -28,6 +28,7 @@ This is a modified version of miniboa retrieved from
 svn address http://miniboa.googlecode.com/svn/trunk/miniboa
 """
 
+import warnings
 import inspect
 import socket
 import select
@@ -422,24 +423,35 @@ class TelnetClient(object):
     def socket_send(self):
         """
         Called by TelnetServer.poll() when send data is ready.  Send any
-        data buffered, trim self.send_buffer to bytes sent, and return
-        number of bytes sent. bbs.exception.ConnectionClosed may be raised.
+        data buffered, trim self.send_buffer to bytes sent, and return number of bytes sent. bbs.exception.ConnectionClosed may be raised.
         """
-        sent = 0
+        if not self.send_ready():
+            warnings.warn ('socket_send() called on empty buffer',
+                    RuntimeWarning, 2)
+            return 0
+        def send(send_bytes):
+            try:
+                return self.sock.send(ready_bytes)
+            except socket.error, err:
+                raise bbs.exception.ConnectionClosed (
+                        'socket send %d:%s' % (err[0], err[1],))
         ready_bytes = bytes(''.join(self.send_buffer))
-        if 0 == len(ready_bytes):
-            logger.warn ('why did you call socket.send() with no data ready?')
-            return
-
-        try:
-            sent = self.sock.send(ready_bytes)
-        except socket.error, err:
-            raise bbs.exception.ConnectionClosed (
-                    'socket send %d:%s' % (err[0], err[1],))
-        assert sent > 0
-        #self.bytes_sent += sent
+        sent = send(ready_bytes)
         self.send_buffer = array.array('c')
-        self.send_buffer.fromstring (ready_bytes[sent:])
+        if sent < len(ready_bytes):
+            # re-buffer data that could not be pushed to socket;
+            self.send_buffer.fromstring (ready_bytes[sent:])
+        else:
+                # When a process has completed sending data to an NVT printer
+                # and has no queued input from the NVT keyboard for further
+                # processing (i.e., when a process at one end of a TELNET
+                # connection cannot proceed without input from the other end),
+                # the process must transmit the TELNET Go Ahead (GA) command.
+            if (not self.input_ready()
+                    and self._check_local_option(SGA) in (False, UNKNOWN)):
+                sent += send(GA)
+        return sent
+
 
     def socket_recv(self):
         """
