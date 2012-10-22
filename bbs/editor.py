@@ -352,7 +352,7 @@ class ScrollingEditor(bbs.ansiwin.AnsiWindow):
         character, or 0 for 'after' (default).
         """
         xpos = self._xpadding + self._horiz_pos + x_adjust
-        return self.pos(xpos, 1)
+        return self.pos(1, xpos)
 
     def refresh(self):
         """
