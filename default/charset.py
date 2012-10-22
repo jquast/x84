@@ -26,7 +26,7 @@ def main():
         Instantiate a new selector, dynamicly for the window size.
         """
         width = max(30, (term.width/2) - 10)
-        xloc = min(0, (term.width/2)-width)
+        xloc = max(0, (term.width/2)-(width/2))
         selector = Selector (yloc=term.height-1, xloc=xloc, width=width,
                 left='utf8', right='cp437')
         selector.selection = selection
@@ -57,13 +57,13 @@ def main():
     selector = get_selector ('utf8')
     refresh (selector)
     while True:
-        ch = getch ()
+        ch = getch (1)
         if ch == term.KEY_ENTER:
             session.user['charset'] = session.encoding
             echo (save_msg % (session.encoding,))
             getch (0.5)
             return
-        else:
+        elif ch is not None:
             selector.process_keystroke (ch)
             if selector.quit:
                 # 'escape' quits without save, though the encoding
@@ -72,8 +72,8 @@ def main():
             if selector.moved:
                 # set and refresh art in new encoding
                 refresh (selector)
-
-        if readevent('refresh', 0) is not None:
+        if pollevent('refresh') is not None:
+            logger.info ('refreshed;')
             # instantiate a new selector in case the window size has changed.
             selector = get_selector (session.encoding)
             refresh (selector)

@@ -6,6 +6,7 @@ and assigned to the session.
 
 Otherwise the user record of the handle passed is retreived and assigned.
 """
+
 # generated using lolcat ..
 BADGE256 = (u'\033[38;5;49m2\033[0m\033[38;5;48m5\033[0m\033[38;5;48m6\033[0m'
              '\033[38;5;48m-\033[0m\033[38;5;48mC\033[0m\033[38;5;84mO\033[0m'
@@ -16,71 +17,94 @@ BADGE256 = (u'\033[38;5;49m2\033[0m\033[38;5;48m5\033[0m\033[38;5;48m6\033[0m'
              '\033[38;5;154mA\033[0m\033[38;5;154mR\033[0m\033[38;5;154mD\033[0m'
              '\033[38;5;184mE\033[0m\033[38;5;184md\033[0m\033[38;5;184m!\033[0m')
 
+def display_intro():
+    session, term = getsession(), getterminal()
+    rstr = u''
+    if not session.user.get('expert', False):
+        rstr += term.move (0, 0) + term.clear
+        if term.number_of_colors == 256:
+            rstr += showcp437('default/art/top/*.256') + BADGE256
+        elif session.env.get('TERM') != 'unknown':
+            rstr += showcp437('default/art/top/*.ans')
+        else:
+            rstr += showcp437('default/art/top/*.asc')
+    return rstr
+
+def get_ynbar():
+    term = getterminal()
+    rstr = u''
+    ynbar = Selector(yloc=term.height - 1, xloc=term.width - 30, width=30,
+            left='Yes', right='No')
+    if term.number_of_colors:
+        ynbar.colors['selected'] = term.green_reverse
+    ynbar.keyset['left'].extend ((u'y', u'Y',))
+    ynbar.keyset['right'].extend ((u'n', u'N',))
+    return ynbar
+
+def redraw_quicklogin(ynbar):
+    term = getterminal()
+    rstr = u''
+    rstr += term.move(ynbar.yloc-1, ynbar.xloc) + term.normal
+    rstr += term.blue_reverse(u' QUiCk lOGiN ?! '.center(ynbar.width))
+    rstr += ynbar.refresh()
+    return rstr
 
 def main(handle=None):
     import time
     session, term = getsession(), getterminal()
     session.activity = 'top'
+    # 1. determine user record,
     if handle in (None, 'anonymous'):
         logger.warn ('anonymous login (source=%s).', session.source)
         user = User(u'anonymous')
     else:
         logger.info ('%r logged in.', handle)
         user = get_user(handle)
-
-    # 1. assign session property, .user
+    # 2. assign session user
     session.user = user
 
-    # 2. update call records
-    user.calls += 1
-    user.lastcall = time.time()
-    if user.handle != 'anonymous':
-        user.save ()
+    # 3. update call records
+    session.user.calls += 1
+    session.user.lastcall = time.time()
+    if session.user.handle != 'anonymous':
+        session.user.save ()
 
-    # 3. if no preferred charset run charset.py selector
-    if user.get('charset', None) is None:
-        logger.warn (user.get('charset', None))
+    # 4. if no preferred charset run charset.py selector
+    if session.user.get('charset', None) is None:
+        logger.warn (session.user.get('charset', None))
         gosub ('charset')
     else:
         # load default charset
-        session.encoding = user.get('charset')
+        session.encoding = session.user.get('charset')
         echo ('\r\nUsing user-preferred charset %s%s.', session.encoding,
                 '(EXCEllENt!)' if session.encoding == 'utf8' else 'bUMMER!')
 
-    # 4. impress with art, prompt for quick login,
+    # 5. impress with art, prompt for quick login (goto 'main'),
+    echo (display_intro())
     if session.env.get('TERM') == 'unknown':
-        if not user.get('expert', False):
-            echo (term.move (0, 0) + term.clear)
-            echo (showcp437('default/art/top/*.asc'))
-        echo (u'\r\n QUiCk lOGiN? [n]')
-
-        # simply hotkey y/n; our terminal is too dumb for lightbar
+        echo (u'\r\n QUiCk lOGiN? [yn]')
         while True:
-            yn = getch()
+            yn = getch(1)
             if yn in (u'y', u'Y'):
                 goto ('main')
             elif yn in (u'n', u'N'):
                 break
+            if pollevent('refresh'):
+                echo (u'\r\n QUiCk lOGiN? [yn]')
     else:
-        echo (term.move (0, 0) + term.clear)
-        if not user.get('expert', False):
-            if term.number_of_colors == 256:
-                echo (showcp437('default/art/top/*.256'))
-                echo (BADGE256)
-            else:
-                echo (showcp437('default/art/top/*.ans'))
-
-        # lightbar left/right, just like the priginal blood island ..
-        ynbar = Selector(yloc=term.height - 1, xloc=term.width - 30, width=30,
-                left='Yes', right='No')
-        if term.number_of_colors:
-            ynbar.colors['selected'] = term.green_reverse
-        echo (term.move(ynbar.yloc-1, ynbar.xloc) + term.normal)
-        echo (u' QUiCk lOGiN ?! '.center(ynbar.width))
-        echo (ynbar.refresh())
+        ynbar = get_ynbar()
+        echo (redraw_quicklogin(ynbar))
         while not ynbar.selected:
-            inp = getch()
-            echo (ynbar.process_keystroke (inp))
+            inp = getch(1)
+            if inp is not None:
+                echo (ynbar.process_keystroke (inp))
+            if pollevent('refresh'):
+                # redraw yes/no
+                swp = ynbar.selection
+                ynbar = get_ynbar()
+                ynbar.selection = swp
+                echo (display_intro ())
+                echo (redraw_quicklogin(ynbar))
             if ynbar.quit:
                 goto ('main')
         if ynbar.selection == ynbar.left:
