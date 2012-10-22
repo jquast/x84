@@ -1,2 +1,0 @@
-#!/bin/sh
-`dirname $0`/lint `dirname $0`/*.py `dirname $0`/bbs
