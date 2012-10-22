@@ -6,16 +6,26 @@ and assigned to the session.
 
 Otherwise the user record of the handle passed is retreived and assigned.
 """
+# generated using lolcat ..
+BADGE256 = (u'\033[38;5;49m2\033[0m\033[38;5;48m5\033[0m\033[38;5;48m6\033[0m'
+             '\033[38;5;48m-\033[0m\033[38;5;48mC\033[0m\033[38;5;84mO\033[0m'
+             '\033[38;5;83ml\033[0m\033[38;5;83mO\033[0m\033[38;5;83mr\033[0m'
+             '\033[38;5;83m \033[0m\033[38;5;83mb\033[0m\033[38;5;119mA\033[0m'
+             '\033[38;5;118md\033[0m\033[38;5;118mG\033[0m\033[38;5;118mE\033[0m'
+             '\033[38;5;118m \033[0m\033[38;5;154mA\033[0m\033[38;5;154mW\033[0m'
+             '\033[38;5;154mA\033[0m\033[38;5;154mR\033[0m\033[38;5;154mD\033[0m'
+             '\033[38;5;184mE\033[0m\033[38;5;184md\033[0m\033[38;5;184m!\033[0m')
+
 
 def main(handle=None):
     import time
     session, term = getsession(), getterminal()
     session.activity = 'top'
     if handle in (None, 'anonymous'):
-        logger.warn ('anonymous login.')
+        logger.warn ('anonymous login (source=%s).', session.source)
         user = User(u'anonymous')
     else:
-        logger.warn ('%r logged in.', handle)
+        logger.info ('%r logged in.', handle)
         user = get_user(handle)
 
     # 1. assign session property, .user
@@ -29,6 +39,7 @@ def main(handle=None):
 
     # 3. if no preferred charset run charset.py selector
     if user.get('charset', None) is None:
+        logger.warn (user.get('charset', None))
         gosub ('charset')
     else:
         # load default charset
@@ -55,13 +66,7 @@ def main(handle=None):
         if not user.get('expert', False):
             if term.number_of_colors == 256:
                 echo (showcp437('default/art/top/*.256'))
-                echo ('\r\n\r\n' + term.bright_black('[! --')
-                    + term.bright_cyan('256')
-                    + term.bright_blue('-COlOR ')
-                    + term.bright_green('bAdGE ')
-                    + term.bright_yellow('AWARdEd')
-                    + term.bright_cyan(' ^_*')
-                    + term.bright_black('-- !]'))
+                echo (BADGE256)
             else:
                 echo (showcp437('default/art/top/*.ans'))
 
