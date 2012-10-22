@@ -8,6 +8,7 @@ data/logging.ini
 *~
 ENV26
 ENV27
+ENV
 virtualenv.py
 ttyrecordings
 .DS_Store
