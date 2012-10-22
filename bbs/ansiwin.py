@@ -55,6 +55,10 @@ class AnsiWindow(object):
     _colors = dict()
 
     def __init__(self, height, width, yloc, xloc):
+        """
+        Construct an ansi window. Its base purpose is to provide
+        window-relativie positions using the pos() method.
+        """
         self.height = height
         self.width = width
         self.yloc = yloc
@@ -204,7 +208,7 @@ class AnsiWindow(object):
         'ansi_text' at the title location of the window.
         """
         xloc = self.width / 2 - (min(len(Ansi(ansi_text)) / 2, self.width / 2))
-        return self.pos(xloc=xloc, yloc=0) + ansi_text
+        return self.pos(xloc, 0) + ansi_text
 
     def footer(self, ansi_text):
         """
@@ -212,7 +216,7 @@ class AnsiWindow(object):
         'ansi_text' at the bottom edge of the window.
         """
         xloc = self.width / 2 - (min(len(Ansi(ansi_text)) / 2, self.width / 2))
-        return self.pos(xloc=xloc, yloc=self.height) + ansi_text
+        return self.pos(xloc, self.height) + ansi_text
 
 
     def border(self):
@@ -284,7 +288,7 @@ class AnsiWindow(object):
         """
         Erase window contents (including border)
         """
-        return self.pos(0, 0) + u''.join([self.pos(xloc=0, yloc=y) +
+        return self.pos(0, 0) + u''.join([self.pos(0, y) +
             self.glyphs.get('erase', u'') for y in range(self.height)])
 
     def clear(self):
@@ -292,6 +296,6 @@ class AnsiWindow(object):
         Erase only window contents, border remains.
         """
         rstr = self.pos(1, 1)
-        rstr += u''.join([self.pos(xloc=1, yloc=y) + self.glyphs.get('erase', u'')
+        rstr += u''.join([self.pos(1, y) + self.glyphs.get('erase', u'')
             for y in range(self.height -2)])
         return rstr
