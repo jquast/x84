@@ -200,7 +200,7 @@ class Pager(bbs.ansiwin.AnsiWindow):
             yloc = row + self.ypadding
             if yloc < start_row:
                 continue
-            rstr += self.pos (yloc, xloc) + line
+            rstr += self.pos (yloc, xloc) + line.ljust(self._visible_width)
         # clear to end of window
         yloc = row + self.ypadding
         while yloc < self._visible_height -1:
