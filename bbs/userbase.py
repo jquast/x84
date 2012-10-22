@@ -36,7 +36,11 @@ class Group(object):
     Use methods 'add' and 'remove' to add and remove users by handle,
     and 'save' to persist to disk (and other bbs sessions).
     """
+
     def __init__(self, name, members=()):
+        """
+        Initialize a group of name and members
+        """
         self._name = name
         self._members = set(members)
 
@@ -102,6 +106,9 @@ class User(object):
     #        Too many instance attributes (8/7)
 
     def __init__(self, handle=u'anonymous'):
+        """
+        Initialize a user record, using handle
+        """
         self._handle = handle
         self._password = (None, None)
         self._handle = u''
