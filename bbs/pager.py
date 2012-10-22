@@ -25,6 +25,9 @@ class Pager(bbs.ansiwin.AnsiWindow):
     #        Too many instance attributes (11/7)
 
     def __init__(self, height, width, yloc, xloc):
+        """
+        Initialize a pager of height, width, y, and x position.
+        """
         bbs.ansiwin.AnsiWindow.__init__ (self, height, width, yloc, xloc)
         self._xpadding = 1
         self._ypadding = 1
