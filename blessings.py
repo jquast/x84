@@ -124,28 +124,17 @@ class Terminal(object):
 
             # various terminal default sequences mappings
             self._keymap.update ([
-                (unichr(10), self.KEY_ENTER),
-                (unichr(13), self.KEY_ENTER),
-                (unichr(8), self.KEY_BACKSPACE),
-                (unichr(127), self.KEY_BACKSPACE),
-                (unichr(27) + u"OA", self.KEY_UP),
-                (unichr(27) + u"OB", self.KEY_DOWN),
-                (unichr(27) + u"OC", self.KEY_RIGHT),
-                (unichr(27) + u"OD", self.KEY_LEFT),
-                (unichr(27) + u"[A", self.KEY_UP),
-                (unichr(27) + u"[B", self.KEY_DOWN),
-                (unichr(27) + u"[C", self.KEY_RIGHT),
-                (unichr(27) + u"[D", self.KEY_LEFT),
-                (unichr(27) + u"A",  self.KEY_UP),
-                (unichr(27) + u"B",  self.KEY_DOWN),
-                (unichr(27) + u"C",  self.KEY_RIGHT),
-                (unichr(27) + u"D",  self.KEY_LEFT),
-                (unichr(27) + u"?x", self.KEY_UP),
-                (unichr(27) + u"?r", self.KEY_DOWN),
-                (unichr(27) + u"?v", self.KEY_RIGHT),
-                (unichr(27) + u"?t", self.KEY_LEFT),
-                (unichr(27) + u"[H", self.KEY_HOME),
-                (unichr(27) + u"[F", self.KEY_END),])
+                (chr(10), self.KEY_ENTER), (chr(13), self.KEY_ENTER),
+                (chr(8), self.KEY_BACKSPACE), (chr(127), self.KEY_BACKSPACE),
+                (chr(27) + "OA", self.KEY_UP), (chr(27) + "OB", self.KEY_DOWN),
+                (chr(27) + "OC", self.KEY_RIGHT), (chr(27) + "OD", self.KEY_LEFT),
+                (chr(27) + "[A", self.KEY_UP), (chr(27) + "[B", self.KEY_DOWN),
+                (chr(27) + "[C", self.KEY_RIGHT), (chr(27) + "[D", self.KEY_LEFT),
+                (chr(27) + "A", self.KEY_UP), (chr(27) + "B",  self.KEY_DOWN),
+                (chr(27) + "C", self.KEY_RIGHT), (chr(27) + "D", self.KEY_LEFT),
+                (chr(27) + "?x", self.KEY_UP), (chr(27) + "?r", self.KEY_DOWN),
+                (chr(27) + "?v", self.KEY_RIGHT), (chr(27) + "?t", self.KEY_LEFT),
+                (chr(27) + "[H", self.KEY_HOME), (chr(27) + "[F", self.KEY_END),])
 
     # Sugary names for commonly-used capabilities, intended to help avoid trips
     # to the terminfo man page and comments in your code:
