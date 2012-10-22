@@ -181,14 +181,14 @@ is implied. This bbs-specific functions such as getch() and echo().
 Other BBS Software
 ==================
 
-  enthral_: C++ open source, still in slow development
-  synchronet_: C formerly commercial, now open source. Sortof like wildcat.
-  daydream_: C open source. 10+ years out of maitenance.
-  mystic_: Pascal, closed source. Sortof like Renegade.
+* enthral_: C++ open source, still in slow development
+* synchronet_: C formerly commercial, now open source. Sortof like wildcat.
+* daydream_: C open source. 10+ years out of maitenance.
+* mystic_: Pascal, closed source. Sortof like Renegade.
 
   Many more archiac systems you can't acquire or run any longer:
   
-  https://en.wikipedia.org/wiki/List_of_BBS_software
+* https://en.wikipedia.org/wiki/List_of_BBS_software
 
 Support
 =======
