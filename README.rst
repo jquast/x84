@@ -12,6 +12,8 @@ Installation
 
 This software requires Python_ 2.6 or 2.7.
 
+``git clone https://github.com/jquast/x84.git x84.nxt``
+
 1. Install virtualenv,
 
 ``curl -o /tmp/virtualenv.py 'https://raw.github.com/pypa/virtualenv/master/virtualenv.py'``

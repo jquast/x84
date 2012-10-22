@@ -1,11 +1,21 @@
 # -*- coding: utf-8 -*-
+"""
+Handle Asynchronous Telnet Connections.
+Single-process, no threads, select-based.
 
-#  This is a modified version of miniboa.
-# TODO: Merge back into miniboa as a pull request if author is interested ?
-#  most significant changes are
-#  character-at-a-time input instead of linemode, encoding option on send,
-#  strict rejection of linemode, (fixed?) terminal type
-#  detection, #  environment variable support,
+Limitations:
+ - No linemode support, character-at-a-time only.
+ - No out-of-band / data mark (DM) / sync supported
+   (no ^C, ^S, ^Q helpers)
+
+This is a modified version of miniboa retrieved from
+svn address http://miniboa.googlecode.com/svn/trunk/miniboa
+which is meant for MUD's. This server would not be safe for MUD clients.
+"""
+#  Copyright 2012 Jeff Quast, whatever Jim's license is; changes from miniboa:
+#    character-at-a-time input instead of linemode, encoding option on send,
+#    strict rejection of linemode, terminal type detection, environment
+#    variable support, GA and SGA, utf-8 safe
 
 #------------------------------------------------------------------------------
 #   miniboa/async.py
@@ -20,13 +30,6 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 #------------------------------------------------------------------------------
-
-"""
-Handle Asynchronous Telnet Connections.
-
-This is a modified version of miniboa retrieved from
-svn address http://miniboa.googlecode.com/svn/trunk/miniboa
-"""
 
 import warnings
 import inspect
@@ -65,7 +68,8 @@ class TelnetServer(object):
     ## Dictionary of environment variables received by negotiation
     env = {}
     def __init__(self, address_pair, on_connect, on_disconnect, on_naws):
-        """ Create a new Telnet Server.
+        """
+        Create a new Telnet Server.
 
         Arguments:
            address_pair: tuple of (ip, port) to bind to.
@@ -232,13 +236,15 @@ def name_option(option):
     return values if values != '' else str(ord(option))
 
 def debug_option(func):
-    """ This function is a decorator that debug prints the 'from' address for
-        callables decorated with this. This helps during telnet negotiation,
-        to understand which function sets or checks local or remote option
-        states.
+    """
+    This function is a decorator that debug prints the 'from' address for
+    callables decorated with this. This helps during telnet negotiation, to
+    understand which function sets or checks local or remote option states.
     """
     def wrapper(self, *args):
-        """ inner wrapper for debug_option """
+        """
+        inner wrapper for debug_option
+        """
         stack = inspect.stack()
         logger.debug ('%s:%s %s(%s%s)',
             os.path.basename(stack[1][1]), stack[1][2],
@@ -894,42 +900,54 @@ class TelnetClient(object):
 
     @debug_option
     def _check_local_option(self, option):
-        """Test the status of local negotiated Telnet options."""
+        """
+        Test the status of local negotiated Telnet options.
+        """
         if not self.telnet_opt_dict.has_key(option):
             self.telnet_opt_dict[option] = TelnetOption()
         return self.telnet_opt_dict[option].local_option
 
     @debug_option
     def _note_local_option(self, option, state):
-        """Record the status of local negotiated Telnet options."""
+        """
+        Record the status of local negotiated Telnet options.
+        """
         if not self.telnet_opt_dict.has_key(option):
             self.telnet_opt_dict[option] = TelnetOption()
         self.telnet_opt_dict[option].local_option = state
 
     @debug_option
     def _check_remote_option(self, option):
-        """Test the status of remote negotiated Telnet options."""
+        """
+        Test the status of remote negotiated Telnet options.
+        """
         if not self.telnet_opt_dict.has_key(option):
             self.telnet_opt_dict[option] = TelnetOption()
         return self.telnet_opt_dict[option].remote_option
 
     @debug_option
     def _note_remote_option(self, option, state):
-        """Record the status of local negotiated Telnet options."""
+        """
+        Record the status of local negotiated Telnet options.
+        """
         if not option in self.telnet_opt_dict:
             self.telnet_opt_dict[option] = TelnetOption()
         self.telnet_opt_dict[option].remote_option = state
 
     @debug_option
     def _check_reply_pending(self, option):
-        """Test the status of requested Telnet options."""
+        """
+        Test the status of requested Telnet options.
+        """
         if not option in self.telnet_opt_dict:
             self.telnet_opt_dict[option] = TelnetOption()
         return self.telnet_opt_dict[option].reply_pending
 
     @debug_option
     def _note_reply_pending(self, option, state):
-        """Record the status of requested Telnet options."""
+        """
+        Record the status of requested Telnet options.
+        """
         if not option in self.telnet_opt_dict:
             self.telnet_opt_dict[option] = TelnetOption()
         self.telnet_opt_dict[option].reply_pending = state
@@ -938,21 +956,29 @@ class TelnetClient(object):
     #---[ Telnet Command Shortcuts ]-------------------------------------------
 
     def _iac_do(self, option):
-        """Send a Telnet IAC "DO" sequence."""
+        """
+        Send a Telnet IAC "DO" sequence.
+        """
         logger.debug ('send IAC DO %s', name_option(option))
         self.send_str (bytes(''.join((IAC, DO, option))))
 
     def _iac_dont(self, option):
-        """Send a Telnet IAC "DONT" sequence."""
+        """
+        Send a Telnet IAC "DONT" sequence.
+        """
         logger.debug ('send IAC DONT %s', name_option(option))
         self.send_str (bytes(''.join((IAC, DONT, option))))
 
     def _iac_will(self, option):
-        """Send a Telnet IAC "WILL" sequence."""
+        """
+        Send a Telnet IAC "WILL" sequence.
+        """
         logger.debug ('send IAC WILL %s', name_option(option))
         self.send_str (bytes(''.join((IAC, WILL, option))))
 
     def _iac_wont(self, option):
-        """Send a Telnet IAC "WONT" sequence."""
+        """
+        Send a Telnet IAC "WONT" sequence.
+        """
         logger.debug ('send IAC WONT %s', name_option(option))
         self.send_str (bytes(''.join((IAC, WONT, option))))
