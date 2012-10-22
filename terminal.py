@@ -47,8 +47,8 @@ def start_process(pipe, origin, env):
     """
     import bbs.session
     # now that we are a sub-process, our root handler has dangerously forked
-    # file descriptors. we remove any existing handlers, and re-address our root
-    # logging handler to an IPC event pipe, named 'logging'.
+    # file descriptors. we remove any existing handlers, and re-address our
+    # root logging handler to an IPC event pipe, named 'logging'.
     root = logging.getLogger()
     for hdlr in root.handlers:
         root.removeHandler (hdlr)
@@ -234,8 +234,6 @@ class ConnectTelnetTerminal (threading.Thread):
         """
         This method is called after the connection is initiated.
         """
-        # Writing Server Applications (TCP/SOCK_STREAM): How can I read only one
-        #   character at a time?
         # According to Roger Espel Llima (espel@drakkar.ens.fr), you can
         #   have your server send a sequence of control characters:
         # (0xff 0xfb 0x01) (0xff 0xfb 0x03) (0xff 0xfd 0x0f3).
