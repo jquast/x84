@@ -111,7 +111,7 @@ class Terminal(object):
 
             # curses capability names are inherited for comparison
             for attr in (a for a in dir(curses) if a.startswith('KEY')):
-                setattr(self, attr, getattr(curses, attr))
+              setattr(self, attr, getattr(curses, attr))
 
             # after sucessful setupterm(), a _keymap of keyboard sequences to
             # curses capability names can be constructed, this creates things
@@ -123,28 +123,28 @@ class Terminal(object):
 
             # various terminal default sequences mappings
             self._keymap.update ([
-                (unichr(10), self.KEY_ENTER),
-                (unichr(13), self.KEY_ENTER),
-                (unichr(8), self.KEY_BACKSPACE),
-                (unichr(127), self.KEY_BACKSPACE),
-                (unichr(27) + u"OA", self.KEY_UP),
-                (unichr(27) + u"OB", self.KEY_DOWN),
-                (unichr(27) + u"OC", self.KEY_RIGHT),
-                (unichr(27) + u"OD", self.KEY_LEFT),
-                (unichr(27) + u"[A", self.KEY_UP),
-                (unichr(27) + u"[B", self.KEY_DOWN),
-                (unichr(27) + u"[C", self.KEY_RIGHT),
-                (unichr(27) + u"[D", self.KEY_LEFT),
-                (unichr(27) + u"A",  self.KEY_UP),
-                (unichr(27) + u"B",  self.KEY_DOWN),
-                (unichr(27) + u"C",  self.KEY_RIGHT),
-                (unichr(27) + u"D",  self.KEY_LEFT),
-                (unichr(27) + u"?x", self.KEY_UP),
-                (unichr(27) + u"?r", self.KEY_DOWN),
-                (unichr(27) + u"?v", self.KEY_RIGHT),
-                (unichr(27) + u"?t", self.KEY_LEFT),
-                (unichr(27) + u"[H", self.KEY_HOME),
-                (unichr(27) + u"[F", self.KEY_END),])
+                ("\r",     self.KEY_ENTER),
+                ("\n",     self.KEY_ENTER),
+                (chr(8),   self.KEY_BACKSPACE),
+                (chr(127), self.KEY_BACKSPACE),
+                ("\033OA", self.KEY_UP),
+                ("\033OB", self.KEY_DOWN),
+                ("\033OC", self.KEY_RIGHT),
+                ("\033OD", self.KEY_LEFT),
+                ("\033[A", self.KEY_UP),
+                ("\033[B", self.KEY_DOWN),
+                ("\033[C", self.KEY_RIGHT),
+                ("\033[D", self.KEY_LEFT),
+                ("\033A",  self.KEY_UP),
+                ("\033B",  self.KEY_DOWN),
+                ("\033C",  self.KEY_RIGHT),
+                ("\033D",  self.KEY_LEFT),
+                ("\033?x", self.KEY_UP),
+                ("\033?r", self.KEY_DOWN),
+                ("\033?v", self.KEY_RIGHT),
+                ("\033?t", self.KEY_LEFT),
+                ("\033[H", self.KEY_HOME),
+                ("\033[F", self.KEY_END),])
 
     # Sugary names for commonly-used capabilities, intended to help avoid trips
     # to the terminfo man page and comments in your code:
@@ -246,13 +246,13 @@ class Terminal(object):
         for descriptor in self._init_descriptor, sys.__stdout__:
             try:
                 return struct.unpack('hhhh', fcntl.ioctl(descriptor,
-                    termios.TIOCGWINSZ, chr(0) * 8))[0:2]
+                    termios.TIOCGWINSZ, '\000' * 8))[0:2]
             except IOError:
                 pass
         return None, None  # Should never get here
 
     @contextlib.contextmanager
-    def location(self, xloc=None, yloc=None):
+    def location(self, x=None, y=None):
         """Return a context manager for temporarily moving the cursor.
 
         Move the cursor to a certain position on entry, let you print stuff
@@ -273,12 +273,12 @@ class Terminal(object):
         """
         # Save position and move to the requested column, row, or both:
         self.stream.write(self.save)
-        if xloc is not None and yloc is not None:
-            self.stream.write(self.move(yloc, xloc))
-        elif xloc is not None:
-            self.stream.write(self.move_x(xloc))
-        elif yloc is not None:
-            self.stream.write(self.move_y(yloc))
+        if x is not None and y is not None:
+            self.stream.write(self.move(y, x))
+        elif x is not None:
+            self.stream.write(self.move_x(x))
+        elif y is not None:
+            self.stream.write(self.move_y(y))
         yield
 
         # Restore original cursor position:
@@ -341,9 +341,8 @@ class Terminal(object):
 
         We also return 0 if the terminal won't tell us how many colors it
         supports, which I think is rare.
+
         """
-        #pylint: disable=R0201
-        #        Method could be a function
         # This is actually the only remotely useful numeric capability. We
         # don't name it after the underlying capability, because we deviate
         # slightly from its behavior, and we might someday wish to give direct
@@ -391,49 +390,46 @@ class Terminal(object):
         return u''
 
     def trans_input (self, data, encoding='utf8'):
-        """
-        Yield either a unicode byte or a curses key constant as integer.
-        If data is a bytestring, it is converted to unicode using encoding.
-        """
-        if isinstance(data, str):
-            data = data.decode (encoding, 'replace')
+      """
+      Yield either a unicode byte or a curses key constant as integer.
+      If data is a bytestring, it is converted to unicode using encoding.
+      """
+      if isinstance(data, str):
+        data = data.decode (encoding, 'replace')
 
-        def scan_keymap(text):
-            """
-            Return sequence and keycode if text begins with any known sequence.
-            """
-            for (keyseq, keycode) in self._keymap.iteritems():
-                if text.startswith (keyseq):
-                    return (keyseq, keycode)
-            return (None, None) # no match
+      def scan_keymap(text):
+          for (keyseq, keycode) in self._keymap.iteritems():
+              if text.startswith (keyseq):
+                  return (keyseq, keycode)
+          return (None, None) # no match
 
-        while len(data):
-            if ('\r','\x00') == (data[0], data[1] if 1 != len(data) else None):
-                # skip beyond nul (nvt telnet)
-                yield self.KEY_ENTER #data[0]
-                data = data[2:]
-                continue
-            if ('\r','\n') == (data[0], data[1] if 1 != len(data) else None):
-                # skip beyond \n (putty, SyncTerm)
-                yield self.KEY_ENTER
-                data = data[2:]
-                continue
-            keyseq, keycode = scan_keymap(data)
-            # keymap KEY_ sequence
-            if (keyseq, keycode) != (None, None):
-                yield keycode
-                data = data[len(keyseq):]
-            else:
-                yield data[0]
-                data = data[1:]
+      while len(data):
+        if ('\r','\x00') == (data[0], data[1] if 1 != len(data) else None):
+              # skip beyond nul (nvt telnet)
+              yield self.KEY_ENTER #data[0]
+              data = data[2:]
+              continue
+        if ('\r','\n') == (data[0], data[1] if 1 != len(data) else None):
+              # skip beyond \n (putty, SyncTerm)
+              yield self.KEY_ENTER
+              data = data[2:]
+              continue
+        keyseq, keycode = scan_keymap(data)
+        # keymap KEY_ sequence
+        if (keyseq, keycode) != (None, None):
+            yield keycode
+            data = data[len(keyseq):]
+        else:
+            yield data[0]
+            data = data[1:]
 
     def keyname(self, value):
-        """Return a matching keycode attribute name given a keycode value."""
-        try:
-            return (a for a in dir(self) if a.startswith('KEY_') and value ==
-                getattr(self, a)).next()
-        except StopIteration:
-            return '<unknown %r>' % (value,)
+      """Return a matching keycode attribute name given a keycode value."""
+      try:
+          return (a for a in dir(self) if a.startswith('KEY_') and value ==
+              getattr(self, a)).next()
+      except StopIteration:
+          return '<unknown %r>' % (value,)
 
     def _resolve_color(self, color):
         """
@@ -502,9 +498,9 @@ class ParametrizingString(unicode):
 
     def __call__(self, *args):
         try:
-                # Re-encode the cap, because tparm() takes a bytestring in Python
-                # 3. However, appear to be a plain Unicode string otherwise so
-                # concats work.
+            # Re-encode the cap, because tparm() takes a bytestring in Python
+            # 3. However, appear to be a plain Unicode string otherwise so
+            # concats work.
             lookup = self.encode('utf-8')
             parametrized = curses.tparm(lookup, *args).decode ('utf-8')
             return (parametrized if self._normal is None else

@@ -114,7 +114,7 @@ class BlessedIPCTerminal(blessings.Terminal):
             from bbs import ini
             # when setupterm() fails with client-supplied terminal_type
             # try again using the configuration .ini default type.
-            default_ttype = ini.cfg.get('session', 'default_ttype')
+            default_ttype = ini.CFG.get('session', 'default_ttype')
             errmsg = 'setupterm(%s) failed: %s' % (terminal_type, err,)
             assert terminal_type != default_ttype, \
                 '%s; using default_ttype' % (errmsg,)
@@ -412,36 +412,10 @@ class ConnectTelnetTerminal (threading.Thread):
                 (self.client.env['TERM'],))
             return
         logger.debug ('failed: terminal type not determined.')
-        self.client.env['TERM'] = ini.cfg.get('session', 'default_ttype')
+        self.client.env['TERM'] = ini.CFG.get('session', 'default_ttype')
         logger.debug ('terminal type: %s (default)', self.client.env['TERM'])
 
-        # Try #2 - ... this is bullshit,
-        #logger.debug('request answerback sequence')
-        #self.client.get_input () # flush & toss input
-        #self.client.send_str (chr(5))  # send request termtype
-        #self.client.socket_send () # push
-        #st_time = time.time()
-        #while not self.client.input_ready() and self._timeleft(st_time):
-        #    time.sleep (self.TIME_POLL)
-        #if not self.client.input_ready():
-        #    logger.debug ('failed: answerback reply not receieved')
-        #    # set to cfg .ini if not detected
-        #    self.client.env['TERM'] = ini.cfg.get('session', 'default_ttype')
-        #    logger.debug ('terminal type: %s (default)',
-        #            self.client.terminal_type)
-        #
-        #    st_time = time.time()
-        #    while self.client.idle() < self.TIME_PAUSE \
-        #    and self._timeleft(st_time):
-        #        time.sleep (self.TIME_POLL)
-        #    inp = self.client.get_input().lower()
-        #    self.client.terminal_type = inp.strip()
-        #    logger.debug ('terminal type: %s (answerback)',
-        #            self.client.terminal_type,)
-        #    self.client.request_wont_echo ()
-        #    return
-
-
+# Deprecate; do we really want this?
 class POSHandler(threading.Thread):
     """
     This thread requires a client pipe, The telnet terminal is queried for its
