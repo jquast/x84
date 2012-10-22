@@ -26,7 +26,7 @@ class DBProxy(object):
         self.schema = schema
         self.table = table
 
-    def __proxy_iter__(self, method, *args):
+    def proxy_iter(self, method, *args):
         """
         Iterable proxy for dictionary methods called over IPC pipe.
         """
@@ -41,7 +41,7 @@ class DBProxy(object):
                 raise StopIteration()
             yield data
 
-    def __proxy__(self, method, *args):
+    def proxy_method(self, method, *args):
         """
         Proxy for dictionary methods called over IPC pipe.
         """
@@ -84,75 +84,75 @@ class DBProxy(object):
         return bbs.session.getsession().read_event (event)
 
     def __cmp__(self, *args):
-        return self.__proxy__ ('__cmp__', *args)
+        return self.proxy_method ('__cmp__', *args)
     __cmp__.__doc__ = dict.__cmp__.__doc__
 
     def __contains__(self, *args):
-        return self.__proxy__ ('__contains__', *args)
+        return self.proxy_method ('__contains__', *args)
     __contains__.__doc__ = dict.__contains__.__doc__
 
     def __getitem__(self, *args):
-        return self.__proxy__ ('__getitem__', *args)
+        return self.proxy_method ('__getitem__', *args)
     __getitem__.__doc__ = dict.__getitem__.__doc__
 
     def __setitem__(self, *args):
-        return self.__proxy__ ('__setitem__', *args)
+        return self.proxy_method ('__setitem__', *args)
     __setitem__.__doc__ = dict.__setitem__.__doc__
 
     def __delitem__(self, *args):
-        return self.__proxy__ ('__delitem__', *args)
+        return self.proxy_method ('__delitem__', *args)
     __delitem__.__doc__ = dict.__delitem__.__doc__
 
     #pylint: disable=C0111
     #        Missing docstring
     def get(self, *args):
-        return self.__proxy__ ('get', *args)
+        return self.proxy_method ('get', *args)
     get.__doc__ = dict.get.__doc__
 
     def has_key(self, *args):
-        return self.__proxy__ ('has_key', *args)
+        return self.proxy_method ('has_key', *args)
     has_key.__doc__ = dict.has_key.__doc__
 
     def setdefault(self, *args):
-        return self.__proxy__ ('setdefault', *args)
+        return self.proxy_method ('setdefault', *args)
     setdefault.__doc__ = dict.setdefault.__doc__
 
     def update(self, *args):
-        return self.__proxy__ ('update', *args)
+        return self.proxy_method ('update', *args)
     update.__doc__ = dict.update.__doc__
 
     def __len__(self):
-        return self.__proxy__ ('__len__')
+        return self.proxy_method ('__len__')
     __len__.__doc__ = dict.__len__.__doc__
 
     def values(self):
-        return self.__proxy__ ('values')
+        return self.proxy_method ('values')
     values.__doc__ = dict.values.__doc__
 
     def items(self):
-        return self.__proxy__ ('items')
+        return self.proxy_method ('items')
     items.__doc__ = dict.items.__doc__
 
     def iteritems(self):
-        return self.__proxy_iter__ ('iteritems')
+        return self.proxy_iter ('iteritems')
     iteritems.__doc__ = dict.iteritems.__doc__
 
     def iterkeys(self):
-        return self.__proxy_iter__ ('iterkeys')
+        return self.proxy_iter ('iterkeys')
     iterkeys.__doc__ = dict.iterkeys.__doc__
 
     def itervalues(self):
-        return self.__proxy_iter__ ('itervalues')
+        return self.proxy_iter ('itervalues')
     itervalues.__doc__ = dict.itervalues.__doc__
 
     def keys(self):
-        return self.__proxy__ ('keys')
+        return self.proxy_method ('keys')
     keys.__doc__ = dict.keys.__doc__
 
     def pop(self):
-        return self.__proxy__ ('pop')
+        return self.proxy_method ('pop')
     pop.__doc__ = dict.pop.__doc__
 
     def popitem(self):
-        return self.__proxy__ ('popitem')
+        return self.proxy_method ('popitem')
     popitem.__doc__ = dict.popitem.__doc__
