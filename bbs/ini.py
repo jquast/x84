@@ -80,7 +80,8 @@ def init_bbs_ini ():
     cfg_bbs.add_section('session')
     cfg_bbs.set('session', 'ttylog_folder', './ttyrecordings/')
     cfg_bbs.set('session', 'record_tty', 'yes')
-    cfg_bbs.set('session', 'scriptpath', os.path.join(os.path.dirname(__file__),
+    cfg_bbs.set('session', 'scriptpath',
+            os.path.join(os.path.dirname(__file__),
         os.path.pardir, 'default/'))
     cfg_bbs.set('session', 'tap_input', 'no')
     cfg_bbs.set('session', 'tap_output', 'no')
