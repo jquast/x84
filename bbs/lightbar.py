@@ -56,7 +56,7 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
         """
         unibytes = u''
         # moveto (ypos),
-        unibytes += self.pos(self.xpadding, self.ypadding + ypos)
+        unibytes += self.pos(self.ypadding + ypos, self.xpadding)
         entry = self.vitem_shift + ypos
         if entry >= len(self.content):
             # out-of-bounds; empty window
