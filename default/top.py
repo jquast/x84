@@ -23,11 +23,14 @@ def display_intro():
     if not session.user.get('expert', False):
         rstr += term.move (0, 0) + term.clear
         if term.number_of_colors == 256:
-            rstr += showcp437('default/art/top/*.256') + BADGE256
+            if term.width >= 76:
+                rstr += showcp437('default/art/top/*.256') + BADGE256
         elif session.env.get('TERM') != 'unknown':
-            rstr += showcp437('default/art/top/*.ans')
+            if term.width >= 79:
+                rstr += showcp437('default/art/top/*.ans')
         else:
-            rstr += showcp437('default/art/top/*.asc')
+            if term.width >= 76:
+                rstr += showcp437('default/art/top/*.asc')
     return rstr
 
 def get_ynbar():
