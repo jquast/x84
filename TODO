@@ -35,7 +35,6 @@ DOCS
   - simple door game
 
 EASY
-* properly send GA when SGA is not negotiated
 * email password reset to new random gibberish
 * sysop's door to launch ttyplay -p on live terminals
 * local.py; wrap default/telnet.py / -- telnetlib to self :-)
