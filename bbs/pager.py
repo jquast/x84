@@ -1,7 +1,6 @@
 """
 Pager class for x/84, http://github.com/jquast/x84/
 """
-import textwrap
 import bbs.output
 import bbs.ansiwin
 
@@ -80,9 +79,8 @@ class Pager(bbs.ansiwin.AnsiWindow):
         # bounds check
         if self._position < 0:
             self._position = 0
-        bottom = max(0, len(self.content) - self._visible_height)
-        if self._position > bottom:
-            self._position = bottom
+        if self._position > self.bottom:
+            self._position = self.bottom
 
     @property
     def visible_content(self):
@@ -93,6 +91,9 @@ class Pager(bbs.ansiwin.AnsiWindow):
 
     @property
     def bottom(self):
+        """
+        Returns bottom-most position of window that contains content
+        """
         return max(0, len(self.content) - self._visible_height)
 
 
