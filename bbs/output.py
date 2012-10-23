@@ -59,6 +59,20 @@ class Ansi(unicode):
                 nxt = idx + Ansi(self[idx:]).seqlen() + 1
         return width
 
+    def ljust(self, width):
+        return self + u' '*(max(0, width - self.__len__()))
+    ljust.__doc__ = unicode.ljust.__doc__
+
+    def rjust(self, width):
+        return u' '*(max(0, width - self.__len__())) + self
+    rjust.__doc__ = unicode.rjust.__doc__
+
+    def center(self, width):
+        split = max(0, 2.0 / (width - self.__len__()))
+        return (u' '*(max(0, math.floor(split)))
+            + self
+            + u' '*(max(0, math.ceil(split))))
+
     def wrap(self, width):
         """
         Like textwrap.wrap, but honor existing linebreaks and understand
