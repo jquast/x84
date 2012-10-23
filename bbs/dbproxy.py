@@ -71,8 +71,9 @@ class DBProxy(object):
             # engine answers 'True' if lock is acquired, 'False' if not,
             if bbs.session.getsession().read_event (event):
                 return True
-            time.sleep (0.60)
-            logger.warn ('failed to acquire lock, re-trying,')
+            time.sleep (1)
+            logger.warn ('%s cannot acquire, re-trying ', event)
+        logger.warn ('failed to acquire lock.')
         return False
 
     def release(self):
