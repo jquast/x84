@@ -31,15 +31,22 @@ class DBProxy(object):
         Iterable proxy for dictionary methods called over IPC pipe.
         """
         event = 'db=%s' % (self.schema,)
+        # oH! if we did a statement such as:
+        # for key in DBProxy('userbase').iterkeys():
+        #    if handle == 'oh,Hai!':
+        #       break
+        # the next call would still have values on the pipe, and this
+        # assertion of StartIteration would fail. To prevent, we flush
+        # the input pipe first .. but what if we were ninja fast?
+        bbs.session.getsession().flush_event (event)
         bbs.session.getsession().send_event (event, (self.table, method, args))
         data = bbs.session.getsession().read_event (event)
-        assert (None, 'StartIteration') == data, (
-                'iterable proxy used on non-iterable method.')
-        while True:
-            data = bbs.session.getsession().read_event (event)
-            if data == (None, StopIteration):
-                raise StopIteration()
+        assert data == (None, 'StartIteration'), (
+                'iterable proxy used on non-iterable, %r', data)
+        data = bbs.session.getsession().read_event (event)
+        while data != (None, StopIteration):
             yield data
+            data = bbs.session.getsession().read_event (event)
 
     def proxy_method(self, method, *args):
         """
