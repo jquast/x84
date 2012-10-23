@@ -430,8 +430,11 @@ class TelnetClient(object):
                     RuntimeWarning, 2)
             return 0
         def send(send_bytes):
+            """
+            raises bbs.exception.ConnectionClosed on sock.send err
+            """
             try:
-                return self.sock.send(ready_bytes)
+                return self.sock.send(send_bytes)
             except socket.error, err:
                 raise bbs.exception.ConnectionClosed (
                         'socket send %d:%s' % (err[0], err[1],))
