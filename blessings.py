@@ -13,6 +13,10 @@ import curses
 import fcntl
 import sys
 
+
+#pylint: disable=C0103,W0611
+#        Invalid name "logger" for type constant
+#        Unused import IOUnsupportedOperation
 logger = logging.getLogger()
 
 try:
@@ -77,6 +81,9 @@ class Terminal(object):
         for attr in (a for a in dir(curses) if a.startswith('KEY')):
             setattr(self, attr, getattr(curses, attr))
 
+        #pylint: disable=W0212,E1101
+        # Access to a protected member _capability_names of a client class
+        # Function 'has_key' has no '_capability_names' member
         self._keymap = dict([(curses.tigetstr(cap).decode('utf-8'),
             keycode) for (keycode,cap) in
             curses.has_key._capability_names.iteritems() if
@@ -173,6 +180,7 @@ class Terminal(object):
         for key in (attr for attr in dir(self)
                 if attr.startswith('KEY_') and keycode == getattr(self, attr)):
             return key
+        return str(None)
 
     @property
     def height(self):
@@ -193,7 +201,7 @@ class Terminal(object):
         """Return a tuple of (terminal height, terminal width)."""
         if self.stream == sys.__stdout__:
             try:
-                return struct.unpack('hhhh', fcntl.ioctl(descriptor,
+                return struct.unpack('hhhh', fcntl.ioctl(sys.__stdout__,
                     termios.TIOCGWINSZ, chr(0) * 8))[0:2]
             except IOError:
                 pass
@@ -375,22 +383,10 @@ class Terminal(object):
                 yield data[0]
                 data = data[1:]
 
-    def keyname(self, value):
-        """Return a matching keycode attribute name given a keycode value."""
-        try:
-            return (a for a in dir(self) if a.startswith('KEY_') and value ==
-                getattr(self, a)).next()
-        except StopIteration:
-            return '<unknown %r>' % (value,)
-
     def _resolve_color(self, color):
         """
         Resolve a color like red or on_bright_green into a callable capability.
         """
-        # TODO: Does curses automatically exchange red and blue and cyan and
-        # yellow when a terminal supports setf/setb rather than setaf/setab?
-        # I'll be blasted if I can find any documentation. The following
-        # assumes it does.
         color_cap = (self._background_color if 'on_' in color else
                      self._foreground_color)
         # curses constants go up to only 7, so add an offset to get at the
@@ -402,10 +398,12 @@ class Terminal(object):
 
     @property
     def _foreground_color(self):
+        """ Return ANSI or non-ANSI foreground attribute."""
         return self.setaf or self.setf
 
     @property
     def _background_color(self):
+        """ Return ANSI or non-ANSI background attribute."""
         return self.setab or self.setb
 
     def _formatting_string(self, formatting):
@@ -436,6 +434,10 @@ class ParametrizingString(unicode):
     A Unicode string which can be called to parametrize it as a terminal
     capability.
     """
+    #pylint: disable=R0904,R0924
+    #        Too many public methods (40/20)
+    #        Badly implemented Container, implements __getitem__, __len__
+    #          but not __delitem__, __setitem__
     def __new__(cls, formatting, normal=None):
         """Instantiate.
 
@@ -444,15 +446,17 @@ class ParametrizingString(unicode):
             "normal" capability.
 
         """
+        #pylint: disable=W0212
+        #        Access to a protected member _normal of a client class
         new = unicode.__new__(cls, formatting)
         new._normal = normal
         return new
 
     def __call__(self, *args):
         try:
-                # Re-encode the cap, because tparm() takes a bytestring in Python
-                # 3. However, appear to be a plain Unicode string otherwise so
-                # concats work.
+            # Re-encode the cap, because tparm() takes a bytestring in Python
+            # 3. However, appear to be a plain Unicode string otherwise so
+            # concats work.
             lookup = self.encode('utf-8')
             parametrized = curses.tparm(lookup, *args).decode ('utf-8')
             return (parametrized if self._normal is None else
@@ -482,7 +486,14 @@ class FormattingString(unicode):
     A Unicode string which can be called upon a piece of text to wrap it in
     formatting.
     """
+    #pylint: disable=R0904,R0924
+    #        Too many public methods (40/20)
+    #        Badly implemented Container, implements __getitem__, __len__
+    #          but not __delitem__, __setitem__
+
     def __new__(cls, formatting, normal):
+        #pylint: disable=W0212
+        #        Access to a protected member _normal of a client class
         new = unicode.__new__(cls, formatting)
         new._normal = normal
         return new
@@ -508,6 +519,11 @@ class NullCallableString(unicode):
     capabilities are blank.
 
     """
+    #pylint: disable=R0904,R0924
+    #        Too many public methods (40/20)
+    #        Badly implemented Container, implements __getitem__, __len__
+    #          but not __delitem__, __setitem__
+
     def __new__(cls):
         new = unicode.__new__(cls, u'')
         return new
@@ -534,3 +550,5 @@ def split_into_formatters(compound):
         else:
             merged_segs.append(spx)
     return merged_segs
+
+
