@@ -15,9 +15,10 @@ def main():
     else:
         artfile = 'default/art/plant.ans'
 
-    enc_prompt = u"Press left/right until artwork looks best. Clients " \
-            "should select utf8 encoding, older clients or clients with " \
-            "appropriate 8-bit fontsets can select cp437."
+    enc_prompt = (u'Press left/right until artwork looks best. Clients should'
+            ' select utf8 encoding and Andale Mono font. Older clients or'
+            ' clients with appropriate 8-bit fontsets can select cp437, though'
+            ' some characters may appear as "?".')
 
     save_msg = u"\r\n\r\n'%s' is now your preferred encoding.\r\n"
 
@@ -51,7 +52,8 @@ def main():
         echo (term.move (0,0) + term.normal + term.clear)
         echo (showcp437 (artfile))
         echo (term.normal + u'\r\n\r\n')
-        echo (u'\r\n'.join(textwrap.wrap(enc_prompt, term.width-3)) + u'\r\n')
+        echo (Ansi(enc_prompt).wrap((term.width / 2) + (term.width / 3))) # 1/2+1/3
+        echo ('\r\n\r\n') # leave at least 2 empty lines at bottom
         echo (sel.refresh ())
 
     selector = get_selector ('utf8')
