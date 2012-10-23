@@ -9,7 +9,7 @@ def dummy_pager(last_callers):
     echo (term.normal + '\r\n\r\n')
     if term.width > 71:
         echo ('\r\n'.join((line.rstrip().center(term.width).rstrip()
-            for line in fopen('default/art/lc.asc', 'r'))))
+            for line in fopen('default/art/lc.asc'))))
     echo (term.normal + '\r\n\r\n')
     for row in range(len(last_callers)):
         echo (last_callers[row].rstrip() + '\r\n')
@@ -27,7 +27,7 @@ def dummy_pager(last_callers):
 def redraw(pager):
     term = getterminal()
     rstr = term.move(0, 0) + term.normal + term.clear
-    for line in fopen('default/art/lc.asc', 'r'):
+    for line in fopen('default/art/lc.asc'):
         rstr += line.center(term.width).rstrip() + '\r\n'
     rstr += pager.border ()
     if len(pager.content) < pager._visible_height:
@@ -87,12 +87,12 @@ def main(record_only=False):
     lcalls_txt = lc_retrieve ()
     if (session.env.get('TERM') == 'unknown'
             or term.number_of_colors == 0
-            or term.height <= 22 or term.width <= 72 or
+            or term.height <= 20 or term.width <= 72 or
             session.user.get('expert', False)):
         dummy_pager (lcalls_txt.split('\n'))
         return
     while True:
-        if (term.height <= 22 or term.width <= 72):
+        if (term.height <= 20 or term.width <= 72):
             # window became too small
             dummy_pager (lcalls_txt.split('\n'))
             return
