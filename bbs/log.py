@@ -47,7 +47,7 @@ class ColoredConsoleHandler(logging.StreamHandler):
     """
 
     def __init__(self):
-        self.term = blessings.Terminal(stream=sys.stderr, force_styling=True)
+        self.term = blessings.Terminal(stream=sys.stderr)
         logging.StreamHandler.__init__ (self)
 
     def color_levelname (self, record):

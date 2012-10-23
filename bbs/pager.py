@@ -1,7 +1,6 @@
 """
 Pager class for x/84, http://github.com/jquast/x84/
 """
-import textwrap
 import bbs.output
 import bbs.ansiwin
 
@@ -80,9 +79,23 @@ class Pager(bbs.ansiwin.AnsiWindow):
         # bounds check
         if self._position < 0:
             self._position = 0
-        bottom = max(0, len(self.content) - self._visible_height)
-        if self._position > bottom:
-            self._position = bottom
+        if self._position > self.bottom:
+            self._position = self.bottom
+
+    @property
+    def visible_content(self):
+        """
+        Returns content that is visible in window
+        """
+        return self.content[self.position:self.position + self._visible_height]
+
+    @property
+    def bottom(self):
+        """
+        Returns bottom-most position of window that contains content
+        """
+        return max(0, len(self.content) - self._visible_height)
+
 
     def init_keystrokes(self):
         """
@@ -190,113 +203,37 @@ class Pager(bbs.ansiwin.AnsiWindow):
         """
         Return unicode string suitable for refreshing pager window.
         """
-        row = 0
-        rstr = u''
         term = bbs.session.getsession().terminal
-        visc = self.content[self.position:self.position + self._visible_height]
-        xloc = self.xpadding
         # draw window contents
-        for row, line in enumerate(visc):
+        rstr = u''
+        row = 0
+        for row, line in enumerate(self.visible_content):
+            len_line = bbs.output.Ansi(line).__len__()
             yloc = row + self.ypadding
             if yloc < start_row:
                 continue
-            rstr += self.pos (yloc, xloc) + line
+            rstr += self.pos (yloc, self.xpadding)
+            rstr += line
+            rstr += ' ' * max(0, self._visible_width - len_line)
         # clear to end of window
         yloc = row + self.ypadding
-        while yloc < self._visible_height -1:
+        while yloc < self._visible_height - 1:
             yloc += 1
-            rstr += self.pos (row, xloc) + u' ' * self._visible_width
-        rstr += term.normal
-        return rstr
+            rstr += self.pos (row, self.xpadding) + u' ' * self._visible_width
+        return rstr + term.normal
 
     def update(self, unibytes):
         """
-        Update content buffer with new ansi unicodes.
+        Update content buffer with lines of ansi unicodes as single unit.
         """
-        if unichr(27) in unibytes:
-            self._update_ansi (unibytes)
-        else:
-            # standard ascii uses the python 'textwrap' module :D
-            self.content = textwrap.wrap(unibytes, self._visible_width)
-        return self.refresh()
+        self.content = bbs.output.Ansi(unibytes
+                ).wrap(self._visible_width).split('\n')
+        return self.refresh ()
 
     def append(self, unibytes):
         """
-        Update content buffer with additional lines, using ansi unicodes.
+        Update content buffer with additional lines of ansi unicodes.
         """
-        if unichr(27) in unibytes:
-            self._update_ansi ('\n'.join(self.content) + '\n' + unibytes)
-        else:
-            self.content.extend (textwrap.wrap(unibytes, self._visible_width))
-        return self._end()
-
-    def _update_ansi(self, unibytes=u''):
-        """
-        Update content buffer with new ansi art.
-        """
-        #pylint: disable=R0914,R0912
-        #        Too many local variables (17/15)
-        #        Too many branches (15/12)
-        save_pos = self.position
-        self.position = 0
-        row = len(self.content)
-        remaining = u''
-        # replace all of the ansi.right(n) sequences with
-        # ' ' to prevent 'bleeding' over 'ghost' glyphs when
-        # scrolling (at the cost of some extra bytes).
-        unibytes = bbs.output.Ansi(unibytes).seqfill()
-        # my own, ansi-safe textwrap ..
-        while unibytes.strip() or remaining.strip():
-            nlset = [(x, z)
-                    for x, z in [(unibytes.find(seq), seq)
-                        for seq in ['\r\n','\n']] if x != -1
-                    ] # ^-- you're not supposed to do this !
-            if 0 == len(nlset):
-                nlp, nlseq = -1, u''
-            else:
-                nlp, nlseq = min(nlset)
-            newline = nlp != -1
-            if (newline and max(self._visible_width + 1,
-                len(bbs.output.Ansi(unibytes[:nlp]))) <= self._visible_width):
-                remaining = unibytes[nlp + len(nlseq):] + remaining
-                unibytes = unibytes[:nlp]
-            else:
-                newline = False
-            if (newline or max(self._visible_width + 1,
-                len(bbs.output.Ansi(unibytes))) <= self._visible_width):
-                # write unibytes to content  buffer
-                while row >= len(self.content):
-                    self.content.append (u'')
-                self.content[row] = unibytes
-                unibytes = remaining
-                remaining = u''
-                row += 1
-                continue
-            wordbreak = unibytes[1:].find(' ') != -1
-            pos = 0
-            nxt = 0
-            col = 0
-            while True:
-                if wordbreak:
-                    # break at nearest word to margin
-                    npos = unibytes[pos+1:].find(' ')
-                    if npos == -1:
-                        break
-                    if (len(bbs.output.Ansi(unibytes[:pos + npos + 1]))
-                            >= self._visible_width-1):
-                        pos += 1 # forward past ' '
-                        break
-                    pos += npos +1
-                else:
-                    # break on margin
-                    if nxt <= pos:
-                        nxt = pos + bbs.output.Ansi(unibytes[pos:]).seqlen()
-                    if nxt <= pos:
-                        col += 1
-                        if col == self._visible_width -1:
-                            break
-                    pos += 1
-            remaining = unibytes[pos:] + remaining
-            unibytes = unibytes[:pos]
-        self.position = save_pos
-        return self.refresh ()
+        self.content.extend (bbs.output.Ansi(unibytes
+            ).wrap(self._visible_width).split('\n'))
+        return self._end() or self.refresh(self.bottom)

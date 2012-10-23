@@ -94,7 +94,7 @@ def try_pass(user):
     session._tap_input = chk # restore -->
 
     if password is None or 0 == len(password):
-        return False
+        return
 
     echo (status_auth)
     if user.auth (password):
@@ -103,7 +103,7 @@ def try_pass(user):
     # you failed !
     echo ('\r\n\r\n')
     denied (badpass_msg % (user.handle,))
-    return False
+    return
 
 def uname():
     """
@@ -128,7 +128,13 @@ def main ():
     echo (term.normal + u'\r\nConnected to %s, see %s for source\r\n' % (
         bbsname, __url__))
     uname ()
-    echo (u'\r\n' + showcp437('default/art/1984.asc') + u'\r\n')
+    echo (u'\r\n')
+    if term.width >= 76:
+        for line in fopen('default/art/1984.asc','r'):
+            echo (line.rstrip().center(term.width).rstrip() + u'\r\n')
+        echo (u'\r\n')
+    if session.env.get('TERM') == 'unknown':
+        echo (u'! TERM is unknown\r\n\r\n')
     if allow_anonymous:
         echo (anon_allowed_msg)
     for n in range(0, max_tries):

@@ -15,9 +15,10 @@ def main():
     else:
         artfile = 'default/art/plant.ans'
 
-    enc_prompt = u"Press left/right until artwork looks best. Clients " \
-            "should select utf8 encoding, older clients or clients with " \
-            "appropriate 8-bit fontsets can select cp437."
+    enc_prompt = (u'Press left/right until artwork looks best. Clients should'
+            ' select utf8 encoding and Andale Mono font. Older clients or'
+            ' clients with appropriate 8-bit fontsets can select cp437, though'
+            ' some characters may appear as "?".')
 
     save_msg = u"\r\n\r\n'%s' is now your preferred encoding.\r\n"
 
@@ -26,7 +27,7 @@ def main():
         Instantiate a new selector, dynamicly for the window size.
         """
         width = max(30, (term.width/2) - 10)
-        xloc = min(0, (term.width/2)-width)
+        xloc = max(0, (term.width/2)-(width/2))
         selector = Selector (yloc=term.height-1, xloc=xloc, width=width,
                 left='utf8', right='cp437')
         selector.selection = selection
@@ -51,19 +52,20 @@ def main():
         echo (term.move (0,0) + term.normal + term.clear)
         echo (showcp437 (artfile))
         echo (term.normal + u'\r\n\r\n')
-        echo (u'\r\n'.join(textwrap.wrap(enc_prompt, term.width-3)) + u'\r\n')
+        echo (Ansi(enc_prompt).wrap((term.width / 2) + (term.width / 3))) # 1/2+1/3
+        echo ('\r\n\r\n') # leave at least 2 empty lines at bottom
         echo (sel.refresh ())
 
     selector = get_selector ('utf8')
     refresh (selector)
     while True:
-        ch = getch ()
+        ch = getch (1)
         if ch == term.KEY_ENTER:
             session.user['charset'] = session.encoding
             echo (save_msg % (session.encoding,))
             getch (0.5)
             return
-        else:
+        elif ch is not None:
             selector.process_keystroke (ch)
             if selector.quit:
                 # 'escape' quits without save, though the encoding
@@ -72,8 +74,8 @@ def main():
             if selector.moved:
                 # set and refresh art in new encoding
                 refresh (selector)
-
-        if readevent('refresh', 0) is not None:
+        if pollevent('refresh') is not None:
+            logger.info ('refreshed;')
             # instantiate a new selector in case the window size has changed.
             selector = get_selector (session.encoding)
             refresh (selector)

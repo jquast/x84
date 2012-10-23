@@ -5,6 +5,8 @@ TESTING
 * TERM=unknown -- this should create an 'expert mode' bbs, with
   no frills, no lightbars, no artwork, etc. -- for low bandwidth
   terminals.
+* assert that any line that y and x, yloc, xloc, ypos, xpos, row, col
+  are used, that they appear in order of Y, X.
 
 must be compatible with the following clients,
 (or document any changes required, fonts, etc.):

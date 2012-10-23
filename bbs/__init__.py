@@ -53,6 +53,7 @@ __all__ = [
     'sendevent',
     'broadcastevent',
     'readevent',
+    'pollevent',
     'readevents',
     'flushevent',
     'flushevents',
@@ -120,9 +121,15 @@ def readevents(events=('input',), timeout=None):
 
 def readevent(event='input', timeout=None):
     """
-    Poll for Session event.
+    Poll for Session event. (blocking)
     """
     return getsession().read_event(event, timeout)
+
+def pollevent(event='input'):
+    """
+    Poll for session event (non-blocking)
+    """
+    return getsession().read_event(event, -1)
 
 def sleep (seconds):
     """

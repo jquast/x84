@@ -191,15 +191,15 @@ class AnsiWindow(object):
             and win.xloc >= self.xloc
             and win.xloc + win.w <= self.xloc + self.width)
 
-    def pos(self, xloc=None, yloc=None):
+    def pos(self, yloc=None, xloc=None):
         """
         Returns terminal sequence to move cursor to window-relative position.
         """
         term = getsession().terminal
-        if xloc is None:
-            xloc = 0
         if yloc is None:
             yloc = 0
+        if xloc is None:
+            xloc = 0
         return term.move (yloc + self.yloc, xloc + self.xloc)
 
     def title(self, ansi_text):
@@ -208,7 +208,7 @@ class AnsiWindow(object):
         'ansi_text' at the title location of the window.
         """
         xloc = self.width / 2 - (min(len(Ansi(ansi_text)) / 2, self.width / 2))
-        return self.pos(xloc, 0) + ansi_text
+        return self.pos(0, xloc) + ansi_text
 
     def footer(self, ansi_text):
         """
@@ -216,7 +216,7 @@ class AnsiWindow(object):
         'ansi_text' at the bottom edge of the window.
         """
         xloc = self.width / 2 - (min(len(Ansi(ansi_text)) / 2, self.width / 2))
-        return self.pos(xloc, self.height) + ansi_text
+        return self.pos(self.height, xloc) + ansi_text
 
 
     def border(self):
@@ -238,7 +238,7 @@ class AnsiWindow(object):
             for col in range (0, self.width):
                 # left to right
                 if (col == 0) or (col == self.width - 1):
-                    rstr += self.pos(col, row)
+                    rstr += self.pos(row, col)
                     if (row == 0) and (col == 0):
                         # top left
                         rstr += self.glyphs.get('top-left', u'')
@@ -262,7 +262,7 @@ class AnsiWindow(object):
                     if thoriz == u'':
                         if topright != u'':
                             # prepare for top-right, (horiz skipped)
-                            rstr += self.pos(self.width -1, row)
+                            rstr += self.pos(row, self.width -1)
                     else:
                         # horizontal line
                         rstr += thoriz
@@ -274,7 +274,7 @@ class AnsiWindow(object):
                     if bhoriz == u'':
                         if botright != u'':
                             # prepare for bot-right, (horiz skipped)
-                            rstr += self.pos(self.width -1, row)
+                            rstr += self.pos(row, self.width -1)
                     else:
                         # horizontal line
                         rstr += bhoriz
@@ -288,7 +288,7 @@ class AnsiWindow(object):
         """
         Erase window contents (including border)
         """
-        return self.pos(0, 0) + u''.join([self.pos(0, y) +
+        return self.pos(0, 0) + u''.join([self.pos(y, 0) +
             self.glyphs.get('erase', u'') for y in range(self.height)])
 
     def clear(self):
@@ -296,6 +296,6 @@ class AnsiWindow(object):
         Erase only window contents, border remains.
         """
         rstr = self.pos(1, 1)
-        rstr += u''.join([self.pos(1, y) + self.glyphs.get('erase', u'')
+        rstr += u''.join([self.pos(y, 1) + self.glyphs.get('erase', u'')
             for y in range(self.height -2)])
         return rstr

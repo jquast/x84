@@ -171,7 +171,6 @@ class User(object):
         attrs = bbs.dbproxy.DBProxy('userattr')[self.handle]
         attrs.__setitem__(key, value)
         bbs.dbproxy.DBProxy('userattr')[self.handle] = attrs
-        # there could be a race condition with the same user .. oh well :p
         logger.info ('%s[%s] set', self.handle, key)
     __setitem__.__doc__ = dict.__setitem__.__doc__
 
@@ -180,6 +179,21 @@ class User(object):
         #        Missing docstring
         return bbs.dbproxy.DBProxy('userattr')[self.handle][key]
     __getitem__.__doc__ = dict.__getitem__.__doc__
+
+    def __delitem__(self, key):
+        #pylint: disable=C0111,
+        #        Missing docstring
+        attrs = bbs.dbproxy.DBProxy('userattr')[self.handle]
+        attrs.__detitem__(key)
+        bbs.dbproxy.DBProxy('userattr')[self.handle] = attrs
+        logger.info ('%s[%s] del', self.handle, key)
+    __delitem__.__doc__ = dict.__delitem__.__doc__
+
+    def __len__(self):
+        #pylint: disable=C0111,
+        #        Missing docstring
+        return bbs.dbproxy.DBProxy('userattr')[self.handle].__len__
+    __len__.__doc__ = dict.__len__.__doc__
 
     def get(self, key, default=None):
         #pylint: disable=C0111,

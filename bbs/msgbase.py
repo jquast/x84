@@ -47,7 +47,7 @@ class Msg(object):
     'parent' points to the message this message directly refers to, and
     'threads' points to messages that refer to this message. 'parent' must be
     explicitly set, but children are automaticly populated into 'threads' of
-    messages replied to through the send() method. XXX
+    messages replied to through the send() method.
     """
     idx = None
     tags = set()
