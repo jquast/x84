@@ -64,7 +64,7 @@ class Ansi(unicode):
         for paragraph in self.split('\n'):
             line = []
             len_line = 0
-            for word in paragraph.split(' '):
+            for word in paragraph.rstrip().split(' '):
                 len_word = Ansi(word).__len__()
                 if len_line + len_word <= width:
                     line.append(word)
@@ -74,7 +74,7 @@ class Ansi(unicode):
                     line = [word]
                     len_line = len_word + 1
             lines.append(' '.join(line))
-        return '\n'.join(lines)
+        return '\r\n'.join(lines)
 
 
     def is_movement(self):
