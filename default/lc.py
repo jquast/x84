@@ -3,9 +3,8 @@ Last Callers script for x/84, http://github.com/jquast/x84
 """
 
 def dummy_pager(last_callers):
-    session, term = getsession(), getterminal()
+    term = getterminal()
     prompt_msg = u'\r\n[c]ontinue, [s]top, [n]on-stop  ?\b\b'
-    session.activity = u'Viewing last callers'
     nonstop = False
     echo (term.normal + '\r\n\r\n')
     if term.width > 71:
@@ -26,6 +25,7 @@ def dummy_pager(last_callers):
     return
 
 def redraw(pager):
+    term = getterminal()
     rstr = term.move(0, 0) + term.normal + term.clear
     for line in fopen('default/art/lc.asc', 'r'):
         rstr += line.center(term.width).rstrip() + '\r\n'
@@ -41,7 +41,8 @@ def redraw(pager):
     return rstr
 
 def get_pager(lcalls):
-    width = 67
+    term = getterminal()
+    width = 69
     height = term.height - 10
     yloc = 10
     xloc = max(3, int((float(term.width) / 2) - (float(width) / 2)))
@@ -53,45 +54,56 @@ def get_pager(lcalls):
     return pager
 
 def lc_retrieve():
-    rstr = u''
+    term = getterminal()
     udb = dict ()
     for handle in list_users():
         user = get_user(handle)
         udb[(user.lastcall, handle)] = (user.calls, user.location)
-    padd_handle = ini.CFG.getint('nua', 'max_user') + 1
-    padd_loc = ini.CFG.getint('nua', 'max_location') + 1
-    padd_lcall = 12
-    padd_ncalls = 13
-    for ((lcall, handle), (ncalls, location)) in (
-            reversed(sorted(udb.items()))):
-        rstr += ( handle.ljust(padd_handle)
-                + location.ljust(padd_loc)
-                + ('%s ago' % (timeago(lcall),)).rjust (padd_lcall)
-                + ('   Calls: %s' % (ncalls,)).ljust (padd_ncalls)
-                + '\n')
+    padd_handle = ini.CFG.getint('nua', 'max_user')
+    padd_location = ini.CFG.getint('nua', 'max_location')
+    rstr = u''
+    for ((tm_lc, handle), (nc, origin)) in (reversed(sorted(udb.items()))):
+        rstr += ( term.bright_red(handle[:len(handle) / 3])
+                + term.bright_black(handle[len(handle) / 3:])
+                + term.dim_yellow(' .,' * (max(1,
+                    padd_handle - len(handle)) / 3))
+                + u' ')
+        rstr += ( term.bright_yellow(origin[:len(origin) / 2])
+                + term.bright_yellow(origin[len(origin) / 2:])
+                + term.dim_red(' .,' * (max(1,
+                    padd_location - len(origin)) / 3))
+                + u' ')
+        rstr += ( term.bright_yellow(timeago(tm_lc))
+                + term.red(' ago; n') + term.bright_yellow('C')
+                + term.red('alls: ') + term.bright_red(str(nc))
+                + u'\n')
     return rstr.rstrip()
 
 
 def main(record_only=False):
     session, term = getsession(), getterminal()
     session.activity = u'Viewing last callers'
-
-    lcalls_txt = lc_retrieve ()
-    if ((session.env.get('TERM') == 'unknown' or term.number_of_colors == 0
-        or term.height <= 22 or term.width <= 71
-        or session.user.get('expert', False))):
-            return dummy_pager(lcalls_txt.split('\n'))
-
     dirty = True
+    lcalls_txt = lc_retrieve ()
+    if (session.env.get('TERM') == 'unknown'
+            or term.number_of_colors == 0
+            or term.height <= 22 or term.width <= 71 or
+            session.user.get('expert', False)):
+        dummy_pager (lcalls_txt.split('\n'))
+        return
     while True:
+        if (term.height <= 22 or term.width <= 71):
+            # window became too small
+            dummy_pager (lcalls_txt.split('\n'))
+            return
         if dirty:
             pager = get_pager(lcalls_txt)
             echo (redraw(pager))
             dirty = False
         inp = getch(1)
-        if inp is not None:
-            echo (pager.process_keystroke (inp))
-        if pager.quit == True:
-            break
         if pollevent('refresh'):
             dirty = True
+        if inp is not None:
+            echo (pager.process_keystroke (inp))
+            if pager.quit == True:
+                break
