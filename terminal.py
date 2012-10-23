@@ -57,10 +57,11 @@ def start_process(pipe, origin, env):
     # curses is initialized for the first time. telnet negotiation did its best
     # to determine the TERM. The default, 'unknown', is equivalent to a dumb
     # terminal.
-    term = BlessedIPCTerminal (stream=IPCStream(pipe),
-            terminal_type=env.get('TERM', 'unknown'),
-            rows=int(env.get('LINES', '24')),
-            columns=int(env.get('COLUMNS', '80')))
+    term = blessings.Terminal (
+            kind=env.get('TERM', 'unknown'),
+            stream=IPCStream(pipe),
+            rows = int(env.get('LINES', '24')),
+            columns = int(env.get('COLUMNS', '80')))
 
     # spawn and begin a new session
     new_session = bbs.session.Session (term, pipe, origin, env)
@@ -73,7 +74,6 @@ def start_process(pipe, origin, env):
     new_session.close ()
     pipe.send (('disconnect', ('process exit',)))
 
-
 class IPCStream(object):
     """
     Connect blessings 'stream' to 'child' multiprocessing.Pipe
@@ -81,81 +81,24 @@ class IPCStream(object):
     """
     def __init__(self, channel):
         self.channel = channel
+
     def write(self, data, is_cp437=False):
-        """ Sends output to Pipe """
+        """
+        Sends output to Pipe.
+        """
         self.channel.send (('output', (data, is_cp437)))
+
     def fileno(self):
-        """ Returns pipe fileno """
+        """
+        Returns pipe fileno.
+        """
         return self.channel.fileno()
+
     def close(self):
-        """ Closes pipe. """
+        """
+        Closes pipe.
+        """
         return self.channel.close ()
-
-
-class BlessedIPCTerminal(blessings.Terminal):
-    # TODO: Adopt blessings and clean out the glue
-    """
-      Furthermore, .rows and .columns no longer queries using termios routines.
-      They must be managed by another procedure.
-      Instances of this class are stored in the global registry (list)
-    """
-    def __init__(self, stream, terminal_type, rows, columns):
-        # patch in a .rows and .columns static property.
-        # this property updated by engine.py poll routine (?)
-        self.rows, self.columns = rows, columns
-
-        try:
-            blessings.Terminal.__init__ (self,
-                kind=terminal_type, stream=stream, force_styling=True)
-            self.kind = terminal_type
-            logging.debug ('setupterm(%s) succesfull', terminal_type,)
-
-        except blessings.curses.error, err:
-            from bbs import ini
-            # when setupterm() fails with client-supplied terminal_type
-            # try again using the configuration .ini default type.
-            default_ttype = ini.CFG.get('session', 'default_ttype')
-            errmsg = 'setupterm(%s) failed: %s' % (terminal_type, err,)
-            assert terminal_type != default_ttype, \
-                '%s; using default_ttype' % (errmsg,)
-            logger.warn (errmsg)
-            stream.write ('%s\r\n' % (errmsg,))
-            stream.write ('terminal type: %s (default)\r\n' % (default_ttype,))
-            blessings.Terminal.__init__ (self,
-                kind=default_ttype, stream=stream, force_styling=True)
-            self.kind = default_ttype
-
-    def keyname(self, keycode):
-        """
-        Return any matching keycode name for a given keycode.
-        """
-        try:
-            return (a for a in dir(self) if a.startswith('KEY_') and keycode ==
-                getattr(self, a)).next ()
-        except StopIteration:
-            logger.warn ('keycode unmatched %r', keycode)
-
-    @property
-    def terminal_type(self):
-        """
-        Terminal type identifier, ala TERM environment.
-        """
-        return self.kind
-
-    @terminal_type.setter
-    def terminal_type(self, value):
-        """
-        Terminal type identifier, ala TERM environment.
-        """
-        if value != self.kind:
-            self.kind = value
-            logger.warn ('TERM=%s; cannot re-initialize curses', value,)
-
-    def _height_and_width(self):
-        """
-        Return a tuple of (terminal height, terminal width).
-        """
-        return self.rows, self.columns
 
 def on_disconnect(client):
     """

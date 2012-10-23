@@ -6,12 +6,14 @@ https://github.com/erikrose/blessings
 import curses.has_key
 import contextlib
 import platform
+import logging
 import termios
 import struct
 import curses
 import fcntl
-import os
 import sys
+
+logger = logging.getLogger()
 
 try:
     from io import UnsupportedOperation as IOUnsupportedOperation
@@ -48,12 +50,8 @@ class Terminal(object):
         around with the terminal; it's almost always needed when the terminal
         is and saves sticking lots of extra args on client functions in
         practice.
-      ``is_a_tty``
-        Whether ``stream`` appears to be a terminal. You can examine this value
-        to decide whether to draw progress bars or other frippery.
-
     """
-    def __init__(self, kind=None, stream=None, force_styling=False):
+    def __init__(self, kind=None, stream=None, rows=24, columns=79):
         """Initialize the terminal.
 
         If ``stream`` is not a tty, I will default to returning an empty
@@ -66,75 +64,37 @@ class Terminal(object):
             the value of the ``TERM`` environment variable.
         :arg stream: A file-like object representing the terminal. Defaults to
             the original value of stdout, like ``curses.initscr()`` does.
-        :arg force_styling: Whether to force the emission of capabilities, even
-            if we don't seem to be in a terminal. This comes in handy if users
-            are trying to pipe your output through something like ``less -r``,
-            which supports terminal codes just fine but doesn't appear itself
-            to be a terminal. Just expose a command-line option, and set
-            ``force_styling`` based on it. Terminal initialization sequences
-            will be sent to ``stream`` if it has a file descriptor and to
-            ``sys.__stdout__`` otherwise. (``setupterm()`` demands to send them
-            somewhere, and stdout is probably where the output is ultimately
-            headed. If not, stderr is probably bound to the same terminal.)
-
-            If you want to force styling to not happen, pass
-            ``force_styling=None``.
-
         """
+        self.kind = kind if kind is not None else 'unknown'
         if stream is None:
             stream = sys.__stdout__
-        try:
-            stream_descriptor = (stream.fileno() if hasattr(stream, 'fileno')
-                    and callable(stream.fileno) else None)
-        except IOUnsupportedOperation:
-            stream_descriptor = None
-
         self.stream = stream
-        self.is_a_tty = (stream_descriptor is not None
-                and os.isatty(stream_descriptor))
-        self._does_styling = ((self.is_a_tty or force_styling) and
-                              force_styling is not None)
+        self.rows = rows
+        self.columns = columns
+        curses.setupterm(kind, stream.fileno())
 
-        # The desciptor to direct terminal initialization sequences to.
-        # sys.__stdout__ seems to always have a descriptor of 1, even if output
-        # is redirected.
-        self._init_descriptor = (sys.__stdout__.fileno()
-                                 if stream_descriptor is None
-                                 else stream_descriptor)
-        if self._does_styling:
-            # Make things like tigetstr() work. Explicit args make setupterm()
-            # work even when -s is passed to nosetests. Lean toward sending
-            # init sequences to the stream if it has a file descriptor, and
-            # send them to stdout as a fallback, since they have to go
-            # somewhere.
-            curses.setupterm(kind or os.environ.get('TERM', 'unknown'),
-                      self._init_descriptor)
+        # curses capability names are inherited for comparison
+        for attr in (a for a in dir(curses) if a.startswith('KEY')):
+            setattr(self, attr, getattr(curses, attr))
 
-            # curses capability names are inherited for comparison
-            for attr in (a for a in dir(curses) if a.startswith('KEY')):
-                setattr(self, attr, getattr(curses, attr))
+        self._keymap = dict([(curses.tigetstr(cap).decode('utf-8'),
+            keycode) for (keycode,cap) in
+            curses.has_key._capability_names.iteritems() if
+            curses.tigetstr(cap) is not None])
 
-            # after sucessful setupterm(), a _keymap of keyboard sequences to
-            # curses capability names can be constructed, this creates things
-            # such as self.KEY_ENTER (..)
-            self._keymap = dict([(curses.tigetstr(cap).decode('utf-8'),
-                keycode) for (keycode,cap) in
-                curses.has_key._capability_names.iteritems() if
-                curses.tigetstr(cap) is not None])
-
-            # various terminal default sequences mappings
-            self._keymap.update ([
-                (chr(10), self.KEY_ENTER), (chr(13), self.KEY_ENTER),
-                (chr(8), self.KEY_BACKSPACE), (chr(127), self.KEY_BACKSPACE),
-                (chr(27) + "OA", self.KEY_UP), (chr(27) + "OB", self.KEY_DOWN),
-                (chr(27) + "OC", self.KEY_RIGHT), (chr(27) + "OD", self.KEY_LEFT),
-                (chr(27) + "[A", self.KEY_UP), (chr(27) + "[B", self.KEY_DOWN),
-                (chr(27) + "[C", self.KEY_RIGHT), (chr(27) + "[D", self.KEY_LEFT),
-                (chr(27) + "A", self.KEY_UP), (chr(27) + "B",  self.KEY_DOWN),
-                (chr(27) + "C", self.KEY_RIGHT), (chr(27) + "D", self.KEY_LEFT),
-                (chr(27) + "?x", self.KEY_UP), (chr(27) + "?r", self.KEY_DOWN),
-                (chr(27) + "?v", self.KEY_RIGHT), (chr(27) + "?t", self.KEY_LEFT),
-                (chr(27) + "[H", self.KEY_HOME), (chr(27) + "[F", self.KEY_END),])
+        # various terminal default sequences mappings
+        self._keymap.update ([
+            (chr(10), self.KEY_ENTER), (chr(13), self.KEY_ENTER),
+            (chr(8), self.KEY_BACKSPACE), (chr(127), self.KEY_BACKSPACE),
+            (chr(27) + "OA", self.KEY_UP), (chr(27) + "OB", self.KEY_DOWN),
+            (chr(27) + "OC", self.KEY_RIGHT), (chr(27) + "OD", self.KEY_LEFT),
+            (chr(27) + "[A", self.KEY_UP), (chr(27) + "[B", self.KEY_DOWN),
+            (chr(27) + "[C", self.KEY_RIGHT), (chr(27) + "[D", self.KEY_LEFT),
+            (chr(27) + "A", self.KEY_UP), (chr(27) + "B",  self.KEY_DOWN),
+            (chr(27) + "C", self.KEY_RIGHT), (chr(27) + "D", self.KEY_LEFT),
+            (chr(27) + "?x", self.KEY_UP), (chr(27) + "?r", self.KEY_DOWN),
+            (chr(27) + "?v", self.KEY_RIGHT), (chr(27) + "?t", self.KEY_LEFT),
+            (chr(27) + "[H", self.KEY_HOME), (chr(27) + "[F", self.KEY_END),])
 
     # Sugary names for commonly-used capabilities, intended to help avoid trips
     # to the terminfo man page and comments in your code:
@@ -201,23 +161,22 @@ class Terminal(object):
         Return values are always Unicode.
 
         """
-        resolution = (self._resolve_formatter(attr) if self._does_styling
-                else NullCallableString())
-        setattr(self, attr, resolution)  # Cache capability codes.
+        # Cache capability codes.
+        resolution = self._resolve_formatter(attr)
+        setattr(self, attr, resolution)
         return resolution
+
+    def keyname(self, keycode):
+        """
+        Return any matching keycode name for a given keycode.
+        """
+        for key in (attr for attr in dir(self)
+                if attr.startswith('KEY_') and keycode == getattr(self, attr)):
+            return key
 
     @property
     def height(self):
         """The height of the terminal in characters
-
-        If no stream or a stream not representing a terminal was passed in at
-        construction, return the dimension of the controlling terminal so
-        piping to things that eventually display on the terminal (like ``less
-        -R``) work. If a stream representing a terminal was passed in, return
-        the dimensions of that terminal. If there somehow is no controlling
-        terminal, return ``None``. (Thus, you should check that ``is_a_tty`` is
-        True before doing any math on the result.)
-
         """
         return self._height_and_width()[0]
 
@@ -232,15 +191,13 @@ class Terminal(object):
 
     def _height_and_width(self):
         """Return a tuple of (terminal height, terminal width)."""
-        # tigetnum('lines') and tigetnum('cols') update only if we call
-        # setupterm() again.
-        for descriptor in self._init_descriptor, sys.__stdout__:
+        if self.stream == sys.__stdout__:
             try:
                 return struct.unpack('hhhh', fcntl.ioctl(descriptor,
                     termios.TIOCGWINSZ, chr(0) * 8))[0:2]
             except IOError:
                 pass
-        return None, None  # Should never get here
+        return (self.rows, self.columns)
 
     @contextlib.contextmanager
     def location(self, xloc=None, yloc=None):
@@ -521,7 +478,10 @@ class ParametrizingString(unicode):
 
 
 class FormattingString(unicode):
-    """A Unicode string which can be called upon a piece of text to wrap it in formatting"""
+    """
+    A Unicode string which can be called upon a piece of text to wrap it in
+    formatting.
+    """
     def __new__(cls, formatting, normal):
         new = unicode.__new__(cls, formatting)
         new._normal = normal
