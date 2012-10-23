@@ -60,6 +60,10 @@ class Ansi(unicode):
         return width
 
     def wrap(self, width):
+        """
+        Like textwrap.wrap, but honor existing linebreaks and understand
+        printable length of a unicode string that contains ANSI sequences.
+        """
         lines = []
         for paragraph in self.split('\n'):
             line = []
