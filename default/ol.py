@@ -1,22 +1,27 @@
 """
-oneliners for X/84 BBS, uses http://bbs-scene.org API. http://1984.ws
-"""
+oneliners for x/84, http://github.com/jquast/x84
 
-import time
+  To use the http://bbs-scene.org API,
+  configure a section in your .ini file:
+
+    [bbs-scene]
+    user = my@email-addr.ess
+    pass = my-plaintext-password
+"""
+import xml.etree.ElementTree
 import threading
 import Queue
-from xml.etree.ElementTree import XML
+import time
+
 import requests
 
 MAX_INPUT = 50          # bbs-scene.org API is 50-character limit max
 SNUFF_TIME = 1*60*60*24 # one message per 24 hours, 0 to disable
-BUF_HISTORY = 1984      # limit history in buffer window and XML/API requests
+BUF_HISTORY = 64        # limit history in buffer window and XML/API requests
 
 class FetchUpdates(threading.Thread):
     """
-    Dispatch request for updates to bbs-scene.org's oneliner's, ensuring the
-    interface isn't locked up if the API is slow or offline, using an
-    asynchronous callback mechanism.
+    Dispatch request to find updates to bbs-scene.org's oneliner's
     """
     url = 'http://bbs-scene.org/api/onelinerz?limit=%d'
     def __init__(self, queue, lock, num):
@@ -26,7 +31,6 @@ class FetchUpdates(threading.Thread):
         threading.Thread.__init__ (self)
 
     def run(self):
-        term = getterminal ()
         usernm = ini.CFG.get('bbs-scene', 'user')
         passwd = ini.CFG.get('bbs-scene', 'pass')
         r = requests.get (self.url % (self.num,), auth=(usernm, passwd))
@@ -34,45 +38,34 @@ class FetchUpdates(threading.Thread):
             logger.error (r.content)
             logger.error ('bbs-scene.org returned %s', r.status_code)
             return
-        self.lock.acquire ()
-        for node in XML(r.content).findall('node'):
-            key = node.find('id').text
-            self.queue.put ((key, dict([(k, node.find(k).text) for k in
-                ('oneliner', 'alias', 'bbsname', 'timestamp',)])))
-        self.lock.release ()
+        else:
+            logger.info ('bbs-scene.org returned %s', r.status_code)
+        # fails to parse
+        xml_nodes = xml.etree.ElementTree.XML(r.content).findall('node')
+        udb = DBProxy('oneliner')
+        udb.acquire ()
+        for node in xml_nodes:
+            udb[int(node.find('id').text)] = dict([(k, node.find(k).text)
+                for k in ('oneliner', 'alias', 'bbsname', 'timestamp',)])
+        udb.release ()
 
-def saysomething():
-    comment = LineEditor(MAX_INPUT).read ()
-    if comment is not None and 0 != len(comment):
-        statusline (save_msg, term.bright_green)
-        session.user['lastliner'] = time.time()
-        if not ini.CFG.has_section('bbs-scene'):
-            addline (msg)
-            redraw_msgs ()
-            return
-        url = 'http://bbs-scene.org/api/onelinerz.xml'
-        usernm = ini.CFG.get('bbs-scene', 'user')
-        passwd = ini.CFG.get('bbs-scene', 'pass')
-        bbsname = ini.CFG.get('system', 'bbsname')
-        # post to bbs-scene.rog
-        req = requests.post (url, auth=(usernm, passwd), data={
-            'oneliner': msg, 'alias': session.handle, 'bbsname': bbsname,})
-        if (req.status_code == 200 and
-                XML(req.content).find('success').text == 'true'):
-            # spawn request threads for updates and bark-back our own line
-            thread = FetchUpdates(queue, lock, history=3)
-            thread.start ()
-            return
-    echo (comment.clear())
-    return
-
-
-def redraw(pager):
-    term = getterminal()
+def addline(msg):
     udb = DBProxy('oneliner')
-    colors = (term.bold_white, term.bold_green, term.bold_blue)
+    udb.acquire ()
+    udb[max([udb.keys()] or [0]) + 1] = {
+        'oneliner': msg,
+        'alias': session.handle,
+        'bbsname': ini.CFG.get('system', 'bbsname'),
+        'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
+    }
+    udb.release ()
+
+def get_oltxt():
+    term = getterminal()
     output = u''
-    for idx, onel in sorted(udb.items())[-BUF_HISTORY:]:
+    colors = (term.bold_white, term.bold_green, term.bold_blue)
+    for idx, onel in sorted(DBProxy('oneliner').items())[-BUF_HISTORY:]:
+        print repr(idx), repr(onel)
         color = colors[idx % len(colors)]
         atime = timeago(time.time() - time.mktime (
             time.strptime(onel['timestamp'], '%Y-%m-%d %H:%M:%S'))).strip()
@@ -81,77 +74,100 @@ def redraw(pager):
                 color(u': '), Ansi(onel['oneliner']).decode_pipe(),
                 term.bold_black(u'  /'), color(atime),
                 term.bold_black(u' ago\n'))
-    return pager.update(output)
+    print 'output', repr(output)
+    return output
 
-def main ():
-    session, term = getsession(), getterminal()
-    session.activity = 'Reading one-liners'
 
-    snuff_msg = u'YOU\'VE AlREADY SAiD ENUff!\a'
-    say_msg = u'SAY WhAT? CTRl-X TO CANCEl'
-    save_msg = u'BURNiNG TO rOM, PlEASE WAiT!'
-    erase_msg = u'ERaSE HiSTORY ?!'
-    erased_msg = u'ThE MiNiSTRY Of TRUTh hONORS YOU'
-    dirty = True
-    queue = Queue.Queue()
-    lock = threading.Lock()
-    # spawn background thread to get new oneliners, and provide us the results
-    if ini.CFG.has_section('bbs-scene'):
-        thread = FetchUpdates(queue, lock, BUF_HISTORY)
-        thread.start ()
-        session.activity = 'Reading bbs-scene 1liners'
+def get_selector():
+    term = getterminal ()
+    selector = Selector(yloc=term.height-1, xloc=(term.width/2)-25,
+            width=50, left='Yes', right='No')
+    selector.keyset['left'].extend((u'y', u'Y'))
+    selector.keyset['right'].extend((u'y', u'Y'))
+    selector.colors['selected'] = term.green_reverse
+    return selector
 
+def get_pager():
+    term = getterminal ()
+    pager = Pager(yloc=12, xloc=3,
+            height=term.height - 15, width=term.width - 6)
+    pager.colors['border'] = term.blue
+    return pager
+
+def redraw(pager, selector):
+    term = getterminal()
+    output = term.home + term.normal + term.clear
     flushevent ('oneliner_update')
+    art = fopen('default/art/ol.ans').readlines()
+    max_ans = max([len(Ansi(from_cp437(line))) for line in art])
+    for line in art:
+        padded = Ansi(from_cp437(line)).center(max_ans)
+        output += Ansi(padded).center(term.width).rstrip()
+        output += term.normal + '\r\n'
+    xloc = (term.width / 2) - (max_ans / 2)
+    selector.yloc = term.height - 1
+    selector.xloc = xloc
+    selector.width = max_ans
+    pager.yloc = 1 + len(art)
+    pager.xloc = xloc
+    pager.height = term.height - pager.yloc - 4
+    pager.width = max_ans
+    pager.update(get_oltxt())
+    output += pager.refresh() + pager.border() + selector.refresh()
+    return output
 
-#    def addline(msg):
-#        udb[max([int(k) for k in udb.keys()] or [0])+1] = {
-#            'oneliner': msg,
-#            'alias': session.handle,
-#            'bbsname': ini.CFG.get('system', 'bbsname'),
-#            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
-#        }
-#
+def dummy_pager():
+    term = getterminal()
+    echo (term.normal + '\r\n\r\n')
+    if term.width >= 79:
+        echo ('\r\n'.join((Art(line.rstrip()).center(term.width).rstrip()
+            for line in fopen('default/art/ol.ans'))))
+    echo (term.normal + '\r\n\r\n')
+    for row in get_oltxt().split('\n')[:(term.height - 2) * -1]:
+        echo (Ansi(row.rstrip()).center((term.width)).rstrip() + '\r\n')
+    echo (term.normal + '\r\npress any key .. ')
+    getch ()
+    return
 
-#    while True:
-#        # a bbs-scene.org update occured from our spawned thread, and has items
-#        # in the queue to be read. matches increments for new records, and if any
-#        # are found, the screen is refreshed.
-#        if not queue.empty():
-#            lock.acquire ()
-#            matches = 0
-#            while True:
-#                try:
-#                    key, value = queue.get(block=False)
-#                except Queue.Empty: # queue exausted
-#                    break
-#                if not udb.has_key(key):
-#                    udb[key] = value
-#                    matches += 1
-#            lock.release ()
-#            if matches > 0:
-#                echo ('\a')
-#                redraw_msgs ()
-#            logger.debug ('bbs-scene.org ol-api: %d updates', matches)
-#
-#        if forceRefresh:
-#            forceRefresh=False
-#            echo (term.move (0,0) + term.clear + term.normal)
-#            if term.width < 78 or term.height < 20:
-#                echo (term.bold_red + 'Screen size too small to display oneliners' \
-#                      + term.normal + '\r\n\r\npress any key...')
-#                getch ()
-#            art = fopen('default/art/ol.ans').readlines()
-#            mw = min(max([len(Ansi(line)) for line in art]), term.width - 6)
-#            x = max(3, (term.width / 2) - (max([len(Ansi(line)) for line in
-#                art]) / 2) - 2)
-#
-#            yn = YesNoClass([x+mw-17, term.height-4])
-#            yn.interactive = True
-#            yn.highlight = term.green_reverse
-#            window = ParaClass(term.height-12, term.width-20,
-#                y=8, x=10, xpad=0, ypad=1)
-#            window.interactive = True
-#            comment = HorizEditor(width=mw, yloc=term.height-3,
+def saysomething():
+    pass
+    #snuff_msg = u'YOU\'VE AlREADY SAiD ENUff!\a'
+    #say_msg = u'SAY WhAT? CTRl-X TO CANCEl'
+    #save_msg = u'BURNiNG TO rOM, PlEASE WAiT!'
+    #if SNUFF_TIME != 0:
+    #    lastliner = session.user.get('lastliner',
+    #            time.time() - SNUFF_TIME)
+    #    if time.time() - lastliner < SNUFF_TIME:
+    #        #statusline (snuff_msg, term.red_reverse)
+    #        getch (1.5)
+    #        echo (yn.move_right ())
+    #        continue
+
+
+#    comment = LineEditor(MAX_INPUT).read ()
+#    if comment is not None and 0 != len(comment):
+#        statusline (save_msg, term.bright_green)
+#        session.user['lastliner'] = time.time()
+#        if not ini.CFG.has_section('bbs-scene'):
+#            addline (msg)
+#            redraw_msgs ()
+#            return
+#        url = 'http://bbs-scene.org/api/onelinerz.xml'
+#        usernm = ini.CFG.get('bbs-scene', 'user')
+#        passwd = ini.CFG.get('bbs-scene', 'pass')
+#        bbsname = ini.CFG.get('system', 'bbsname')
+#        # post to bbs-scene.rog
+#        req = requests.post (url, auth=(usernm, passwd), data={
+#            'oneliner': msg, 'alias': session.handle, 'bbsname': bbsname,})
+#        if (req.status_code == 200 and
+#                xml.etree.ElementTree.XML(req.content).find('success').text == 'true'):
+#            # spawn request threads for updates and bark-back our own line
+#            thread = FetchUpdates(queue, lock, history=3)
+#            thread.start ()
+#            return
+#    echo (comment.clear())
+#    return
+##            comment = HorizEditor(width=mw, yloc=term.height-3,
 #                xloc=x, xpad=1, maxlen=MAX_INPUT)
 #            comment.partial = True
 #            comment.interactive = True
@@ -161,53 +177,65 @@ def main ():
 #            redraw_msgs ()
 #            yn.refresh ()
 #
-#        event, data = readevent (['input', 'oneliner_update', 'refresh'],
-#            timeout=int(ini.CFG.get('session', 'timeout')))
-#
-#        if (None, None) == (event, data):
-#            return # timeout
-#        if event == 'refresh':
-#            forceRefresh=True
-#            continue
-#
-#        elif event == 'input':
-#            if data in ['\030','q']:
-#                break
-#            if data in chk_yesno:
-#                choice = yn.run (key=data)
-#                if choice == yn.NO:
-#                    # exit
-#                    break
-#                elif choice == yn.YES:
-#                    if SNUFF_TIME != 0:
-#                        lastliner = session.user.get('lastliner',
-#                                time.time() -SNUFF_TIME)
-#                        if time.time() -lastliner < SNUFF_TIME:
-#                            statusline (snuff_msg, term.red_reverse)
-#                            getch (1.5)
-#                            yn.right ()
-#                            continue
-#                    # write something
-#                    saysomething ()
-#            elif str(data).lower() == '\003' and session.user.is_sysop:
-#                # sysop can clear history with ctrl+c
-#                yn.right ()
-#                statusline (erase_msg, term.red_reverse)
-#                yn.interactive = False
-#                choice = yn.run (key=data)
-#                if choice == term.KEY_LEFT:
-#                    # yes, delete all the db ..
-#                    statusline (erased_msg, term.bright_white)
-#                    getch (1.6)
-#                    udb.clear ()
-#                    redraw_msgs ()
-#                statusline ()
-#                yn.interactive = True
-#            elif data == 'q':
-#                break
-#            else:
-#                # send as movement key to pager window
-#                window.run (key=data, timeout=None)
-#    echo (term.normal)
+
+#    dirty = True
 
 
+def main ():
+    session, term = getsession(), getterminal()
+    session.activity = 'one-liners'
+
+    queue = Queue.Queue()
+    lock = threading.Lock()
+    # spawn background thread to get new oneliners, and provide us the results
+    thread = None
+    if ini.CFG.has_section('bbs-scene'):
+        thread = FetchUpdates(queue, lock, BUF_HISTORY)
+        thread.start ()
+        session.activity = 'one-liners [bbs-scene.org]'
+
+    dirty = True
+    pager, selector = get_pager(), get_selector()
+    while True:
+        # bbs-scene.org updates setn queued by thread
+        if thread is not None and not thread.is_alive():
+            thread = None
+            dirty = True
+            logger.info ('bbs-scene.org returned; will-update')
+
+        # screen resize
+        if pollevent('refresh'):
+            pager, selector = get_pager(), get_selector()
+            dirty = True
+
+        if pollevent('oneliner_update'):
+            dirty = True
+
+        if dirty:
+            if (session.env.get('TERM') != 'unknown' and not
+                    session.user.get('expert', False) and term.width >= 79):
+                echo (term.home + term.clear)
+                echo (redraw(pager, selector))
+                dirty = False
+                continue
+            # run simple pager for dumb terminals, if we've dispatched
+            # for bbs-scene.org updates, wait up to 15s.
+            # bbs-scene.org updates setn queued by thread
+            if thread is not None:
+                thread.join (5)
+            return dummy_pager()
+
+        # always poll for input
+        inp = getch(1)
+        if inp is not None:
+            # input is multiplexed to both interfaces
+            echo (pager.process_keystroke (inp))
+            echo (selector.process_keystroke (inp))
+            # quit 'q', or selected 'no' & return
+            if (selector.selected and selector.selection == selector.right
+                    or pager.quit):
+                return
+            if (selector.selected and selector.selection == selector.left):
+                # selected 'yes' & return
+                saysomething ()
+                dirty = True
