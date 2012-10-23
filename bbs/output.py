@@ -34,10 +34,10 @@ class Ansi(unicode):
     A unicode class that is poorly aware of the effect ansi sequences have on
     length.
     """
-# pylint: disable=R0904,R0924
-#         Too many public methods (45/20)
-#         Badly implemented Container, implements __getitem__,
-#           __len__ but not __delitem__, __setitem__.
+    # pylint: disable=R0904,R0924
+    #         Too many public methods (45/20)
+    #         Badly implemented Container, implements __getitem__,
+    #           __len__ but not __delitem__, __setitem__.
 
     def __len__(self):
         """
@@ -47,21 +47,35 @@ class Ansi(unicode):
         """
         if not unichr(27) in self:
             return unicode.__len__(self)
-
         # 'nxt' points to first *ch beyond current ansi sequence, if any.
         # 'width' is currently estimated display length (in theory).
         nxt, width = 0, 0
         for idx in range(0, unicode.__len__(self)):
             width += Ansi(self[idx:]).anspadd()
-            # if not within bounds of ansi sequence
             if idx == nxt:
                 nxt = idx + Ansi(self[idx:]).seqlen()
             if nxt <= idx:
                 width += 1
-                # point nxt beyond ansiseq,
-                # or next pos if no ansiseq present
-                nxt = idx + Ansi(self[idx:]).seqlen() +1
+                nxt = idx + Ansi(self[idx:]).seqlen() + 1
         return width
+
+    def wrap(self, width):
+        lines = []
+        for paragraph in self.split('\n'):
+            line = []
+            len_line = 0
+            for word in paragraph.split(' '):
+                len_word = Ansi(word).__len__()
+                if len_line + len_word <= width:
+                    line.append(word)
+                    len_line += len_word + 1
+                else:
+                    lines.append(' '.join(line))
+                    line = [word]
+                    len_line = len_word + 1
+            lines.append(' '.join(line))
+        return '\n'.join(lines)
+
 
     def is_movement(self):
         """
@@ -157,17 +171,16 @@ class Ansi(unicode):
            padded u' 's.  At the cost of extra bytes, this prevents 'bleeding'
            when scrolling artwork.
         """
-        nxt = 0
+        ptr = 0
         rstr = u''
         for idx in range(0, unicode.__len__(self)):
-            seq_left = self[idx:].seqlen()
+            seq_left = Ansi(self[idx:]).seqlen()
             if seq_left:
-                clen = Ansi(self[idx:]).anspadd
-                nxt = idx + seq_left
-                rstr += u' ' * (clen)
+                ptr = idx + seq_left
+                rstr += u' ' * (Ansi(self[idx:]).anspadd())
             elif seq_left and Ansi(self[idx:]).is_movement():
-                nxt = idx + seq_left
-            elif nxt <= idx:
+                ptr = idx + seq_left
+            elif ptr <= idx:
                 rstr += self[idx]
         return rstr
 
@@ -231,9 +244,9 @@ class Ansi(unicode):
             return 3 # fill screen (DEC)
         elif ANSI_CODEPAGE.match (self):
             return 3
-        elif ANSI_WILLMOVE.match(self):
-            return 4
         elif ANSI_WONTMOVE.match(self):
+            return 3
+        elif ANSI_WILLMOVE.match(self):
             return 4
         elif self[1] == '[':
             # all sequences are at least 4 (\033,[,0,m)
