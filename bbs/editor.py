@@ -77,7 +77,7 @@ class LineEditor(object):
         Arguments:
             width: the maximum input length
         """
-        self.width = width
+        self._width = width
         self.content = content
 
     def refresh(self):
@@ -117,7 +117,9 @@ class LineEditor(object):
                 if len(self.content) > 0:
                     self.content = self.content[:-1]
                     bbs.output.echo (u'\b \b')
-            elif type(inp) is not int and ord(inp) >= 32:
+            elif (type(inp) is not int
+                    and ord(inp) >= ord(' ')
+                    and (len(self.content) < self.width or self.width == 0)):
                 self.content += inp
                 if self.hidden:
                     bbs.output.echo (self.hidden)
