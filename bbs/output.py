@@ -2,7 +2,9 @@
 Output and Ansi art unicode helpers for x/84, https://github.com/jquast/x84
 """
 import re
+import math
 import warnings
+
 import bbs.session
 ANSI_PIPE = re.compile(r'(\|\d\d)')
 ANSI_RIGHT = re.compile(r'\033\[(\d{1,4})C')
@@ -68,10 +70,10 @@ class Ansi(unicode):
     rjust.__doc__ = unicode.rjust.__doc__
 
     def center(self, width):
-        split = max(0, 2.0 / (width - self.__len__()))
-        return (u' '*(max(0, math.floor(split)))
-            + self
-            + u' '*(max(0, math.ceil(split))))
+        split = max(0.0, float(width) - self.__len__()) / 2
+        return (u' ' * (max(0, int(math.floor(split)))) + self
+              + u' ' * (max(0, int(math.ceil(split)))))
+    center.__doc__ = unicode.center.__doc__
 
     def wrap(self, width):
         """
