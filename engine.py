@@ -181,8 +181,7 @@ def _loop(telnet_server):
                         logger.warn ('(%r, %r) stale', event, method)
                     else:
                         pipe.send ((event, False,))
-                        logger.warn ('(%r, %r) failed to acquire',
-                                event, method)
+                        logger.warn ('(%r, %r) failed', event, method)
                 elif method == 'release':
                     if not event in locks:
                         logger.warn ('(%s, %s) missing', event, method)
