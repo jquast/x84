@@ -1,5 +1,5 @@
 API: bbs
 ========
 
-.. automodule:: bbs
+.. automodule:: x84.bbs
    :members:

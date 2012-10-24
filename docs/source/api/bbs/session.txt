@@ -1,5 +1,5 @@
 API: bbs.session
 ================
 
-.. automodule:: bbs.session
+.. automodule:: x84.bbs.session
    :members:
