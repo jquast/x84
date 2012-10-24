@@ -107,7 +107,7 @@ def get_oltxt():
             term.bold_white(u')'), color(u': '),
             Ansi(onel['oneliner']).decode_pipe(),
             term.bold_black(u'  /'), color(atime),
-            term.bold_black(u' ago\n'),)))
+            term.bold_black(u' ago'),)))
     return output[(BUF_HISTORY * -1):]
 
 def get_selector(selection=u'No'):
