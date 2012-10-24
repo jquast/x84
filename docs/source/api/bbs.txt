@@ -1,0 +1,5 @@
+API: bbs
+========
+
+.. automodule:: bbs
+   :members:
