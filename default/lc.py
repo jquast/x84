@@ -2,6 +2,8 @@
 Last Callers script for x/84, http://github.com/jquast/x84
 """
 
+from bbs import *
+
 def dummy_pager(last_callers):
     term = getterminal()
     prompt_msg = u'\r\n[c]ontinue, [s]top, [n]on-stop  ?\b\b'
