@@ -537,7 +537,7 @@ class TelnetClient(object):
         """
         Handle incoming Telnet commands that are two bytes long.
         """
-        logger.debug ('recv _two_byte_cmd %s', name_option(cmd),)
+        #logger.debug ('recv _two_byte_cmd %s', name_option(cmd),)
         if cmd == SB:
             ## Begin capturing a sub-negotiation string
             self.telnet_got_sb = True
@@ -580,8 +580,7 @@ class TelnetClient(object):
         Handle incoming Telnet commmands that are three bytes long.
         """
         cmd = self.telnet_got_cmd
-        logger.debug ('recv _three_byte_cmd %s %s', name_option(cmd),
-            name_option(option))
+        logger.debug ('recv IAC %s %s', name_option(cmd), name_option(option))
         # Incoming DO's and DONT's refer to the status of this end
 
         if cmd == DO:
@@ -901,7 +900,7 @@ class TelnetClient(object):
     ## Sometimes verbiage is tricky.  I use 'note' rather than 'set' here
     ## because (to me) set infers something happened.
 
-    @debug_option
+    #@debug_option
     def _check_local_option(self, option):
         """
         Test the status of local negotiated Telnet options.
@@ -910,7 +909,7 @@ class TelnetClient(object):
             self.telnet_opt_dict[option] = TelnetOption()
         return self.telnet_opt_dict[option].local_option
 
-    @debug_option
+    #@debug_option
     def _note_local_option(self, option, state):
         """
         Record the status of local negotiated Telnet options.
@@ -919,7 +918,7 @@ class TelnetClient(object):
             self.telnet_opt_dict[option] = TelnetOption()
         self.telnet_opt_dict[option].local_option = state
 
-    @debug_option
+    #@debug_option
     def _check_remote_option(self, option):
         """
         Test the status of remote negotiated Telnet options.
@@ -928,7 +927,7 @@ class TelnetClient(object):
             self.telnet_opt_dict[option] = TelnetOption()
         return self.telnet_opt_dict[option].remote_option
 
-    @debug_option
+    #@debug_option
     def _note_remote_option(self, option, state):
         """
         Record the status of local negotiated Telnet options.
@@ -937,7 +936,7 @@ class TelnetClient(object):
             self.telnet_opt_dict[option] = TelnetOption()
         self.telnet_opt_dict[option].remote_option = state
 
-    @debug_option
+    #@debug_option
     def _check_reply_pending(self, option):
         """
         Test the status of requested Telnet options.
@@ -946,7 +945,7 @@ class TelnetClient(object):
             self.telnet_opt_dict[option] = TelnetOption()
         return self.telnet_opt_dict[option].reply_pending
 
-    @debug_option
+    #@debug_option
     def _note_reply_pending(self, option, state):
         """
         Record the status of requested Telnet options.
