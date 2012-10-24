@@ -1,11 +1,5 @@
 """
-bbs module for X/84 BBS https://github.com/jquast/x84
-everything in the bbs package is exported as a global to all bbs session
-scripts. It is as if the statement:
-
-    from bbs import *
-
-Is implied for all session scripts.
+bbs module for x/84, https://github.com/jquast/x84
 """
 import bbs.ini as ini
 from bbs.selector import Selector
@@ -162,3 +156,10 @@ def showcp437 (filepattern):
     term = getterminal()
     return chompn(from_cp437(SAUCE(fobj).__str__())) + term.normal
 
+def ropen(filename, mode='rb'):
+    """
+    Open random file using wildcard (glob)
+    """
+    import glob
+    import random
+    return open(random.choice(glob.glob(abspath(filename))), mode)
