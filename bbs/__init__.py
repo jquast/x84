@@ -106,7 +106,7 @@ def sendevent(pid, event, data):
     return getsession().send_event('event', (pid, event, data))
 
 
-def broadcastevent(event, data):
+def broadcastevent(event, data=None):
     """
     Broadcast an event to all other sessions.
     """
