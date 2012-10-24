@@ -99,36 +99,36 @@ class DBProxy(object):
 
     #pylint: disable=C0111
     #        Missing docstring
-    def __cmp__(self, *args):
-        return self.proxy_method ('__cmp__', *args)
+    def __cmp__(self, obj):
+        return self.proxy_method ('__cmp__', obj)
     __cmp__.__doc__ = dict.__cmp__.__doc__
 
-    def __contains__(self, *args):
-        return self.proxy_method ('__contains__', *args)
+    def __contains__(self, key):
+        return self.proxy_method ('__contains__', key)
     __contains__.__doc__ = dict.__contains__.__doc__
 
-    def __getitem__(self, *args):
-        return self.proxy_method ('__getitem__', *args)
+    def __getitem__(self, key):
+        return self.proxy_method ('__getitem__', key)
     __getitem__.__doc__ = dict.__getitem__.__doc__
 
-    def __setitem__(self, *args):
-        return self.proxy_method ('__setitem__', *args)
+    def __setitem__(self, key, value):
+        return self.proxy_method ('__setitem__', key, value)
     __setitem__.__doc__ = dict.__setitem__.__doc__
 
-    def __delitem__(self, *args):
-        return self.proxy_method ('__delitem__', *args)
+    def __delitem__(self, key):
+        return self.proxy_method ('__delitem__', key)
     __delitem__.__doc__ = dict.__delitem__.__doc__
 
-    def get(self, *args):
-        return self.proxy_method ('get', *args)
+    def get(self, key, default=None):
+        return self.proxy_method ('get', key, default)
     get.__doc__ = dict.get.__doc__
 
-    def has_key(self, *args):
-        return self.proxy_method ('has_key', *args)
+    def has_key(self, key):
+        return self.proxy_method ('has_key', key)
     has_key.__doc__ = dict.has_key.__doc__
 
-    def setdefault(self, *args):
-        return self.proxy_method ('setdefault', *args)
+    def setdefault(self, key, value):
+        return self.proxy_method ('setdefault', key, value)
     setdefault.__doc__ = dict.setdefault.__doc__
 
     def update(self, *args):
