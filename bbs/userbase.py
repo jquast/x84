@@ -168,26 +168,33 @@ class User(object):
     def __setitem__(self, key, value):
         #pylint: disable=C0111,
         #        Missing docstring
-        attrs = bbs.dbproxy.DBProxy('userattr')[self.handle]
+        uadb = bbs.dbproxy.DBProxy('userattr')
+        uadb.acquire ()
+        attrs = uadb[self.handle]
         attrs.__setitem__(key, value)
-        bbs.dbproxy.DBProxy('userattr')[self.handle] = attrs
-        logger.info ('%s[%s] set', self.handle, key)
+        uadb[self.handle] = attrs
+        uadb.release ()
+        logger.info ('%s[%s]=%r', self.handle, key, value)
     __setitem__.__doc__ = dict.__setitem__.__doc__
+
+    def __delitem__(self, key):
+        #pylint: disable=C0111,
+        #        Missing docstring
+        uadb = bbs.dbproxy.DBProxy('userattr')
+        uadb.acquire ()
+        attrs = uadb[self.handle]
+        attrs.__detitem__(key)
+        uadb[self.handle] = attrs
+        uadb.release ()
+        logger.info ('del %s[%s]', self.handle, key)
+    __delitem__.__doc__ = dict.__delitem__.__doc__
+
 
     def __getitem__(self, key):
         #pylint: disable=C0111,
         #        Missing docstring
         return bbs.dbproxy.DBProxy('userattr')[self.handle][key]
     __getitem__.__doc__ = dict.__getitem__.__doc__
-
-    def __delitem__(self, key):
-        #pylint: disable=C0111,
-        #        Missing docstring
-        attrs = bbs.dbproxy.DBProxy('userattr')[self.handle]
-        attrs.__detitem__(key)
-        bbs.dbproxy.DBProxy('userattr')[self.handle] = attrs
-        logger.info ('%s[%s] del', self.handle, key)
-    __delitem__.__doc__ = dict.__delitem__.__doc__
 
     def __len__(self):
         #pylint: disable=C0111,
@@ -198,7 +205,8 @@ class User(object):
     def get(self, key, default=None):
         #pylint: disable=C0111,
         #        Missing docstring
-        return bbs.dbproxy.DBProxy('userattr')[self.handle].get(key, default)
+        uattrs = bbs.dbproxy.DBProxy('userattr')[self.handle]
+        return uattrs.get(key, default)
     get.__doc__ = dict.get.__doc__
 
     @property
