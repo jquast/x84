@@ -154,12 +154,13 @@ def redraw(pager, selector):
 
 def dummy_pager():
     term = getterminal()
+    show_num = (min(5,term.height - 10)) * -1
     echo (term.normal + '\r\n\r\n')
     if term.width >= 79:
         echo ('\r\n'.join((Art(line.rstrip()).center(term.width).rstrip()
             for line in fopen('default/art/ol.ans'))))
     echo (term.normal + '\r\n\r\n')
-    for row in get_oltxt()[:(term.height - 2) * -1]:
+    for row in get_oltxt()[:show_num]:
         echo (Ansi(row.rstrip()).center((term.width)).rstrip() + '\r\n')
     echo (term.normal + '\r\npress any key .. ')
     getch ()
