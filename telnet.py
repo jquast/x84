@@ -218,10 +218,17 @@ UNKNOWN = -1
 class TelnetOption(object):
     """
     Simple class used to track the status of an extended Telnet option.
+    Attributes and values:
+        local_option: UNKNOWN (default), True, or False.
+        remote_option: UNKNOWN (default), True, or False.
+        reply_pending: True or Fale.
     """
     # pylint: disable=R0903
     #         Too few public methods (0/2)
     def __init__(self):
+        """
+        Set attribute defaults on init.
+        """
         self.local_option = UNKNOWN     # Local state of an option
         self.remote_option = UNKNOWN    # Remote state of an option
         self.reply_pending = False      # Are we expecting a reply?
