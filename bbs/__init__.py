@@ -13,7 +13,6 @@ from bbs.door import Door
 from bbs.dbproxy import DBProxy
 from bbs.userbase import list_users, get_user, find_user, User, Group
 from bbs.session import getsession, getterminal, logger
-from bbs.scripting import abspath, fopen, ropen
 from bbs.pager import Pager
 from bbs.ansiwin import AnsiWindow
 from bbs.output import echo, timeago, Ansi, chompn
@@ -57,9 +56,6 @@ __all__ = [
     'getch',
     'sleep',
     'echo',
-    'abspath',
-    'fopen',
-    'ropen',
     'showcp437',
     'SAUCE',]
 
@@ -162,4 +158,4 @@ def ropen(filename, mode='rb'):
     """
     import glob
     import random
-    return open(random.choice(glob.glob(abspath(filename))), mode)
+    return open(random.choice(glob.glob(filename)), mode)

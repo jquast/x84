@@ -29,7 +29,7 @@ def main():
                   + color() + '\r\n\r\npress any key...')
             getch ()
             return False
-        art = fopen('art/userlist.asc',  'r').readlines()
+        art = open('art/userlist.asc',  'r').readlines()
         # lowlight userlist
         ul = LightClass (h=session.height-7, w=69, y=7, x=(session.width/2)-(69/2), ypad=1, xpad=3)
         ul.partial = ul.interactive = True

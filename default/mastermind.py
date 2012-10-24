@@ -195,7 +195,7 @@ def disp_rules():
   cw=60
   cx=getsession().width/2 -(cw/2)
   pager = ParaClass(h=18,w=cw,y=6,x=cx, xpad=1, ypad=1)
-  pager.update (fopen('mastermind-rules.txt').read())
+  pager.update (open('mastermind-rules.txt').read())
   pager.border ()
   pager.title ('press any key...', align='bottom')
   flushevent ('input')

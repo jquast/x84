@@ -15,7 +15,6 @@ import io
 
 import bbs.ini
 import bbs.exception
-#import bbs.scripting
 
 #pylint: disable=C0103
 #        Invalid name "logger" for type constant (should match
@@ -64,12 +63,12 @@ class Session(object):
         self.lock = threading.Lock()
         self._user = None
         self._script_stack = [(bbs.ini.CFG.get('matrix','script'),)]
-        #self._cwd = bbs.ini.CFG.get('session', 'scriptpath')
         self._tap_input = bbs.ini.CFG.getboolean('session','tap_input')
         self._tap_output = bbs.ini.CFG.getboolean('session','tap_output')
         self._ttylog_folder = bbs.ini.CFG.get('session', 'ttylog_folder')
         self._record_tty = bbs.ini.CFG.getboolean('session', 'record_tty')
         self._ttyrec_folder = bbs.ini.CFG.get('session', 'ttylog_folder')
+        self._script_module = None
         self._fp_ttyrec = None
         self._ttyrec_fname = None
         self._connect_time = time.time()
@@ -421,18 +420,21 @@ class Session(object):
             waitfor = timeleft(stime)
         return (None, None)
 
-
     def runscript(self, script_name, *args):
         """
         Execute the main() callable with optional *args of python script.
         """
         self._script_stack.append ((script_name,) + args)
         logger.info ('runscript %s, %s.', script_name, args,)
-        # load default/__init__.py as 'default',
-        script_path = bbs.ini.CFG.get('session', 'scriptpath')
-        base_script = os.path.basename(script_path)
-        script_module = imp.load_module(base_script,
-                *imp.find_module(base_script))
+        def _load_script_module():
+            if self._script_module is None:
+                # load default/__init__.py as 'default',
+                script_path = bbs.ini.CFG.get('session', 'scriptpath')
+                base_script = os.path.basename(script_path)
+                self._script_module = imp.load_module(
+                        base_script, *imp.find_module(base_script))
+            return self._script_module
+        script_module = _load_script_module()
         # from $(script_path) import script_name as script
         script = imp.load_module (script_name,
                 *imp.find_module (script_name, script_module.__path__))

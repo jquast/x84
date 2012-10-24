@@ -40,7 +40,7 @@ def redraw(pager):
     rstr = term.normal + '\r\n\r\n'
     if term.width >= 64:
         rstr += '\r\n'.join((line.rstrip().center(term.width).rstrip()
-            for line in fopen('default/art/news.asc', 'r')))
+            for line in open('default/art/news.asc', 'r')))
     rstr += term.normal + '\r\n\r\n'
     if pager is not None:
         rstr += pager.refresh()

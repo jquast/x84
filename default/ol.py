@@ -133,7 +133,7 @@ def redraw(pager, selector):
     flushevent ('oneliner_update')
 
     # xzip's ansi is line-clean, center-align with terminal width,
-    art = fopen('default/art/ol.ans').readlines()
+    art = open('default/art/ol.ans').readlines()
     max_ans = max([len(Ansi(from_cp437(line))) for line in art])
     for line in art:
         padded = Ansi(from_cp437(line)).center(max_ans)
@@ -158,7 +158,7 @@ def dummy_pager():
     echo (term.normal + '\r\n\r\n')
     if term.width >= 79:
         echo ('\r\n'.join((Art(line.rstrip()).center(term.width).rstrip()
-            for line in fopen('default/art/ol.ans'))))
+            for line in open('default/art/ol.ans'))))
     echo (term.normal + '\r\n\r\n')
     for row in get_oltxt()[:show_num]:
         echo (Ansi(row.rstrip()).center((term.width)).rstrip() + '\r\n')
