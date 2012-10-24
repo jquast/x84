@@ -55,7 +55,6 @@ class Session(object):
             source: origin of the connect (ip, port),
             env: dict of environment variables, such as 'TERM', 'USER'.
         """
-        assert SESSION is None, 'Session may be instantiated only once'
         self.pipe = pipe
         self.terminal = terminal
         self.source = source
@@ -87,6 +86,7 @@ class Session(object):
         #pylint: disable=W0603
         #        Using the global statement
         global SESSION
+        assert SESSION is None, 'Session may be instantiated only once'
         SESSION = self
 
     @property
