@@ -2,6 +2,7 @@
 'sysop news' script for x/84, https://github.com/jquast/x84
 """
 
+from bbs import *
 
 def dummy_pager(news_txt):
     term = getterminal()
@@ -65,7 +66,7 @@ def main():
     while True:
         inp = getch(1)
         if inp is not None:
-            pager.process_keystroke (inp)
+            echo (pager.process_keystroke (inp))
             if pager.quit:
                 return
         if pollevent('refresh'):

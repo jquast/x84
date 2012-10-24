@@ -10,6 +10,8 @@
 """
 __url__ = u'https://github.com/jquast/x84/'
 
+from bbs import *
+
 def denied(msg):
     term = getterminal()
     echo (msg)
