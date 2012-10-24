@@ -34,7 +34,7 @@ def getsession():
 
 def getterminal():
     """
-    Return blessings terminal instace of this session.
+    Return blessings terminal instance of this session.
     """
     return getsession().terminal
 
@@ -55,6 +55,10 @@ class Session(object):
             source: origin of the connect (ip, port),
             env: dict of environment variables, such as 'TERM', 'USER'.
         """
+        #pylint: disable=W0603
+        #        Using the global statement
+        global SESSION
+        assert SESSION is None, 'Session may be instantiated only once'
         self.pipe = pipe
         self.terminal = terminal
         self.source = source
@@ -83,10 +87,6 @@ class Session(object):
         self._ttyrec_sec = -1
         self._ttyrec_usec = -1
         self._ttyrec_len_text = 0
-        #pylint: disable=W0603
-        #        Using the global statement
-        global SESSION
-        assert SESSION is None, 'Session may be instantiated only once'
         SESSION = self
 
     @property
@@ -436,13 +436,14 @@ class Session(object):
                 script_path = bbs.ini.CFG.get('session', 'scriptpath')
                 base_script = os.path.basename(script_path)
                 self._script_module = imp.load_module(
-                        base_script, *imp.find_module(base_script))
+                        base_script, *imp.find_module(script_name, [script_path]))
+                self._script_module.__path__ = script_path
             return self._script_module
         script_module = _load_script_module()
         #pylint: disable=W0142
         #        Used * or ** magic
         script = imp.load_module (script_name,
-                *imp.find_module (script_name, script_module.__path__))
+                *imp.find_module (script_name, [script_module.__path__]))
         if not hasattr(script, 'main'):
             raise bbs.exception.ScriptError (
                 "%s: main() not found." % (script_name,))

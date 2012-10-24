@@ -1,8 +1,6 @@
-see __init__.py file, contains list __all__
+The modules here provide features for the BBS userland.
+Check out the directory "default/" in x84 root for how such code can look like.
 
-everything listed in __all__ is exported into the global namespace
+The userland scripts usually enable the modules here with a simple:
 
-it is as if the statement:
-  from bbs import *
-
-is implied for all scripts.
+from bbs import *
