@@ -7,6 +7,8 @@ Session.write() method takes special handling of a session.encoding value
 of 'cp437' for encoding translation.
 """
 
+from bbs import *
+
 def main():
     import textwrap
     session, term = getsession(), getterminal()
@@ -53,7 +55,7 @@ def main():
         echo (showcp437 (artfile))
         echo (term.normal + u'\r\n\r\n')
         echo (Ansi(enc_prompt).wrap((term.width / 2) + (term.width / 3))) # 1/2+1/3
-        echo ('\r\n\r\n') # leave at least 2 empty lines at bottom
+        echo (u'\r\n\r\n') # leave at least 2 empty lines at bottom
         echo (sel.refresh ())
 
     selector = get_selector ('utf8')
