@@ -57,11 +57,8 @@ def start_process(pipe, origin, env):
     # curses is initialized for the first time. telnet negotiation did its best
     # to determine the TERM. The default, 'unknown', is equivalent to a dumb
     # terminal.
-    term = blessings.Terminal (
-            kind=env.get('TERM', 'unknown'),
-            stream=IPCStream(pipe),
-            rows = int(env.get('LINES', '24')),
-            columns = int(env.get('COLUMNS', '80')))
+    term = blessings.Terminal (env.get('TERM', 'unknown'), IPCStream(pipe),
+            int(env.get('LINES', '24')), int(env.get('COLUMNS', '80')))
 
     # spawn and begin a new session
     new_session = bbs.session.Session (term, pipe, origin, env)
