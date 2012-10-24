@@ -6,6 +6,7 @@ and assigned to the session.
 
 Otherwise the user record of the handle passed is retreived and assigned.
 """
+from bbs import *
 
 # generated using lolcat ..
 BADGE256 = (u'\033[38;5;20m2\033[0m\033[38;5;40m5\033[0m\033[38;5;42m6\033[0m'
