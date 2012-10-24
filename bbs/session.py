@@ -3,17 +3,19 @@
 Session engine for x/84, http://github.com/jquast/x84/
 """
 import traceback
+import threading
 import logging
 import struct
 import math
 import time
+import imp
 import sys
 import os
 import io
 
 import bbs.ini
 import bbs.exception
-import bbs.scripting
+#import bbs.scripting
 
 #pylint: disable=C0103
 #        Invalid name "logger" for type constant (should match
@@ -54,15 +56,15 @@ class Session(object):
             source: origin of the connect (ip, port),
             env: dict of environment variables, such as 'TERM', 'USER'.
         """
+        assert SESSION is None, 'Session may be instantiated only once'
         self.pipe = pipe
         self.terminal = terminal
         self.source = source
         self.env = env
+        self.lock = threading.Lock()
         self._user = None
         self._script_stack = [(bbs.ini.CFG.get('matrix','script'),)]
-        self._script_name = None
-        self._script_fname = None
-        self._cwd = bbs.ini.CFG.get('session', 'scriptpath')
+        #self._cwd = bbs.ini.CFG.get('session', 'scriptpath')
         self._tap_input = bbs.ini.CFG.getboolean('session','tap_input')
         self._tap_output = bbs.ini.CFG.getboolean('session','tap_output')
         self._ttylog_folder = bbs.ini.CFG.get('session', 'ttylog_folder')
@@ -83,7 +85,6 @@ class Session(object):
         self._ttyrec_sec = -1
         self._ttyrec_usec = -1
         self._ttyrec_len_text = 0
-        assert SESSION is None, 'Session may be instantiated only once'
         #pylint: disable=W0603
         #        Using the global statement
         global SESSION
@@ -170,23 +171,8 @@ class Session(object):
         #pylint: disable=C0111
         #         Missing docstring
         self._source = value
-
     @property
-    def cwd(self):
-        """
-        Current working directory of session
-        """
-        return (os.path.realpath(self._cwd) + os.path.sep)
 
-    @cwd.setter
-    def cwd(self, value):
-        #pylint: disable=C0111
-        #         Missing docstring
-        if self._cwd != value:
-            logger.debug ('cwd=%s', value)
-            self._cwd = value
-
-    @property
     def encoding(self):
         """
         Session terminal encoding; only 'utf8' and 'cp437' are supported.
@@ -386,7 +372,7 @@ class Session(object):
                'logger': Data is logging record, used by IPCLogHandler.
                'output': Unicode data to write to client.
                'global': Broadcast event to other sessions.
-               'pos': Request cursor position.
+               XX 'pos': Request cursor position.
                'db-<schema>': Request sqlite dict method result.
                'db=<schema>': Request sqlite dict method result as iterable.
                'lock-<name>': Fine-grained global bbs locking.
@@ -436,43 +422,27 @@ class Session(object):
         return (None, None)
 
 
-    def runscript(self, script, *args):
+    def runscript(self, script_name, *args):
         """
         Execute the main() callable with optional *args of python script.
         """
-        self._script_stack.append ((script,) + args)
-        logger.info ('runscript %s, %s.', script, args,)
-        try:
-            (self._script_name, self._script_fname) = (
-                    bbs.scripting.chkmodpath (script, self.cwd))
-        except LookupError, e:
-            raise bbs.exception.ScriptError, e
-
-        current_path = os.path.dirname(self._script_fname)
-        if not current_path in sys.path:
-            sys.path.insert (0, current_path)
-            logger.debug ('inserted to sys.path: %s', current_path)
-
-        logger.debug ('scripting.load(%s, %s)', self.cwd, self._script_name,)
-        script = bbs.scripting.load(self.cwd, self._script_name)
-        for idx in bbs.__all__:
-            try:
-                setattr(script, idx, getattr(bbs, idx))
-            except AttributeError, err:
-                logger.error (err)
+        self._script_stack.append ((script_name,) + args)
+        logger.info ('runscript %s, %s.', script_name, args,)
+        # load default/__init__.py as 'default',
+        script_path = bbs.ini.CFG.get('session', 'scriptpath')
+        base_script = os.path.basename(script_path)
+        script_module = imp.load_module(base_script,
+                *imp.find_module(base_script))
+        # from $(script_path) import script_name as script
+        script = imp.load_module (script_name,
+                *imp.find_module (script_name, script_module.__path__))
         if not hasattr(script, 'main'):
-            raise bbs.exception.ScriptError ("%s: main() not found." %
-                    (self._script_name,))
+            raise bbs.exception.ScriptError (
+                "%s: main() not found." % (script_name,))
         if not callable(script.main):
-            raise bbs.exception.ScriptError ("%s: main not callable." %
-                    (self._script_name,))
-        prev_path = self.cwd \
-            if self.cwd is not None else current_path
-        self.cwd = current_path
+            raise bbs.exception.ScriptError (
+                "%s: main not callable." % (script_name,))
         value = script.main(*args)
-        self.cwd = prev_path
-
-        # we were gosub()'d here and have returned value.
         toss = self._script_stack.pop()
         logger.debug ('%s popped: %s', toss, value)
         return value
@@ -484,12 +454,14 @@ class Session(object):
         if self.is_recording:
             self.stop_recording()
 
+# TODO: Somehow move these to ttyrec.py to keep session.py terse;
     def rename_recording(self, src, dst):
         """
         Rotate ttyrec recording keyed by dst to make way for dst.0 by renaming
         src.0 to dst.0; not really sure this is correct ^_*
         """
         # acquire tty recording lock
+        self.lock.acquire ()
         while True:
             self.send_event('lock-ttyrec', ('acquire', 5.0))
             if self.read_event('lock-ttyrec'):
@@ -501,6 +473,8 @@ class Session(object):
             os.path.join(self._ttylog_folder, '%s.0' % (dst,)))
         # release tty recording lock
         self.send_event('lock-ttyrec', ('release', None))
+        self._ttyrec_fname = dst
+        self.lock.release ()
 
     def rotate_recordings(self, key):
         """
@@ -542,9 +516,10 @@ class Session(object):
         """
         assert self._fp_ttyrec is None, ('already recording')
         if dst is None:
-            dst = self.user.handle
+            dst = self.user.handle or 'None'
         self._ttyrec_fname = dst
         # acquire tty recording lock
+        self.lock.acquire ()
         while True:
             self.send_event('lock-ttyrec', ('acquire', 5.0))
             if self.read_event('lock-ttyrec'):
@@ -566,6 +541,7 @@ class Session(object):
         logger.info ('REC %s' % (filename,))
         # release tty recording lock
         self.send_event('lock-ttyrec', ('release', None))
+        self.lock.release ()
 
     def _ttyrec_write_header(self):
         """

@@ -50,9 +50,6 @@ def main ():
     # load .ini files
     bbs.ini.init (cfg_bbsfile, cfg_logfile)
 
-    # initialize scripting system path from .ini value
-    bbs.scripting.init (bbs.ini.CFG.get('session', 'scriptpath'))
-
     # start telnet server
     addr_tup = (bbs.ini.CFG.get('telnet', 'addr'),
         int(bbs.ini.CFG.get('telnet', 'port')),)
