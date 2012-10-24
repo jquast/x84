@@ -148,7 +148,7 @@ def showcp437 (filepattern):
     """
     fobj = ropen(filepattern, 'rb') \
       if '*' in filepattern or '?' in filepattern \
-        else fopen(filepattern, 'rb')
+        else open(filepattern, 'rb')
     term = getterminal()
     return chompn(from_cp437(SAUCE(fobj).__str__())) + term.normal
 
