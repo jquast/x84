@@ -201,25 +201,29 @@ class Pager(bbs.ansiwin.AnsiWindow):
 
     def refresh(self, start_row=0):
         """
-        Return unicode string suitable for refreshing pager window.
+        Return unicode string suitable for refreshing pager window from
+        visible content row 'start_row' and downward. This can be useful if
+        only the last line is modified; only the last line need be refreshed.
         """
         term = bbs.session.getsession().terminal
         # draw window contents
         rstr = u''
         row = 0
         for row, line in enumerate(self.visible_content):
-            len_line = bbs.output.Ansi(line).__len__()
-            yloc = row + self.ypadding
-            if yloc < start_row:
+            if row < start_row:
                 continue
+            yloc = row + self.ypadding
             rstr += self.pos (yloc, self.xpadding)
             rstr += line
-            rstr += ' ' * max(0, self._visible_width - len_line)
+            len_line = bbs.output.Ansi(line).__len__()
+            rstr += u' ' * max(0, self._visible_width - len_line)
         # clear to end of window
         yloc = row + self.ypadding
         while yloc < self._visible_height - 1:
             yloc += 1
-            rstr += self.pos (row, self.xpadding) + u' ' * self._visible_width
+            rstr += self.pos (yloc, self.xpadding)
+            rstr += u' ' * (self._visible_width)
+            rstr += '['
         return rstr + term.normal
 
     def update(self, unibytes):
@@ -227,7 +231,7 @@ class Pager(bbs.ansiwin.AnsiWindow):
         Update content buffer with lines of ansi unicodes as single unit.
         """
         self.content = bbs.output.Ansi(unibytes
-                ).wrap(self._visible_width).split('\n')
+                ).wrap(self._visible_width - 1).split('\r\n')
         return self.refresh ()
 
     def append(self, unibytes):
@@ -235,5 +239,5 @@ class Pager(bbs.ansiwin.AnsiWindow):
         Update content buffer with additional lines of ansi unicodes.
         """
         self.content.extend (bbs.output.Ansi(unibytes
-            ).wrap(self._visible_width).split('\n'))
+            ).wrap(self._visible_width - 1).split('\r\n'))
         return self._end() or self.refresh(self.bottom)
