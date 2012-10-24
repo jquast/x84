@@ -148,16 +148,18 @@ def _loop(telnet_server):
                 for o_client, o_pipe, o_lock in terminal.terminals():
                     if o_client != client:
                         o_pipe.send ((event, data,))
+                        logger.debug ('%s=>%r', event, data)
 
-            elif event == 'pos':
-                assert type(data) in (float, int, type(None))
-                # 'pos' query: 'what is the cursor position ?'
-                # returns 'pos-reply' event as a callback
-                # mechanism, data of (None, None) indicates timeout,
-                # otherwise (y, x) is cursor position ..
-                thread = terminal.POSHandler(pipe, client, lock,
-                    reply_event='pos-reply', timeout=data)
-                thread.start ()
+            #deprecation,
+            #elif event == 'pos':
+            #    assert type(data) in (float, int, type(None))
+            #    # 'pos' query: 'what is the cursor position ?'
+            #    # returns 'pos-reply' event as a callback
+            #    # mechanism, data of (None, None) indicates timeout,
+            #    # otherwise (y, x) is cursor position ..
+            #    thread = terminal.POSHandler(pipe, client, lock,
+            #        reply_event='pos-reply', timeout=data)
+            #    thread.start ()
 
             elif event.startswith('db'):
                 # db query-> database dictionary method, callback
@@ -173,15 +175,18 @@ def _loop(telnet_server):
                 if method == 'acquire':
                     if not event in locks:
                         locks[event] = time.time ()
-                        pipe.send ((event, True,))
                         logger.debug ('(%r, %r) granted.', event, method)
+                        logger.debug ('%s=>%r', event, True)
+                        pipe.send ((event, True,))
                     elif (stale is not None
                             and time.time() - locks[event] > stale):
-                        pipe.send ((event, True,))
                         logger.error ('(%r, %r) stale.', event, method)
+                        logger.debug ('%s=>%r', event, True)
+                        pipe.send ((event, True,))
                     else:
-                        pipe.send ((event, False,))
                         logger.warn ('(%r, %r) failed.', event, method)
+                        logger.debug ('%s=>%r', event, False)
+                        pipe.send ((event, False,))
                 elif method == 'release':
                     if not event in locks:
                         logger.error ('(%s, %s) not acquired.', event, method)
