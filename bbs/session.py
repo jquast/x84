@@ -427,6 +427,10 @@ class Session(object):
         self._script_stack.append ((script_name,) + args)
         logger.info ('runscript %s, %s.', script_name, args,)
         def _load_script_module():
+            """
+            Load and return `scriptpath` as a module (cached).
+            It really begs wether this should be called a 'bbs module' ..
+            """
             if self._script_module is None:
                 # load default/__init__.py as 'default',
                 script_path = bbs.ini.CFG.get('session', 'scriptpath')
@@ -435,7 +439,8 @@ class Session(object):
                         base_script, *imp.find_module(base_script))
             return self._script_module
         script_module = _load_script_module()
-        # from $(script_path) import script_name as script
+        #pylint: disable=W0142
+        #        Used * or ** magic
         script = imp.load_module (script_name,
                 *imp.find_module (script_name, script_module.__path__))
         if not hasattr(script, 'main'):
