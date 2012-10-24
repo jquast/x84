@@ -148,7 +148,6 @@ def _loop(telnet_server):
                 for o_client, o_pipe, o_lock in terminal.terminals():
                     if o_client != client:
                         o_pipe.send ((event, data,))
-                        logger.debug ('%s=>%r', event, data)
 
             #deprecation,
             #elif event == 'pos':
@@ -176,16 +175,13 @@ def _loop(telnet_server):
                     if not event in locks:
                         locks[event] = time.time ()
                         logger.debug ('(%r, %r) granted.', event, method)
-                        logger.debug ('%s=>%r', event, True)
                         pipe.send ((event, True,))
                     elif (stale is not None
                             and time.time() - locks[event] > stale):
                         logger.error ('(%r, %r) stale.', event, method)
-                        logger.debug ('%s=>%r', event, True)
                         pipe.send ((event, True,))
                     else:
                         logger.warn ('(%r, %r) failed.', event, method)
-                        logger.debug ('%s=>%r', event, False)
                         pipe.send ((event, False,))
                 elif method == 'release':
                     if not event in locks:
