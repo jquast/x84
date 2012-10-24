@@ -1,5 +1,4 @@
-"""
-oneliners for x/84, http://github.com/jquast/x84
+""" oneliners for x/84, http://github.com/jquast/x84
 
   To use the (optional) http://bbs-scene.org API,
   configure a section in your .ini file:
@@ -9,6 +8,10 @@ oneliners for x/84, http://github.com/jquast/x84
     pass = my-plaintext-password
 """
 import threading
+import time
+import requests
+import xml.etree.ElementTree
+from bbs import *
 
 # bbs-scene.org API is 50-character limit max
 MAX_INPUT = 50
@@ -30,9 +33,6 @@ class FetchUpdates(threading.Thread):
     content = list ()
 
     def run(self):
-        import xml.etree.ElementTree
-        import time
-        import requests
         usernm = ini.CFG.get('bbs-scene', 'user')
         passwd = ini.CFG.get('bbs-scene', 'pass')
         logger.info ('fetching %r ..', self.url)
@@ -50,7 +50,7 @@ class FetchUpdates(threading.Thread):
         xml_nodes = xml.etree.ElementTree.XML(req.content).findall('node')
         for node in xml_nodes:
             self.content.append ((node.find('id').text, dict(
-                ((key, node.find(key).text) for key in (
+                ((key, node.find(key).text.strip()) for key in (
                 'oneliner', 'alias', 'bbsname', 'timestamp',))),))
         logger.info ('stored %d updates from bbs-scene.org', len(self.content))
 
@@ -66,6 +66,21 @@ def wait_for(thread):
             if getch(0) == u'x':
                 return
 
+def chk_thread(thread):
+    # check if bbs-scene.org thread finished
+    if thread is not None and not thread.is_alive():
+        udb = DBProxy('oneliner')
+        udbkeys = udb.keys()
+        nlc = 0
+        for key, value in thread.content:
+            if key not in udbkeys:
+                udb[key] = value
+                nlc += 1
+        if nlc:
+            logger.info ('%d new entries', nlc)
+            broadcastevent ('oneliner_update')
+        return True
+
 #def addline(msg):
 #    import time
 #    udb = DBProxy('oneliner')
@@ -79,7 +94,6 @@ def wait_for(thread):
 #    udb.release ()
 
 def get_oltxt():
-    import time
     term = getterminal()
     output = list()
     colors = (term.bold_white, term.bold_green, term.bold_blue)
@@ -204,20 +218,6 @@ def saysomething():
 #
 
 #    dirty = True
-
-def chk_thread(thread):
-    # check if bbs-scene.org thread finished
-    if thread is not None and not thread.is_alive():
-        udb = DBProxy('oneliner')
-        udbkeys = udb.keys()
-        nlc = 0
-        for key, value in thread.content:
-            if key not in udbkeys:
-                udb[key] = value
-                nlc += 1
-        if nlc:
-            broadcastevent ('oneliner_update')
-        return True
 
 def main ():
     session, term = getsession(), getterminal()
