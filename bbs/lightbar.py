@@ -3,6 +3,7 @@ lightbar package for x/84 BBS, http://github.com/jquast/x84
 """
 import bbs.ansiwin
 import bbs.session
+import bbs.output
 
 NETHACK_KEYSET = { 'home': [u'y', ],
                    'end': [u'n', ],
@@ -26,6 +27,9 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
     #pylint: disable=R0904
     #         Too many public methods (29/20)
     def __init__(self, height, width, yloc, xloc):
+        """
+        Initialize a lightbar of height, width, y and x position.
+        """
         bbs.ansiwin.AnsiWindow.__init__(height, width, yloc, xloc)
         self._alignment = 'left'
         self._vitem_idx = 0
@@ -347,9 +351,9 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
         """
         justify text to width according to alignment prperty
         """
-        return (Ansi(text).rjust if self.alignment == 'right' else
-                Ansi(text).ljust if self.alignment == 'left' else
-                Ansi(text).center)(width)
+        return (bbs.output.Ansi(text).rjust if self.alignment == 'right' else
+                bbs.output.Ansi(text).ljust if self.alignment == 'left' else
+                bbs.output.Ansi(text).center)(width)
 
     @property
     def _visible_bottom(self):
