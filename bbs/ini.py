@@ -82,7 +82,7 @@ def init_bbs_ini ():
     cfg_bbs.set('session', 'record_tty', 'yes')
     cfg_bbs.set('session', 'scriptpath',
             os.path.join(os.path.dirname(__file__),
-        os.path.pardir, 'default/'))
+        os.path.pardir, 'default'))
     cfg_bbs.set('session', 'tap_input', 'no')
     cfg_bbs.set('session', 'tap_output', 'no')
     cfg_bbs.set('session', 'default_encoding', 'utf8')
