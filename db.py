@@ -60,20 +60,20 @@ class DBHandler(threading.Thread):
         func = getattr(dictdb, self.cmd)
         assert callable(func), \
             "'%(cmd)s' not a valid method of <type 'dict'>" % self
-        logger.debug ('%s/%s(%s)', self.schema, self.cmd, self.args)
+        logger.debug ('%s/%s%s', self.schema, self.cmd,
+                '(*%d)' if len(self.args) else '')
         if 0 == len(self.args):
             result = func()
         else:
             result = func(*self.args)
-        if self.event[2] == '=':
+        if self.event[2] == '-':
+            self.pipe.send ((self.event, result))
+        elif self.event[2] == '=':
             # wrap iteratable with special marker,
             self.pipe.send ((self.event, (None, 'StartIteration'),))
             for item in iter(result):
                 self.pipe.send ((self.event, item,))
             self.pipe.send ((self.event, (None, StopIteration,),))
-            return
-        elif self.event[2] == '-':
-            self.pipe.send ((self.event, result,))
         else:
             assert False
 
