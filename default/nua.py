@@ -1,170 +1,154 @@
 """
- New user account script for X/84, http://1984.ws
-
- Simply create a new User() instance and set the most minimum values,
- such as handle and password, then call the .save() method to commit
- this record.
+ New user account script for x/84, https://github.com/jquast/x84
 """
 
-# input area (y, x)
-loc_user   = (12, 20)
-loc_origin = (14, 20)
-loc_pass   = (16, 20)
-loc_email  = (18, 20)
-loc_state  = (20, 10)
-loc_prompt = (23, 35)
-# grr, (x, y) ?
-loc_yesno  = (62, 23) #23, 62)
+def warning(msg, cpsec=10.0, min_sec=3.0, split_loc=3):
+    """
+    Display a 2-tone warning to user with a dynamic pause
+    """
+    term = getterminal()
+    echo (u''.join((term.clear_eol, term.normal, u'\r\n\r\n',
+        term.bold_red, msg[:-split_loc], term.normal, msg[-split_loc:],
+        term.bold_black, u'!')))
+    inp = getch(max(min_sec, float(len(msg)) / cpsec))
+    return inp
 
-def main (handle):
-    import os
-    if handle.lower() in ('new',):
-        handle = u''
-    location, hint = u'', u''
-    password, verify, = u'', u''
-    session = getsession()
-    terminal = getterminal()
-
-    def warning(msg):
-        " Display warning to user with a dynamic pause "
-        cpsec =  10.0
-        min_sec = 3
-        split_loc = 3
-        warning_msg = u''.join((
-            terminal.clear_eol,
-            terminal.normal, terminal.red, msg[:-split_loc],
-            terminal.normal, msg[-split_loc:],
-            terminal.bright_black, u'!'))
-        echo (warning_msg)
-        inkey = getch(max(min_sec,float(len(msg))/cpsec))
-        echo (terminal.clear_bol)
-        return inkey
-
-    session.activity = u'New User Application'
-    echo (terminal.clear + terminal.normal)
-    showfile ('art/newuser.asc')
-    echo ( u'New User Application'.center (terminal.width-1) + u'\r\n')
-
+def set_handle(user):
+    """
+    Prompt for a user.handle, minumum length.
+    """
+    import os.path # os.path.sep not allowed in nicks
+    term = getterminal ()
+    prompt_handle = u'username: '
+    msg_empty = u'ENtER AN AliAS'
+    msg_exists = u'USER EXiStS.'
+    msg_tooshort = u'TOO ShORt, MUSt bE At lEASt %s.'
+    msg_invalid = u'IllEGAl USERNAME'
+    width = ini.CFG.getint('nua', 'max_user')
+    min_user = ini.CFG.getint('nua', 'min_user')
+    invalid_nicks = ini.CFG.get('nua', 'invalid_handles').split()
     while True:
-        user_ok = origin_ok = pass_ok = level = 0
-        while not (user_ok):
-            echo (terminal.move (*loc_user))
-            echo (terminal.clear_eol + terminal.normal)
-            echo (u'username: ')
-            handle = readline (int(ini.cfg.get('nua', 'max_user')), handle)
-            echo (terminal.move (*loc_user))
-            if not handle:
-                inkey = warning(u'Enter an alias, Press Ctrl+X to cancel')
-                if inkey == chr(24):
-                    return
-            elif finduser (handle):
-                warning (u'User exists')
-            elif (handle == u''
-                    or len(handle) < int(ini.cfg.get('nua', 'min_user'))):
-                warning (u'Too short! (%s)' % ini.cfg.get('nua', 'min_user'))
-            elif (handle.lower() in ini.cfg.get('nua',
-                'invalid_handles').split()):
-                warning (u'Illegal username')
-            elif os.path.sep in handle:
-                # handle is often used for filenames, like tty recordings,
-                # so avoid allowing usernames with '/' inside the nickname
-                warning (u'Illegal username')
-            elif ':' in handle:
-                # hrm,
-                warning (u'Illegal username')
-            else:
-                user_ok = True
+        echo (u'\r\n\r\n' + term.clear_eol + term.normal + prompt_handle)
+        user.handle = LineEditor (width, user.handle).read()
+        if user.handle == u'' or user.handle is None:
+            warning(msg_empty)
+        elif find_user (user.handle):
+            warning (msg_exists)
+        elif len(user.handle) < min_user:
+            warning (msg_tooshort % min_user)
+        elif ((user.handle.lower() in invalid_nicks)
+                or os.path.sep in user.handle):
+            warning (msg_invalid)
+        else:
+            return
 
-        while not (origin_ok):
-            echo (terminal.move (*loc_origin))
-            echo (terminal.clear_eol + terminal.normal)
-            echo (u'origin: ')
-            location = readline (int(ini.cfg.get('nua', 'max_origin')), location)
-            echo (terminal.move (*loc_origin))
-            if location == u'':
-                inkey = warning(u'Enter a location, Press Ctrl+X to cancel')
-                if inkey == chr(24):
-                    return
-                echo (terminal.clear_eol)
-            else:
-                origin_ok = True
+def set_location(user):
+    """
+    Prompt for and set user.location, may be empty
+    """
+    term = getterminal()
+    prompt_location = u'origin (optional): '
+    width = ini.CFG.getint('nua', 'max_location')
+    echo (u'\r\n\r\n' + term.clear_eol + term.normal + prompt_location)
+    user.location = LineEditor (width, user.location).read()
+    if user.location is None:
+        user.location = u''
 
-        while not (pass_ok):
-            echo (terminal.move(*loc_pass))
-            echo (terminal.clear_eol + terminal.normal)
-            echo (u'password: ')
-            password = readline (int(ini.cfg.get('nua', 'max_pass')), hidden='x')
-            echo (terminal.move(*loc_pass))
-            if len(password) < 4:
-                # fail if password too short
-                echo (terminal.move (*loc_email))
-                inkey = warning(u'too short, Press Ctrl+X to cancel')
-                if inkey == chr(24):
-                    return
-                echo (terminal.clear_eol)
-            else:
-                # verify
-                echo (terminal.clear_eol + terminal.normal)
-                echo (u'   again: ')
-                verify = readline (int(ini.cfg.get('nua', 'max_pass')), hidden='z')
-                echo (terminal.move(*loc_pass))
-                if password != verify:
-                    inkey = warning (u'verify must match, Press Ctrl+X to cancel')
-                    if inkey  == chr(24):
-                        return
-                    echo (terminal.clear_eol)
-                else:
-                    break
+def set_email(user):
+    """
+    Prompt for and set user.email, may be empty
+    """
+    term = getterminal()
+    prompt_email = u'e-mail (optional): '
+    width = ini.CFG.getint('nua', 'max_email')
+    echo (u'\r\n\r\n' + term.clear_eol + term.normal + prompt_email)
+    user.email = LineEditor (width, user.email).read()
+    if user.email is None:
+        user.email = u''
 
-        # this is a joke?
-        while (level < 2):
-            echo (terminal.move(*loc_email))
-            # email loop
-            echo (terminal.clear_eol + terminal.normal)
-            echo (u'e-mail (optional): ')
-            hint= readline (int(ini.cfg.get('nua', 'max_email')))
-            echo (terminal.move(*loc_email))
-            # TODO regexp
-            if not len(hint):
-                level = 2
-                break # no e-mail
-            for ch in hint:
-                # must have @, level 1
-                if ch == u'@':
-                    level = 1
-                # must have '.' following @, level 2
-                if level == 1 and ch == u'.':
-                    level = 2
-                    break
-            if level == 2:
-                # email is valid, break out
-                break
+def set_password(user):
+    """
+    Prompt for user.password, minimum length.
+    """
+    term = getterminal ()
+    prompt_password = u'password: '
+    prompt_verify = u'   again: '
+    msg_empty = u'ENtER A PASSWORd!'
+    msg_tooshort = u'TOO ShORt, MUSt bE At lEASt %s.'
+    msg_unmatched = u'VERifY MUSt MAtCH!'
+    width = ini.CFG.getint('nua', 'max_pass')
+    min_pass = ini.CFG.getint('nua', 'min_pass')
+    while True:
+        echo (u'\r\n\r\n' + term.clear_eol + term.normal + prompt_password)
+        le = LineEditor (width)
+        le.hidden = 'x'
+        password = le.read()
+        if password == u'' or password is None:
+            warning(msg_empty)
+        elif len(password) < min_pass:
+            warning (msg_tooshort % min_pass)
+        else:
+            echo (u'\r\n\r\n' + term.clear_eol + term.normal + prompt_verify)
+            le = LineEditor (width)
+            le.hidden = 'x'
+            verify = le.read()
+            if password != verify:
+                warning (msg_unmatched)
+                continue
+            user.password = password
+            return
 
-            # allow user to opt-out of e-mail
-            echo (terminal.move (*loc_state))
-            inkey = warning(u'invalid, Ctrl+O to Opt out')
-            echo (terminal.move (*loc_state))
-            if inkey == chr(15):
-                echo (terminal.clear_eol + terminal.normal)
-                echo (u'make your statement, then: ')
-                hint = readline (int(ini.cfg.get('nua', 'max_email')))
-                if not hint:
-                    return
-                break
+def prompt_ok():
+    """
+    Prompt user to continue, True if they select yes.
+    """
+    session, term = getsession(), getterminal()
+    prompt_confirm = u'EVERYthiNG lOOk Ok ?'
+    prompt_continue = u'YES (CONtiNUE)'
+    prompt_chg = u'NO! (ChANGE)'
+    def prompt_ok_dumb(user):
+        echo ('\r\n\r\n%s\r\n' % (prompt_confirm,))
+        echo ('1 - %s\r\n' % (prompt_continue,))
+        echo ('2 - %s\r\n\r\n' % (prompt_chg,))
+        echo ('select (1, 2) --> ')
+        while True:
+            ch = getch()
+            if ch == u'1':
+                return True
+            elif ch == u'2':
+                return False
+    if session.env.get('TERM') == 'unknown':
+        return prompt_ok_dumb()
+    sel = Selector(yloc=term.height - 1, xloc=5,
+            width=term.width - 10, left=prompt_continue, right=prompt_chg)
+    echo (term.normal)
+    echo (term.move(term.height - 2, 0) + term.clear_eol)
+    echo (prompt_confirm.center(term.width-1) + '\r\n')
+    echo (term.clear_eol + sel.refresh())
+    while True:
+        echo (sel.process_keystroke(getch()))
+        if sel.selected:
+            return True if sel.selection == prompt_continue else False
 
-        echo (terminal.move (*loc_prompt))
-        echo (terminal.clear_eol + terminal.normal)
-        echo (u'   Everything cool?')
+def main (handle=u''):
+    session, term = getsession(), getterminal()
+    session.activity = u'Applying for an account'
+    artfile = u'default/art/nua.asc'
+    msg_header = u'NEW USER APPliCAtiON'
+    newcmds = ini.CFG.get('matrix', 'newcmds').split()
+    topscript = ini.CFG.get('matrix', 'topscript')
 
-        lr = YesNoClass(loc_yesno)
-        lr.left ()
-        lr.run()
-        if lr.isleft():
-            # handle, password, location, hint
-            # XXX decode necessary now?
-            u = User (handle=handle.decode('utf-8'),
-                password=password.decode('utf-8'),
-                location=location.decode('utf-8'),
-                hint=hint.decode('utf-8'))
-            u.save ()
-            goto (ini.cfg.get('matrix', 'topscript'), u.handle)
+    # display art and msg_header as banner
+    echo (term.clear + term.normal + showcp437(artfile))
+    echo (u'\r\n\r\n' + term.reverse + msg_header.center (term.width))
+
+    # create new user record for manipulation
+    user = User(handle if handle.lower() not in newcmds else u'')
+    while True:
+        set_handle (user)
+        set_location (user)
+        set_email (user)
+        set_password (user)
+        if prompt_ok ():
+            user.save ()
+            goto (topscript, user.handle)

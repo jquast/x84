@@ -1,15 +1,19 @@
 """
-lightwin package for x/84 BBS, http://github.com/jquast/x84
+lightbar package for x/84 BBS, http://github.com/jquast/x84
 """
+import bbs.ansiwin
+import bbs.session
 
-from bbs.ansiwin import AnsiWindow
-import logging
-logger = logging.getLogger()
+NETHACK_KEYSET = { 'home': [u'y', ],
+                   'end': [u'n', ],
+                   'pgup': [u'h', ],
+                   'pgdown': [u'l', ],
+                   'up': [u'k', ],
+                   'down': [u'j', ],
+                   'exit': [u'q', ],
+}
 
-NETHACK_KEYSET = { 'home': [u'y', ], 'end': [u'n', ], 'pgup': [u'h', ],
-'pgdown': [u'l', ], 'up': [u'k', ], 'down': [u'j', ], 'quit': [u'q', ], }
-
-class LightClass (AnsiWindow):
+class Lightbar (bbs.ansiwin.AnsiWindow):
     """
     This Windowing class offers a classic 'lightbar' interface.
 
@@ -52,7 +56,7 @@ class LightClass (AnsiWindow):
         """
         unibytes = u''
         # moveto (ypos),
-        unibytes += self.pos(xloc=self.xpadding, yloc=self.ypadding + ypos)
+        unibytes += self.pos(self.ypadding + ypos, self.xpadding)
         entry = self.vitem_shift + ypos
         if entry >= len(self.content):
             # out-of-bounds; empty window
@@ -97,9 +101,8 @@ class LightClass (AnsiWindow):
         override or inherit this method to create a common color and graphic
         set.
         """
-        from bbs.session import getsession
         self.keyset = NETHACK_KEYSET
-        term = getsession().terminal
+        term = bbs.session.getterminal()
         if u'' != term.KEY_HOME:
             self.keyset['home'].append (
                 term.KEY_HOME)
@@ -119,7 +122,7 @@ class LightClass (AnsiWindow):
             self.keyset['down'].append (
                 term.KEY_DOWN)
         if u'' != term.KEY_EXIT:
-            self.keyset['quit'].append (
+            self.keyset['exit'].append (
                 term.KEY_EXIT)
 
     def process_keystroke(self, key):
@@ -139,7 +142,7 @@ class LightClass (AnsiWindow):
             self._up ()
         elif key in self.keyset['down']:
             self._down ()
-        elif key in self.keyset['quit']:
+        elif key in self.keyset['exit']:
             self._quit = True
 
     @property
@@ -211,7 +214,6 @@ class LightClass (AnsiWindow):
         #        Missing docstring
         if self._vitem_idx != value:
             self._vitem_lastidx = self._vitem_idx
-            logger.debug ('vitem_idx %d->%d', self._vitem_idx, value)
             self._vitem_idx = value
             self.moved = True
 
@@ -242,9 +244,6 @@ class LightClass (AnsiWindow):
         # if selected item is out of range of new list, then scroll to last
         # page, and move selection to end of screen,
         if self.vitem_shift and self.index +1 > len(self.content):
-            logger.warn ('vshift %d; vidx %d( index %d ) out of range for %d.',
-                    self.vitem_shift, self.vitem_idx, self.index,
-                    len(self.content))
             self.vitem_shift = len(self.content) - self._visible_height + 1
             self.vitem_idx = self._visible_height - 2
 
@@ -331,32 +330,6 @@ class LightClass (AnsiWindow):
             self.vitem_idx = self._visible_height - 1
 
     @property
-    def xpadding(self):
-        """
-        Horizontal padding of window border
-        """
-        return self._xpadding
-
-    @xpadding.setter
-    def xpadding(self, value):
-        #pylint: disable=C0111
-        #         Missing docstring
-        self._xpadding = value
-
-    @property
-    def ypadding(self):
-        """
-        Horizontal padding of window border
-        """
-        return self._ypadding
-
-    @ypadding.setter
-    def ypadding(self, value):
-        #pylint: disable=C0111
-        #         Missing docstring
-        self._ypadding = value
-
-    @property
     def alignment(self):
         """
         Justification of text content. One of 'left', 'right', or 'center'.
@@ -379,20 +352,6 @@ class LightClass (AnsiWindow):
                 text.center)(width)
 
     @property
-    def _visible_width(self):
-        """
-        Visible width of lightbar after accounting for horizontal padding.
-        """
-        return self.width - (self.xpadding * 2)
-
-    @property
-    def _visible_height(self):
-        """
-        Visible height of lightbar after accounting for vertical padding.
-        """
-        return self.height - (self.ypadding * 2)
-
-    @property
     def _visible_bottom(self):
         """
         Visible bottom-most item of lightbar.
@@ -401,4 +360,3 @@ class LightClass (AnsiWindow):
             return len(self.content)
         else:
             return self._visible_height
-

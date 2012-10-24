@@ -141,7 +141,7 @@ def main(editing_user=None):
     isSysop = 'sysop' in session.user.groups
     session.activity = 'user editor: handle'
     echo (cls() + color() + cursor_show())
-    showfile ('art/ueditor.asc')
+    showcp437 ('art/ueditor.asc')
     echo ('\r\n')
     if editing_user is not None:
         editing_user= finduser(editing_user)

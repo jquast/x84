@@ -1,10 +1,14 @@
+"""
+Scripting package for x/84, http://github.com/jquast/x84/
+"""
 import os
-import sys
+import io
 import imp
-#import multiprocessing
 import logging
 
-script_path = 'default/'
+SCRIPT_PATH = 'default/'
+#pylint: disable=C0103
+#        Invalid name "logger" for type constant (should match
 logger = logging.getLogger()
 
 def init(global_script_path):
@@ -12,8 +16,10 @@ def init(global_script_path):
     Set the folder path where all scripts referenced as parameters to
     session goto() and gosub() calls are found.
     """
-    global script_path
-    script_path = global_script_path
+    #pylint: disable=W0603
+    #        Using the global statement
+    global SCRIPT_PATH
+    SCRIPT_PATH = global_script_path
 
 def chkmodpath(name, parent):
     """
@@ -30,7 +36,7 @@ def chkmodpath(name, parent):
         name_a = os.path.join(parent, name)
         path_a = name_a + '.py'
         if os.path.exists (path_a):
-            logger.debug ('absolute path match: (%s, %s)', name_a, path_a)
+            #logger.debug ('absolute path match: (%s, %s)', name_a, path_a)
             return (name_a, path_a)
 
     # as-is (path/X.py)
@@ -41,7 +47,7 @@ def chkmodpath(name, parent):
         return name_r, path_r
 
     # script-path relative
-    name_l = os.path.join(script_path, name)
+    name_l = os.path.join(SCRIPT_PATH, name)
     path_l = name_l + '.py'
     if os.path.exists(path_l):
         logger.debug ('script-path match: (%s, %s)', name_l, path_l)
@@ -64,6 +70,36 @@ def load(cwd, script_name):
     The 'current working directory' of the script should also
     be specified as cwd, and should be in sys.path.
     """
+    #pylint: disable=W0612
+    #        Unused variable 'module_path'
     module_name, module_path = chkmodpath(script_name, cwd)
     return imp.load_module (module_name,
         *imp.find_module(os.path.split(module_name)[-1]))
+
+def abspath(filename=None):
+    """
+    Return absolute path under context of current os.path.curdir
+    """
+    # deprecate ?
+    if (filename and not filename.startswith(os.path.sep)) or not filename:
+        # find apropriate relative filepath
+        path = os.path.curdir
+        if filename:
+            path = os.path.join(path, filename)
+    else:
+        path = filename
+    return os.path.normpath(path)
+
+def fopen(filepath, mode='rb'):
+    """
+    Return wrap to io.open using script-relative filepath and mode of 'rb'.
+    """
+    return open(abspath(filepath), mode)
+
+def ropen(filename, mode='rb'):
+    """
+    Open random file using wildcard (glob)
+    """
+    import glob
+    import random
+    return open(random.choice(glob.glob(abspath(filename))), mode)

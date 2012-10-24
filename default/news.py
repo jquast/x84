@@ -1,101 +1,74 @@
 """
- Sysop News script for X/84, http://1984.ws
- Simply edit text file of NEWS_PATH.
+'sysop news' script for x/84, https://github.com/jquast/x84
 """
 
-NEWS_PATH = 'data/news.txt'
-TIMEOUT = 1984
+
+def dummy_pager(news_txt):
+    term = getterminal()
+    prompt_msg = u'\r\n[c]ontinue, [s]top, [n]on-stop  ?\b\b'
+    nonstop = False
+    echo (redraw(None))
+    for row in range(len(news_txt)):
+        echo (last_callers[row].rstrip() + '\r\n')
+        if not nonstop and row > 0 and 0 == (row % (term.height-1)):
+            echo (prompt_msg)
+            inp = getch()
+            if inp in (u's', u'S', u'q', u'Q', term.KEY_EXIT):
+                return
+            if inp in ('n', u'N'):
+                nonstop = True
+    echo ('\r\npress any key .. ')
+    getch ()
+    return
+
+def get_pager(news_txt):
+    term = getterminal()
+    width = 60
+    height = term.height - 15
+    yloc = 10
+    xloc = max(5, int((float(term.width) / 2) - (float(width) / 2)))
+    pager = Pager(height, width, yloc, xloc)
+    pager.xpadding = 1
+    pager.ypadding = 1
+    pager.colors['border'] = term.red
+    pager.update (news_txt)
+    return pager
+
+def redraw(pager):
+    term = getterminal ()
+    rstr = term.normal + '\r\n\r\n'
+    if term.width >= 64:
+        rstr += '\r\n'.join((line.rstrip().center(term.width).rstrip()
+            for line in fopen('default/art/news.asc', 'r')))
+    rstr += term.normal + '\r\n\r\n'
+    if pager is not None:
+        rstr += pager.refresh()
+    return rstr
 
 def main():
-    import time
-    session = getsession()
+    session, term = getsession(), getterminal()
     session.activity = 'Reading news'
-    term = session.terminal
-    expert = session.user.get('expert', False)
-
-    def refresh_all(text):
-        """ Refresh screen, return None if expert mode,
-            otherwise a pager object refreshed with text.
-        """
-        flushevent ('refresh')
-        art = fopen('art/news.asc').readlines()
-        art_width = maxanswidth(art)
-        echo (term.move (0,0) + term.clear + '\r\n\r\n')
-
-        if expert:
-            if term.width > art_width +2:
-                echo ('\r\n'.join (art,))
-            return # no pager window
-        if term.width < art_width +2:
-            return # no pager window
-
-        # initialize and display pager border
-        align_x = min(1, (term.width/2) -(art_width/2))+4
-        p= ParaClass(h=term.height -len(art) -4,
-                     w=art_width +4,
-                     y=len(art)+3,
-                     x=align_x,
-                     xpad=2, ypad=1)
-        p.interactive = True
-        p.partial = True
-        p.highlight ()
-
-        # overlay ascii art
-        for y, line_txt in enumerate(art):
-            for x in range(len(line_txt)):
-                if line_txt[x] != ' ':
-                    x +=1
-                    break
-            x = align_x + 1 \
-                if len(line_txt) == 1 \
-                else align_x +x
-            echo (term.move (y+4, x))
-            echo (line_txt.lstrip() + '\r\n')
-
-        # now fill pager window with content & refresh
-        p.update (text, refresh=True)
-        echo (term.move (0,0))
-        echo ('%dx%d' % (term.width, term.height,))
-        return p
-
+    news_path = 'data/news.txt'
     try:
-        news_content = open(NEWS_PATH).readlines()
+        news_txt = '\n'.join(open(news_path).readlines())
     except IOError:
-        news_content = '%s not found -- no news :)\n' \
-            % (abspath(NEWS_PATH,))
-    pager = refresh_all(news_content)
+        news_txt = '`news` has not yet been comprimised.'
 
-    POLL = 0.1
-    t = 0
-    while 0 != len(news_content):
-        t -= time.time()
-        event, data = readevent(('refresh', 'input',), 0.1)
-        t += time.time()
-        if (None, None) == (event, data):
-            if t > TIMEOUT:
-                logger.info ('news/timeout exceeded')
-                gosub ('logoff')
-        else:
-            t = 0 # last-key
+    if (session.env.get('TERM') == 'unknown'
+            or session.user.get('expert', False) or term.width < 64):
+        dummy_pager (news_txt)
+        return
 
-        if expert is False and term.height < 10 or term.width < 40:
-            echo (''.join ((term.move(0, 0), term.clear, term.bold_red,
-              'screen size smaller than 40x10; ', 'switching to expert mode.',
-              term.normal,)))
-            expert = True
-            getch(1)
-
-        if event == 'refresh':
-            print 'refresh got!'
-            pager = refresh_all (news_content)
-
-        elif event == 'input':
-            if data in (term.KEY_EXIT, 'q', 'Q',):
+    echo (term.home + term.normal + term.clear)
+    pager = get_pager(news_txt)
+    echo (redraw(pager))
+    while True:
+        inp = getch(1)
+        if inp is not None:
+            pager.process_keystroke (inp)
+            if pager.quit:
                 return
-            if expert:
-                if data in (' ', term.KEY_NPAGE):
-                    news_content = news_content[term.height -2:]
-                if data in (term.KEY_DOWN, term.KEY_ENTER):
-                    news_content = news_content[1:]
-            else:
-                pager.run (data)
+        if pollevent('refresh'):
+            echo (term.home + term.normal + term.clear)
+            pager = get_pager(news_txt)
+            echo (redraw(pager))

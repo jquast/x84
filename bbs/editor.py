@@ -1,10 +1,11 @@
 """
-editor package for X/84 BBS, http://github.com/jquast/x84
+editor package for x/84, https://github.com/jquast/x84
 """
-import bbs.ansiwin
+
+import bbs.input
 import bbs.session
-import logging
-logger = logging.getLogger()
+import bbs.ansiwin
+import bbs.output
 
 PC_KEYSET = { 'refresh': [unichr(12),],
               'backspace': [unichr(8), unichr(127),],
@@ -12,7 +13,121 @@ PC_KEYSET = { 'refresh': [unichr(12),],
               'exit': [unichr(27),],
               }
 
-class HorizEditor(bbs.ansiwin.AnsiWindow):
+class LineEditor(object):
+    """
+    This unicode line editor is unaware of its (x, y) position and is great
+    for prompting a quick phrase on any terminal, such as a login: prompt.
+    """
+    # This should really be gnu/readline, but its not really accessible ..
+    _hidden = False
+    _width = 0
+    _timeout = None
+    _highlight = None
+
+    @property
+    def highlight(self):
+        """
+        highlight: when of non-zero length, a terminal sequence such as
+        term.cyan_reverse before printing ' '*width + '\b'+width, used before
+        reading input in read() and refresh(). this gives the effect of
+        economic and terminal-agnostic 'input field'. By default term.reverse
+        is used. Set to u'' to disable.
+        """
+        if self._highlight == None:
+            return bbs.session.getterminal().reverse
+        return self._highlight
+
+    @highlight.setter
+    def highlight(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self._highlight = value
+
+    @property
+    def hidden(self):
+        """
+        When not False, represents a single 'mask' character to hide input
+        with, such as a password prompt
+        """
+        return self._hidden
+
+    @hidden.setter
+    def hidden(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        assert value is False or 1 == len(value)
+        self._hidden = value
+
+    @property
+    def width(self):
+        """
+        When non-zero, represents the upperbound limit of characters to receive
+        on input until no more characters are accepted.
+        """
+        return self._width
+
+    @width.setter
+    def width(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self._width = value
+
+    def __init__(self, width=None, content=u''):
+        """
+        Arguments:
+            width: the maximum input length
+        """
+        self._width = width
+        self.content = content
+
+    def refresh(self):
+        """
+        Returns unicode byts suitable for drawing line.
+        No movement or positional sequences are returned.
+        """
+        rstr = u''
+        if 0 != len(self.highlight):
+            rstr += self.highlight
+            rstr += ' '*self.width
+            rstr += '\b'*self.width
+        if self.hidden:
+            rstr += self.hidden * len(self.content)
+        else:
+            rstr += self.content
+        return rstr
+
+    def read(self):
+        """
+        Reads input until the ENTER or ESCAPE key is pressed (Blocking).
+        Allows backspacing. Returns unicode text, or None when cancelled.
+        """
+        bbs.output.echo (self.refresh ())
+        term = bbs.session.getterminal()
+        while True:
+            inp = bbs.input.getch (timeout=None)
+            if inp == term.KEY_EXIT:
+                if 0 != len(self.highlight):
+                    bbs.output.echo (term.normal)
+                return None
+            elif inp == term.KEY_ENTER:
+                if 0 != len(self.highlight):
+                    bbs.output.echo (term.normal)
+                return self.content
+            elif inp == term.KEY_BACKSPACE:
+                if len(self.content) > 0:
+                    self.content = self.content[:-1]
+                    bbs.output.echo (u'\b \b')
+            elif (type(inp) is not int
+                    and ord(inp) >= ord(' ')
+                    and (len(self.content) < self.width or self.width == 0)):
+                self.content += inp
+                if self.hidden:
+                    bbs.output.echo (self.hidden)
+                else:
+                    bbs.output.echo (inp)
+
+
+class ScrollingEditor(bbs.ansiwin.AnsiWindow):
     """
     A single line editor that scrolls horizontally
     """
@@ -28,12 +143,16 @@ class HorizEditor(bbs.ansiwin.AnsiWindow):
     _margin_pct = 20.0
     _carriage_returned = False
     _max_length = 0
-    _xpadding = 1
     _quit = False
     _bell = False
     _trim_char = '$ '
     keyset = dict()
     content = u''
+
+    def __init__(self, width, yloc, xloc):
+        bbs.ansiwin.AnsiWindow.__init__(self, height=1,
+                width=width, yloc=yloc, xloc=xloc)
+    __init__.__doc__ = bbs.ansiwin.AnsiWindow.__init__.__doc__
 
     @property
     def position(self):
@@ -188,32 +307,6 @@ class HorizEditor(bbs.ansiwin.AnsiWindow):
         #         Missing docstring
         self._max_length = value
 
-    @property
-    def xpadding(self):
-        """
-        Horizontal padding of window border
-        """
-        return self._xpadding
-
-    @xpadding.setter
-    def xpadding(self, value):
-        #pylint: disable=C0111
-        #         Missing docstring
-        self._xpadding = value
-
-    @property
-    def _visible_width(self):
-        """
-        The visible width of the editor window after padding.
-        """
-        #pylint: disable=C0111
-        #         Missing docstring
-        return self.width -(self._xpadding *2)
-
-
-    #def resize(self, height=None, width=None, yloc=None, xloc=None):
-    #    AnsiWindow.resize(self, height, width, yloc, xloc)
-
     def init_keystrokes(self):
         """
         This initializer sets glyphs and colors appropriate for a "theme",
@@ -221,7 +314,7 @@ class HorizEditor(bbs.ansiwin.AnsiWindow):
         set.
         """
         self.keyset = PC_KEYSET
-        term = bbs.session.getsession().terminal
+        term = bbs.session.getterminal()
         if u'' != term.KEY_REFRESH:
             self.keyset['refresh'].append (
                 term.KEY_REFRESH)
@@ -251,8 +344,6 @@ class HorizEditor(bbs.ansiwin.AnsiWindow):
             self._quit = True
             return u''
         elif type(keystroke) is int:
-            term = bbs.session.getsession().terminal
-            logger.debug ('invalid key, %s', term.keyname(keystroke))
             return u''
         return self.add (keystroke)
 
@@ -263,14 +354,14 @@ class HorizEditor(bbs.ansiwin.AnsiWindow):
         character, or 0 for 'after' (default).
         """
         xpos = self._xpadding + self._horiz_pos + x_adjust
-        return self.pos(xloc=xpos, yloc=1)
+        return self.pos(1, xpos)
 
     def refresh(self):
         """
         Return unicode sequence suitable for refreshing the entire line and
         placing the cursor.
         """
-        term = bbs.session.getsession().terminal
+        term = bbs.session.getterminal()
         self._horiz_lastshift = self._horiz_shift
         self._horiz_shift = 0
         # re-detect how far we should scroll horizontally,
@@ -346,3 +437,5 @@ class HorizEditor(bbs.ansiwin.AnsiWindow):
         # return character appended
         self._horiz_pos += 1
         return u_chr
+
+

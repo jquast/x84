@@ -12,29 +12,31 @@ import re
 
 import blessings
 
+#pylint: disable=C0103
+#        Invalid name "logger" for type constant
 logger = logging.getLogger()
 
 # global list of (TelnetClient, multiprocessing.Pipe, threading.Lock)
 # this is a shared global variable across threads.
-_registry = list ()
+TERMINALS = list ()
 
 def register_terminal(client, pipe, lock):
     """
     Register a (client, pipe, lock,) terminal
     """
-    _registry.append ((client, pipe, lock,))
+    TERMINALS.append ((client, pipe, lock,))
 
 def unregister_terminal(client, pipe, lock):
     """
     Unregister a (client, pipe, lock,) terminal
     """
-    _registry.remove ((client, pipe, lock,))
+    TERMINALS.remove ((client, pipe, lock,))
 
 def terminals():
     """
     Returns list of (client, pipe, lock,) of all registered terminal sessions.
     """
-    return _registry
+    return TERMINALS
 
 def start_process(pipe, origin, env):
     """
@@ -45,28 +47,32 @@ def start_process(pipe, origin, env):
     """
     import bbs.session
     # now that we are a sub-process, our root handler has dangerously forked
-    # file descriptors. we re-address our root logging handler to redirect up
-    # the IPC pipe as a even named 'logging'
+    # file descriptors. we remove any existing handlers, and re-address our
+    # root logging handler to an IPC event pipe, named 'logging'.
     root = logging.getLogger()
-    ipc_handler = bbs.session.IPCLogHandler (pipe)
-    root.addHandler (ipc_handler)
+    for hdlr in root.handlers:
+        root.removeHandler (hdlr)
+    root.addHandler (bbs.session.IPCLogHandler (pipe))
 
     # curses is initialized for the first time. telnet negotiation did its best
     # to determine the TERM. The default, 'unknown', is equivalent to a dumb
     # terminal.
-    term = BlessedIPCTerminal (stream=IPCStream(pipe),
-            terminal_type=env.get('TERM', 'unknown'),
-            rows=int(env.get('LINES', '24')),
-            columns=int(env.get('COLUMNS', '80')))
+    term = blessings.Terminal (
+            kind=env.get('TERM', 'unknown'),
+            stream=IPCStream(pipe),
+            rows = int(env.get('LINES', '24')),
+            columns = int(env.get('COLUMNS', '80')))
 
     # spawn and begin a new session
     new_session = bbs.session.Session (term, pipe, origin, env)
-    new_session.run ()
+    try:
+        new_session.run ()
+    except KeyboardInterrupt:
+        raise SystemExit
 
     logger.info('%s/%s end process', new_session.pid, new_session.handle)
     new_session.close ()
     pipe.send (('disconnect', ('process exit',)))
-
 
 class IPCStream(object):
     """
@@ -75,81 +81,24 @@ class IPCStream(object):
     """
     def __init__(self, channel):
         self.channel = channel
+
     def write(self, data, is_cp437=False):
-        """ Sends output to Pipe """
+        """
+        Sends output to Pipe.
+        """
         self.channel.send (('output', (data, is_cp437)))
+
     def fileno(self):
-        """ Returns pipe fileno """
+        """
+        Returns pipe fileno.
+        """
         return self.channel.fileno()
+
     def close(self):
-        """ Closes pipe. """
+        """
+        Closes pipe.
+        """
         return self.channel.close ()
-
-
-class BlessedIPCTerminal(blessings.Terminal):
-    # TODO: Adopt blessings and clean out the glue
-    """
-      Furthermore, .rows and .columns no longer queries using termios routines.
-      They must be managed by another procedure.
-      Instances of this class are stored in the global registry (list)
-    """
-    def __init__(self, stream, terminal_type, rows, columns):
-        # patch in a .rows and .columns static property.
-        # this property updated by engine.py poll routine (?)
-        self.rows, self.columns = rows, columns
-
-        try:
-            blessings.Terminal.__init__ (self,
-                kind=terminal_type, stream=stream, force_styling=True)
-            self.kind = terminal_type
-            logging.debug ('setupterm(%s) succesfull', terminal_type,)
-
-        except blessings.curses.error, err:
-            from bbs import ini
-            # when setupterm() fails with client-supplied terminal_type
-            # try again using the configuration .ini default type.
-            default_ttype = ini.cfg.get('session', 'default_ttype')
-            errmsg = 'setupterm(%s) failed: %s' % (terminal_type, err,)
-            assert terminal_type != default_ttype, \
-                '%s; using default_ttype' % (errmsg,)
-            logger.warn (errmsg)
-            stream.write ('%s\r\n' % (errmsg,))
-            stream.write ('terminal type: %s (default)\r\n' % (default_ttype,))
-            blessings.Terminal.__init__ (self,
-                kind=default_ttype, stream=stream, force_styling=True)
-            self.kind = default_ttype
-
-    def keyname(self, keycode):
-        """
-        Return any matching keycode name for a given keycode.
-        """
-        try:
-            return (a for a in dir(self) if a.startswith('KEY_') and keycode ==
-                getattr(self, a)).next ()
-        except StopIteration:
-            logger.warn ('keycode unmatched %r', keycode)
-
-    @property
-    def terminal_type(self):
-        """
-        Terminal type identifier, ala TERM environment.
-        """
-        return self.kind
-
-    @terminal_type.setter
-    def terminal_type(self, value):
-        """
-        Terminal type identifier, ala TERM environment.
-        """
-        if value != self.kind:
-            self.kind = value
-            logger.warn ('TERM=%s; cannot re-initialize curses', value,)
-
-    def _height_and_width(self):
-        """
-        Return a tuple of (terminal height, terminal width).
-        """
-        return self.rows, self.columns
 
 def on_disconnect(client):
     """
@@ -228,8 +177,6 @@ class ConnectTelnetTerminal (threading.Thread):
         """
         This method is called after the connection is initiated.
         """
-        # Writing Server Applications (TCP/SOCK_STREAM): How can I read only one
-        #   character at a time?
         # According to Roger Espel Llima (espel@drakkar.ens.fr), you can
         #   have your server send a sequence of control characters:
         # (0xff 0xfb 0x01) (0xff 0xfb 0x03) (0xff 0xfd 0x0f3).
@@ -406,36 +353,10 @@ class ConnectTelnetTerminal (threading.Thread):
                 (self.client.env['TERM'],))
             return
         logger.debug ('failed: terminal type not determined.')
-        self.client.env['TERM'] = ini.cfg.get('session', 'default_ttype')
+        self.client.env['TERM'] = ini.CFG.get('session', 'default_ttype')
         logger.debug ('terminal type: %s (default)', self.client.env['TERM'])
 
-        # Try #2 - ... this is bullshit,
-        #logger.debug('request answerback sequence')
-        #self.client.get_input () # flush & toss input
-        #self.client.send_str (chr(5))  # send request termtype
-        #self.client.socket_send () # push
-        #st_time = time.time()
-        #while not self.client.input_ready() and self._timeleft(st_time):
-        #    time.sleep (self.TIME_POLL)
-        #if not self.client.input_ready():
-        #    logger.debug ('failed: answerback reply not receieved')
-        #    # set to cfg .ini if not detected
-        #    self.client.env['TERM'] = ini.cfg.get('session', 'default_ttype')
-        #    logger.debug ('terminal type: %s (default)',
-        #            self.client.terminal_type)
-        #
-        #    st_time = time.time()
-        #    while self.client.idle() < self.TIME_PAUSE \
-        #    and self._timeleft(st_time):
-        #        time.sleep (self.TIME_POLL)
-        #    inp = self.client.get_input().lower()
-        #    self.client.terminal_type = inp.strip()
-        #    logger.debug ('terminal type: %s (answerback)',
-        #            self.client.terminal_type,)
-        #    self.client.request_wont_echo ()
-        #    return
-
-
+# Deprecate; do we really want this?
 class POSHandler(threading.Thread):
     """
     This thread requires a client pipe, The telnet terminal is queried for its

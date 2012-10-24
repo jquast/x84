@@ -1,57 +1,59 @@
 """
-leftright package for X/84 BBS, https://github.com/jquast/x84
+Left/Right lightbar choice selector for x/84, https://github.com/jquast/x84
 """
 from __future__ import division
+import math
+
 import bbs.session
 import bbs.ansiwin
-
-import math
-import logging
-
-logger = logging.getLogger()
 
 VI_KEYSET = { 'refresh': [unichr(12),],
               'toggle': [u' ',],
               'left': [u'hj',],
               'right': [u'kl',],
               'enter': [u'\r',],
-              'exit': [unichr(27), u'q'],
+              'exit': [u'q', u'Q', unichr(3)],
               }
-
 
 class Selector(bbs.ansiwin.AnsiWindow):
     """
     A two-state horizontal lightbar interface.
     """
-    _left = u'Left'
-    _right = u'Right'
-    _selection = _left
-    _width = None
-    _moved = False
-    keyset = dict()
+    #pylint: disable=R0902,R0913,R0904
+    #        Too many instance attributes (8/7)
+    #        Too many arguments (6/5)
+    #        Too many public methods (25/20)
 
-    def __init__(self, yloc, xloc, width=None):
+    def __init__(self, yloc, xloc, width, left, right):
         """
-        Set screen position of Selector UI and optional display width. If
-        unset, a suitable width of medium padding is used.
+        Set screen position of Selector UI and display width of both. The
+        highlighted selection is displayed using the self.highlight attribute,
+        in order (left, right). The default selection is left.
         """
-        self.xloc = xloc
-        self.yloc = xloc
-        if width is None:
-            width = 2 * (len(self._left) + len(self._right))
+        self._left = self._selection = left
+        self._right = right
+        self._moved = False
+        self._quit = False
+        self._selected = False
         bbs.ansiwin.AnsiWindow.__init__(self,
                 height=1, width=width, yloc=yloc, xloc=xloc)
         self.init_theme ()
+
+        self.keyset = dict()
         self.init_keystrokes ()
 
     def init_theme (self):
-        term = bbs.session.getsession().terminal
+        """
+        Initialize colors['selected'] and colors['unselected'].
+        """
+        term = bbs.session.getterminal()
         self.colors ['selected'] = term.reverse
         self.colors ['unselected'] = term.normal
 
     def init_keystrokes (self):
         """
-        add application keys (left, right) to keyset.
+        Merge curses-detected application keys into a VI_KEYSET-formatted
+        keyset, for keys 'refresh', 'left', 'right', 'enter', and 'exit'.
         """
         self.keyset = VI_KEYSET
         term = bbs.session.getsession().terminal
@@ -76,6 +78,8 @@ class Selector(bbs.ansiwin.AnsiWindow):
         Process a keystroke, toggling self.selection and returning string
         suitable for refresh when changed.
         """
+        #pylint: disable=R0911
+        #        Too many return statements (7/6)
         self._moved = False
         if keystroke in self.keyset['refresh']:
             return self.refresh ()
@@ -88,8 +92,9 @@ class Selector(bbs.ansiwin.AnsiWindow):
         elif keystroke in self.keyset['exit']:
             self._quit = True
             return u''
-        term = getsession().terminal
-        logger.debug ('invalid key, %s', term.keyname(keystroke))
+        elif keystroke in self.keyset['enter']:
+            self._selected = True
+            return u''
         return u''
 
     @property
@@ -102,6 +107,13 @@ class Selector(bbs.ansiwin.AnsiWindow):
         return self._moved
 
     @property
+    def selected(self):
+        """
+        Returns True when keyset['enter'] key detected in process_keystroke
+        """
+        return self._selected
+
+    @property
     def selection(self):
         """
         Current selection.
@@ -110,6 +122,8 @@ class Selector(bbs.ansiwin.AnsiWindow):
 
     @selection.setter
     def selection(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
         assert value in (self._left, self._right)
         if self._selection != value:
             self._moved = True
@@ -124,6 +138,8 @@ class Selector(bbs.ansiwin.AnsiWindow):
 
     @left.setter
     def left(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
         self._left = value
 
     @property
@@ -135,18 +151,22 @@ class Selector(bbs.ansiwin.AnsiWindow):
 
     @right.setter
     def right(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
         self._right = value
 
     def refresh(self):
         """
         Return terminal sequence suitable for re-drawing left/right menubar.
         """
+        term = bbs.session.getterminal()
         rstr = self.pos(0, 0)
         attrs = (self.colors['selected'], self.colors['unselected'])
         a_left = attrs[0] if self.selection == self.left else attrs[1]
         a_right = attrs[1] if self.selection == self.left else attrs[0]
-        rstr += a_left + self.left.center(math.ceil(self.width / 2))
-        rstr += a_right + self.right.center(math.floor(self.width / 2))
+        u_left = self.left.center(int(math.ceil(self.width / 2)))
+        u_right = self.right.center(int(math.floor(self.width / 2)))
+        rstr += a_left + u_left + a_right + u_right + term.normal
         return rstr
 
     def move_right(self):

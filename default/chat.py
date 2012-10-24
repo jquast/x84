@@ -80,7 +80,7 @@ def handles (chatters):
 def join():
     " make self available for chat "
     echo (cls() + cursor_show())
-    showfile ('art/talk.ans', ibmcp437=True)
+    showcp437 ('art/talk.ans', ibmcp437=True)
 
 def percentage_text (text, percentage):
     brk = int(float(len(text))*percentage)

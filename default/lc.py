@@ -1,81 +1,109 @@
-""" Last Callers script for X/84 BBS, http://1984.ws """
-import time
+"""
+Last Callers script for x/84, http://github.com/jquast/x84
+"""
 
-def main(recordonly=False):
+def dummy_pager(last_callers):
+    term = getterminal()
+    prompt_msg = u'\r\n[c]ontinue, [s]top, [n]on-stop  ?\b\b'
+    nonstop = False
+    echo (term.normal + '\r\n\r\n')
+    if term.width > 71:
+        echo ('\r\n'.join((line.rstrip().center(term.width).rstrip()
+            for line in fopen('default/art/lc.asc'))))
+    echo (term.normal + '\r\n\r\n')
+    for row in range(len(last_callers)):
+        echo (last_callers[row].rstrip() + '\r\n')
+        if not nonstop and row > 0 and 0 == (row % (term.height-1)):
+            echo (prompt_msg)
+            inp = getch()
+            if inp in (u's', u'S', u'q', u'Q', term.KEY_EXIT):
+                return
+            if inp in ('n', u'N'):
+                nonstop = True
+    echo ('\r\npress any key .. ')
+    getch ()
+    return
+
+def redraw(pager):
+    term = getterminal()
+    rstr = term.move(0, 0) + term.normal + term.clear
+    for line in fopen('default/art/lc.asc'):
+        rstr += line.center(term.width).rstrip() + '\r\n'
+    rstr += pager.border ()
+    if len(pager.content) < pager._visible_height:
+        rstr += pager.footer ('%s-%s (q)uit %s-%s' % (
+            term.bold_white, term.normal, term.bold_white, term.normal))
+    else:
+        rstr += pager.footer ('%s-%s up%s/%sdown%s/%s(q)uit %s-%s' % (
+            term.bold_white, term.normal, term.bold_red, term.normal,
+            term.bold_red, term.normal, term.bold_white, term.normal))
+    rstr += pager.refresh ()
+    return rstr
+
+def get_pager(lcalls):
+    term = getterminal()
+    width = 69
+    height = term.height - 15
+    yloc = 10
+    xloc = max(3, int((float(term.width) / 2) - (float(width) / 2)))
+    pager = Pager(height, width, yloc, xloc)
+    pager.xpadding = 2
+    pager.ypadding = 1
+    pager.colors['border'] = term.red
+    pager.update (lcalls)
+    return pager
+
+def lc_retrieve():
+    term = getterminal()
+    udb = dict ()
+    for handle in list_users():
+        user = get_user(handle)
+        udb[(user.lastcall, handle)] = (user.calls, user.location)
+    padd_handle = ini.CFG.getint('nua', 'max_user')
+    padd_location = ini.CFG.getint('nua', 'max_location')
+    rstr = u''
+    for ((tm_lc, handle), (nc, origin)) in (reversed(sorted(udb.items()))):
+        rstr += ( term.bright_red(handle[:len(handle) / 3])
+                + term.bright_black(handle[len(handle) / 3:])
+                + term.dim_yellow(' .,' * (max(1,
+                    padd_handle - len(handle)) / 3))
+                + u' ')
+        rstr += ( term.bright_yellow(origin[:len(origin) / 2])
+                + term.bright_yellow(origin[len(origin) / 2:])
+                + term.dim_red(' .,' * (max(1,
+                    padd_location - len(origin)) / 3))
+                + u' ')
+        rstr += ( term.bright_yellow(timeago(tm_lc))
+                + term.red(' ago;     n') + term.bright_yellow('C')
+                + term.red('alls: ') + term.bright_red(str(nc))
+                + u'\n')
+    return rstr.rstrip()
+
+
+def main(record_only=False):
     session, term = getsession(), getterminal()
-    udb = DBProxy('lastcallers')
-    session.activity = 'Viewing Last Callers'
-
-    for u in listusers():
-        udb[u.handle] = u.lastcall
-    if recordonly:
+    session.activity = u'Viewing last callers'
+    dirty = True
+    lcalls_txt = lc_retrieve ()
+    if (session.env.get('TERM') == 'unknown'
+            or term.number_of_colors == 0
+            or term.height <= 20 or term.width <= 72 or
+            session.user.get('expert', False)):
+        dummy_pager (lcalls_txt.split('\n'))
         return
-
-    padd_handle = int(ini.cfg.get('nua','max_user')) +1
-    padd_origin = int(ini.cfg.get('nua','max_origin')) +1
-    padd_timeago = 12
-    padd_ncalls = 13
-
-    def lc_retrieve():
-        " retrieve window paint data, list of last callers "
-        return '\n'.join((
-          u.handle.ljust (padd_handle) \
-              + u.location.ljust (padd_origin) \
-              + ('%s ago' % (timeago,)).rjust (padd_timeago) \
-              + ('   Calls: %s' % (u.calls,)).ljust (padd_ncalls) \
-              for timeago, u in [(timeago(time.time() -lc), getuser(handle)) \
-                for lc, handle in reversed(sorted([(v,k) \
-                  for (k,v) in udb.items() \
-                    if finduser(k) is not None]))]))
-
-    def refresh_highdef():
-        y=14
-        h=term.height - (y+2)
-        w=67
-        x=(80-w)/2 # ansi is centered for 80-wide
-        echo (term.clear + term.normal)
-        if h < 5:
-            echo (term.bold_green + 'Screen size too small to display last callers' \
-                  + term.normal + '\r\n\r\npress any key...')
-            getch()
-            return False
-        p= ParaClass(h, w, y, (80-w)/2-2, xpad=2, ypad=1)
-        p.colors['inactive'] = term.red
-        p.partial = True
-        #return p
-        #p.lowlight ()
-        #return p
-        echo (term.move(0,0))
-        showfile ('art/lc.ans')
-        data = lc_retrieve()
-        if len(data) < h:
-            footer='%s-%s (q)uit %s-%s' % (term.bold_white,
-                term.normal, term.bold_white, term.normal)
-        else:
-            footer='%s-%s up%s/%sdown%s/%s(q)uit %s-%s' % (term.bold_white,
-                term.normal, term.bold_red, term.normal,
-                term.bold_red, term.normal, term.bold_white,
-                term.normal)
-        p.title (footer, 'bottom')
-        p.update (data)
-        p.interactive = True
-        return p
-
-    #if not term.number_of_colors:
-    #  # TODO: scrolling, polling for new logins while waiting for return key..
-    #  echo (lc_retrieve)
-    #  return
-
-    pager = refresh_highdef()
-    while pager.exit is False:
-        event, data = readevent(('input', 'refresh', 'login'), timeout=None)
-        if event in ['refresh', 'login']:
-            # in the event of a window refresh (or screen resize),
-            # or another user logging in, refresh the screen
-            pager = refresh_highdef ()
-            if pager is False:
-                return # resized to window that is too small ..
-            flushevents (['refresh', 'login', 'input'])
-        elif event == 'input':
-            # update display dataset and run
-            pager.run (data)
+    while True:
+        if (term.height <= 20 or term.width <= 72):
+            # window became too small
+            dummy_pager (lcalls_txt.split('\n'))
+            return
+        if dirty:
+            pager = get_pager(lcalls_txt)
+            echo (redraw(pager))
+            dirty = False
+        inp = getch(1)
+        if pollevent('refresh'):
+            dirty = True
+        if inp is not None:
+            echo (pager.process_keystroke (inp))
+            if pager.quit == True:
+                break

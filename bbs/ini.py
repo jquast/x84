@@ -6,7 +6,7 @@ import logging.config
 import os.path
 import ConfigParser
 
-cfg = None
+CFG = None
 
 def init(cfg_bbsfile='data/default.ini', cfg_logfile='data/logging.ini'):
     """
@@ -15,7 +15,6 @@ def init(cfg_bbsfile='data/default.ini', cfg_logfile='data/logging.ini'):
     the file 'cfg_bbsfile' exists, those settings are merged. Logfile settings
     are also loaded from 'cfg_filepath'.
     """
-    global cfg
     root = logging.getLogger()
     def write_cfg(cfg, filepath):
         """
@@ -36,8 +35,8 @@ def init(cfg_bbsfile='data/default.ini', cfg_logfile='data/logging.ini'):
             root.error ('%s', err)
             save_err = True
     if not save_err:
-        root.info ('loading %s', cfg_logfile)
         logging.config.fileConfig (cfg_logfile)
+        root.info ('loaded %s', cfg_logfile)
 
     # load defaults, overlay filepath
     cfg_bbs = init_bbs_ini ()
@@ -47,9 +46,12 @@ def init(cfg_bbsfile='data/default.ini', cfg_logfile='data/logging.ini'):
         except IOError, err:
             root.error ('%s', err)
     else:
-        root.info ('loading %s', cfg_bbsfile)
         cfg_bbs.read (cfg_bbsfile)
-    cfg = cfg_bbs
+        root.info ('loaded %s', cfg_bbsfile)
+    #pylint: disable=W0603
+    #        Using the global statement
+    global CFG
+    CFG = cfg_bbs
 
 
 def init_bbs_ini ():
@@ -70,7 +72,7 @@ def init_bbs_ini ():
     cfg_bbs.set('matrix', 'byecmds', 'exit logoff bye quit')
     cfg_bbs.set('matrix', 'script', 'matrix')
     cfg_bbs.set('matrix', 'topscript', 'top')
-    cfg_bbs.set('matrix', 'enable_anonymous', 'yes')
+    cfg_bbs.set('matrix', 'enable_anonymous', 'no')
 
     cfg_bbs.add_section('database')
     cfg_bbs.set('database', 'sqlite_folder', './data/')
@@ -78,7 +80,8 @@ def init_bbs_ini ():
     cfg_bbs.add_section('session')
     cfg_bbs.set('session', 'ttylog_folder', './ttyrecordings/')
     cfg_bbs.set('session', 'record_tty', 'yes')
-    cfg_bbs.set('session', 'scriptpath', os.path.join(os.path.dirname(__file__),
+    cfg_bbs.set('session', 'scriptpath',
+            os.path.join(os.path.dirname(__file__),
         os.path.pardir, 'default/'))
     cfg_bbs.set('session', 'tap_input', 'no')
     cfg_bbs.set('session', 'tap_output', 'no')
@@ -97,10 +100,11 @@ def init_bbs_ini ():
     cfg_bbs.add_section('nua')
     cfg_bbs.set('nua', 'script', 'nua')
     cfg_bbs.set('nua', 'min_user', '3')
+    cfg_bbs.set('nua', 'min_pass', '4')
     cfg_bbs.set('nua', 'max_user', '11')
     cfg_bbs.set('nua', 'max_pass', '16')
-    cfg_bbs.set('nua', 'max_email', '30')
-    cfg_bbs.set('nua', 'max_origin', '24')
+    cfg_bbs.set('nua', 'max_email', '50')
+    cfg_bbs.set('nua', 'max_location', '24')
     cfg_bbs.set('nua', 'allow_apply', 'yes')
     cfg_bbs.set('nua', 'invalid_handles', ' '.join \
         ((cfg_bbs.get('matrix','byecmds'),

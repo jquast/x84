@@ -5,25 +5,28 @@ import threading
 import logging
 import os
 import sqlitedict
+#pylint: disable=C0103
+#        Invalid name "logger" for type constant
 logger = logging.getLogger(__name__)
 
-_lock = threading.Lock()
-_databases = {}
+# prevent race condition on instantiation of new databases
+LOCK = threading.Lock()
+DATABASES = {}
 
 def get_db(schema):
     """
     Returns a shared SqliteDict instance, creating a new one if not found
     """
-    _lock.acquire()
-    if not schema in _databases:
+    LOCK.acquire()
+    if not schema in DATABASES:
         assert schema.isalnum()
         import bbs.ini
-        dbpath = os.path.join(bbs.ini.cfg.get('database','sqlite_folder'),
+        dbpath = os.path.join(bbs.ini.CFG.get('database','sqlite_folder'),
             '%s.sqlite3' % (schema,),)
-        _databases[schema] = sqlitedict.SqliteDict(
-                dbpath, autocommit=True)
-    _lock.release ()
-    return _databases[schema]
+        DATABASES[schema] = sqlitedict.SqliteDict(filename=dbpath,
+                tablename='unnamed', autocommit=True)
+    LOCK.release ()
+    return DATABASES[schema]
 
 class DBHandler(threading.Thread):
     """
@@ -31,17 +34,20 @@ class DBHandler(threading.Thread):
     method name and its arguments, and the return value is sent to the session
     pipe with the same 'event' name.
     """
-    def __init__(self, pipe, event, data, iterable=False):
+    def __init__(self, pipe, event, data):
         """ Arguments:
               pipe: parent end of multiprocessing.Pipe()
-              event: database schema in form of string 'db-schema'
-              data: tuple of dictionary method and arguments
+              event: database schema in form of string 'db-schema' or
+                  'db=schema'. When '-' is used, the result is returned as a
+                  single transfer. When '=', an iterable is yielded and the
+                  data is transfered via the IPC pipe as a stream.
         """
         self.pipe = pipe
         self.event = event
         self.schema = event[3:]
-        self.cmd = data[0]
-        self.args = data[1]
+        self.table = data[0]
+        self.cmd = data[1]
+        self.args = data[2]
         threading.Thread.__init__ (self)
 
     def run(self):
@@ -54,20 +60,20 @@ class DBHandler(threading.Thread):
         func = getattr(dictdb, self.cmd)
         assert callable(func), \
             "'%(cmd)s' not a valid method of <type 'dict'>" % self
-        logger.debug ('%s/%s(%s)', self.schema, self.cmd, self.args)
+        logger.debug ('%s/%s%s', self.schema, self.cmd,
+                '(*%d)' if len(self.args) else '')
         if 0 == len(self.args):
             result = func()
         else:
             result = func(*self.args)
-        if self.event[2] == '=':
+        if self.event[2] == '-':
+            self.pipe.send ((self.event, result))
+        elif self.event[2] == '=':
             # wrap iteratable with special marker,
             self.pipe.send ((self.event, (None, 'StartIteration'),))
             for item in iter(result):
                 self.pipe.send ((self.event, item,))
             self.pipe.send ((self.event, (None, StopIteration,),))
-            return
-        elif self.event[2] == '-':
-            self.pipe.send ((self.event, result,))
         else:
             assert False
 

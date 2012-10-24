@@ -1,158 +1,147 @@
 """
- Matrix login screen for X/84 (Formerly, 'The Progressive') BBS, http://1984.ws
+ Matrix login screen for X/84 (Formerly, 'The Progressive') BBS,
 
- This script is the session entry point. In Legacy era, a matrix script might
- be something to full folk not in the know, require a passcode, or even
- swapping the modem into a strange stop/bit/parity configuration, or
- auto-answering to strange strings, or simply, "login" program. thats what we
- do here.
+ This script is the session entry point.  Or simply put, the login program.
+
+ In legacy era, a matrix script might be something to fool folk not in the
+ know, meant to divert agents from underground boards, require a passcode,
+ or even swapping the modem into a strange stop/bit/parity configuration,
+ callback mechanisms, etc.. read all about it in old e-zines.
 """
 __url__ = u'https://github.com/jquast/x84/'
 
-import sys
-
-TIMEOUT = 45
-CH_MASK_PASSWD = u'x'
-def main ():
-    echo (u'\033(U') # switches to CP437 on some systems.
-    # you may or may not want this; the art on this bbs does!
-    session = getsession()
+def denied(msg):
     term = getterminal()
-    # we only allow ASCII in ENV variables anyway, so encode as iso8859-1
-    handle = session.env.get('USER', '').decode('iso8859-1', 'replace')
-    timeout = int(ini.cfg.get('session',  'timeout'))
-    byecmds = ini.cfg.get('matrix', 'byecmds').split()
-    newcmds = ini.cfg.get('matrix', 'newcmds').split()
-    APPLY_DENIED = u'\r\n\r\nfiRSt, YOU MUSt AbANdON YOUR libERtIES.'
-    apply_msg = u'\r\n\r\n  --> Create new account? [ynq]   <--' + '\b'*5
+    echo (msg)
+    echo (term.normal + u'\r\n\r\n')
+    getch (1.0)
+
+
+def get_username(handle=u''):
+    """
+    Prompt for a login handle. If unfound, script change to 'nua' when
+    allow_apply is enabled (default=yes). Also allow 'anonymous' when enabled
+    (default=no). A unicode handle of non-zero length is returned when the
+    login handle matches a userbase record.
+    """
+    term = getterminal ()
     prompt_user = u'\r\n  user: '
-    badpass_msg = u"\r\n  " + term.red_reverse + u"'%s' login failed."
+    apply_msg = u'\r\n\r\n  --> Create new account? [ynq]   <--' + '\b'*5
+    allow_apply = ini.CFG.getboolean('nua', 'allow_apply')
+    allow_anonymous = ini.CFG.getboolean('matrix', 'enable_anonymous')
+    newcmds = ini.CFG.get('matrix', 'newcmds').split()
+    topscript = ini.CFG.get('matrix', 'topscript')
+    denied_msg = u'\r\n\r\nfiRSt, YOU MUSt AbANdON YOUR libERtIES.'
     badanon_msg = u"\r\n  " + term.bright_red + u"'%s' login denied."
-    max_user = int(ini.cfg.get('nua', 'max_user'))
-    allow_apply = ini.cfg.get('nua', 'allow_apply') in ('yes',)
-    allow_anonymous = ini.cfg.get('matrix', 'enable_anonymous') == 'yes'
-    topscript = ini.cfg.get('matrix', 'topscript')
-    bbsname = ini.cfg.get('system', 'bbsname')
-    status_auth = ''.join((
-      term.move (0,0) + term.clear + term.bright_cyan + u'\033#8',
-      term.move (max(0,(term.height /2) -1), max(0,(term.width /2) -10),),' '*20,
-      term.move (max(0,(term.height /2)   ), max(0,(term.width /2) -10),),
-        'encrypting ...'.center (20),
-      term.move (max(0,(term.height /2) +1), max(0,(term.width /2) -10),),' '*20,
-      term.normal,))
-    status_dirties_screen = True
+    max_user = ini.CFG.getint('nua', 'max_user')
+    nuascript = ini.CFG.get('nua', 'script')
+    byecmds = ini.CFG.get('matrix', 'byecmds').split()
 
-    def denied(msg):
-        echo (msg)
-        echo (term.normal + u'\r\n\r\n')
-        getch (0.7)
-
-    def refresh():
-        flushevent ('refresh')
-        echo ('\r\n' + term.normal)
-        echo (u'\r\nConnected to %s, see %s for source\r\n' % (bbsname, __url__))
-        uname = '/usr/bin/uname' if sys.platform in ['darwin'] else '/bin/uname'
-        Door (uname, args=('-a',)).run()
-        echo (u'\r\n\r\n')
-        showfile('art/1984.asc')
-        echo (u'\r\n\r\n')
+    echo (prompt_user)
+    handle = LineEditor(max_user, handle).read ()
+    if handle is None or 0 == len(handle):
+        return u''
+    elif handle.lower() in newcmds:
+        if allow_apply:
+            gosub ('nua', u'')
+            return u''
+        denied (term.bright_red + denied_msg)
+        return u''
+    elif handle.lower() in byecmds:
+        goto ('logoff')
+    elif handle.lower() == u'anonymous':
         if allow_anonymous:
-            echo (u"'anonymous' login enabled.\r\n")
-        show_cur = term.normal_cursor
-        if 0 != len(show_cur):
-            echo (show_cur)
+            goto (topscript, 'anonymous')
+        denied (badanon_msg % (handle,))
+        return u''
+    u_handle = find_user(handle)
+    if u_handle is not None:
+        return u_handle # matched
+    if allow_apply is False:
+        denied (term.bright_red(denied_msg))
+        return u''
 
-    refresh ()
-    while True:
-        session.activity = u'logging in'
-        echo (prompt_user)
-        handle, event, data = readlineevent \
-            (width=max_user, value=handle,
-                events=(('refresh','input',)), timeout=timeout)
+    echo (apply_msg)
+    ynq = getch ()
+    if ynq in (u'q', u'Q', term.KEY_EXIT):
+        # goodbye
+        goto ('logoff')
+    elif ynq in (u'y', u'Y'):
+        # new user application
+        goto (nuascript, handle)
+    echo ('\r\n')
+    return u''
 
-        if (None, None) == (event, data):
-            raise ConnectionTimeout, 'timeout at login prompt'
 
-        if event == 'refresh':
-            # let the user know why we're breaking up his prompt ..
-            echo (u' [%s]\r\n' % (data[0],))
-            continue
+def try_pass(user):
+    session, term = getsession(), getterminal()
+    prompt_pass = u'\r\n\r\n  pass: '
+    status_auth = u'\r\n\r\n  ' + term.yellow_reverse(u"Encrypting ..")
+    topscript = ini.CFG.get('matrix', 'topscript', 'top')
+    badpass_msg = (u'\r\n  ' + term.red_reverse +
+            u"'%s' login failed." + term.normal)
+    max_pass = int(ini.CFG.get('nua', 'max_pass', '32'))
+    # prompt for password, disable input tap during, mask input with 'x',
+    # and authenticate against user record, performing a script change to
+    # topscript if sucessful.
+    echo (prompt_pass)
 
-        if 0 == len(handle):
-            continue # re-prompt
+    chk = session._tap_input # <-- save
+    session._tap_input = False
+    le = LineEditor(max_pass)
+    le.hidden = u'x'
+    password = le.read ()
+    session._tap_input = chk # restore -->
 
-        if handle.lower() in newcmds:
-            if allow_apply:
-                # 'new' in your language ..
-                gosub ('nua', '')
-                refresh()
-                continue
-            else:
-                # applications are denied
-                denied (term.bright_red + APPLY_DENIED)
-                handle = ''
-                continue
+    if password is None or 0 == len(password):
+        return
 
-        elif handle in byecmds:
-            goto ('logoff')
+    echo (status_auth)
+    if user.auth (password):
+        goto (topscript, user.handle)
 
-        # this account name used to be about warez, not sql injections
-        if handle.lower() == 'anonymous':
-            if allow_anonymous:
-                goto (topscript, 'anonymous')
-            denied (badanon_msg % (handle,))
-            getch (0.8)
-            handle = ''
-            continue
-        handle = handle.decode(session.encoding)
+    # you failed !
+    echo ('\r\n\r\n')
+    denied (badpass_msg % (user.handle,))
+    return
 
-        if not DBProxy('userbase').has_key(handle):
-            #remain exactly where you are
-            #make no move, until you are ordered
-            #now we can see you. -i#
-            if allow_apply is False:
-                # applications are denied
-                denied (term.bright_red + APPLY_DENIED)
-                getch (0.8)
-                handle = ''
-                continue
+def uname():
+    """
+    On unix systems with uname, call with -a on connect
+    """
+    import os
+    for uname_filepath in ('/usr/bin/uname', '/bin/uname'):
+        if os.path.exists(uname_filepath):
+            Door (uname_filepath, args=('-a',)).run()
+            break
 
-            # the photos of you and the girl will be recycled for prolitarian use
-            echo (apply_msg)
-            ynq = getch(timeout)
-            if ynq is None:
-                raise ConnectionTimeout, 'timeout at nua? prompt'
-            elif ynq == u'q' or ynq == u'Q' or ynq == term.KEY_EXIT:
-                goto ('logoff')
-            elif ynq == u'y' or ynq == u'Y':
-                goto (ini.cfg.get('nua', 'script'), handle)
-            continue
 
-        # request & authenticate password
-        echo (u'\r\n\r\n  pass: ')
+def main ():
+    session, term = getsession(), getterminal()
+    handle = (session.env.get('USER', '') .decode('iso8859-1', 'replace'))
+    anon_allowed_msg = u"'anonymous' login enabled.\r\n"
+    allow_anonymous = ini.CFG.getboolean('matrix', 'enable_anonymous')
+    bbsname = ini.CFG.get('system', 'bbsname')
+    max_tries = 10
 
-        # even when running a keyboard debug tap (default = off)
-        # disable tap during password input.
-
-        chk = session._tap_input # save
-        session._tap_input = False
-        # get keyboard input
-        password, event, data = readlineevent \
-            (width=int(ini.cfg.get('nua', 'max_pass')),
-                hidden=CH_MASK_PASSWD, timeout=timeout)
-        session._tap_input = chk # restore
-
-        if (None, None) == (event, data):
-            raise ConnectionTimeout, 'timeout at password prompt'
-
-        if password == '':
-            continue
-
-        echo (status_auth)
-        if authuser(handle.decode(session.encoding),
-            password.decode(session.encoding)):
-            goto (ini.cfg.get('matrix', 'topscript'), handle)
-        if status_dirties_screen:
-            refresh()
-
-        denied (badpass_msg % (handle,))
+    flushevent ('refresh')
+    echo (term.normal + u'\r\nConnected to %s, see %s for source\r\n' % (
+        bbsname, __url__))
+    uname ()
+    echo (u'\r\n')
+    if term.width >= 76:
+        for line in fopen('default/art/1984.asc','r'):
+            echo (line.rstrip().center(term.width).rstrip() + u'\r\n')
+        echo (u'\r\n')
+    if session.env.get('TERM') == 'unknown':
+        echo (u'! TERM is unknown\r\n\r\n')
+    if allow_anonymous:
+        echo (anon_allowed_msg)
+    for n in range(0, max_tries):
+        handle = get_username(handle)
+        if handle != u'':
+            user = get_user(handle)
+            try_pass (user)
+            logger.info ('%r failed password', handle)
+    logger.info ('maximum tries exceeded')
+    goto ('logoff')

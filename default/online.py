@@ -31,7 +31,7 @@ def main(login_handle=None):
 
     def refresh(clist=None, info=None, mode=SYSTEM):
         echo (color() + cls() + cursor_hide())
-        showfile ('art/wfc.ans')
+        showcp437 ('art/wfc.ans')
         session.activity = 'WFC screen'
         flushevent('refresh')
 

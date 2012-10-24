@@ -63,7 +63,7 @@ def main(handle=None):
         " refresh main menu screen "
         session.activity = u'Main Menu'
         clear ()
-        showfile (u'art/speedmain.asc')
+        showcp437 (u'art/speedmain.asc')
         # speak session variables as equivalent os environment values
         echo (u'\r\nTERM: %s' % (term.terminal_type,))
         echo (u', LINES: %d' % (term.rows,))
@@ -77,8 +77,8 @@ def main(handle=None):
 
     refresh ()
     while True:
-        event, choice = session.read_event(events=('input', 'refresh',),
-            timeout=int(ini.cfg.get('session', 'timeout')))
+        event, choice = session.read_events('input', 'refresh',
+            timeout=int(ini.CFG.get('session', 'timeout')))
         if (None, None) == (event, choice):
             # timeout
             raise ConnectionTimeout, 'timeout at menu prompt'
@@ -261,7 +261,7 @@ def main(handle=None):
             # play dopewars!
             elif str(choice) == '#':
                 # check if server is already running ...
-                pidfile = ini.cfg.get('dopewars', 'pidfile')
+                pidfile = ini.CFG.get('dopewars', 'pidfile')
                 running = False
                 if os.path.exists(pidfile):
                     # str->int->str, sanitize input
@@ -269,8 +269,8 @@ def main(handle=None):
                     d = Door('/bin/ps', args=('-p', pid,))
                     running = bool(0 == d.run())
                 if running == False:
-                    scorefile = ini.cfg.get('dopewars', 'scorefile')
-                    logfile = ini.cfg.get('dopewars', 'logfile')
+                    scorefile = ini.CFG.get('dopewars', 'scorefile')
+                    logfile = ini.CFG.get('dopewars', 'logfile')
                     echo (u'\r\n\r\nLaunching dopewars server,\r\n')
                     os.spawnl(os.P_NOWAIT, '/usr/local/bin/dopewars',
                             'dopewars',
@@ -290,7 +290,7 @@ def main(handle=None):
                 session.enable_keycodes = False
                 session._buffer_event('input', 'Xc\015\015')
                 d = Door('/usr/local/bin/dopewars', args=( \
-                    '--scorefile=%s' % (ini.cfg.get('dopewars', 'scorefile'),),
+                    '--scorefile=%s' % (ini.CFG.get('dopewars', 'scorefile'),),
                     '--hostname=127.0.0.1', '--port=60387',
                     '--text-client', '--player=%s' % (handle,),))
                 res = d.run ()

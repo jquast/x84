@@ -1,0 +1,4 @@
+#!/bin/sh
+cd `dirname $0`
+./ENV/bin/pylint --rcfile=.pylint *.py bbs
+./ENV/bin/pychecker -F .pycheckrc bbs

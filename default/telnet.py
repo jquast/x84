@@ -38,11 +38,13 @@ def main(host, port=None):
             unistring = from_cp437(telnet_client.read_very_eager())
             if 0 != len(unistring):
                 echo (unistring)
-            if inp == '\035':
-                # XXX implement a command set? ..
+
+            if inp == '\035': # ^]
                 telnet_client.close ()
                 echo (u'\r\n%sConnection closed.' % (term.clear_el +
                     term.normal))
+            elif inp == '\r':
+                telnet_client.write ('\r\x00') # RFC telnet return ..
             elif inp is not None:
                 telnet_client.write (inp)
         except:

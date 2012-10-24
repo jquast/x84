@@ -3,7 +3,7 @@ ansiwin package for x/84 BBS http://github.com/jquast/x84
 """
 from bbs.cp437 import CP437TABLE
 from bbs.session import getsession
-from bbs.strutils import ansilen
+from bbs.output import Ansi
 
 GLYPHSETS = { 'unknown':
         { 'top-left': u'+',
@@ -55,11 +55,18 @@ class AnsiWindow(object):
     _colors = dict()
 
     def __init__(self, height, width, yloc, xloc):
+        """
+        Construct an ansi window. Its base purpose is to provide
+        window-relativie positions using the pos() method.
+        """
         self.height = height
         self.width = width
         self.yloc = yloc
         self.xloc = xloc
+        self.glyphs = dict()
         self.init_theme ()
+        self._xpadding = 1
+        self._ypadding = 1
 
     def init_theme(self):
         """
@@ -105,11 +112,50 @@ class AnsiWindow(object):
         #        Missing docstring
         self._colors = value
 
+    @property
+    def xpadding(self):
+        """
+        Horizontal padding of window border
+        """
+        return self._xpadding
+
+    @xpadding.setter
+    def xpadding(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self._xpadding = value
+
+    @property
+    def ypadding(self):
+        """
+        Horizontal padding of window border
+        """
+        return self._ypadding
+
+    @ypadding.setter
+    def ypadding(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        self._ypadding = value
+
+    @property
+    def _visible_height(self):
+        """
+        The visible height of the editor window after vertical padding.
+        """
+        return self.height - (self._ypadding * 2)
+
+    @property
+    def _visible_width(self):
+        """
+        Visible width of lightbar after accounting for horizontal padding.
+        """
+        return self.width - (self._xpadding * 2)
+
     def resize(self, height=None, width=None, yloc=None, xloc=None):
         """
         Adjust window dimensions.
         """
-        assert (height, width, yloc, xloc) != (None, None, None, None)
         if height is not None:
             self.height = height
         if width is not None:
@@ -145,24 +191,33 @@ class AnsiWindow(object):
             and win.xloc >= self.xloc
             and win.xloc + win.w <= self.xloc + self.width)
 
-    def pos(self, xloc=None, yloc=None):
+    def pos(self, yloc=None, xloc=None):
         """
         Returns terminal sequence to move cursor to window-relative position.
         """
         term = getsession().terminal
-        if xloc is None:
-            xloc = 0
         if yloc is None:
             yloc = 0
+        if xloc is None:
+            xloc = 0
         return term.move (yloc + self.yloc, xloc + self.xloc)
 
     def title(self, ansi_text):
         """
         Returns sequence that positions and displays unicode sequence
-        'ansi_text' at the title location of the window (it may be trimmed).
+        'ansi_text' at the title location of the window.
         """
-        xloc = self.width / 2 - (min(ansilen(ansi_text) / 2, self.width / 2))
-        return self.pos(xloc=xloc, yloc=0) + ansi_text
+        xloc = self.width / 2 - (min(len(Ansi(ansi_text)) / 2, self.width / 2))
+        return self.pos(0, xloc) + ansi_text
+
+    def footer(self, ansi_text):
+        """
+        Returns sequence that positions and displays unicode sequence
+        'ansi_text' at the bottom edge of the window.
+        """
+        xloc = self.width / 2 - (min(len(Ansi(ansi_text)) / 2, self.width / 2))
+        return self.pos(self.height, xloc) + ansi_text
+
 
     def border(self):
         """
@@ -173,7 +228,7 @@ class AnsiWindow(object):
         """
         #pylint: disable=R0912
         #        Too many branches (17/12)
-        ret = self.colors.get('border', u'')
+        rstr = self.colors.get('border', u'')
         thoriz = self.glyphs.get('top-horiz', u'') * (self.width - 2)
         bhoriz = self.glyphs.get('bot-horiz', u'') * (self.width - 2)
         topright = self.glyphs.get('top-right', u'')
@@ -183,64 +238,64 @@ class AnsiWindow(object):
             for col in range (0, self.width):
                 # left to right
                 if (col == 0) or (col == self.width - 1):
-                    ret += self.pos(col, row)
+                    rstr += self.pos(row, col)
                     if (row == 0) and (col == 0):
                         # top left
-                        ret += self.glyphs.get('top-left', u'')
+                        rstr += self.glyphs.get('top-left', u'')
                     elif (row == self.height - 1) and (col == 0):
                         # bottom left
-                        ret += self.glyphs.get('bot-left', u'')
+                        rstr += self.glyphs.get('bot-left', u'')
                     elif (row == 0):
                         # top right
-                        ret += self.glyphs.get('top-right', u'')
+                        rstr += self.glyphs.get('top-right', u'')
                     elif (row == self.height - 1):
                         # bottom right
-                        ret += self.glyphs.get('bot-right', u'')
+                        rstr += self.glyphs.get('bot-right', u'')
                     elif col == 0:
                         # left vertical line
-                        ret += self.glyphs.get('left-vert', u'')
+                        rstr += self.glyphs.get('left-vert', u'')
                     elif col == self.width - 1:
                         # right vertical line
-                        ret += self.glyphs.get('right-vert', u'')
+                        rstr += self.glyphs.get('right-vert', u'')
                 elif (row == 0):
                     # top row (column 1)
                     if thoriz == u'':
                         if topright != u'':
                             # prepare for top-right, (horiz skipped)
-                            ret += self.pos(self.width -1, row)
+                            rstr += self.pos(row, self.width -1)
                     else:
                         # horizontal line
-                        ret += thoriz
+                        rstr += thoriz
                     # top-right,
-                    ret += topright
+                    rstr += topright
                     break
                 elif (row == self.height - 1):
                     # bottom row (column 1)
                     if bhoriz == u'':
                         if botright != u'':
                             # prepare for bot-right, (horiz skipped)
-                            ret += self.pos(self.width -1, row)
+                            rstr += self.pos(row, self.width -1)
                     else:
                         # horizontal line
-                        ret += bhoriz
+                        rstr += bhoriz
                     # top-right,
-                    ret += botright
+                    rstr += botright
                     break
-        ret += self.colors.get('border', u'')
-        return ret
+        rstr += self.colors.get('border', u'')
+        return rstr
 
     def erase(self):
         """
         Erase window contents (including border)
         """
-        return self.pos(0, 0) + u''.join([self.pos(xloc=0, yloc=y) +
+        return self.pos(0, 0) + u''.join([self.pos(y, 0) +
             self.glyphs.get('erase', u'') for y in range(self.height)])
 
     def clear(self):
         """
         Erase only window contents, border remains.
         """
-        ret = self.pos(1, 1)
-        ret += u''.join([self.pos(xloc=1, yloc=y) + self.glyphs('erase', u'')
+        rstr = self.pos(1, 1)
+        rstr += u''.join([self.pos(y, 1) + self.glyphs.get('erase', u'')
             for y in range(self.height -2)])
-        return ret
+        return rstr

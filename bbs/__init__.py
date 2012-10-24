@@ -7,82 +7,67 @@ scripts. It is as if the statement:
 
 Is implied for all session scripts.
 """
-import msgbase # FIX, work on msging...
-import ini
-from exception import Disconnect, Goto, ConnectionTimeout
-from strutils import chompn, asctime, timeago, ansilen
-from strutils import chkseq, seqp, seqc, maxanswidth
-from cp437 import from_cp437
-from door import Door
-from dbproxy import DBProxy
-from userbase import User, getuser, finduser, userexist, authuser, listusers
-from session import getsession, logger
-from fileutils import abspath, fopen, ropen
-from output import echo, oflush, delay
-from input import getch, getpos, readline, readlineevent
-from ansiwin import AnsiWindow
-from editor import HorizEditor
-from leftright import Selector
-from lightwin import LightClass
-from pager import ParaClass
-from sauce import SAUCE
+import bbs.ini as ini
+from bbs.selector import Selector
+from bbs.lightbar import Lightbar
+from bbs.editor import LineEditor, ScrollingEditor
+from bbs.input import getch
+
+from bbs.exception import Disconnect, Goto, ConnectionTimeout
+from bbs.cp437 import from_cp437
+from bbs.door import Door
+from bbs.dbproxy import DBProxy
+from bbs.userbase import list_users, get_user, find_user, User, Group
+from bbs.session import getsession, getterminal, logger
+from bbs.scripting import abspath, fopen, ropen
+from bbs.pager import Pager
+from bbs.ansiwin import AnsiWindow
+from bbs.output import echo, timeago, Ansi, chompn
+# from bbs.input import getpos
+import sauce
+SAUCE = sauce.SAUCE
 
 __all__ = [
+    'Ansi',
+    'LineEditor',
+    'ScrollingEditor',
     'ConnectionTimeout',
     'Door',
     'from_cp437',
     'logger',
-    'maxanswidth',
-    'chompn',
-    'asctime',
     'timeago',
-    'ansilen',
-    'chkseq',
-    'seqp',
-    'seqc',
     'DBProxy',
     'User',
-    'finduser',
-    'userexist',
-    'authuser',
-    'getuser',
-    'listusers',
+    'Group',
+    'list_users',
+    'find_user',
+    'get_user',
     'ini',
     'AnsiWindow',
-    'HorizEditor',
     'Selector',
-    'LightClass',
-    'ParaClass',
+    'Lightbar',
+    'Pager',
     'disconnect',
     'goto',
     'gosub',
     'sendevent',
     'broadcastevent',
     'readevent',
+    'pollevent',
+    'readevents',
     'flushevent',
     'flushevents',
     'getsession',
     'getterminal',
     'gethandle',
     'getch',
-    'getpos',
-    'delay',
-    'oflush',
+    'sleep',
     'echo',
     'abspath',
     'fopen',
     'ropen',
-    'showfile',
-    'readline',
-    'readlineevent',
-    'msgbase',
+    'showcp437',
     'SAUCE',]
-
-def getterminal():
-    """
-    Return blessings terminal instace of this session.
-    """
-    return getsession().terminal
 
 
 def gethandle():
@@ -110,8 +95,9 @@ def gosub(*arg):
     """
     Switch to another bbs script, with arguments. Returns script return value.
     """
+    #pylint: disable=W0142
+    #        Used * or ** magic
     return getsession().runscript(*(arg[0],) + arg[1:])
-
 
 def sendevent(pid, event, data):
     """
@@ -120,19 +106,36 @@ def sendevent(pid, event, data):
     return getsession().send_event('event', (pid, event, data))
 
 
-def broadcastevent(event, data):
+def broadcastevent(event, data=None):
     """
     Broadcast an event to all other sessions.
     """
     return getsession().send_event('global', (getsession().pid, event, data))
 
 
-def readevent(events = ['input'], timeout = None):
+def readevents(events=('input',), timeout=None):
     """
-    Poll for and read an event from the main bbs engine.
+    Poll for first available Session event.
     """
-    return getsession().read_event(events, timeout)
+    return getsession().read_events(events, timeout)
 
+def readevent(event='input', timeout=None):
+    """
+    Poll for Session event. (blocking)
+    """
+    return getsession().read_event(event, timeout)
+
+def pollevent(event='input'):
+    """
+    Poll for session event (non-blocking)
+    """
+    return getsession().read_event(event, -1)
+
+def sleep (seconds):
+    """
+    Block session for seconds, meanwhile, buffers events
+    """
+    getsession().read_events ((), seconds)
 
 def flushevent(event = 'input', timeout = -1):
     """
@@ -141,44 +144,21 @@ def flushevent(event = 'input', timeout = -1):
     return getsession().flush_event(event, timeout)
 
 
-def flushevents(events = ['input'], timeout = -1):
+def flushevents(events = ('input',), timeout = -1):
     """
     Remove any data for specified events buffered from the main bbs engine.
     """
-    return [flushevent(e, timeout) for e in events]
+    return [flushevent(evt, timeout) for evt in events]
 
-
-def showfile (filename, bps=0, pause=0.1, cleansauce=True,
-        file_encoding='cp437'):
+def showcp437 (filepattern):
     """
-    Display a file to the user. This is different from a echo(open().read()) in
-    several ways:
-        1. by default, it presumes the file is in CP437 encoding, and
-        translates to requivalent unicode bytes. CP437 encoding is used for
-        "ansi art".
-        2. it is possible to simulate a bits-per-second speed
+    Display a cp437 artfile relative to current script path, trimming SAUCE
+    data and translating cp437 to utf8. A glob pattern can be used, such as
+    'art/login*.ans'
     """
-    # this is for ansi art, really. if you're not doing that, use .read() and
-    # such. this is overkill u kno?
-    # when unspecified, session interprets charset of file
-    # open a random file if '*' or '?' is used in filename (glob matching)
-    fobj = ropen(filename, 'rb') \
-      if '*' in filename or '?' in filename \
-        else fopen(filename, 'rb')
+    fobj = ropen(filepattern, 'rb') \
+      if '*' in filepattern or '?' in filepattern \
+        else fopen(filepattern, 'rb')
+    term = getterminal()
+    return chompn(from_cp437(SAUCE(fobj).__str__())) + term.normal
 
-    data = chompn(SAUCE(fobj).__str__() if cleansauce else fobj.read())
-    if file_encoding == 'cp437':
-        data = from_cp437(data)
-    else:
-        data = data.decode(file_encoding)
-    if 0 == bps:
-        echo (data)
-        echo (getterminal().normal)
-        return
-
-    # display at a timed speed; re-expereince the pace of 9600bps ...
-    cpp = int((float(bps)/8) *pause)
-    for num, char in enumerate(data):
-        if 0 == (num % cpp):
-            getsession().read_event(events=['input'], timeout=pause)
-        echo (char)
