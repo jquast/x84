@@ -9,15 +9,14 @@ import sqlitedict
 #        Invalid name "logger" for type constant
 logger = logging.getLogger(__name__)
 
-# prevent race condition on instantiation of new databases
-LOCK = threading.Lock()
+FILELOCK = threading.Lock()
 DATABASES = {}
 
 def get_db(schema):
     """
     Returns a shared SqliteDict instance, creating a new one if not found
     """
-    LOCK.acquire()
+    FILELOCK.acquire()
     if not schema in DATABASES:
         assert schema.isalnum()
         import bbs.ini
@@ -25,7 +24,7 @@ def get_db(schema):
             '%s.sqlite3' % (schema,),)
         DATABASES[schema] = sqlitedict.SqliteDict(filename=dbpath,
                 tablename='unnamed', autocommit=True)
-    LOCK.release ()
+    FILELOCK.release ()
     return DATABASES[schema]
 
 class DBHandler(threading.Thread):
