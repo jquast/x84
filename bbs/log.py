@@ -29,12 +29,12 @@ def skip_repeat_line1(record):
     redundant bits. This especially makes tracebacks & etc. more readable.
     """
     cur_line1 = line_cmp(record)
-    if (cur_line1 == LAST_LINE and LAST_LINE[0].lower().strip() == 'error'):
-        # avoid repeating unnecessarily,
-        record = line_blank(record)
     #pylint: disable=W0603
     #        Using the global statement
     global LAST_LINE
+    if (cur_line1 == LAST_LINE and LAST_LINE[0].lower().strip() == 'error'):
+        # avoid repeating unnecessarily,
+        record = line_blank(record)
     LAST_LINE = cur_line1
     return record
 
