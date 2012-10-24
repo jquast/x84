@@ -10,6 +10,8 @@
 """
 __url__ = u'https://github.com/jquast/x84/'
 
+from bbs import *
+
 def denied(msg):
     term = getterminal()
     echo (msg)
@@ -130,7 +132,7 @@ def main ():
     uname ()
     echo (u'\r\n')
     if term.width >= 76:
-        for line in fopen('default/art/1984.asc','r'):
+        for line in open('default/art/1984.asc','r'):
             echo (line.rstrip().center(term.width).rstrip() + u'\r\n')
         echo (u'\r\n')
     if session.env.get('TERM') == 'unknown':

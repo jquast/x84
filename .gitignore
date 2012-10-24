@@ -2,6 +2,7 @@ data/*.sqlite3
 data/dopewars.*
 data/default.ini
 data/logging.ini
+docs/build
 *.log
 *.pyc
 *.swp

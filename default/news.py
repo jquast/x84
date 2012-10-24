@@ -2,6 +2,7 @@
 'sysop news' script for x/84, https://github.com/jquast/x84
 """
 
+from bbs import *
 
 def dummy_pager(news_txt):
     term = getterminal()
@@ -39,7 +40,7 @@ def redraw(pager):
     rstr = term.normal + '\r\n\r\n'
     if term.width >= 64:
         rstr += '\r\n'.join((line.rstrip().center(term.width).rstrip()
-            for line in fopen('default/art/news.asc', 'r')))
+            for line in open('default/art/news.asc', 'r')))
     rstr += term.normal + '\r\n\r\n'
     if pager is not None:
         rstr += pager.refresh()
@@ -65,7 +66,7 @@ def main():
     while True:
         inp = getch(1)
         if inp is not None:
-            pager.process_keystroke (inp)
+            echo (pager.process_keystroke (inp))
             if pager.quit:
                 return
         if pollevent('refresh'):

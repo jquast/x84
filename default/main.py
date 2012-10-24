@@ -1,14 +1,8 @@
 """
- Main menu script for X/84, http://1984.ws
- $Id: main.py,v 1.12 2010/01/02 07:35:27 dingo Exp $
-
+ Main menu script for x/84, http://github.com/jquast/x84
 """
-__author__ = 'Jeffrey Quast <dingo@1984.ws>'
-__copyright__ = ['Copyright (c) 2009 Jeffrey Quast']
-__license__ = 'ISC'
-__url__ = 'http://1984.ws'
 
-deps = ['bbs']
+from bbs import *
 
 def main():
     term = getterminal()

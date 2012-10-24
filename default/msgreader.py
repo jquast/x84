@@ -71,9 +71,9 @@ def main(msgs):
         pager.title(color(*DARKGREY) + '-< ' + ur + color() + '#' + color() + str(n+1) + ' of ' + str(len(msgs)) + color(*DARKGREY) + ' ' + pp + ' >-',align='bottom')
 
         echo (''.join([pos(3, TOP+y)+row \
-              for y, row in enumerate(fopen('art/p-left.ans').readlines())]))
+              for y, row in enumerate(open('art/p-left.ans').readlines())]))
         echo (''.join([pos(cx+cw-3, ch-9+y)+row \
-              for y, row in enumerate(fopen('art/p-right.ans').readlines())]))
+              for y, row in enumerate(open('art/p-right.ans').readlines())]))
 
         txt = ''
         if 'sysop' in getuser(handle()).groups:

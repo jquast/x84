@@ -1,5 +1,4 @@
-"""
-oneliners for x/84, http://github.com/jquast/x84
+""" oneliners for x/84, http://github.com/jquast/x84
 
   To use the (optional) http://bbs-scene.org API,
   configure a section in your .ini file:
@@ -9,6 +8,10 @@ oneliners for x/84, http://github.com/jquast/x84
     pass = my-plaintext-password
 """
 import threading
+import time
+import requests
+import xml.etree.ElementTree
+from bbs import *
 
 # bbs-scene.org API is 50-character limit max
 MAX_INPUT = 50
@@ -30,9 +33,6 @@ class FetchUpdates(threading.Thread):
     content = list ()
 
     def run(self):
-        import xml.etree.ElementTree
-        import time
-        import requests
         usernm = ini.CFG.get('bbs-scene', 'user')
         passwd = ini.CFG.get('bbs-scene', 'pass')
         logger.info ('fetching %r ..', self.url)
@@ -50,7 +50,7 @@ class FetchUpdates(threading.Thread):
         xml_nodes = xml.etree.ElementTree.XML(req.content).findall('node')
         for node in xml_nodes:
             self.content.append ((node.find('id').text, dict(
-                ((key, node.find(key).text) for key in (
+                ((key, node.find(key).text.strip()) for key in (
                 'oneliner', 'alias', 'bbsname', 'timestamp',))),))
         logger.info ('stored %d updates from bbs-scene.org', len(self.content))
 
@@ -66,6 +66,21 @@ def wait_for(thread):
             if getch(0) == u'x':
                 return
 
+def chk_thread(thread):
+    # check if bbs-scene.org thread finished
+    if thread is not None and not thread.is_alive():
+        udb = DBProxy('oneliner')
+        udbkeys = udb.keys()
+        nlc = 0
+        for key, value in thread.content:
+            if key not in udbkeys:
+                udb[key] = value
+                nlc += 1
+        if nlc:
+            logger.info ('%d new entries', nlc)
+            broadcastevent ('oneliner_update')
+        return True
+
 #def addline(msg):
 #    import time
 #    udb = DBProxy('oneliner')
@@ -79,7 +94,6 @@ def wait_for(thread):
 #    udb.release ()
 
 def get_oltxt():
-    import time
     term = getterminal()
     output = list()
     colors = (term.bold_white, term.bold_green, term.bold_blue)
@@ -93,7 +107,7 @@ def get_oltxt():
             term.bold_white(u')'), color(u': '),
             Ansi(onel['oneliner']).decode_pipe(),
             term.bold_black(u'  /'), color(atime),
-            term.bold_black(u' ago\n'),)))
+            term.bold_black(u' ago'),)))
     return output[(BUF_HISTORY * -1):]
 
 def get_selector(selection=u'No'):
@@ -119,7 +133,7 @@ def redraw(pager, selector):
     flushevent ('oneliner_update')
 
     # xzip's ansi is line-clean, center-align with terminal width,
-    art = fopen('default/art/ol.ans').readlines()
+    art = open('default/art/ol.ans').readlines()
     max_ans = max([len(Ansi(from_cp437(line))) for line in art])
     for line in art:
         padded = Ansi(from_cp437(line)).center(max_ans)
@@ -140,12 +154,13 @@ def redraw(pager, selector):
 
 def dummy_pager():
     term = getterminal()
+    show_num = (min(5,term.height - 10)) * -1
     echo (term.normal + '\r\n\r\n')
     if term.width >= 79:
         echo ('\r\n'.join((Art(line.rstrip()).center(term.width).rstrip()
-            for line in fopen('default/art/ol.ans'))))
+            for line in open('default/art/ol.ans'))))
     echo (term.normal + '\r\n\r\n')
-    for row in get_oltxt()[:(term.height - 2) * -1]:
+    for row in get_oltxt()[:show_num]:
         echo (Ansi(row.rstrip()).center((term.width)).rstrip() + '\r\n')
     echo (term.normal + '\r\npress any key .. ')
     getch ()
@@ -204,20 +219,6 @@ def saysomething():
 #
 
 #    dirty = True
-
-def chk_thread(thread):
-    # check if bbs-scene.org thread finished
-    if thread is not None and not thread.is_alive():
-        udb = DBProxy('oneliner')
-        udbkeys = udb.keys()
-        nlc = 0
-        for key, value in thread.content:
-            if key not in udbkeys:
-                udb[key] = value
-                nlc += 1
-        if nlc:
-            broadcastevent ('oneliner_update')
-        return True
 
 def main ():
     session, term = getsession(), getterminal()

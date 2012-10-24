@@ -1,4 +1,4 @@
 #!/bin/sh
-cd `dirname $0`
-./ENV/bin/pylint --rcfile=.pylint *.py bbs
-./ENV/bin/pychecker -F .pycheckrc bbs
+`dirname $0`/ENV/bin/pylint --rcfile=.pylint *.py bbs
+`dirname $0`./ENV/bin/pychecker -F .pycheckrc bbs
+python -m compileall -q `dirname $0`

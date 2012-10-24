@@ -12,8 +12,8 @@ def main ():
       '   Jeffrey Quast <dingo@1984.ws>\n' \
       '   Wijnand Modderman-Lenstra <maze@pyth0n.org>\n' \
       ' Artwork: spidy!food, hellbeard!impure\n'
-    footer = fopen('art/si-header.asc').read()
-    header = fopen('art/si-footer.asc').read()
+    footer = open('art/si-header.asc').read()
+    header = open('art/si-footer.asc').read()
     txt = footer + body + header
     session = getsession()
     term = session.terminal

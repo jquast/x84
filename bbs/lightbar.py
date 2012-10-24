@@ -25,18 +25,18 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
     #         Too many instance attributes (15/7)
     #pylint: disable=R0904
     #         Too many public methods (29/20)
-    _alignment = 'left'
-    _vitem_idx = 0
-    _vitem_lastidx = 0
-    _vitem_shift = 0
-    _vitem_lastshift = 0
-    _items_len = 0
-    _xpadding = 0
-    _ypadding = 0
-    _moved = False
-    _quit = False
-    content = list()
-    keyset = dict
+    def __init__(self, height, width, yloc, xloc):
+        bbs.ansiwin.AnsiWindow.__init__(height, width, yloc, xloc)
+        self._alignment = 'left'
+        self._vitem_idx = 0
+        self._vitem_lastidx = 0
+        self._vitem_shift = 0
+        self._vitem_lastshift = 0
+        self._moved = False
+        self._quit = False
+        self.content = list()
+        self.keyset = NETHACK_KEYSET
+        self.init_keystrokes()
 
     @property
     def update(self, unicodelist=None):
@@ -347,9 +347,9 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
         """
         justify text to width according to alignment prperty
         """
-        return (text.rjust if self.alignment == 'right' else
-                text.ljust if self.alignment == 'left' else
-                text.center)(width)
+        return (Ansi(text).rjust if self.alignment == 'right' else
+                Ansi(text).ljust if self.alignment == 'left' else
+                Ansi(text).center)(width)
 
     @property
     def _visible_bottom(self):

@@ -2,6 +2,7 @@ ROADMAP, 1.0:
 
 TESTING
 * ensure you can have a login name of [some-japanese-characters]
+  and this is fine everywhere
 * TERM=unknown -- this should create an 'expert mode' bbs, with
   no frills, no lightbars, no artwork, etc. -- for low bandwidth
   terminals.

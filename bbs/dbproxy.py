@@ -56,25 +56,31 @@ class DBProxy(object):
         bbs.session.getsession().send_event (event, (self.table, method, args))
         return bbs.session.getsession().read_event (event)
 
-    def acquire(self, timeout=None):
+    def acquire(self, blocking=False):
         """
-        Acquire bbs-global lock on database, possibly blocking until it can be
-        obtained. When timeout is not None, return False if lock cannot be
-        acquired after timeout has elapsed in seconds.
+        Acquire a bbs-global lock, blocking or non-blocking.
+
+        When invoked with the blocking argument set to True (the default),
+        block until the lock is unlocked, then set it to locked and return
+        True.
+
+        When invoked with the blocking argument set to False, do not block. If
+        a call with blocking set to True would block, return False immediately;
+        otherwise, set the lock to locked and return True.
         """
-        if timeout is None:
-            timeout = float('inf')
         event = 'lock-%s' % (self.schema,)
-        stime = time.time ()
-        while time.time() - stime < timeout:
-            bbs.session.getsession().send_event (event, ('acquire', timeout))
-            # engine answers 'True' if lock is acquired, 'False' if not,
+        while True:
+            bbs.session.getsession().lock.acquire ()
+            bbs.session.getsession().send_event (event, ('acquire', True))
             if bbs.session.getsession().read_event (event):
+                bbs.session.getsession().lock.release ()
                 return True
-            time.sleep (1)
-            logger.warn ('%s cannot acquire, re-trying ', event)
-        logger.warn ('failed to acquire lock.')
-        return False
+            if not blocking:
+                bbs.session.getsession().lock.release ()
+                return False
+            # let another thread have a go,
+            bbs.session.getsession().lock.release ()
+            time.sleep (0.1)
 
     def release(self):
         """
@@ -91,6 +97,8 @@ class DBProxy(object):
         bbs.session.getsession().send_event (event, ('locked', None))
         return bbs.session.getsession().read_event (event)
 
+    #pylint: disable=C0111
+    #        Missing docstring
     def __cmp__(self, *args):
         return self.proxy_method ('__cmp__', *args)
     __cmp__.__doc__ = dict.__cmp__.__doc__
@@ -111,8 +119,6 @@ class DBProxy(object):
         return self.proxy_method ('__delitem__', *args)
     __delitem__.__doc__ = dict.__delitem__.__doc__
 
-    #pylint: disable=C0111
-    #        Missing docstring
     def get(self, *args):
         return self.proxy_method ('get', *args)
     get.__doc__ = dict.get.__doc__

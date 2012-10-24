@@ -339,7 +339,7 @@ class ConnectTelnetTerminal (threading.Thread):
         from bbs import ini
         detected = lambda: self.client.env['TERM'] != 'unknown'
         if detected():
-            logger.debug ('terminal type: %s (unsolicited)' %
+            logger.info ('terminal type: %s (unsolicited)' %
                 (self.client.env['TERM'],))
             return
         logger.debug ('request-terminal-type')
@@ -349,12 +349,12 @@ class ConnectTelnetTerminal (threading.Thread):
         while not detected() and self._timeleft(st_time):
             time.sleep (self.TIME_POLL)
         if detected():
-            logger.debug ('terminal type: %s (negotiated)' %
+            logger.info ('terminal type: %s (negotiated)' %
                 (self.client.env['TERM'],))
             return
-        logger.debug ('failed: terminal type not determined.')
+        logger.warn ('failed: terminal type not determined.')
         self.client.env['TERM'] = ini.CFG.get('session', 'default_ttype')
-        logger.debug ('terminal type: %s (default)', self.client.env['TERM'])
+        logger.info ('terminal type: %s (default)', self.client.env['TERM'])
 
 # Deprecate; do we really want this?
 class POSHandler(threading.Thread):

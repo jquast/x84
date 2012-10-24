@@ -1,7 +1,0 @@
-#!/bin/bash
-# TODO: Installer creates this shell script
-# requires path to bash for shebang line,
-#      and path to virtualenv (ENV26)
-#      and path to x84 source code (`dirname $0`)
-. `dirname $0`/ENV26/bin/activate
-python `dirname $0`/engine.py $*
