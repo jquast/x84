@@ -126,27 +126,25 @@ class Pager(bbs.ansiwin.AnsiWindow):
         sequence suitable for refreshing when that keystroke modifies the
         window.
         """
-        #pylint: disable=R0911
-        #        Too many return statements (9/6)
         self._position_last = self._position
         if keystroke in self.keyset['refresh']:
-            return self.refresh ()
+            rstr = self.refresh ()
         elif keystroke in self.keyset['up']:
-            return self._up ()
+            rstr = self._up ()
         elif keystroke in self.keyset['down']:
-            return self._down ()
+            rstr = self._down ()
         elif keystroke in self.keyset['home']:
-            return self._home ()
+            rstr = self._home ()
         elif keystroke in self.keyset['end']:
-            return self._end ()
+            rstr = self._end ()
         elif keystroke in self.keyset['pgup']:
-            return self._pgup ()
+            rstr = self._pgup ()
         elif keystroke in self.keyset['pgdown']:
-            return self._pgdown ()
+            rstr = self._pgdown ()
         elif keystroke in self.keyset['exit']:
             self._quit = True
-            return u''
-        return u''
+            rstr = u''
+        return rstr
 
     def _home(self):
         """
