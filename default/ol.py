@@ -112,7 +112,8 @@ def get_oltxt():
 
 def get_selector(selection=u'No'):
     term = getterminal ()
-    selector = Selector(yloc=term.height-1, xloc=(term.width / 2) - 25,
+    selector = Selector(yloc=term.height-1,
+            xloc=(term.width / 2) - 25,
             width=50, left=u'Yes', right=u'No')
     selector.keyset['left'].extend((u'y', u'Y'))
     selector.keyset['right'].extend((u'y', u'Y'))
@@ -122,8 +123,8 @@ def get_selector(selection=u'No'):
 
 def get_pager():
     term = getterminal ()
-    pager = Pager(yloc=12, xloc=3,
-            height=term.height - 15, width=term.width - 6)
+    pager = Pager(yloc=9, xloc=min(3, (term.width/2)-50),
+            height=term.height - 12, width=max(term.width - 6,100))
     pager.colors['border'] = term.blue
     return pager
 
@@ -139,15 +140,14 @@ def redraw(pager, selector):
         padded = Ansi(from_cp437(line)).center(max_ans)
         output += Ansi(padded).center(term.width).rstrip()
         output += term.normal + '\r\n'
-
-    xloc = (term.width / 2) - (max_ans / 2)
-    selector.yloc = term.height - 1
-    selector.xloc = xloc
-    selector.width = max_ans
-    pager.yloc = 1 + len(art)
-    pager.xloc = xloc
-    pager.height = term.height - pager.yloc - 4
-    pager.width = max_ans
+    #xloc = (term.width / 2) - (max_ans / 2)
+    #selector.yloc = term.height - 1
+    #selector.xloc = xloc
+    #selector.width = max_ans
+    #pager.yloc = 1 + len(art)
+    #pager.xloc = xloc
+    #pager.height = term.height - pager.yloc - 4
+    #pager.width = max_ans
     pager.update(u'\n'.join(get_oltxt()))
     output += pager.refresh() + pager.border() + selector.refresh()
     return output
