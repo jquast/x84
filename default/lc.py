@@ -67,13 +67,11 @@ def lc_retrieve():
     for ((tm_lc, handle), (nc, origin)) in (reversed(sorted(udb.items()))):
         rstr += ( term.bright_red(handle[:len(handle) / 3])
                 + term.bright_black(handle[len(handle) / 3:])
-                + term.dim_yellow(' .,' * (max(1,
-                    padd_handle - len(handle)) / 3))
+                + term.dim_yellow('.' * (max(1, padd_handle - len(handle))))
                 + u' ')
         rstr += ( term.bright_yellow(origin[:len(origin) / 2])
                 + term.bright_yellow(origin[len(origin) / 2:])
-                + term.dim_red(' .,' * (max(1,
-                    padd_location - len(origin)) / 3))
+                + term.dim_red('.' * (max(1, padd_location - len(origin))))
                 + u' ')
         rstr += ( term.bright_yellow(timeago(tm_lc))
                 + term.red(' ago;     n') + term.bright_yellow('C')
