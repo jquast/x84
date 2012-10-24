@@ -37,7 +37,7 @@ class Pager(bbs.ansiwin.AnsiWindow):
         self._moved = False
         self._quit = False
         self.content = list ()
-        self.keyset = dict ()
+        self.keyset = NETHACK_KEYSET
         self.init_keystrokes ()
 
     @property
@@ -104,7 +104,6 @@ class Pager(bbs.ansiwin.AnsiWindow):
         set.
         """
         from bbs.session import getsession
-        self.keyset = NETHACK_KEYSET
         term = getsession().terminal
         if u'' != term.KEY_HOME:
             self.keyset['home'].append (term.KEY_HOME)
@@ -185,7 +184,7 @@ class Pager(bbs.ansiwin.AnsiWindow):
         """
         Scroll down ``num`` rows.
         """
-        self.position -= num
+        self.position += num
         if self.moved:
             return self.refresh ()
         return u''
@@ -194,7 +193,7 @@ class Pager(bbs.ansiwin.AnsiWindow):
         """
         Scroll up ``num`` rows.
         """
-        self.position += num
+        self.position -= num
         if self.moved:
             return self.refresh ()
         return u''
@@ -223,7 +222,6 @@ class Pager(bbs.ansiwin.AnsiWindow):
             yloc += 1
             rstr += self.pos (yloc, self.xpadding)
             rstr += u' ' * (self._visible_width)
-            rstr += '['
         return rstr + term.normal
 
     def update(self, unibytes):
