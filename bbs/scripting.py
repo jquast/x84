@@ -36,7 +36,7 @@ def chkmodpath(name, parent):
         name_a = os.path.join(parent, name)
         path_a = name_a + '.py'
         if os.path.exists (path_a):
-            logger.debug ('absolute path match: (%s, %s)', name_a, path_a)
+            #logger.debug ('absolute path match: (%s, %s)', name_a, path_a)
             return (name_a, path_a)
 
     # as-is (path/X.py)
