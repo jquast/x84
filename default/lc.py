@@ -46,13 +46,14 @@ def redraw(pager):
 
 def get_pager(lcalls):
     term = getterminal()
-    width = 69
+    width = 65
     height = term.height - 15
     yloc = 10
     xloc = max(3, int((float(term.width) / 2) - (float(width) / 2)))
     pager = Pager(height, width, yloc, xloc)
     pager.xpadding = 2
     pager.ypadding = 1
+    pager.alignment = 'center'
     pager.colors['border'] = term.red
     pager.update (lcalls)
     return pager
@@ -69,16 +70,13 @@ def lc_retrieve():
     for ((tm_lc, handle), (nc, origin)) in (reversed(sorted(udb.items()))):
         rstr += ( term.bright_red(handle[:len(handle) / 3])
                 + term.bright_black(handle[len(handle) / 3:])
-                + term.dim_yellow('.' * (max(1, padd_handle - len(handle))))
-                + u' ')
+                + u' ' * (max(1, padd_handle - len(handle))) + u' ')
         rstr += ( term.bright_yellow(origin[:len(origin) / 2])
                 + term.bright_yellow(origin[len(origin) / 2:])
-                + term.dim_red('.' * (max(1, padd_location - len(origin))))
-                + u' ')
+                + u' ' * (max(1, padd_location - len(origin))) + u' ')
         rstr += ( term.bright_yellow(timeago(tm_lc))
-                + term.red(' ago;     n') + term.bright_yellow('C')
-                + term.red('alls: ') + term.bright_red(str(nc))
-                + u'\n')
+                + term.red(' ago  n') + term.bright_yellow('C')
+                + term.red('/') + term.bright_red(str(nc)) + u'\n')
     return rstr.rstrip()
 
 
@@ -89,12 +87,12 @@ def main():
     lcalls_txt = lc_retrieve ()
     if (session.env.get('TERM') == 'unknown'
             or term.number_of_colors == 0
-            or term.height <= 20 or term.width <= 72 or
+            or term.height <= 20 or term.width <= 71 or
             session.user.get('expert', False)):
         dummy_pager (lcalls_txt.split('\n'))
         return
     while True:
-        if (term.height <= 20 or term.width <= 72):
+        if (term.height <= 20 or term.width <= 71):
             # window became too small
             dummy_pager (lcalls_txt.split('\n'))
             return
