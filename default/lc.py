@@ -34,7 +34,7 @@ def redraw(pager):
     for line in open('default/art/lc.asc'):
         rstr += line.center(term.width).rstrip() + '\r\n'
     rstr += pager.border ()
-    if len(pager.content) < pager._visible_height:
+    if len(pager.content) < pager.visible_height:
         rstr += pager.footer ('%s-%s (q)uit %s-%s' % (
             term.bold_white, term.normal, term.bold_white, term.normal))
     else:
