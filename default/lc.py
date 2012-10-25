@@ -82,7 +82,7 @@ def lc_retrieve():
     return rstr.rstrip()
 
 
-def main(record_only=False):
+def main():
     session, term = getsession(), getterminal()
     session.activity = u'Viewing last callers'
     dirty = True
