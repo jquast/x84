@@ -256,14 +256,8 @@ def main ():
         inp = getch (1)
         if inp is not None:
             # input is multiplexed to both interfaces
-            x = pager.process_keystroke (inp)
-            print 'pg,'
-            print repr(x)
-            echo (x)
-            x = selector.process_keystroke (inp)
-            print 'sl,'
-            print repr(x)
-            echo (x)
+            echo (pager.process_keystroke (inp))
+            echo (selector.process_keystroke (inp))
 
             # quit 'q', or selected 'no' & return
             if (selector.selected and selector.selection == selector.right

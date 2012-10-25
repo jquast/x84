@@ -138,7 +138,7 @@ class Pager(bbs.ansiwin.AnsiWindow):
         elif keystroke in self.keyset['exit']:
             self._quit = True
         else:
-            bbs.session.logger.warn ('unhandled, %r', keystroke
+            bbs.session.logger.info ('unhandled, %r', keystroke
                     if type(keystroke) is not int
                     else bbs.session.getsession().terminal.keyname(keystroke))
         return rstr
