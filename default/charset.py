@@ -12,7 +12,6 @@ of 'cp437' for encoding translation.
 from bbs import *
 
 def main():
-    import textwrap
     session, term = getsession(), getterminal()
     if term.number_of_colors == 256:
         artfile = 'default/art/plant-256.ans'
@@ -53,7 +52,7 @@ def main():
         else:
             assert False, "Only encodings 'utf8' and 'cp437' supported."
         # clear & display art
-        echo (term.move (0,0) + term.normal + term.clear)
+        echo (term.move (0, 0) + term.normal + term.clear)
         echo (showcp437 (artfile))
         echo (term.normal + u'\r\n\r\n')
         echo (Ansi(enc_prompt).wrap((term.width / 2) + (term.width / 3))) # 1/2+1/3
