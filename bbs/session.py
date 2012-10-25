@@ -311,7 +311,7 @@ class Session(object):
         return store
 
 
-    def _buffer_event (self, event, data):
+    def buffer_event (self, event, data=None):
         """
         Push data into buffer keyed by event. Allow only the most recent
         refresh event to be buffered.
@@ -324,7 +324,7 @@ class Session(object):
             self._buffer[event] = list()
 
         if event == 'input':
-            self._buffer_input (data)
+            self.buffer_input (data)
         elif event == 'refresh':
             if data[0] == 'resize':
                 # inherit terminal dimensions values
@@ -334,7 +334,7 @@ class Session(object):
         else:
             self._buffer[event].insert (0, data)
 
-    def _buffer_input (self, data):
+    def buffer_input (self, data):
         """
         Update idle time, buffer input, and when Session.enable_keycodes is
         True, decode multibyte sequences as possible nvt, vt100, telnet, and
@@ -410,7 +410,7 @@ class Session(object):
                 event, data = self.pipe.recv()
                 if event == 'exception':
                     raise getattr(bbs.exception, data[0]), data[1]
-                self._buffer_event (event, data)
+                self.buffer_event (event, data)
                 if event in events:
                     return (event, self._event_pop(event))
                 else:
@@ -435,8 +435,8 @@ class Session(object):
                 # load default/__init__.py as 'default',
                 script_path = bbs.ini.CFG.get('session', 'scriptpath')
                 base_script = os.path.basename(script_path)
-                self._script_module = imp.load_module(
-                        base_script, *imp.find_module(script_name, [script_path]))
+                self._script_module = imp.load_module(base_script,
+                        *imp.find_module(script_name, [script_path]))
                 self._script_module.__path__ = script_path
             return self._script_module
         script_module = _load_script_module()
