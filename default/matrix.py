@@ -10,6 +10,8 @@
 """
 __url__ = u'https://github.com/jquast/x84/'
 
+#pylint: disable=W0614
+#        Unused import from wildcard import
 from bbs import *
 
 def denied(msg):

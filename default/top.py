@@ -6,6 +6,9 @@ and assigned to the session.
 
 Otherwise the user record of the handle passed is retreived and assigned.
 """
+
+#pylint: disable=W0614
+#        Unused import from wildcard import
 from bbs import *
 
 # generated using lolcat ..

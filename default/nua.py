@@ -2,6 +2,10 @@
  New user account script for x/84, https://github.com/jquast/x84
 """
 
+#pylint: disable=W0614
+#        Unused import from wildcard import
+from bbs import *
+
 def warning(msg, cpsec=10.0, min_sec=3.0, split_loc=3):
     """
     Display a 2-tone warning to user with a dynamic pause

@@ -2,6 +2,8 @@
 'sysop news' script for x/84, https://github.com/jquast/x84
 """
 
+#pylint: disable=W0614
+#        Unused import from wildcard import
 from bbs import *
 
 def dummy_pager(news_txt):

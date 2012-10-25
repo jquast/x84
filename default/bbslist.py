@@ -1,6 +1,11 @@
 """
 bbs listing for X/84, http://github.com/x84/jquast
 """
+
+#pylint: disable=W0614
+#        Unused import from wildcard import
+from bbs import *
+
 def main():
     session, term = getsession(), getterminal()
     session.activity = 'BBS Lister'

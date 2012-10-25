@@ -7,6 +7,8 @@ Session.write() method takes special handling of a session.encoding value
 of 'cp437' for encoding translation.
 """
 
+#pylint: disable=W0614
+#        Unused import from wildcard import
 from bbs import *
 
 def main():

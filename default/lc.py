@@ -2,6 +2,8 @@
 Last Callers script for x/84, http://github.com/jquast/x84
 """
 
+#pylint: disable=W0614
+#        Unused import from wildcard import
 from bbs import *
 
 def dummy_pager(last_callers):
@@ -61,8 +63,8 @@ def lc_retrieve():
     for handle in list_users():
         user = get_user(handle)
         udb[(user.lastcall, handle)] = (user.calls, user.location)
-    padd_handle = ini.CFG.getint('nua', 'max_user')
-    padd_location = ini.CFG.getint('nua', 'max_location')
+    padd_handle = ini.CFG.getint('nua', 'max_user') + 1
+    padd_location = ini.CFG.getint('nua', 'max_location') + 1
     rstr = u''
     for ((tm_lc, handle), (nc, origin)) in (reversed(sorted(udb.items()))):
         rstr += ( term.bright_red(handle[:len(handle) / 3])

@@ -2,6 +2,11 @@
 telnet client for X/84 BBS, https://github.com/jquast/x84/
 """
 TIME_POLL = 0.05
+
+#pylint: disable=W0614
+#        Unused import from wildcard import
+from bbs import *
+
 def main(host, port=None):
     """
     Call script with argument host and optional argument port to connect to a

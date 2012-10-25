@@ -2,12 +2,9 @@
  Main menu script for x/84, http://github.com/jquast/x84
 """
 
+#pylint: disable=W0614
+#        Unused import from wildcard import
 from bbs import *
-
-def pak():
-    term = getterminal()
-    echo ('\r\n\r\n  ' + term.normal + u'Press any key...')
-    getch ()
 
 def refresh():
     " refresh main menu screen "
@@ -17,42 +14,47 @@ def refresh():
     max_len = max([line.__len__() for line in art])
     if max_len <= term.width:
         for line in art:
-            echo (line.center(term.width - max_len).rstrip() + '\r\n')
+            echo (line.center(term.width).rstrip() + '\r\n')
     def disp_entry(char, blurb):
-        return (term.bold_blue('(') + term.blue_reverse(char)
+        return Ansi(term.bold_blue('(') + term.blue_reverse(char)
                 + term.bold_blue + ')' + term.bright_white (' '+blurb))
-    echo (term.move(len(art) + 3, max(1, (term.width/2) - 20)))
-    echo (disp_entry ('b', 'bbs lister'))
-    echo (disp_entry ('l', 'last calls'))
-    echo (disp_entry ('o', 'one liners'))
-    echo (term.move(len(art) + 4, max(1, (term.width/2) - 20)))
-    echo (disp_entry ('z', 'news'))
-    echo (disp_entry ('g', 'goodbye'))
-    echo (disp_entry ('c', 'charset'))
+    echo (term.move(len(art) - 10, term.width / 4) or '\r\n')
+    echo (disp_entry ('b', 'bbs lister').ljust(term.width/5))
+    echo (disp_entry ('l', 'last calls').ljust(term.width/5))
+    echo (disp_entry ('o', 'one liners').ljust(term.width/5))
+    echo (term.move(len(art) - 8, term.width / 4) or '\r\n')
+    echo (disp_entry ('z', 'news').ljust(term.width/5))
+    echo (disp_entry ('g', 'goodbye').ljust(term.width/5))
+    echo (disp_entry ('c', 'charset').ljust(term.width/5))
     echo ('\r\n\r\n')
 
 def main():
     session, term = getsession(), getterminal()
 
+    dirty = True
     while True:
         if pollevent('refresh'):
-            refresh ()
+            dirty = True
+        if dirty:
+            dirty = False
+            refresh()
         choice = getch(1)
         if choice == u'*':
             goto ('main')
         elif choice == u'b':
             gosub ('bbslist')
-            refresh ()
+            dirty = True
         elif choice == u'l':
             gosub ('lc')
-            refresh ()
+            dirty = True
         elif choice == u'o':
             gosub ('ol')
-            refresh ()
+            dirty = True
         elif choice == u'z':
             gosub('news')
-            refresh()
+            dirty = True
         elif choice == u'g':
             goto('logoff')
         elif choice == u'c':
             gosub('charset')
+            dirty = True

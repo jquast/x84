@@ -4,6 +4,10 @@
 TIMEOUT = 35
 AUTOMSG_LENGTH = 40
 
+#pylint: disable=W0614
+#        Unused import from wildcard import
+from bbs import *
+
 def main():
     import time
     db = DBProxy('automsg')
