@@ -102,6 +102,12 @@ class Selector(bbs.ansiwin.AnsiWindow):
         """
         return self._selected
 
+    @selected.setter
+    def selected(self, value):
+        # this setter should only be used to reset to 'False' for recycling
+        assert type(value) is bool
+        self._selected = value
+
     @property
     def selection(self):
         """
