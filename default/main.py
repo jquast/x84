@@ -26,7 +26,7 @@ def refresh():
     echo (disp_entry ('z', 'news').ljust(term.width/5))
     echo (disp_entry ('g', 'goodbye').ljust(term.width/5))
     echo (disp_entry ('c', 'charset').ljust(term.width/5))
-    echo ('\r\n\r\n')
+    echo (u'\r\n\r\n')
 
 def main():
     session, term = getsession(), getterminal()
