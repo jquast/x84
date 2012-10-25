@@ -88,8 +88,8 @@ class LineEditor(object):
         rstr = u''
         if 0 != len(self.highlight):
             rstr += self.highlight
-            rstr += ' '*self.width
-            rstr += '\b'*self.width
+            rstr += ' ' * self.width
+            rstr += '\b' * self.width
         if self.hidden:
             rstr += self.hidden * len(self.content)
         else:
@@ -173,7 +173,7 @@ class ScrollingEditor(bbs.ansiwin.AnsiWindow):
             return len(self.content) >= self.max_length
         if len(self.content) >= self.max_length:
             return True
-        if self.content >= self._visible_width:
+        if self.content >= self.visible_width:
             return True
         return False
 
@@ -197,7 +197,7 @@ class ScrollingEditor(bbs.ansiwin.AnsiWindow):
         Returns True when user nears margin and bell has been sounded and
         carriage has not yet been returned.
         """
-        return int(float(self._visible_width) * (float(self.scroll_pct) * .01))
+        return int(float(self.visible_width) * (float(self.scroll_pct) * .01))
 
     @bell.setter
     def bell(self, value):
@@ -248,7 +248,7 @@ class ScrollingEditor(bbs.ansiwin.AnsiWindow):
         Returns number of columns horizontal editor will scroll, calculated by
         scroll_pct.
         """
-        return int(float(self._visible_width) * (float(self.scroll_pct) * .01))
+        return int(float(self.visible_width) * (float(self.scroll_pct) * .01))
 
     @property
     def margin_amt(self):
@@ -257,7 +257,7 @@ class ScrollingEditor(bbs.ansiwin.AnsiWindow):
         signals bell=True, indicating that the end is near and the carriage
         should be returned.
         """
-        return int(float(self._visible_width) * (float(self.margin_pct) * .01))
+        return int(float(self.visible_width) * (float(self.margin_pct) * .01))
 
     @property
     def scroll_pct(self):
@@ -299,7 +299,7 @@ class ScrollingEditor(bbs.ansiwin.AnsiWindow):
         enable_scrolling is True. When unset, the maximum length is the
         visible width of the window.
         """
-        return self._max_length or self._visible_width
+        return self._max_length or self.visible_width
 
     @max_length.setter
     def max_length(self, value):
@@ -315,18 +315,10 @@ class ScrollingEditor(bbs.ansiwin.AnsiWindow):
         """
         self.keyset = PC_KEYSET
         term = bbs.session.getterminal()
-        if u'' != term.KEY_REFRESH:
-            self.keyset['refresh'].append (
-                term.KEY_REFRESH)
-        if u'' != term.KEY_BACKSPACE:
-            self.keyset['backspace'].append (
-                term.KEY_BACKSPACE)
-        if u'' != term.KEY_ENTER:
-            self.keyset['enter'].append (
-                term.KEY_ENTER)
-        if u'' != term.KEY_EXIT:
-            self.keyset['quit'].append (
-                term.KEY_EXIT)
+        self.keyset['refresh'].append (term.KEY_REFRESH)
+        self.keyset['backspace'].append (term.KEY_BACKSPACE)
+        self.keyset['enter'].append (term.KEY_ENTER)
+        self.keyset['quit'].append (term.KEY_EXIT)
 
     def process_keystroke(self, keystroke):
         """
@@ -369,14 +361,14 @@ class ScrollingEditor(bbs.ansiwin.AnsiWindow):
         #pylint: disable=W0612
         #        Unused variable 'loop_cnt'
         for loop_cnt in range(len(self.content)):
-            if col_pos > (self._visible_width - self.scroll_amt):
+            if col_pos > (self.visible_width - self.scroll_amt):
                 # shift window horizontally
                 self._horiz_shift += self.scroll_amt
                 col_pos -= self.scroll_amt
         scroll = self._horiz_shift - len(self.trim_char)
         data = self.trim_char + self.content[scroll:]
         eeol = (self.glyphs.get('erase', u' ')
-                * (self._visible_width - len(data)))
+                * (self.visible_width - len(data)))
         return ( term.normal + data + eeol + self.fixate )
 
     def _enter(self):
@@ -395,7 +387,7 @@ class ScrollingEditor(bbs.ansiwin.AnsiWindow):
         rstr = u''
         self.content = self.content[:-1]
         if self.is_scrolled:
-            if self._horiz_pos < (self._visible_width - self.scroll_amt):
+            if self._horiz_pos < (self.visible_width - self.scroll_amt):
                 # shift left,
                 self._horiz_shift -= self.scroll_amt
                 self._horiz_pos += self.scroll_amt
@@ -429,7 +421,7 @@ class ScrollingEditor(bbs.ansiwin.AnsiWindow):
             return u''
         # append to input
         self.content += u_chr
-        if self._horiz_pos >= (self._visible_width):
+        if self._horiz_pos >= (self.visible_width):
             # we have to scroll to display this output,
             self._horiz_shift += self.scroll_amt
             self._horiz_pos -= self.scroll_amt - 1

@@ -67,6 +67,7 @@ class AnsiWindow(object):
         self.init_theme ()
         self._xpadding = 1
         self._ypadding = 1
+        self._alignment = 'left'
 
     def init_theme(self):
         """
@@ -139,14 +140,38 @@ class AnsiWindow(object):
         self._ypadding = value
 
     @property
-    def _visible_height(self):
+    def alignment(self):
+        """
+        Justification of text content. One of 'left', 'right', or 'center'.
+        """
+        return self._alignment
+
+    @alignment.setter
+    def alignment(self, value):
+        # pylint: disable=C0111
+        #         Missing docstring
+        assert value in ('left', 'right', 'center')
+        self._alignment = value
+
+    def align(self, text, width=None):
+        """
+        justify Ansi text alignment property and width. When None (default),
+        the visible width after padding is used.
+        """
+        return (bbs.output.Ansi(text).rjust if self.alignment == 'right' else
+                bbs.output.Ansi(text).ljust if self.alignment == 'left' else
+                bbs.output.Ansi(text).center)(width
+                        if width is not None else self.width)
+
+    @property
+    def visible_height(self):
         """
         The visible height of the editor window after vertical padding.
         """
         return self.height - (self._ypadding * 2)
 
     @property
-    def _visible_width(self):
+    def visible_width(self):
         """
         Visible width of lightbar after accounting for horizontal padding.
         """
@@ -299,3 +324,13 @@ class AnsiWindow(object):
         rstr += u''.join([self.pos(y, 1) + self.glyphs.get('erase', u'')
             for y in range(self.height -2)])
         return rstr
+
+    @property
+    def visible_bottom(self):
+        """
+        Visible bottom-most item of lightbar.
+        """
+        if self.vitem_shift + (self.visible_height -1) > len(self.content):
+            return len(self.content)
+        else:
+            return self.visible_height

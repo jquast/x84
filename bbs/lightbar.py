@@ -31,7 +31,6 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
         Initialize a lightbar of height, width, y and x position.
         """
         bbs.ansiwin.AnsiWindow.__init__(height, width, yloc, xloc)
-        self._alignment = 'left'
         self._vitem_idx = 0
         self._vitem_lastidx = 0
         self._vitem_shift = 0
@@ -63,13 +62,11 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
         unibytes += self.pos(self.ypadding + ypos, self.xpadding)
         entry = self.vitem_shift + ypos
         if entry >= len(self.content):
-            # out-of-bounds; empty window
-            return self.glyphs['fill'] * self._visible_width
-        # colorize,
-        unibytes += (self.colors['highlight'] if entry == self.index
+            # out-of-bounds;
+            return self.glyphs['fill'] * self.visible_width
+        unibytes += (self.colors['highlight']
+                if entry == self.index
                 else self.colors['lowlight'])
-        # justified text,
-        unibytes += self._align(self.content[entry], self._visible_width)
         unibytes += self.colors['normal']
         return unibytes
 
@@ -78,7 +75,7 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
         Refresh full lightbar window contents
         """
         return u''.join(self.refresh_row (ypos) for ypos in
-                range(self._visible_bottom))
+                range(self.visible_bottom))
 
     def refresh_quick (self):
         """
@@ -107,47 +104,35 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
         """
         self.keyset = NETHACK_KEYSET
         term = bbs.session.getterminal()
-        if u'' != term.KEY_HOME:
-            self.keyset['home'].append (
-                term.KEY_HOME)
-        if u'' != term.KEY_END:
-            self.keyset['end'].append (
-                term.KEY_END)
-        if u'' != term.KEY_PPAGE:
-            self.keyset['pageup'].append (
-                term.KEY_PPAGE)
-        if u'' != term.KEY_NPAGE:
-            self.keyset['pagedown'].append (
-                term.KEY_NPAGE)
-        if u'' != term.KEY_UP:
-            self.keyset['up'].append (
-                term.KEY_KEY_UP)
-        if u'' != term.KEY_DOWN:
-            self.keyset['down'].append (
-                term.KEY_DOWN)
-        if u'' != term.KEY_EXIT:
-            self.keyset['exit'].append (
-                term.KEY_EXIT)
+        self.keyset['home'].append (term.KEY_HOME)
+        self.keyset['end'].append (term.KEY_END)
+        self.keyset['pageup'].append (term.KEY_PPAGE)
+        self.keyset['pagedown'].append (term.KEY_NPAGE)
+        self.keyset['up'].append (term.KEY_KEY_UP)
+        self.keyset['down'].append (term.KEY_DOWN)
+        self.keyset['exit'].append (term.KEY_EXIT)
 
     def process_keystroke(self, key):
         """
         Process the keystroke received by run method and take action.
         """
         self._moved = False
+        rstr = u''
         if key in self.keyset['home']:
-            self._home ()
+            rstr += self.move_home ()
         elif key in self.keyset['end']:
-            self._end ()
+            rstr += self.move_end ()
         elif key in self.keyset['pgup']:
-            self._pageup ()
+            rstr += self.move_pageup ()
         elif key in self.keyset['pgdown']:
-            self._pagedown ()
+            rstr += self.move_pagedown ()
         elif key in self.keyset['up']:
-            self._up ()
+            rstr += self.move_up ()
         elif key in self.keyset['down']:
-            self._down ()
+            rstr += self.move_down ()
         elif key in self.keyset['exit']:
             self._quit = True
+        return rstr
 
     @property
     def moved(self):
@@ -248,12 +233,12 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
         # if selected item is out of range of new list, then scroll to last
         # page, and move selection to end of screen,
         if self.vitem_shift and self.index +1 > len(self.content):
-            self.vitem_shift = len(self.content) - self._visible_height + 1
-            self.vitem_idx = self._visible_height - 2
+            self.vitem_shift = len(self.content) - self.visible_height + 1
+            self.vitem_idx = self.visible_height - 2
 
         # if we are a shifted window, shift 1 line up while keeping our
         # lightbar position until the bottom-most item is within visable range.
-        while (self.vitem_shift and self.vitem_shift + self._visible_height - 1
+        while (self.vitem_shift and self.vitem_shift + self.visible_height - 1
                 > len(self.content)):
             self.vitem_shift -= 1
             self.vitem_idx += 1
@@ -263,104 +248,79 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
         while self.vitem_idx > 0 and self.index >= len(self.content):
             self.vitem_idx -= 1
 
-    def _down(self):
+    def move_down(self):
         """
         Move selection down one row.
         """
         if self.index >= len(self.content):
-            return
-        if self.vitem_idx + 1 < self._visible_bottom:
+            return u''
+        if self.vitem_idx + 1 < self.visible_bottom:
             self.vitem_idx += 1
         elif self.vitem_idx < len(self.content):
             self.vitem_shift += 1
+        return u''
 
     def _up(self):
         """
         Move selection up one row.
         """
         if 0 == self.index:
-            return
+            return u''
         elif self.vitem_idx >= 1:
             self.vitem_idx -= 1
         elif self.vitem_shift > 0:
             self.vitem_shift -= 1
+        return u''
 
     def _pagedown(self):
         """
         Move selection down one page.
         """
-        if len(self.content) < self._visible_height:
+        if len(self.content) < self.visible_height:
             self.vitem_idx = len(self.content) - 1
-        elif (self.vitem_shift + self._visible_height < len(self.content)
-                -self._visible_height):
-            self.vitem_shift = self.vitem_shift + self._visible_height
-        elif self.vitem_shift != len(self.content) - self._visible_height:
+        elif (self.vitem_shift + self.visible_height < len(self.content)
+                -self.visible_height):
+            self.vitem_shift = self.vitem_shift + self.visible_height
+        elif self.vitem_shift != len(self.content) - self.visible_height:
             # shift window to last page
-            self.vitem_shift = len(self.content) - self._visible_height
+            self.vitem_shift = len(self.content) - self.visible_height
         else:
             # already at last page, goto end
-            self._end ()
+            return self.move_end ()
+        return u''
 
     def _pageup(self):
         """
         Move selection up one page.
         """
-        if len(self.content) < self._visible_height - 1:
+        if len(self.content) < self.visible_height - 1:
             self.vitem_idx = 0
-        if self.vitem_shift - self._visible_height > 0:
-            self.vitem_shift = self.vitem_shift - self._visible_height
+        if self.vitem_shift - self.visible_height > 0:
+            self.vitem_shift = self.vitem_shift - self.visible_height
         elif self.vitem_shift > 0:
             self.vitem_shift = 0
         else:
             # already at first page, goto home
-            self._home ()
+            return self.move_home ()
+        return
 
-    def _home(self):
+    def move_home(self):
         """
         Move selection to the very top and first entry of the list.
         """
         if (0, 0) != (self.vitem_idx, self.vitem_shift):
             self.vitem_idx = 0
             self.vitem_shift = 0
+        return u''
 
-    def _end(self):
+    def move_end(self):
         """
         Move selection to the very last and final entry of the list.
         """
-        if len(self.content) < self._visible_height:
+        if len(self.content) < self.visible_height:
             self.vitem_idx = len(self.content) - 1
         else:
-            self.vitem_shift = len(self.content) -self._visible_height
-            self.vitem_idx = self._visible_height - 1
+            self.vitem_shift = len(self.content) -self.visible_height
+            self.vitem_idx = self.visible_height - 1
+        return u''
 
-    @property
-    def alignment(self):
-        """
-        Justification of text content. One of 'left', 'right', or 'center'.
-        """
-        return self._alignment
-
-    @alignment.setter
-    def alignment(self, value):
-        # pylint: disable=C0111
-        #         Missing docstring
-        assert value in ('left', 'right', 'center')
-        self._alignment = value
-
-    def _align(self, text, width):
-        """
-        justify text to width according to alignment prperty
-        """
-        return (bbs.output.Ansi(text).rjust if self.alignment == 'right' else
-                bbs.output.Ansi(text).ljust if self.alignment == 'left' else
-                bbs.output.Ansi(text).center)(width)
-
-    @property
-    def _visible_bottom(self):
-        """
-        Visible bottom-most item of lightbar.
-        """
-        if self.vitem_shift + (self._visible_height -1) > len(self.content):
-            return len(self.content)
-        else:
-            return self._visible_height

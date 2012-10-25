@@ -9,8 +9,8 @@ import bbs.ansiwin
 
 VI_KEYSET = { 'refresh': [unichr(12),],
               'toggle': [u' ',],
-              'left': [u'hj',],
-              'right': [u'kl',],
+              'left': [u'h',],
+              'right': [u'l'],
               'enter': [u'\r',],
               'exit': [u'q', u'Q', unichr(3)],
               }
@@ -38,8 +38,7 @@ class Selector(bbs.ansiwin.AnsiWindow):
         bbs.ansiwin.AnsiWindow.__init__(self,
                 height=1, width=width, yloc=yloc, xloc=xloc)
         self.init_theme ()
-
-        self.keyset = dict()
+        self.keyset = VI_KEYSET
         self.init_keystrokes ()
 
     def init_theme (self):
@@ -55,47 +54,37 @@ class Selector(bbs.ansiwin.AnsiWindow):
         Merge curses-detected application keys into a VI_KEYSET-formatted
         keyset, for keys 'refresh', 'left', 'right', 'enter', and 'exit'.
         """
-        self.keyset = VI_KEYSET
         term = bbs.session.getsession().terminal
-        if u'' != term.KEY_REFRESH:
-            self.keyset['refresh'].append (
-                term.KEY_REFRESH)
-        if u'' != term.KEY_LEFT:
-            self.keyset['left'].append (
-                term.KEY_LEFT)
-        if u'' != term.KEY_RIGHT:
-            self.keyset['right'].append (
-                term.KEY_RIGHT)
-        if u'' != term.KEY_ENTER:
-            self.keyset['enter'].append (
-                term.KEY_ENTER)
-        if u'' != term.KEY_EXIT:
-            self.keyset['exit'].append (
-                term.KEY_EXIT)
+        self.keyset['refresh'].append (term.KEY_REFRESH)
+        self.keyset['left'].append (term.KEY_LEFT)
+        self.keyset['right'].append (term.KEY_RIGHT)
+        self.keyset['enter'].append (term.KEY_ENTER)
+        self.keyset['exit'].append (term.KEY_EXIT)
 
     def process_keystroke(self, keystroke):
         """
         Process a keystroke, toggling self.selection and returning string
         suitable for refresh when changed.
         """
-        #pylint: disable=R0911
-        #        Too many return statements (7/6)
         self._moved = False
+        rstr = u''
         if keystroke in self.keyset['refresh']:
-            return self.refresh ()
+            rstr += self.refresh ()
         elif keystroke in self.keyset['left']:
-            return self.move_left ()
+            rstr += self.move_left ()
         elif keystroke in self.keyset['right']:
-            return self.move_right ()
+            rstr += self.move_right ()
         elif keystroke in self.keyset['toggle']:
-            return self.toggle ()
+            rstr += self.toggle ()
         elif keystroke in self.keyset['exit']:
             self._quit = True
-            return u''
         elif keystroke in self.keyset['enter']:
             self._selected = True
-            return u''
-        return u''
+        else:
+            bbs.session.logger.warn ('unhandled, %r', keystroke
+                    if type(keystroke) is not int
+                    else bbs.session.getsession().terminal.keyname(keystroke))
+        return rstr
 
     @property
     def moved(self):

@@ -16,6 +16,8 @@ def echo(data, encoding=None):
     """
     Output unicode bytes and terminal sequences to session terminal
     """
+    if not (isinstance(data, unicode) or isinstance(data, bytes)):
+        warnings.warn ('echo(%s)' % (repr(data)), Warning, 2)
     if data is None or 0 == len(data):
         warnings.warn ('terminal capability not translated? %s' % \
             ('encoding=%s'%(encoding,) if encoding is not None else '',),

@@ -3,16 +3,17 @@ Pager class for x/84, http://github.com/jquast/x84/
 """
 import bbs.output
 import bbs.ansiwin
+import bbs.session
 
 NETHACK_KEYSET = {
         'refresh': [unichr(12), ],
         'home': [u'y', ],
         'end': [u'n', ],
-        'pgup': [u'h', u'K'],
-        'pgdown': [u'l', u'J'],
         'up': [u'k', ],
+        'pgup': [u'K', ],
         'down': [u'j', ],
-        'exit': [u'q', u'Q'],
+        'pgdown': [u'J', ],
+        'exit': [u'q', u'Q', ],
         }
 
 class Pager(bbs.ansiwin.AnsiWindow):
@@ -87,14 +88,14 @@ class Pager(bbs.ansiwin.AnsiWindow):
         """
         Returns content that is visible in window
         """
-        return self.content[self.position:self.position + self._visible_height]
+        return self.content[self.position:self.position + self.visible_height]
 
     @property
     def bottom(self):
         """
         Returns bottom-most position of window that contains content
         """
-        return max(0, len(self.content) - self._visible_height)
+        return max(0, len(self.content) - self.visible_height)
 
 
     def init_keystrokes(self):
@@ -103,22 +104,14 @@ class Pager(bbs.ansiwin.AnsiWindow):
         override or inherit this method to create a common color and graphic
         set.
         """
-        from bbs.session import getsession
-        term = getsession().terminal
-        if u'' != term.KEY_HOME:
-            self.keyset['home'].append (term.KEY_HOME)
-        if u'' != term.KEY_END:
-            self.keyset['end'].append (term.KEY_END)
-        if u'' != term.KEY_PPAGE:
-            self.keyset['pgup'].append (term.KEY_PPAGE)
-        if u'' != term.KEY_NPAGE:
-            self.keyset['pgdown'].append (term.KEY_NPAGE)
-        if u'' != term.KEY_UP:
-            self.keyset['up'].append (term.KEY_KEY_UP)
-        if u'' != term.KEY_DOWN:
-            self.keyset['down'].append (term.KEY_DOWN)
-        if u'' != term.KEY_EXIT:
-            self.keyset['exit'].append (term.KEY_EXIT)
+        term = bbs.session.getsession().terminal
+        self.keyset['home'].append (term.KEY_HOME)
+        self.keyset['end'].append (term.KEY_END)
+        self.keyset['pgup'].append (term.KEY_PPAGE)
+        self.keyset['pgdown'].append (term.KEY_NPAGE)
+        self.keyset['up'].append (term.KEY_KEY_UP)
+        self.keyset['down'].append (term.KEY_DOWN)
+        self.keyset['exit'].append (term.KEY_EXIT)
 
     def process_keystroke(self, keystroke):
         """
@@ -127,26 +120,30 @@ class Pager(bbs.ansiwin.AnsiWindow):
         window.
         """
         self._position_last = self._position
+        rstr = u''
         if keystroke in self.keyset['refresh']:
-            rstr = self.refresh ()
+            rstr += self.refresh ()
         elif keystroke in self.keyset['up']:
-            rstr = self._up ()
+            rstr += self.move_up ()
         elif keystroke in self.keyset['down']:
-            rstr = self._down ()
+            rstr += self.move_down ()
         elif keystroke in self.keyset['home']:
-            rstr = self._home ()
+            rstr += self.move_home ()
         elif keystroke in self.keyset['end']:
-            rstr = self._end ()
+            rstr += self.move_end ()
         elif keystroke in self.keyset['pgup']:
-            rstr = self._pgup ()
+            rstr += self.move_pgup ()
         elif keystroke in self.keyset['pgdown']:
-            rstr = self._pgdown ()
+            rstr += self.move_pgdown ()
         elif keystroke in self.keyset['exit']:
             self._quit = True
-            rstr = u''
+        else:
+            bbs.session.logger.warn ('unhandled, %r', keystroke
+                    if type(keystroke) is not int
+                    else bbs.session.getsession().terminal.keyname(keystroke))
         return rstr
 
-    def _home(self):
+    def move_home(self):
         """
         Scroll to top.
         """
@@ -155,30 +152,30 @@ class Pager(bbs.ansiwin.AnsiWindow):
             return self.refresh ()
         return u''
 
-    def _end(self):
+    def move_end(self):
         """
         Scroll to bottom.
         """
-        self.position = len(self.content) - self._visible_height
+        self.position = len(self.content) - self.visible_height
         if self.moved:
             return self.refresh ()
         return u''
 
-    def _pgup(self, num=1):
+    def move_pgup(self, num=1):
         """
         Scroll up ``num`` pages.
         """
-        self.position -= (num * (self._visible_height))
+        self.position -= (num * (self.visible_height))
         return self.refresh() if self.moved else u''
 
-    def _pgdown(self, num=1):
+    def move_pgdown(self, num=1):
         """
         Scroll down ``num`` pages.
         """
-        self.position += (num * (self._visible_height))
+        self.position += (num * (self.visible_height))
         return self.refresh() if self.moved else u''
 
-    def _down(self, num=1):
+    def move_down(self, num=1):
         """
         Scroll down ``num`` rows.
         """
@@ -187,7 +184,7 @@ class Pager(bbs.ansiwin.AnsiWindow):
             return self.refresh ()
         return u''
 
-    def _up(self, num=1):
+    def move_up(self, num=1):
         """
         Scroll up ``num`` rows.
         """
@@ -213,13 +210,13 @@ class Pager(bbs.ansiwin.AnsiWindow):
             rstr += self.pos (yloc, self.xpadding)
             rstr += line
             len_line = bbs.output.Ansi(line).__len__()
-            rstr += u' ' * max(0, self._visible_width - len_line)
+            rstr += u' ' * max(0, self.visible_width - len_line)
         # clear to end of window
         yloc = row + self.ypadding
-        while yloc < self._visible_height - 1:
+        while yloc < self.visible_height - 1:
             yloc += 1
             rstr += self.pos (yloc, self.xpadding)
-            rstr += u' ' * (self._visible_width)
+            rstr += u' ' * (self.visible_width)
         return rstr + term.normal
 
     def update(self, unibytes):
@@ -227,7 +224,7 @@ class Pager(bbs.ansiwin.AnsiWindow):
         Update content buffer with lines of ansi unicodes as single unit.
         """
         self.content = bbs.output.Ansi(unibytes
-                ).wrap(self._visible_width - 1).split('\r\n')
+                ).wrap(self.visible_width - 1).split('\r\n')
         return self.refresh ()
 
     def append(self, unibytes):
@@ -235,5 +232,5 @@ class Pager(bbs.ansiwin.AnsiWindow):
         Update content buffer with additional lines of ansi unicodes.
         """
         self.content.extend (bbs.output.Ansi(unibytes
-            ).wrap(self._visible_width - 1).split('\r\n'))
+            ).wrap(self.visible_width - 1).split('\r\n'))
         return self._end() or self.refresh(self.bottom)
