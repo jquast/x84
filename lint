@@ -2,8 +2,8 @@
 rm *.pyc */*.pyc
 echo 'pylint,'
 . `dirname $0`/ENV/bin/activate
-pylint --rcfile=.pylint *.py bbs
+pylint --rcfile=.pylint *.py bbs default/*.py
 echo 'pychecker,'
-pychecker -F .pycheckrc blessings.py db.py engine.py terminal.py telnet.py bbs
+pychecker -F .pycheckrc blessings.py db.py engine.py terminal.py telnet.py bbs default/*.py
 echo 'compileall,'
 python -m compileall -q `dirname $0`

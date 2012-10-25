@@ -9,7 +9,7 @@
 only = 0
 
 # the maximum number of warnings to be displayed
-limit = 99
+limit = 999
 
 # list of evil C extensions that crash the interpreter
 evil = []
