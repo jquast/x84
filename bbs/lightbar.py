@@ -260,7 +260,7 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
             self.vitem_shift += 1
         return u''
 
-    def _up(self):
+    def move_up(self):
         """
         Move selection up one row.
         """
@@ -272,7 +272,7 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
             self.vitem_shift -= 1
         return u''
 
-    def _pagedown(self):
+    def move_pagedown(self):
         """
         Move selection down one page.
         """
@@ -289,7 +289,7 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
             return self.move_end ()
         return u''
 
-    def _pageup(self):
+    def move_pageup(self):
         """
         Move selection up one page.
         """
@@ -323,4 +323,15 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
             self.vitem_shift = len(self.content) -self.visible_height
             self.vitem_idx = self.visible_height - 1
         return u''
+
+    @property
+    def visible_bottom(self):
+        """
+        Visible bottom-most item of lightbar.
+        """
+        if self.vitem_shift + (self.visible_height -1) > len(self.content):
+            return len(self.content)
+        else:
+            return self.visible_height
+
 
