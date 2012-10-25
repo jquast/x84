@@ -44,7 +44,7 @@ class FetchUpdates(threading.Thread):
             logger.error ('bbs-scene.org returned %s', req.status_code)
             return
         else:
-            logger.info ('bbs-scene.org returned %d records in %2.2fs',
+            logger.info ('bbs-scene.org returned %d in %2.2fs',
                     req.status_code, time.time() - stime)
 
         # can throw exceptions when xml is invalid
@@ -53,7 +53,6 @@ class FetchUpdates(threading.Thread):
             self.content.append ((node.find('id').text, dict(
                 ((key, node.find(key).text.strip()) for key in (
                 'oneliner', 'alias', 'bbsname', 'timestamp',))),))
-        logger.info ('stored %d updates from bbs-scene.org', len(self.content))
 
 def wait_for(thread):
     if thread.is_alive():
@@ -81,6 +80,8 @@ def chk_thread(thread):
         if nlc:
             logger.info ('%d new entries', nlc)
             broadcastevent ('oneliner_update')
+        else:
+            logger.info ('no new bbs-scene.org entries')
         return True
 
 def addline(msg):
@@ -148,6 +149,7 @@ def redraw(pager, selector):
     term = getterminal()
     flushevent ('oneliner_update')
     pager.update(u'\n'.join(get_oltxt()))
+    output = u''
     output += pager.move_end () or pager.refresh()
     output += pager.border()
     output += selector.refresh()
@@ -174,7 +176,7 @@ def dummy_pager():
     return
 
 def saysomething ():
-    term = getterminal()
+    session, term = getsession(), getterminal()
     yloc = term.height - 3
     xloc = max(0, ((term.width / 2) - (MAX_INPUT / 2)))
     echo (term.move(yloc, xloc) or u'\r\n\r\n')
@@ -187,23 +189,26 @@ def saysomething ():
         if not ini.CFG.has_section('bbs-scene'):
             # always post local,
             addline (oneliner)
-            return
+            return None
         sel = get_selector()
-        echo (term.move(selector.yloc-1, selector.xloc) or ('\r\n\r\n'))
+        sel.colors['selected'] = term.blue_reverse
+        echo (term.move(sel.yloc-1, sel.xloc) or ('\r\n\r\n'))
         echo ('MAkE AN ASS Of YOURSElf ON bbS-SCENE.ORG?!')
-        echo (selector.refresh())
-        while not selector.selected and not selector.quit:
-            echo (selector.process_keystroke(getch()))
-        if selector.quit or selector.selection == selector.right:
-            return
-        if selector.selection == selector.left:
+        echo (sel.refresh())
+        while not sel.selected and not sel.quit:
+            echo (sel.process_keystroke(getch()))
+        session.buffer_event('refresh', 'dirty')
+        if sel.quit or sel.selection == sel.right:
+            logger.info ('user declined')
+            return None
+        if sel.selection == sel.left:
             url = 'http://bbs-scene.org/api/onelinerz.xml'
             usernm = ini.CFG.get('bbs-scene', 'user')
             passwd = ini.CFG.get('bbs-scene', 'pass')
-            bbsname = ini.CFG.get('system', 'bbsname')
+            data = {'oneliner': oneliner, 'alias': session.user.handle,
+                    'bbsname': ini.CFG.get('system', 'bbsname')}
             # post to bbs-scene.rog
-            req = requests.post (url, auth=(usernm, passwd), data={
-                'oneliner': msg, 'alias': session.handle, 'bbsname': bbsname,})
+            req = requests.post (url, auth=(usernm, passwd), data=data)
             if (req.status_code != 200 or
                     (xml.etree.ElementTree.XML (req.content)
                         .find('success').text != 'true')):
@@ -211,11 +216,15 @@ def saysomething ():
                 echo (('\r\n%s'%(term.clear_eol,)).join (req.content))
                 echo ('\r\n\r\n%s(code : %s).\r\n', term.clear_eol, req.status_code)
                 echo ('\r\n%sPress any key ..', term.clear_eol)
+                logger.warn ('failed to post req')
                 getch ()
-                return
+                return None
+            logger.info ('succeeded bbs-scene api post (%d)', req.status_code)
             thread = FetchUpdates()
             thread.start ()
-            return
+            # wait for oneliner_update
+            flushevent('refresh')
+            return thread
 
 def main ():
     session, term = getsession(), getterminal()
@@ -230,7 +239,7 @@ def main ():
     pager, selector = get_pager(), get_selector()
     dirty = True
     waited = False
-    session.buffer_event ('refresh')
+    session.buffer_event ('refresh', 'init')
     while True:
         # 1. calculate and redraw screen
         # screen resize
@@ -276,7 +285,7 @@ def main ():
 
             # selected 'yes' & return, 'say something'
             if (selector.selected and selector.selection == selector.left):
-                saysomething ()
+                thread = saysomething ()
                 # new selector :-)
                 selector = get_selector(selector.selection)
                 dirty = True
