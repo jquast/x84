@@ -233,4 +233,4 @@ class Pager(bbs.ansiwin.AnsiWindow):
         """
         self.content.extend (bbs.output.Ansi(unibytes
             ).wrap(self.visible_width - 1).split('\r\n'))
-        return self._end() or self.refresh(self.bottom)
+        return self.move_end() or self.refresh(self.bottom)
