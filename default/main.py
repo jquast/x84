@@ -30,33 +30,6 @@ def refresh():
     echo (disp_entry ('p', 'vi .plan').ljust(term.width/5))
     echo (u'\r\n\r\n')
 
-def edit_nhrc():
-    session, term = getsession(), getterminal()
-    editor = '/usr/local/bin/virus'
-    if session.user.handle == u'anonymous':
-        echo (u''.join((u'\r\n', term.bold_red, msg_anon_noedit, temr.normal)))
-        getch (2)
-        prompt ()
-        continue # denied
-    fp, tmppath = tempfile.mkstemp ()
-    nethackrc = session.user.get('.nethackrc', '')
-    length = len(nethackrc)
-    if 0 != length:
-        written = 0
-        while written < length:
-            written += os.write (fp, nethackrc[written:])
-    os.close (fp)
-    lastmod = os.stat(tmppath).st_mtime
-    d = Door(editor, args=(tmppath,))
-    d._TAP = True
-    if 0 == d.run() and os.stat(tmppath).st_mtime > lastmod:
-        # program exited normaly, file has been modified
-        fp = open(tmppath, 'r')
-        session.user.set('.nethackrc', fp.read())
-        fp.close ()
-        session.user.save ()
-    os.unlink (tmppath)
-
 def main():
     session, term = getsession(), getterminal()
 
