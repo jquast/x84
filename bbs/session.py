@@ -59,6 +59,7 @@ class Session(object):
         #        Using the global statement
         global SESSION
         assert SESSION is None, 'Session may be instantiated only once'
+        SESSION = self
         self.pipe = pipe
         self.terminal = terminal
         self.source = source
@@ -87,7 +88,6 @@ class Session(object):
         self._ttyrec_sec = -1
         self._ttyrec_usec = -1
         self._ttyrec_len_text = 0
-        SESSION = self
 
     @property
     def duration(self):
