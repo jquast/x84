@@ -132,10 +132,9 @@ def get_pager():
     pager.colors['border'] = term.blue
     return pager
 
-def redraw(pager, selector):
+def banner():
     term = getterminal()
     output = term.home + term.normal + term.clear
-    flushevent ('oneliner_update')
     # xzip's ansi is line-clean, center-align with terminal width,
     art = open('default/art/ol.ans').readlines()
     max_ans = max([len(Ansi(from_cp437(line))) for line in art])
@@ -143,10 +142,15 @@ def redraw(pager, selector):
         padded = Ansi(from_cp437(line)).center(max_ans)
         output += Ansi(padded).center(term.width).rstrip()
         output += term.normal + '\r\n'
+    return output
+
+def redraw(pager, selector):
+    term = getterminal()
+    flushevent ('oneliner_update')
     pager.update(u'\n'.join(get_oltxt()))
-    pager.move_end ()
-    output += (pager.refresh() + pager.border() +
-            selector.refresh() + selector.border ())
+    output += pager.move_end () or pager.refresh()
+    output += pager.border()
+    output += selector.refresh()
     return output
 
 def dummy_pager():
@@ -172,16 +176,19 @@ def dummy_pager():
 def saysomething ():
     term = getterminal()
     yloc = term.height - 3
-    xloc = min(0, ((term.width / 2) - (MAX_INPUT / 2)))
+    xloc = max(0, ((term.width / 2) - (MAX_INPUT / 2)))
     echo (term.move(yloc, xloc) or u'\r\n\r\n')
-    oneliner = LineEditor(MAX_INPUT).read ()
+    echo (term.bright_blue('SAY WhAt') + term.bright_black (' ?! '))
+    ole = LineEditor(MAX_INPUT)
+    ole.highlight = term.green_reverse
+    oneliner = ole.read ()
     if oneliner is not None and 0 != len(oneliner):
         session.user['lastliner'] = time.time()
         if not ini.CFG.has_section('bbs-scene'):
             # always post local,
             addline (oneliner)
             return
-        selector = get_selector()
+        sel = get_selector()
         echo (term.move(selector.yloc-1, selector.xloc) or ('\r\n\r\n'))
         echo ('MAkE AN ASS Of YOURSElf ON bbS-SCENE.ORG?!')
         echo (selector.refresh())
@@ -223,16 +230,18 @@ def main ():
     pager, selector = get_pager(), get_selector()
     dirty = True
     waited = False
+    session.buffer_event ('refresh')
     while True:
         # 1. calculate and redraw screen
         # screen resize
         if pollevent('refresh'):
             pager, selector = get_pager(), get_selector(selector.selection)
             dirty = True
-        # bbs-scene.org update
+            echo (term.home + term.clear)
+            echo (banner())
+        # bbs-scene.org completed,
         if chk_thread (thread):
             thread = None
-            dirty = True
         # global signal for new oneliners (like irc!)
         if pollevent('oneliner_update'):
             dirty = True
@@ -240,7 +249,6 @@ def main ():
         if dirty and (session.env.get('TERM') != 'unknown' and
                 not session.user.get('expert', False)
                 and term.width >= 78 and term.height >= 20):
-            echo (term.home + term.clear)
             echo (redraw(pager, selector))
             dirty = False
         elif dirty:
@@ -262,9 +270,13 @@ def main ():
             # quit 'q', or selected 'no' & return
             if (selector.selected and selector.selection == selector.right
                     or pager.quit):
+                print 'pager', pager.quit
+                print 'selector', selector.selected, selector.selection
                 return
 
             # selected 'yes' & return, 'say something'
             if (selector.selected and selector.selection == selector.left):
                 saysomething ()
+                # new selector :-)
+                selector = get_selector(selector.selection)
                 dirty = True
