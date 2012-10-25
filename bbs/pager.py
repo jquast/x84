@@ -109,7 +109,7 @@ class Pager(bbs.ansiwin.AnsiWindow):
         self.keyset['end'].append (term.KEY_END)
         self.keyset['pgup'].append (term.KEY_PPAGE)
         self.keyset['pgdown'].append (term.KEY_NPAGE)
-        self.keyset['up'].append (term.KEY_KEY_UP)
+        self.keyset['up'].append (term.KEY_UP)
         self.keyset['down'].append (term.KEY_DOWN)
         self.keyset['exit'].append (term.KEY_EXIT)
 
