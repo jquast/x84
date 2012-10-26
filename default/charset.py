@@ -62,14 +62,14 @@ def main():
     selector = get_selector ('utf8')
     refresh (selector)
     while True:
-        ch = getch (1)
-        if ch == term.KEY_ENTER:
+        inp = getch (1)
+        if inp == term.KEY_ENTER:
             session.user['charset'] = session.encoding
             echo (save_msg % (session.encoding,))
             getch (0.5)
             return
-        elif ch is not None:
-            selector.process_keystroke (ch)
+        elif inp is not None:
+            selector.process_keystroke (inp)
             if selector.quit:
                 # 'escape' quits without save, though the encoding
                 # has been temporarily set for this session.
