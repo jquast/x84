@@ -1,6 +1,34 @@
 ROADMAP, 1.0:
+=============
+
+Files to make/finish
+--------------------
+setup.py
+local.py
+default/msgreader.py
+default/msgwriter.py / editor.py (utf-8!)
+default/ueditor.py
+default/page.py
+  hijack another session with a gosub(),
+  they will use term.fullscreen (),
+default/irc.py
+default/weather.py
+default/si.py <-- merge in torus.py
+default/ttyplay.py
+default/wfc.py
+default/plan.py (browse, xmodem up/down)
+default/pwreset.py
+
+DOCS
+----
+* create wiki articles:
+  - custom matrix
+  - simple door game (grafitti!)
+  - about scripts included
+* bbs api for bbs/ module
 
 TESTING
+-------
 * ensure you can have a login name of [some-japanese-characters]
   and this is fine everywhere
 * TERM=unknown -- this should create an 'expert mode' bbs, with
@@ -11,62 +39,24 @@ TESTING
 * assert that any method or function that returns ansi string sequences ends with term.normal.
 
 must be compatible with the following clients,
-(or document any changes required, fonts, etc.):
-OSX:
-   iTerm2
-   Terminal.app
-Windows:
-   PuTTy
-   SyncTerm
-   mtel
-   telnet (-t vtnt?)
-BSD, Linux, etc.
-   uxterm + bsdtelnet
+OSX: iTerm2, Terminal.app
+Windows: PuTTy, SyncTerm, mtel, telnet (-t vtnt?)
+BSD/Linux: uxterm, bsdtelnet, linux console
 
-SOON
-* cross-session paging -- basically allow sending
-  a script name + arguments to antoher session, forcing
-  that session to gosub() -- this would be used, for instance
-  by a sysop to break into chat,
-  or to request chat by another user,
-  or simply for fun; use term.exit_fullscreen;
-
-DOCS
-* create wiki articles:
-  - custom matrix
-  - simple door game
-
-EASY
-* email password reset to new random gibberish
-* sysop's door to launch ttyplay -p on live terminals
-* local.py; wrap default/telnet.py / -- telnetlib to self :-)
-* pylint-complete default/
-* user editor + profile editor (edit self)
-* (cheap) vertical message editor; simply use horizontal line editor,
-  when you press return, it moves to the next one... up arrows move
-  to the previous one... cheap.
-* find a unicode editor -- modify nvi ??
-    nvi -S .... nvi still lets you :r /etc/passwd,
-    and virus doesn't support unicode ..
-* demonstrate xmodem protocol ...
-  allow upload/download of .plan file;
-  allow download of bbs source code .
-
-HARD
-* setup.py creates us an 'x84' binary that 'just works',
-* github integration, + repositories, notifications of commits .. ?
-* properly implement STATUS in telnet.py ;/
-* graffiti app example, a simple ansi editor, but save screen buffer to database, and share updates with other nodes via global() events, so you can watch others deface...
-* message reader/browser
-  something akin to mutt's interface would be super.
-* bbs-scene.org bbs lister
-* demonstrate LORD dosemu game, esp. cp437 art translation!
+it is possible with multiprocessing module,
+http://docs.python.org/library/multiprocessing.html#using-a-remote-manager
+for a ./local.py, to instantiate a modified bbs.Session,
+and register as a client to a running engine.py,
+ .. and that can be remote. there is a risk of
+    executing arbitrary code due to the pickling process,
+    but if you trust the clients, this is a way to build a 'farm'
+    of bbs systems .. and may be how local.py should run;
 
 PARKING LOT
-
+===========
+Lord / dosemu / freedos / dosbox eample
 flesh out fileserver ... zIPE's call.
   at least hook on_* methods
   file stats, ftpd admin door, etc.
-
 19:34  airwalk you need 1) gl like ftp support
 19:34  airwalk and 2) zipscript-c support
