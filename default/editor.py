@@ -1,3 +1,7 @@
+import tempfile
+import os
+from bbs import *
+
 def main(sattr):
     session, term = getsession(), getterminal()
     editor = '/usr/local/bin/virus'
