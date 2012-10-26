@@ -12,7 +12,7 @@ def dummy_pager(news_txt):
     nonstop = False
     echo (redraw(None))
     for row in range(len(news_txt)):
-        echo (last_callers[row].rstrip() + '\r\n')
+        echo (news_txt[row].rstrip() + '\r\n')
         if not nonstop and row > 0 and 0 == (row % (term.height-1)):
             echo (prompt_msg)
             inp = getch()
@@ -26,9 +26,9 @@ def dummy_pager(news_txt):
 
 def get_pager(news_txt):
     term = getterminal()
-    width = 60
-    height = term.height - 15
-    yloc = 10
+    width = term.width-6
+    yloc = min(10, max(0,term.height - 10))
+    height = term.height - yloc - 1
     xloc = max(5, int((float(term.width) / 2) - (float(width) / 2)))
     pager = Pager(height, width, yloc, xloc)
     pager.xpadding = 1
@@ -46,24 +46,26 @@ def redraw(pager):
     rstr += term.normal + '\r\n\r\n'
     if pager is not None:
         rstr += pager.refresh()
+        rstr += pager.border()
     return rstr
 
 def main():
+    import codecs
     session, term = getsession(), getterminal()
     session.activity = 'Reading news'
     news_path = 'data/news.txt'
     try:
-        news_txt = '\n'.join(open(news_path).readlines())
+        news_txt = codecs.open(news_path, encoding='utf8').readlines()
     except IOError:
         news_txt = '`news` has not yet been comprimised.'
 
     if (session.env.get('TERM') == 'unknown'
             or session.user.get('expert', False) or term.width < 64):
-        dummy_pager (news_txt)
+        dummy_pager (news_txt.split('\n'))
         return
 
     echo (term.home + term.normal + term.clear)
-    pager = get_pager(news_txt)
+    pager = get_pager(u'\n'.join(news_txt))
     echo (redraw(pager))
     while True:
         inp = getch(1)
@@ -73,5 +75,5 @@ def main():
                 return
         if pollevent('refresh'):
             echo (term.home + term.normal + term.clear)
-            pager = get_pager(news_txt)
+            pager = get_pager(u'\n'.join(news_txt))
             echo (redraw(pager))
