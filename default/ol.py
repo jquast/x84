@@ -143,7 +143,8 @@ def banner():
         max_ans = max([len(Ansi(from_cp437(line))) for line in art])
         for line in art:
             padded = Ansi(from_cp437(line)).center(max_ans)
-            output += Ansi(padded).center(term.width).rstrip()
+            output += term.normal + term.blue # minor fix for this art ;/
+            output += Ansi(padded).center(term.width).rstrip() + '\r\n'
     return output + term.normal
 
 def redraw(pager, selector):
