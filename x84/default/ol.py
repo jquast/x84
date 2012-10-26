@@ -90,7 +90,7 @@ def add_oneline (msg):
     udb.acquire ()
     udb[max([int(key) for key in udb.keys()] or [0]) + 1] = {
         'oneliner': msg,
-        'alias': session.handle,
+        'alias': getsession().handle,
         'bbsname': ini.CFG.get('system', 'bbsname'),
         'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
     }
