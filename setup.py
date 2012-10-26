@@ -19,16 +19,12 @@ setup(name         = 'X84',
                         'x84.default',
                         'x84.bbs',
       ],
-      package_dir  = {
-                        'x84':            '',
-                        'x84.default':    'default',
-                        'x84.bbs':        'bbs',
-      },
       package_data = {
                         'x84':         ['*.ini'
+                                        'data/*',
                                         'default/art/*.ans',
                                         'default/art/*.asc'],
       },
       requires     = ['blessings', 'sauce', 'sqlitedict', 'xmodem'],
-      scripts      = ['x84'],
+      scripts      = ['bin/x84'],
 )
