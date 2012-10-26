@@ -14,23 +14,15 @@ ANSI_WONTMOVE = re.compile(r'\033\[[sm]')
 
 def echo(data, encoding=None):
     """
-    Output unicode bytes and terminal sequences to session terminal
+    Output unicode bytes and terminal sequences to session terminal.
+    non-unicode is accepted, translated as iso8859-1, and a warning is emitted.
     """
-    if not (isinstance(data, unicode) or isinstance(data, bytes)):
-        warnings.warn ('echo(%s)' % (repr(data)), Warning, 2)
-    if data is None or 0 == len(data):
-        warnings.warn ('terminal capability not translated? %s' % \
-            ('encoding=%s'%(encoding,) if encoding is not None else '',),
-            Warning, 2)
-    if type(data) is bytes:
-        warnings.warn('non-unicode: %s%r' % \
-            (encoding if encoding is not None \
-            else '', data,), UnicodeWarning, 2)
+    if not isinstance(data, unicode):
+        warnings.warn('non-unicode: %s%r' % (encoding
+            if encoding is not None else '', data,), UnicodeWarning, 2)
         return bbs.session.getsession().write \
             (data.decode(encoding if encoding is not None else 'iso8859-1'))
-    assert encoding is None, 'just send unicode'
-
-    # thanks for using unicode !
+    assert encoding is None, 'encoding should only be specified for bytes'
     return bbs.session.getsession().write (data)
 
 class Ansi(unicode):
