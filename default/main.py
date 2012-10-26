@@ -26,6 +26,7 @@ def refresh():
     echo (disp_entry ('z', 'news').ljust(term.width/5))
     echo (disp_entry ('g', 'goodbye').ljust(term.width/5))
     echo (disp_entry ('c', 'charset').ljust(term.width/5))
+    echo (term.move(len(art) - 6, term.width / 4) or '\r\n')
     echo (disp_entry ('r', 'vi .nethackrc').ljust(term.width/5))
     echo (disp_entry ('p', 'vi .plan').ljust(term.width/5))
     echo (u'\r\n\r\n')
