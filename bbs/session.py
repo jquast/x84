@@ -256,7 +256,9 @@ class Session(object):
                     logger.error (line.rstrip())
                 for line in traceback.format_exception_only(e_type, e_value):
                     logger.error (line.rstrip())
-
+                if not self.lock.acquire(False):
+                    logger.error ('re-instantiating over locked thread !')
+                    self.lock = threading.Lock()
             if 0 != len(self._script_stack):
                 # recover from a general exception or script error
                 fault = self._script_stack.pop()
@@ -409,7 +411,11 @@ class Session(object):
             if self.pipe.poll (None if waitfor == float('inf') else waitfor):
                 event, data = self.pipe.recv()
                 if event == 'exception':
-                    raise getattr(bbs.exception, data[0]), data[1]
+                    # raise custom exception passed through pipe by name,
+                    if hasattr(bbs.exception, data[0]):
+                        raise getattr(bbs.exception, data[0]), data[1]
+                    # raise a direct exception type, and its value only.
+                    raise data[0], data[1]
                 self.buffer_event (event, data)
                 if event in events:
                     return (event, self._event_pop(event))
