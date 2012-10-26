@@ -1,7 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env python
 # TODO: Installer creates this shell script
 # requires path to bash for shebang line,
 #      and path to virtualenv (ENV26)
 #      and path to x84 source code (`dirname $0`)
-. `dirname $0`/ENV/bin/activate
-python `dirname $0`/engine.py $*
+import os
+import sys
+import x84
+# Hack to allow modules within x84 to be imported as modules
+sys.path.append(os.path.dirname(sys.modules['x84'].__file__))
+from engine import main
+sys.exit(main())
