@@ -6,18 +6,11 @@ https://github.com/erikrose/blessings
 import curses.has_key
 import contextlib
 import platform
-import logging
 import termios
 import struct
-import curses
 import fcntl
 import sys
 
-
-#pylint: disable=C0103,W0611
-#        Invalid name "logger" for type constant
-#        Unused import IOUnsupportedOperation
-logger = logging.getLogger()
 
 try:
     from io import UnsupportedOperation as IOUnsupportedOperation
