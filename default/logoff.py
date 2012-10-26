@@ -15,8 +15,6 @@ def main():
     term = session.terminal
     expert = session.user.get('expert', False) \
         if session.user is not None else False
-    is_sysop = session.user.is_sysop \
-        if session.user is not None else False
     session.activity = u'Logging Off!'
     prompt_msg = u'[spnG]: ' if expert is True \
         else u'%s:AY SOMEthiNG %s:REViOUS %s:EXt %s:Et thE fUCk Off !\b' \
@@ -30,8 +28,6 @@ def main():
           u' sAYs ', term.cyan_reverse, u'WhAt: ', term.normal,))
     goodbye_msg = u''.join((term.black_bold, u'\r\n\r\n',
             u'back to the mundane world...', u'\r\n',))
-    demerit_msg = u''.join((term.black_bold, u'\r\n\r\n',
-          u'tiMEOUt: 1 dEMERit.', '\r\n',))
     commit_msg = u'-- !  thANk YOU fOR YOUR CONtRibUtiON, bROthER  ! --'
     write_msg = u'bURNiNG tO ROM, PlEASE WAiT ...'
     newDb = ((time.time() -1984, u'B. b.', u'bEhAVE YOURSElVES ...'),)
