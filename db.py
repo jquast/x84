@@ -1,8 +1,10 @@
 """
 Database request handler for x/84 http://github.com/jquast/x84
 """
+import bbs.exception
 import threading
 import logging
+import sys
 import os
 import sqlitedict
 #pylint: disable=C0103
@@ -61,10 +63,16 @@ class DBHandler(threading.Thread):
             "'%(cmd)s' not a valid method of <type 'dict'>" % self
         logger.debug ('%s/%s%s', self.schema, self.cmd,
                 '(*%d)' if len(self.args) else '')
-        if 0 == len(self.args):
-            result = func()
-        else:
-            result = func(*self.args)
+        try:
+            if 0 == len(self.args):
+                result = func()
+            else:
+                result = func(*self.args)
+        except Exception, err:
+            # Pokemon exception.
+            e_type, e_value, e_tb = sys.exc_info()
+            self.pipe.send ((bbs.exception.DatabaseError, (e_type, err)))
+            return
         if self.event[2] == '-':
             self.pipe.send ((self.event, result))
         elif self.event[2] == '=':
