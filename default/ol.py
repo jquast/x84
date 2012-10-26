@@ -18,18 +18,15 @@ from bbs import *
 
 # bbs-scene.org API is 50-character limit max
 MAX_INPUT = 50
-# one message per 24 hours, 0 to disable
-BUF_HISTORY = 100
-# limit XML/API requests limit
+# scrollback / database limit
+BUF_HISTORY = 500
+# XML/API requests limit
 XML_HISTORY = 84
 # in dumb terminal mode or expert mode, wait up to
 # this long for bbs-scene.org updates ('x' cancels)
-WAIT_FETCH = 10
+WAIT_FETCH = 3
 
 class FetchUpdates(threading.Thread):
-    """
-    Dispatch request to find updates to bbs-scene.org's oneliner's
-    """
     url = 'http://bbs-scene.org/api/onelinerz?limit=%d' % (XML_HISTORY,)
     content = list ()
 
@@ -47,7 +44,8 @@ class FetchUpdates(threading.Thread):
             logger.info ('bbs-scene.org returned %d in %2.2fs',
                     req.status_code, time.time() - stime)
 
-        # can throw exceptions when xml is invalid
+        # can throw exceptions when xml is invalid, as a thread, nobody needs
+        # to catch it. theres some things that should be CDATA wrapped ..
         xml_nodes = xml.etree.ElementTree.XML(req.content).findall('node')
         for node in xml_nodes:
             self.content.append ((node.find('id').text, dict(
@@ -55,6 +53,8 @@ class FetchUpdates(threading.Thread):
                 'oneliner', 'alias', 'bbsname', 'timestamp',))),))
 
 def wait_for(thread):
+    # for dummy or small terminals, wait until a request
+    # thread has gotten content before continuing, *up to t WAIT_FETCH seconds
     if thread.is_alive():
         echo ("\r\n\r\nfetching bbs-scene.org oneliners .. "
                 "(%s)s\b\b%s" % (' ' * 2, '\b' * 2,))
@@ -64,11 +64,11 @@ def wait_for(thread):
                 return
             thread.join (1)
             if getch(0) == u'q':
-                # undocumented: q cancels -- in case it ever goes down D:
                 return
 
 def chk_thread(thread):
-    # check if bbs-scene.org thread finished
+    # check if bbs-scene.org thread finished, if so, farm
+    # its data and send updates if there is one,
     if thread is not None and not thread.is_alive():
         udb = DBProxy('oneliner')
         udbkeys = udb.keys()
@@ -84,24 +84,23 @@ def chk_thread(thread):
             logger.info ('no new bbs-scene.org entries')
         return True
 
-def addline(msg):
-    #import time
-    #udb = DBProxy('oneliner')
-    #udb.acquire (timeout=float('inf'), stale=3)
-    #udb[max([int(key) for key in udb.keys()] or [0]) + 1] = {
-    #    'oneliner': msg,
-    #    'alias': session.handle,
-    #    'bbsname': ini.CFG.get('system', 'bbsname'),
-    #    'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
-    #}
-    #udb.release ()
-    broadcastevent ('oneliner_update')
+def add_oneline (msg):
+    import time
+    udb = DBProxy('oneliner')
+    udb.acquire ()
+    udb[max([int(key) for key in udb.keys()] or [0]) + 1] = {
+        'oneliner': msg,
+        'alias': session.handle,
+        'bbsname': ini.CFG.get('system', 'bbsname'),
+        'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
+    }
+    udb.release ()
 
 def get_oltxt():
     term = getterminal()
     output = list()
     colors = (term.bold_white, term.bold_green, term.bold_blue)
-    for idx, onel in sorted(DBProxy('oneliner').items())[BUF_HISTORY * -1:]:
+    for idx, onel in sorted(DBProxy('oneliner').iteritems())[BUF_HISTORY * -1:]:
         color = colors[int(idx) % len(colors)]
         atime = timeago(time.time() - time.mktime (
             time.strptime(onel['timestamp'], '%Y-%m-%d %H:%M:%S'))).strip()
@@ -135,23 +134,28 @@ def get_pager():
 
 def banner():
     term = getterminal()
-    output = term.home + term.normal + term.clear
-    # xzip's ansi is line-clean, center-align with terminal width,
-    art = open('default/art/ol.ans').readlines()
-    max_ans = max([len(Ansi(from_cp437(line))) for line in art])
-    for line in art:
-        padded = Ansi(from_cp437(line)).center(max_ans)
-        output += Ansi(padded).center(term.width).rstrip()
-        output += term.normal + '\r\n'
-    return output
+    output = u''
+    output += u'\r\n\r\n'
+    if term.width >= 78:
+        output += term.home + term.normal + term.clear
+        # xzip's ansi is line-clean, center-align with terminal width,
+        art = open('default/art/ol.ans').readlines()
+        max_ans = max([len(Ansi(from_cp437(line))) for line in art])
+        for line in art:
+            padded = Ansi(from_cp437(line)).center(max_ans)
+            output += Ansi(padded).center(term.width).rstrip()
+    return output + term.normal
 
 def redraw(pager, selector):
     term = getterminal()
     flushevent ('oneliner_update')
     pager.update(u'\n'.join(get_oltxt()))
+    prompt_ole = u'SAY somethiNG ?!'
     output = u''
     output += pager.move_end () or pager.refresh()
     output += pager.border()
+    output += term.move(selector.yloc - 2, selector.xloc)
+    output += term.bold_green (prompt_ole.center(selector.width).rstrip())
     output += selector.refresh()
     return output
 
@@ -159,114 +163,153 @@ def dummy_pager():
     term = getterminal()
     tail = 10
     indent = 4
-    echo ('\r\n\r\n')
+    prompt_ole = u'SAY somethiNG ?!'
+    echo (u'\r\n\r\n')
     for record in get_oltxt()[(tail * -1):]:
         # convert from record to a width-wrapped, indented
         # text-wrapped record, for real small terminals ^_*
         wrapped = Ansi(record.rstrip()).wrap(term.width - indent)
-        echo (('\r\n' + ' ' * indent).join(wrapped.split('\r\n'))+'\r\n')
-    echo (term.normal + '\r\n\r\n')
-    echo ('SAY SOMEthiNG [yn]  ?!\b\b\b')
+        echo ((u'\r\n' + u' ' * indent).join(wrapped.split(u'\r\n')) + u'\r\n')
+    echo (term.normal + u'\r\n\r\n')
+    echo (prompt_ole + u' [yn]')
     while True:
         ch = getch()
         if ch in (u'n', u'N', u'q', term.KEY_EXIT):
             break
         if ch in (u'y', u'Y'):
-            saysomething ()
+            return saysomething (dumb=True)
     return
 
-def saysomething ():
+def saysomething (dumb=True):
     session, term = getsession(), getterminal()
+    prompt_api = u'MAkE AN ASS Of YOURSElf ON bbS-SCENE.ORG?!'
+    prompt_say = u'SAY WhAt ?! '
+    heard_msg = u'YOUR MESSAGE hAS bEEN VOiCEd.'
+    heard_api = u'YOUR MESSAGE hAS bEEN brOAdCAStEd.'
+
     yloc = term.height - 3
     xloc = max(0, ((term.width / 2) - (MAX_INPUT / 2)))
-    echo (term.move(yloc, xloc) or u'\r\n\r\n')
-    echo (term.bright_blue('SAY WhAt') + term.bright_black (' ?! '))
+    if dumb:
+        echo (u'\r\n\r\n' + term.bold_blue(prompt_say))
+    else:
+        echo (term.move(yloc, xloc) or u'\r\n\r\n')
+        echo (term.bold_blue(prompt_say))
     ole = LineEditor(MAX_INPUT)
     ole.highlight = term.green_reverse
     oneliner = ole.read ()
-    if oneliner is not None and 0 != len(oneliner):
-        session.user['lastliner'] = time.time()
-        if not ini.CFG.has_section('bbs-scene'):
-            # always post local,
-            addline (oneliner)
-            return None
+    if oneliner is None or 0 == len(oneliner.strip()):
+        if not dumb:
+            # clear input line,
+            echo (term.normal + term.move(yloc, 0) + term.clear_eol)
+        return None
+
+    session.user['lastliner'] = time.time()
+    if not ini.CFG.has_section('bbs-scene'):
+        # post local unless bbs-scene.org is configured
+        add_oneline (oneliner.strip())
+        echo ('\r\n' + heard_msg)
+        broadcastevent ('oneliner_update')
+        return None
+    if dumb:
+        # post to bbs-scene.org ?
+        echo ('\r\n\r\n' + bold_blue(prompt_api) + u' [yn]')
+        ch = getch(1)
+        while ch not in (u'y', u'Y', u'n', u'N'):
+            ch = getch()
+        if ch in (u'n', u'N'):
+            #  no? then just post locally
+            add_oneline (oneliner.strip())
+            broadcastevent ('oneliner_update')
+            return
+    else:
         sel = get_selector()
-        sel.colors['selected'] = term.blue_reverse
+        sel.colors['selected'] = term.red_reverse
         echo (term.move(sel.yloc-1, sel.xloc) or ('\r\n\r\n'))
-        echo ('MAkE AN ASS Of YOURSElf ON bbS-SCENE.ORG?!')
+        echo (term.blue_reverse(prompt_api.center(sel.width)))
         echo (sel.refresh())
         while not sel.selected and not sel.quit:
             echo (sel.process_keystroke(getch()))
         session.buffer_event('refresh', 'dirty')
         if sel.quit or sel.selection == sel.right:
-            logger.info ('user declined')
+            echo (term.normal + term.move(yloc, 0) + term.clear_eol)
+            echo (term.move (sel.yloc, 0) + term.clear_eol)
             return None
-        if sel.selection == sel.left:
-            url = 'http://bbs-scene.org/api/onelinerz.xml'
-            usernm = ini.CFG.get('bbs-scene', 'user')
-            passwd = ini.CFG.get('bbs-scene', 'pass')
-            data = {'oneliner': oneliner, 'alias': session.user.handle,
-                    'bbsname': ini.CFG.get('system', 'bbsname')}
-            # post to bbs-scene.rog
-            req = requests.post (url, auth=(usernm, passwd), data=data)
-            if (req.status_code != 200 or
-                    (xml.etree.ElementTree.XML (req.content)
-                        .find('success').text != 'true')):
-                echo ('\r\n\r\n%srequest failed,\r\n', term.clear_eol)
-                echo (('\r\n%s'%(term.clear_eol,)).join (req.content))
-                echo ('\r\n\r\n%s(code : %s).\r\n', term.clear_eol, req.status_code)
-                echo ('\r\n%sPress any key ..', term.clear_eol)
-                logger.warn ('failed to post req')
-                getch ()
-                return None
-            logger.info ('succeeded bbs-scene api post (%d)', req.status_code)
-            thread = FetchUpdates()
-            thread.start ()
-            # wait for oneliner_update
-            flushevent('refresh')
-            return thread
+
+    # This is an AJAX effect.
+    # Dispatch a thread to fetch updates, whose callback
+    # will cause the database and pager to update.
+    url = 'http://bbs-scene.org/api/onelinerz.xml'
+    usernm = ini.CFG.get('bbs-scene', 'user')
+    passwd = ini.CFG.get('bbs-scene', 'pass')
+    data = {u'oneliner': oneliner.strip(),
+            u'alias': session.user.handle,
+            u'bbsname': ini.CFG.get('system', 'bbsname')}
+    # post to bbs-scene.rog
+    req = requests.post (url, auth=(usernm, passwd), data=data)
+    if (req.status_code != 200 or
+            (xml.etree.ElementTree.XML (req.content)
+                .find('success').text != 'true')):
+        echo (u'\r\n\r\n%srequest failed,\r\n', term.clear_eol)
+        echo (u'%r' % (req.content,))
+        echo (u'\r\n\r\n%s(code : %s).\r\n', term.clear_eol, req.status_code)
+        echo (u'\r\n%sPress any key ..', term.clear_eol)
+        logger.warn ('bbs-scene.org api request failed')
+        getch ()
+        return
+    logger.info ('bbs-scene.org api (%d): %r/%r', req.status_code,
+            session.user.handle, oneliner.strip())
+    thread = FetchUpdates()
+    thread.start ()
+    if not dumb:
+        # clear line w/input bar,
+        echo (term.normal + term.move(yloc, 0) + term.clear_eol)
+        # clear line w/selector
+        echo (term.move (sel.yloc, 0) + term.clear_eol)
+    else:
+        echo ('\r\n\r\n' + heard_api)
+        getch (2)
+    return thread
 
 def main ():
     session, term = getsession(), getterminal()
-    session.activity = 'one-liners'
+    pager, selector = get_pager(), get_selector()
 
     thread = None
     if ini.CFG.has_section('bbs-scene'):
         thread = FetchUpdates()
         thread.start ()
-        session.activity = 'one-liners [bbs-scene.org]'
+        session.activity = u'one-liners [bbs-scene.org]'
+    else:
+        session.activity = u'one-liners'
 
-    pager, selector = get_pager(), get_selector()
+    # flag a pager update,
     dirty = True
-    waited = False
-    session.buffer_event ('refresh', 'init')
+    # force screen clear on first loop,
+    session.buffer_event ('refresh', ('init',))
     while True:
-        # 1. calculate and redraw screen
-        # screen resize
+        # 1. calculate and redraw screen,
+        # or enter dumb pager mode (no scrolling)
         if pollevent('refresh'):
             pager, selector = get_pager(), get_selector(selector.selection)
-            dirty = True
-            echo (term.home + term.clear)
             echo (banner())
-        # bbs-scene.org completed,
+            dirty = True
         if chk_thread (thread):
             thread = None
-        # global signal for new oneliners (like irc!)
         if pollevent('oneliner_update'):
             dirty = True
-        # re-draw smart terminal (pager, y/n selector)
         if dirty and (session.env.get('TERM') != 'unknown' and
                 not session.user.get('expert', False)
                 and term.width >= 78 and term.height >= 20):
+            # smart terminal
             echo (redraw(pager, selector))
             dirty = False
         elif dirty:
-            # enter dumb terminal mode,
+            # dumb terminal
             if thread is not None:
                 wait_for (thread)
             if chk_thread (thread):
                 thread = None
-            echo ('\r\n\r\n')
+            echo (u'\r\n\r\n')
             return dummy_pager()
 
         # 2. detect and process keyboard input,
@@ -276,16 +319,14 @@ def main ():
             echo (pager.process_keystroke (inp))
             echo (selector.process_keystroke (inp))
 
-            # quit 'q', or selected 'no' & return
-            if (selector.selected and selector.selection == selector.right
-                    or pager.quit):
-                print 'pager', pager.quit
-                print 'selector', selector.selected, selector.selection
-                return
-
             # selected 'yes' & return, 'say something'
             if (selector.selected and selector.selection == selector.left):
-                thread = saysomething ()
-                # new selector :-)
-                selector = get_selector(selector.selection)
-                dirty = True
+                # re-assign thread so that it is checked for updates
+                thread = saysomething (dumb=False)
+                # undo 'selected' state of yes/no bar,
+                selector.selected = False
+
+            # quit 'q', or selected 'no' & return
+            elif (selector.selected and selector.selection == selector.right
+                    or pager.quit):
+                return
