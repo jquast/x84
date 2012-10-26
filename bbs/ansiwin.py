@@ -260,6 +260,7 @@ class AnsiWindow(object):
         bhoriz = self.glyphs.get('bot-horiz', u'') * (self.width - 2)
         topright = self.glyphs.get('top-right', u'')
         botright = self.glyphs.get('bot-right', u'')
+        term = bbs.session.getsession().terminal
         for row in range(0, self.height):
             # top to bottom
             for col in range (0, self.width):
@@ -309,7 +310,7 @@ class AnsiWindow(object):
                     rstr += botright
                     break
         rstr += self.colors.get('border', u'')
-        return rstr
+        return rstr + term.normal
 
     def erase(self):
         """
