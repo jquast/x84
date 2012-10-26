@@ -11,6 +11,7 @@ NETHACK_KEYSET = { 'home': [u'y', ],
                    'pgdown': [u'l', ],
                    'up': [u'k', ],
                    'down': [u'j', ],
+                   'enter': [u'\r', ],
                    'exit': [u'q', ],
 }
 
@@ -26,49 +27,51 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
     #         Too many instance attributes (15/7)
     #pylint: disable=R0904
     #         Too many public methods (29/20)
+    content = list ()
+
     def __init__(self, height, width, yloc, xloc):
         """
         Initialize a lightbar of height, width, y and x position.
         """
-        bbs.ansiwin.AnsiWindow.__init__(height, width, yloc, xloc)
+        bbs.ansiwin.AnsiWindow.__init__(self, height, width, yloc, xloc)
         self._vitem_idx = 0
         self._vitem_lastidx = 0
         self._vitem_shift = 0
         self._vitem_lastshift = 0
         self._moved = False
+        self._selected = False
         self._quit = False
-        self.content = list()
         self.keyset = NETHACK_KEYSET
         self.init_keystrokes()
+        self.init_theme()
 
-    @property
-    def update(self, unicodelist=None):
+    def update(self, keyed_uchars=None):
         """
         Replace content of lightbar with a unicode list.
         """
-        if unicodelist is None:
-            unicodelist = [u'',]
-        self.content = unicodelist
+        if keyed_uchars is None:
+            keyed_uchars = (None, u'',)
+        self.content = list(keyed_uchars)
         self.position = (self.vitem_idx, self.vitem_shift)
 
-    def refresh_row(self, ypos):
+    def refresh_row(self, row):
         """
         Return unicode byte sequence suitable for moving to location ypos of
         window-relative row, and displaying any valid entry there, or using
         glyphs['fill'] if out of bounds.
         """
+        term = bbs.session.getsession().terminal
         unibytes = u''
-        # moveto (ypos),
-        unibytes += self.pos(self.ypadding + ypos, self.xpadding)
-        entry = self.vitem_shift + ypos
+        unibytes += self.pos(self.ypadding + row, self.xpadding)
+        entry = self.vitem_shift + row
         if entry >= len(self.content):
             # out-of-bounds;
             return self.glyphs['fill'] * self.visible_width
-        unibytes += (self.colors['highlight']
+        unibytes += (self.colors['selected']
                 if entry == self.index
-                else self.colors['lowlight'])
-        unibytes += self.colors['normal']
-        return unibytes
+                else self.colors['unselected'])
+        unibytes += self.content[entry][1]
+        return unibytes + term.normal
 
     def refresh (self):
         """
@@ -89,12 +92,19 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
             unibytes += self.refresh ()
         elif self.moved:
             if self._vitem_lastidx != -1:
-                # unlight old entry
+                # unselected old entry
                 unibytes += self.refresh_row (self._vitem_lastidx)
-                # highlight new entry
+                # and selected new entry
                 unibytes += self.refresh_row (self.vitem_idx)
         return unibytes
 
+    def init_theme(self):
+        """
+        Initialize colors['selected'] and colors['unselected'].
+        """
+        term = bbs.session.getsession().terminal
+        self.colors['selected'] = term.reverse_green
+        self.colors['unselected'] = term.white
 
     def init_keystrokes(self):
         """
@@ -106,10 +116,11 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
         term = bbs.session.getterminal()
         self.keyset['home'].append (term.KEY_HOME)
         self.keyset['end'].append (term.KEY_END)
-        self.keyset['pageup'].append (term.KEY_PPAGE)
-        self.keyset['pagedown'].append (term.KEY_NPAGE)
+        self.keyset['pgup'].append (term.KEY_PPAGE)
+        self.keyset['pgdown'].append (term.KEY_NPAGE)
         self.keyset['up'].append (term.KEY_KEY_UP)
         self.keyset['down'].append (term.KEY_DOWN)
+        self.keyset['enter'].append (term.KEY_ENTER)
         self.keyset['exit'].append (term.KEY_EXIT)
 
     def process_keystroke(self, key):
@@ -130,6 +141,8 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
             rstr += self.move_up ()
         elif key in self.keyset['down']:
             rstr += self.move_down ()
+        elif key in self.keyset['enter']:
+            self.selected = True
         elif key in self.keyset['exit']:
             self._quit = True
         return rstr
@@ -163,7 +176,24 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
         """
         Selected content of self.content by index
         """
-        return self.content[self.index]
+        return (self.content[self.index]
+                if self.index > 0 and self.index < len(self.content)
+                else (None, None))
+
+    @property
+    def selected(self):
+        """
+        Returns True when keyset['enter'] key detected in process_keystroke
+        """
+        return self._selected
+
+    @selected.setter
+    def selected(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        # this setter should only be used to reset to 'False' for recycling
+        assert type(value) is bool
+        self._selected = value
 
     @property
     def last_index(self):
@@ -179,6 +209,16 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
         top of window, and 'shift' being the number of items scrolled.
         """
         return (self.vitem_idx, self.vitem_shift)
+
+    @property
+    def visible_content(self):
+        """
+        Returns content that is visible in window
+        """
+        #pylint: disable=W0612
+        #        Unused variable 'item'
+        item, shift = self.position
+        return self.content[shift:shift + self.visible_height]
 
     @position.setter
     def position(self, pos_tuple):
@@ -204,7 +244,7 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
         if self._vitem_idx != value:
             self._vitem_lastidx = self._vitem_idx
             self._vitem_idx = value
-            self.moved = True
+            self._moved = True
 
     @property
     def vitem_shift(self):
@@ -224,7 +264,7 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
         if self._vitem_shift != value:
             self._vitem_lastshift = self._vitem_shift
             self._vitem_shift = value
-            self.moved = True
+            self._moved = True
 
     def _chk_bounds (self):
         """
