@@ -284,7 +284,8 @@ class Session(object):
             # back to their bytestring equivalents unless there isn't
             # a mapping, then use that position in text ('?').
             unibytes = u''.join([unichr(CP437.index(glyph)) if glyph in CP437
-                else unicode(text[n]) for n, glyph in enumerate(unibytes)])
+                else unicode(text[n], 'iso8859-1', 'replace') for n, glyph in
+                enumerate(unibytes)])
         self.terminal.stream.write (unibytes,
                 is_cp437=(self.encoding == 'cp437'))
         if self._tap_output and logger.isEnabledFor(logging.DEBUG):
