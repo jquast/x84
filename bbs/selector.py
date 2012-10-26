@@ -104,6 +104,8 @@ class Selector(bbs.ansiwin.AnsiWindow):
 
     @selected.setter
     def selected(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
         # this setter should only be used to reset to 'False' for recycling
         assert type(value) is bool
         self._selected = value
