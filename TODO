@@ -37,6 +37,8 @@ TESTING
 * assert that any line that y and x, yloc, xloc, ypos, xpos, row, col
   are used, that they appear in order of Y, X.
 * assert that any method or function that returns ansi string sequences ends with term.normal.
+* assert that UTF-8 is always referred to as 'utf8',
+  and is referred to as minimally as possible, fewest knobs.
 
 must be compatible with the following clients,
 OSX: iTerm2, Terminal.app
