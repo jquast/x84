@@ -13,7 +13,7 @@ def dummy_pager(last_callers):
     echo (term.normal + '\r\n\r\n')
     if term.width > 71:
         echo ('\r\n'.join((line.rstrip().center(term.width).rstrip()
-            for line in open('default/art/lc.asc'))))
+            for line in open(dirname(__file__)+'/art/lc.asc'))))
     echo (term.normal + '\r\n\r\n')
     for row in range(len(last_callers)):
         echo (last_callers[row].rstrip() + '\r\n')
@@ -31,7 +31,7 @@ def dummy_pager(last_callers):
 def redraw(pager):
     term = getterminal()
     rstr = term.move(0, 0) + term.normal + term.clear
-    for line in open('default/art/lc.asc'):
+    for line in open(dirname(__file__)+'/art/lc.asc'):
         rstr += line.center(term.width).rstrip() + '\r\n'
     rstr += pager.border ()
     if len(pager.content) < pager.visible_height:

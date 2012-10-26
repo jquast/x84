@@ -210,7 +210,7 @@ def banner():
     if term.width >= 72:
         output += term.home + term.normal + term.clear
         # spidy's ascii is 72-wide (and, like spidy, total nonsense ..,)
-        for line in open('default/art/bbslist.asc'):
+        for line in open(dirname(__file__)+'/art/bbslist.asc'):
             output += line.center(72).rstrip() + '\r\n'
     return output + term.normal
 

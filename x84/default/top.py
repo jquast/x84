@@ -28,10 +28,10 @@ def display_intro():
         rstr += term.move (0, 0) + term.clear
         if session.env.get('TERM') != 'unknown':
             if term.width >= 79:
-                rstr += showcp437('default/art/top/*.ans')
+                rstr += showcp437(dirname(__file__)+'/art/top/*.ans')
         else:
             if term.width >= 76:
-                rstr += showcp437('default/art/top/*.asc')
+                rstr += showcp437(dirname(__file__)+'/art/top/*.asc')
 
         if term.number_of_colors == 256:
             rstr += '\r\n\r\n' + BADGE256

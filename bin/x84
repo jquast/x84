@@ -6,7 +6,13 @@
 import os
 import sys
 import x84
+
+# Root to the BBS package directory
+ROOT = os.path.dirname(sys.modules['x84'].__file__)
+
 # Hack to allow modules within x84 to be imported as modules
-sys.path.append(os.path.dirname(sys.modules['x84'].__file__))
+sys.path.append(ROOT)
+
+# Run the BBS
 from engine import main
 sys.exit(main())

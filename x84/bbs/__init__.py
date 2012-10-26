@@ -1,6 +1,7 @@
 """
 bbs module for x/84, https://github.com/jquast/x84
 """
+from os.path import dirname
 import bbs.ini as ini
 from bbs.selector import Selector
 from bbs.lightbar import Lightbar
@@ -56,6 +57,7 @@ __all__ = [
     'getch',
     'sleep',
     'echo',
+    'dirname',
     'showcp437',
     'SAUCE',]
 

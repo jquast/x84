@@ -139,7 +139,7 @@ def banner():
     if term.width >= 78:
         output += term.home + term.normal + term.clear
         # xzip's ansi is line-clean, center-align with terminal width,
-        art = open('default/art/ol.ans').readlines()
+        art = open(dirname(__file__)+'/art/ol.ans').readlines()
         max_ans = max([len(Ansi(from_cp437(line))) for line in art])
         for line in art:
             padded = Ansi(from_cp437(line)).center(max_ans)

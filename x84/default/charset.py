@@ -14,9 +14,9 @@ from bbs import *
 def main():
     session, term = getsession(), getterminal()
     if term.number_of_colors == 256:
-        artfile = 'default/art/plant-256.ans'
+        artfile = dirname(__file__)+'/art/plant-256.ans'
     else:
-        artfile = 'default/art/plant.ans'
+        artfile = dirname(__file__)+'/art/plant.ans'
 
     enc_prompt = (u'Press left/right until artwork looks best. Clients should'
             ' select utf8 encoding and Andale Mono font. Older clients or'

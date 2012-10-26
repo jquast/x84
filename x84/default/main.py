@@ -10,7 +10,7 @@ def refresh():
     " refresh main menu screen "
     term = getterminal ()
     echo (u''.join((term.normal, term.normal_cursor, term.clear, '\r\n')))
-    art = ([Ansi(from_cp437(line)) for line in open('default/art/main.asc')])
+    art = ([Ansi(from_cp437(line)) for line in open(dirname(__file__)+'/art/main.asc')])
     max_len = max([line.__len__() for line in art])
     if max_len <= term.width:
         for line in art:

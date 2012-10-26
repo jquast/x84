@@ -137,7 +137,7 @@ def prompt_ok():
 def main (handle=u''):
     session, term = getsession(), getterminal()
     session.activity = u'Applying for an account'
-    artfile = u'default/art/nua.asc'
+    artfile = dirname(__file__)+'/art/nua.asc'
     msg_header = u'NEW USER APPliCAtiON'
     newcmds = ini.CFG.get('matrix', 'newcmds').split()
     topscript = ini.CFG.get('matrix', 'topscript')
