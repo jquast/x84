@@ -3,18 +3,4 @@ xmodem
 sauce
 requests
 py-bcrypt
-argparse==1.2.1
-checker==1.6
-execute==1.2
-logilab-astng==0.24.1
-logilab-common==0.58.1
-mailinglogger==3.7.0
-py-bcrypt==0.2
-pylint==0.26.0
-requests==0.14.2
-sauce==0.1.1
-sqlitedict==1.0.8
-wsgiref==0.1.2
--e git+https://github.com/jquast/x84.git@df6bbe702be5c7c52feb0bd6cbda90d128f0fc6e#egg=x84-dev
-xmodem==0.2.4
-zope.dottedname==3.4.6
+pylint
