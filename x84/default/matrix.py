@@ -10,9 +10,10 @@
 """
 __url__ = u'https://github.com/jquast/x84/'
 
+import os
 #pylint: disable=W0614
 #        Unused import from wildcard import
-from bbs import *
+from x84.bbs import *
 
 def denied(msg):
     term = getterminal()
@@ -89,22 +90,16 @@ def try_pass(user):
     # and authenticate against user record, performing a script change to
     # topscript if sucessful.
     echo (prompt_pass)
-
     chk = session._tap_input # <-- save
     session._tap_input = False
     le = LineEditor(max_pass)
     le.hidden = u'x'
     password = le.read ()
     session._tap_input = chk # restore -->
-
-    if password is None or 0 == len(password):
-        return
-
-    echo (status_auth)
-    if user.auth (password):
-        goto (topscript, user.handle)
-
-    # you failed !
+    if password is not None and 0 != len(password):
+        echo (status_auth)
+        if user.auth (password):
+            goto (topscript, user.handle)
     echo ('\r\n\r\n')
     denied (badpass_msg % (user.handle,))
     return
@@ -121,6 +116,8 @@ def uname():
 
 
 def main ():
+    import logging
+    logger = logging.getLogger()
     session, term = getsession(), getterminal()
     handle = (session.env.get('USER', '') .decode('iso8859-1', 'replace'))
     anon_allowed_msg = u"'anonymous' login enabled.\r\n"
@@ -128,13 +125,14 @@ def main ():
     bbsname = ini.CFG.get('system', 'bbsname')
     max_tries = 10
 
-    flushevent ('refresh')
+    session.flush_event ('refresh')
     echo (term.normal + u'\r\nConnected to %s, see %s for source\r\n' % (
         bbsname, __url__))
     uname ()
     echo (u'\r\n')
     if term.width >= 76:
-        for line in open(dirname(__file__)+'/art/1984.asc','r'):
+        for line in open(os.path.join
+                (os.path.dirname(__file__), 'art', '1984.asc'), 'r'):
             echo (line.rstrip().center(term.width).rstrip() + u'\r\n')
         echo (u'\r\n')
     if session.env.get('TERM') == 'unknown':

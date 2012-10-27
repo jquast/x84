@@ -4,8 +4,8 @@ Left/Right lightbar choice selector for x/84, https://github.com/jquast/x84
 from __future__ import division
 import math
 
-import bbs.session
-import bbs.ansiwin
+import session
+import ansiwin
 
 VI_KEYSET = { 'refresh': [unichr(12),],
               'toggle': [u' ',],
@@ -15,7 +15,7 @@ VI_KEYSET = { 'refresh': [unichr(12),],
               'exit': [u'q', u'Q', unichr(3)],
               }
 
-class Selector(bbs.ansiwin.AnsiWindow):
+class Selector(ansiwin.AnsiWindow):
     """
     A two-state horizontal lightbar interface.
     """
@@ -35,7 +35,7 @@ class Selector(bbs.ansiwin.AnsiWindow):
         self._moved = False
         self._quit = False
         self._selected = False
-        bbs.ansiwin.AnsiWindow.__init__(self,
+        ansiwin.AnsiWindow.__init__(self,
                 height=1, width=width, yloc=yloc, xloc=xloc)
         self.init_theme ()
         self.keyset = VI_KEYSET
@@ -45,7 +45,7 @@ class Selector(bbs.ansiwin.AnsiWindow):
         """
         Initialize colors['selected'] and colors['unselected'].
         """
-        term = bbs.session.getterminal()
+        term = session.getterminal()
         self.colors ['selected'] = term.reverse
         self.colors ['unselected'] = term.normal
 
@@ -54,7 +54,7 @@ class Selector(bbs.ansiwin.AnsiWindow):
         Merge curses-detected application keys into a VI_KEYSET-formatted
         keyset, for keys 'refresh', 'left', 'right', 'enter', and 'exit'.
         """
-        term = bbs.session.getsession().terminal
+        term = session.getsession().terminal
         self.keyset['refresh'].append (term.KEY_REFRESH)
         self.keyset['left'].append (term.KEY_LEFT)
         self.keyset['right'].append (term.KEY_RIGHT)
@@ -81,9 +81,9 @@ class Selector(bbs.ansiwin.AnsiWindow):
         elif keystroke in self.keyset['enter']:
             self._selected = True
         else:
-            bbs.session.logger.info ('unhandled, %r', keystroke
+            session.logger.info ('unhandled, %r', keystroke
                     if type(keystroke) is not int
-                    else bbs.session.getsession().terminal.keyname(keystroke))
+                    else session.getsession().terminal.keyname(keystroke))
         return rstr
 
     @property
@@ -156,7 +156,7 @@ class Selector(bbs.ansiwin.AnsiWindow):
         """
         Return terminal sequence suitable for re-drawing left/right menubar.
         """
-        term = bbs.session.getterminal()
+        term = session.getterminal()
         rstr = self.pos(0, 0)
         attrs = (self.colors['selected'], self.colors['unselected'])
         a_left = attrs[0] if self.selection == self.left else attrs[1]

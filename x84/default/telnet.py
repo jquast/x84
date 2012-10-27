@@ -5,7 +5,7 @@ TIME_POLL = 0.05
 
 #pylint: disable=W0614
 #        Unused import from wildcard import
-from bbs import *
+from x84.bbs import *
 
 def main(host, port=None):
     """

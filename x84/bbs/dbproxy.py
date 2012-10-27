@@ -4,7 +4,7 @@ Database proxy helper for X/84.
 import logging
 import time
 
-import bbs.session
+import session
 
 #pylint: disable=C0103
 #        Invalid name "logger" for type constant (should match
@@ -38,23 +38,23 @@ class DBProxy(object):
         # the next call would still have values on the pipe, and this
         # assertion of StartIteration would fail. To prevent, we flush
         # the input pipe first .. but what if we were ninja fast?
-        bbs.session.getsession().flush_event (event)
-        bbs.session.getsession().send_event (event, (self.table, method, args))
-        data = bbs.session.getsession().read_event (event)
+        session.getsession().flush_event (event)
+        session.getsession().send_event (event, (self.table, method, args))
+        data = session.getsession().read_event (event)
         assert data == (None, 'StartIteration'), (
                 'iterable proxy used on non-iterable, %r', data)
-        data = bbs.session.getsession().read_event (event)
+        data = session.getsession().read_event (event)
         while data != (None, StopIteration):
             yield data
-            data = bbs.session.getsession().read_event (event)
+            data = session.getsession().read_event (event)
 
     def proxy_method(self, method, *args):
         """
         Proxy for dictionary methods called over IPC pipe.
         """
         event = 'db-%s' % (self.schema,)
-        bbs.session.getsession().send_event (event, (self.table, method, args))
-        return bbs.session.getsession().read_event (event)
+        session.getsession().send_event (event, (self.table, method, args))
+        return session.getsession().read_event (event)
 
     def acquire(self, blocking=False):
         """
@@ -70,16 +70,16 @@ class DBProxy(object):
         """
         event = 'lock-%s' % (self.schema,)
         while True:
-            bbs.session.getsession().lock.acquire ()
-            bbs.session.getsession().send_event (event, ('acquire', True))
-            if bbs.session.getsession().read_event (event):
-                bbs.session.getsession().lock.release ()
+            session.getsession().lock.acquire ()
+            session.getsession().send_event (event, ('acquire', True))
+            if session.getsession().read_event (event):
+                session.getsession().lock.release ()
                 return True
             if not blocking:
-                bbs.session.getsession().lock.release ()
+                session.getsession().lock.release ()
                 return False
             # let another thread have a go,
-            bbs.session.getsession().lock.release ()
+            session.getsession().lock.release ()
             time.sleep (0.1)
 
     def release(self):
@@ -87,15 +87,15 @@ class DBProxy(object):
         Release bbs-global lock on database.
         """
         event = 'lock-%s' % (self.schema,)
-        bbs.session.getsession().send_event (event, ('release', None))
+        session.getsession().send_event (event, ('release', None))
 
     def locked(self):
         """
         Tests wether the lock is currently locked
         """
         event = 'lock-%s' % (self.schema,)
-        bbs.session.getsession().send_event (event, ('locked', None))
-        return bbs.session.getsession().read_event (event)
+        session.getsession().send_event (event, ('locked', None))
+        return session.getsession().read_event (event)
 
     #pylint: disable=C0111
     #        Missing docstring

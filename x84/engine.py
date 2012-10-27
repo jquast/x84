@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-command-line launcher and main event loop for x/84
+Command-line launcher and main event loop for x/84
 """
 # Please place _ALL_ Metadata here. No need to duplicate this
 # in every .py file of the project -- except where individual scripts
@@ -28,13 +28,16 @@ def main ():
     #        Too many local variables (19/15)
     import getopt
     import sys
+    import os
 
     import terminal
     import telnet
-    import bbs.ini
+    import x84.bbs.ini
 
-    cfg_bbsfile = 'data/default.ini'
-    cfg_logfile = 'data/logging.ini'
+    lookup_bbs = ('/etc/x84/default.ini',
+            os.path.expanduser('~/.x84/default.ini'))
+    lookup_log = ('/etc/x84/logging.ini',
+            os.path.expanduser('~/.x84/logging.ini'))
     try:
         opts, tail = getopt.getopt(sys.argv[1:], ":", ('config', 'logger',))
     except getopt.GetoptError, err:
@@ -42,17 +45,20 @@ def main ():
         return 1
     for opt, arg in opts:
         if opt in ('--config',):
-            cfg_bbsfile = arg
+            lookup_bbs = (arg,)
         elif opt in ('--logger',):
-            cfg_logfile = arg
+            lookup_log = (arg,)
     assert 0 == len (tail), 'Unrecognized program arguments: %s' % (tail,)
 
+    if not os.path.exists(os.path.expanduser('~/.x84')):
+        print 'Creating %s' % (os.path.expanduser('~/.x84'))
+        os.mkdir (os.path.expanduser('~/.x84'))
     # load .ini files
-    bbs.ini.init (cfg_bbsfile, cfg_logfile)
+    x84.bbs.ini.init (lookup_bbs, lookup_log)
 
     # start telnet server
-    addr_tup = (bbs.ini.CFG.get('telnet', 'addr'),
-        int(bbs.ini.CFG.get('telnet', 'port')),)
+    addr_tup = (x84.bbs.ini.CFG.get('telnet', 'addr'),
+        int(x84.bbs.ini.CFG.get('telnet', 'port')),)
     telnet_server = telnet.TelnetServer (
         address_pair = addr_tup,
         on_connect = terminal.on_connect,
@@ -78,14 +84,15 @@ def _loop(telnet_server):
     #         Too many statements (73/50)
     import logging
     import time
-
-    import terminal
     import db
-    import bbs.ini
+    import terminal
+
+    import x84.bbs.ini
+    import x84.bbs.exception
 
     logger = logging.getLogger()
     logger.info ('listening %s/tcp', telnet_server.port)
-    client_timeout = int(bbs.ini.CFG.get('session', 'timeout', '1984'))
+    client_timeout = int(x84.bbs.ini.CFG.get('session', 'timeout', '1984'))
     locks = dict ()
     # main event loop
     while True:
@@ -106,7 +113,7 @@ def _loop(telnet_server):
             if client.idle() > client_timeout:
                 logger.info ('%s timeout.', client.addrport())
                 pipe.send (('exception', (
-                    bbs.exception.ConnectionTimeout, None,)))
+                    x84.bbs.exception.ConnectionTimeout, None,)))
                 client.deactivate ()
                 continue
 
@@ -130,14 +137,7 @@ def _loop(telnet_server):
                 logger.handle (data)
 
             elif event == 'output':
-                text, cp437 = data
-                if not cp437:
-                    client.send_unicode (text)
-                    continue
-                else:
-                    # disguise cp437 as ios8859-1 so bytes remain unmolested
-                    bytestring = text.encode('iso8859-1', 'replace')
-                    client.send_str (bytestring)
+                client.send_unicode (ucs=data[0], encoding=data[1])
 
             elif event == 'global':
                 #pylint: disable=W0612
@@ -145,17 +145,6 @@ def _loop(telnet_server):
                 for o_client, o_pipe, o_lock in terminal.terminals():
                     if o_client != client:
                         o_pipe.send ((event, data,))
-
-            #deprecation,
-            #elif event == 'pos':
-            #    assert type(data) in (float, int, type(None))
-            #    # 'pos' query: 'what is the cursor position ?'
-            #    # returns 'pos-reply' event as a callback
-            #    # mechanism, data of (None, None) indicates timeout,
-            #    # otherwise (y, x) is cursor position ..
-            #    thread = terminal.POSHandler(pipe, client, lock,
-            #        reply_event='pos-reply', timeout=data)
-            #    thread.start ()
 
             elif event.startswith('db'):
                 # db query-> database dictionary method, callback
@@ -186,6 +175,17 @@ def _loop(telnet_server):
                     else:
                         del locks[event]
                         logger.debug ('(%s, %s) removed.', event, data)
+
+            #elif event == 'pos':
+            #    assert type(data) in (float, int, type(None))
+            #    # 'pos' query: 'what is the cursor position ?'
+            #    # returns 'pos-reply' event as a callback
+            #    # mechanism, data of (None, None) indicates timeout,
+            #    # otherwise (y, x) is cursor position ..
+            #    thread = terminal.POSHandler(pipe, client, lock,
+            #        reply_event='pos-reply', timeout=data)
+            #    thread.start ()
+
 
 if __name__ == '__main__':
     exit(main ())

@@ -4,7 +4,7 @@ Logging handler for x/84 BBS, http://github.com/jquast/x84
 import logging
 import copy
 import sys
-import blessings
+import x84.blessings
 
 
 def line_cmp(record):
@@ -47,7 +47,7 @@ class ColoredConsoleHandler(logging.StreamHandler):
     """
 
     def __init__(self):
-        self.term = blessings.Terminal(stream=sys.stderr)
+        self.term = x84.blessings.Terminal(stream=sys.stderr)
         logging.StreamHandler.__init__ (self)
 
     def color_levelname (self, record):

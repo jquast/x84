@@ -4,50 +4,75 @@
 
 import logging.config
 import os.path
-import ConfigParser
 
 CFG = None
 
-def init(cfg_bbsfile='data/default.ini', cfg_logfile='data/logging.ini'):
+def init(lookup_bbs, lookup_log):
     """
-    Initialize global 'cfg' variable, a singleton to contain bbs properties and
-    settings across all modules. After initializing default configurations, if
-    the file 'cfg_bbsfile' exists, those settings are merged. Logfile settings
-    are also loaded from 'cfg_filepath'.
+    Initialize global 'CFG' variable, a singleton to contain bbs properties and
+    settings across all modules, as well as the logger. Each variable is tuple
+    lookup path of in-order preferences for .ini files.
+
+    If none our found, defaults are initialized, and the last item of each
+    tuple is created.
     """
+    import ConfigParser
     root = logging.getLogger()
     def write_cfg(cfg, filepath):
         """
-        write ConfigParser to filepath
+        Write Config to filepath.
         """
         root.info ('saving %s', filepath)
         fptr = open(filepath, 'wb')
         cfg.write (fptr)
         fptr.close ()
 
-    # load-only defaults,
-    save_err = False
-    if not os.path.exists(cfg_logfile):
+    # we exploit our last argument as, what we presume to be within a folder
+    # writable by our process -- engine.py specifys as ~/.x84/somefile.ini
+    loaded = False
+    for cfg_logfile in lookup_log:
+        # load-only defaults,
+        if os.path.exists(cfg_logfile):
+            print ('loading %s' % (cfg_logfile,))
+            logging.config.fileConfig (cfg_logfile)
+            loaded=True
+            break
+    if not loaded:
         cfg_log = init_log_ini()
+        if not os.path.isdir(os.path.dirname(cfg_logfile)):
+            try:
+                os.mkdir (os.path.dirname(cfg_logfile))
+            except OSError, err:
+                root.warn ('%s', err)
         try:
             write_cfg (cfg_log, cfg_logfile)
+            root.info ('Saved %s' % (cfg_logfile,))
         except IOError, err:
             root.error ('%s', err)
-            save_err = True
-    if not save_err:
         logging.config.fileConfig (cfg_logfile)
-        root.info ('loaded %s', cfg_logfile)
 
-    # load defaults, overlay filepath
-    cfg_bbs = init_bbs_ini ()
-    if not os.path.exists(cfg_bbsfile):
+    loaded = False
+    cfg_bbs = ConfigParser.SafeConfigParser()
+    for cfg_bbsfile in lookup_bbs:
+        # load defaults,
+        if os.path.exists(cfg_bbsfile):
+            cfg_bbs.read (cfg_bbsfile)
+            root.info ('loaded %s', cfg_bbsfile)
+            loaded=True
+            break
+    if not loaded:
+        cfg_bbs = init_bbs_ini()
+        if not os.path.isdir(os.path.dirname(cfg_bbsfile)):
+            try:
+                os.makedir (os.path.dirname(cfg_bbsfile))
+            except OSError, err:
+                root.warn ('%s', err)
         try:
             write_cfg (cfg_bbs, cfg_bbsfile)
+            root.info ('Saved %s' % (cfg_bbsfile,))
         except IOError, err:
             root.error ('%s', err)
-    else:
-        cfg_bbs.read (cfg_bbsfile)
-        root.info ('loaded %s', cfg_bbsfile)
+
     #pylint: disable=W0603
     #        Using the global statement
     global CFG
@@ -58,14 +83,28 @@ def init_bbs_ini ():
     """
     Returns ConfigParser instance of bbs system defaults
     """
+    import ConfigParser
     cfg_bbs = ConfigParser.SafeConfigParser()
 
     cfg_bbs.add_section('system')
     cfg_bbs.set('system', 'bbsname', 'x/84')
+    cfg_bbs.set('system', 'sysop', '')
+    cfg_bbs.set('system', 'software', 'x/84')
+    # use module-level 'default' folder
+    cfg_bbs.set('system', 'scriptpath',
+            os.path.abspath(os.path.join( os.path.dirname(__file__),
+                os.path.pardir, 'default')))
+    cfg_bbs.set('system', 'datapath',
+            os.path.join(os.path.expanduser('~/.x84'), 'data'))
+    cfg_bbs.set('system', 'ttyrecpath',
+        os.path.join(os.path.expanduser('~/.x84'), 'ttyrecordings'))
 
     cfg_bbs.add_section('telnet')
     cfg_bbs.set('telnet', 'addr', '127.0.0.1')
     cfg_bbs.set('telnet', 'port', '6023')
+
+    cfg_bbs.add_section('door')
+    cfg_bbs.set('door', 'path', '/usr/local/bin:/usr/games')
 
     cfg_bbs.add_section ('matrix')
     cfg_bbs.set('matrix', 'newcmds', 'new apply')
@@ -74,23 +113,13 @@ def init_bbs_ini ():
     cfg_bbs.set('matrix', 'topscript', 'top')
     cfg_bbs.set('matrix', 'enable_anonymous', 'no')
 
-    cfg_bbs.add_section('database')
-    cfg_bbs.set('database', 'sqlite_folder', './data/')
-
     cfg_bbs.add_section('session')
-    cfg_bbs.set('session', 'ttylog_folder', './ttyrecordings/')
     cfg_bbs.set('session', 'record_tty', 'yes')
-    cfg_bbs.set('session', 'scriptpath',
-            os.path.join(os.path.dirname(__file__),
-        os.path.pardir, 'default'))
     cfg_bbs.set('session', 'tap_input', 'no')
     cfg_bbs.set('session', 'tap_output', 'no')
     cfg_bbs.set('session', 'default_encoding', 'utf8')
     cfg_bbs.set('session', 'default_ttype', 'linux')
     cfg_bbs.set('session', 'timeout', '1984')
-
-    cfg_bbs.add_section('door')
-    cfg_bbs.set('door', 'path', '/usr/local/bin:/usr/games')
 
     cfg_bbs.add_section('irc')
     cfg_bbs.set('irc', 'server', 'efnet.xs4all.nl')
@@ -112,31 +141,11 @@ def init_bbs_ini ():
           'sysop anonymous',)))
     return cfg_bbs
 
-    #cfg_bbs.add_section('dopewars')
-    #cfg_bbs.set('dopewars', 'scorefile', 'data/dopewars.scores')
-    #cfg_bbs.set('dopewars', 'pidfile', 'data/dopewars.pid')
-    #cfg_bbs.set('dopewars', 'logfile', 'data/dopewars.log')
-
-    #cfg_bbs.add_section('ftp')
-    #cfg_bbs.set('ftp', 'enabled', 'no')
-    #cfg_bbs.set('ftp', 'addr', '127.0.0.1')
-    #cfg_bbs.set('ftp', 'port', '6021')
-    #cfg_bbs.set('ftp', 'basedir', 'ftpdata/')
-    #cfg_bbs.set('ftp', 'enable_anonymous', 'no')
-    #cfg_bbs.set('ftp', 'enable_masquerade', 'no')
-    #cfg_bbs.set('ftp', 'enable_fxp', 'no')
-    #cfg_bbs.set('ftp', 'timeout', '1984')
-    #cfg_bbs.set('ftp', 'masq_addr', '64.150.165.47')
-    #cfg_bbs.set('ftp', 'pasv_ports', '61984-65000')
-    #cfg_bbs.set('ftp', 'read_limit', '0')
-    #cfg_bbs.set('ftp', 'write_limit', '0')
-    #cfg_bbs.set('ftp', 'conns_max', '30')
-    #cfg_bbs.set('ftp', 'conns_per_ip', '3')
-
 def init_log_ini ():
     """
     Returns ConfigParser instance of logger defaults
     """
+    import ConfigParser
     cfg_log = ConfigParser.SafeConfigParser()
     cfg_log.add_section('formatters')
     cfg_log.set('formatters', 'keys', 'default')
@@ -151,7 +160,7 @@ def init_log_ini ():
     cfg_log.set('handlers', 'keys', 'console, info_file')
 
     cfg_log.add_section('handler_console')
-    cfg_log.set('handler_console', 'class', 'bbs.log.ColoredConsoleHandler')
+    cfg_log.set('handler_console', 'class', 'x84.bbs.log.ColoredConsoleHandler')
     cfg_log.set('handler_console', 'formatter', 'default')
     cfg_log.set('handler_console', 'args', 'tuple()')
 
@@ -159,13 +168,15 @@ def init_log_ini ():
     cfg_log.set('handler_info_file', 'class', 'logging.FileHandler')
     cfg_log.set('handler_info_file', 'level', 'INFO')
     cfg_log.set('handler_info_file', 'formatter', 'default')
-    cfg_log.set('handler_info_file', 'args', '("data/info.log", "w")')
+    cfg_log.set('handler_info_file', 'args', '("%s", "w")' %
+            (os.path.join(os.path.expanduser('~/.x84'), 'info.log'),))
 
     cfg_log.add_section('handler_debug_file')
     cfg_log.set('handler_debug_file', 'class', 'logging.FileHandler')
     cfg_log.set('handler_debug_file', 'level', 'debug')
     cfg_log.set('handler_debug_file', 'formatter', 'default')
-    cfg_log.set('handler_debug_file', 'args', '("data/debug.log", "w")')
+    cfg_log.set('handler_debug_file', 'args', '("%s", "w")' %
+            (os.path.join(os.path.expanduser('~/.x84'), 'debug.log'),))
 
     cfg_log.add_section('loggers')
     cfg_log.set('loggers', 'keys', 'root')

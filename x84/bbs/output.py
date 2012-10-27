@@ -5,25 +5,23 @@ import re
 import math
 import warnings
 
-import bbs.session
+import session
+
 ANSI_PIPE = re.compile(r'(\|\d\d)')
 ANSI_RIGHT = re.compile(r'\033\[(\d{1,4})C')
 ANSI_CODEPAGE = re.compile(r'\033\([A-Z]')
 ANSI_WILLMOVE = re.compile(r'\033\[[HJuABCDEF]')
 ANSI_WONTMOVE = re.compile(r'\033\[[sm]')
 
-def echo(data, encoding=None):
+def echo(ucs):
     """
     Output unicode bytes and terminal sequences to session terminal.
     non-unicode is accepted, translated as iso8859-1, and a warning is emitted.
     """
-    if not isinstance(data, unicode):
-        warnings.warn('non-unicode: %s%r' % (encoding
-            if encoding is not None else '', data,), UnicodeWarning, 2)
-        return bbs.session.getsession().write \
-            (data.decode(encoding if encoding is not None else 'iso8859-1'))
-    assert encoding is None, 'encoding should only be specified for bytes'
-    return bbs.session.getsession().write (data)
+    if not isinstance(ucs, unicode):
+        warnings.warn('non-unicode: %r' % (ucs,), UnicodeWarning, 2)
+        return session.getsession().write (ucs.decode('iso8859-1'))
+    return session.getsession().write (ucs)
 
 class Ansi(unicode):
     """
@@ -218,7 +216,7 @@ class Ansi(unicode):
         Return new terminal sequence, replacing 'pipe codes', such as u'|03'
         with this terminals equivalent attribute sequence.
         """
-        term = bbs.session.getsession().terminal
+        term = session.getterminal()
         rstr = u''
         ptr = 0
         match = None

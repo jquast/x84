@@ -2,6 +2,7 @@
 Database request handler for x/84 http://github.com/jquast/x84
 """
 import bbs.exception
+import bbs.ini
 import threading
 import logging
 import sys
@@ -19,11 +20,12 @@ def get_db(schema):
     Returns a shared SqliteDict instance, creating a new one if not found
     """
     FILELOCK.acquire()
+    datapath = bbs.ini.CFG.get('system', 'datapath')
     if not schema in DATABASES:
         assert schema.isalnum()
-        import bbs.ini
-        dbpath = os.path.join(bbs.ini.CFG.get('database','sqlite_folder'),
-            '%s.sqlite3' % (schema,),)
+        if not os.path.exists(datapath):
+            os.makedirs (datapath)
+        dbpath = os.path.join(datapath, '%s.sqlite3' % (schema,),)
         DATABASES[schema] = sqlitedict.SqliteDict(filename=dbpath,
                 tablename='unnamed', autocommit=True)
     FILELOCK.release ()

@@ -1,6 +1,0 @@
-The modules here provide features for the BBS userland.
-Check out the directory "default/" in x84 root for how such code can look like.
-
-The userland scripts usually enable the modules here with a simple:
-
-from bbs import *

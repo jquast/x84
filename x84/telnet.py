@@ -307,45 +307,42 @@ class TelnetClient(object):
         self.recv_buffer = array.array('c')
         return data
 
-    def send_str(self, bytestring):
+    def send_str(self, bstr):
         """
-        buffer bytestrings for sending to the distant end.
+        Buffer bytestring for client.
         """
-        self.send_buffer.fromstring (bytestring)
+        self.send_buffer.fromstring (bstr)
 
-    def send_unicode(self, unibytes, encoding='utf8'):
+    def send_unicode(self, ucs, encoding='utf8'):
         """
-        buffer unicode data, encoded to bytestrings as 'encoding'
+        Buffer unicode string, encoded for client as 'encoding'.
         """
-        bytestring = unibytes.encode(encoding, 'replace')
         ## Must be escaped 255 (IAC + IAC) to avoid IAC intepretation
-        bytestring = bytestring.replace(chr(255), 2*chr(255))
-        self.send_str (bytestring)
+        self.send_str (ucs.encode(encoding, 'replace').replace(chr(255), 2*chr(255)))
 
     def deactivate(self):
         """
-        Set the client to disconnect on the next server poll.
+        Flag client for disconnection.
         """
         logger.debug ('%s: marked for deactivation', self.addrport())
         self.active = False
 
     def addrport(self):
         """
-        Return the DE's IP address and port number as a string.
+        Returns IP address and port of DE as string.
         """
         return '%s:%d' % (self.address_pair[0], self.address_pair[1])
 
     def idle(self):
         """
-        Returns the number of seconds that have elasped since the DE
-        last sent us some input.
+        Returns time elapsed since DE last sent input.
         """
         return time.time() - self.last_input_time
 
 
     def duration(self):
         """
-        Returns the number of seconds the DE has been connected.
+        Returns time elapsed since DE connected.
         """
         return time.time() - self.connect_time
 

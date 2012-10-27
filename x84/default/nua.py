@@ -2,9 +2,10 @@
  New user account script for x/84, https://github.com/jquast/x84
 """
 
+import os
 #pylint: disable=W0614
 #        Unused import from wildcard import
-from bbs import *
+from x84.bbs import *
 
 def warning(msg, cpsec=10.0, min_sec=3.0, split_loc=3):
     """
@@ -137,7 +138,7 @@ def prompt_ok():
 def main (handle=u''):
     session, term = getsession(), getterminal()
     session.activity = u'Applying for an account'
-    artfile = dirname(__file__)+'/art/nua.asc'
+    artfile = os.path.join(os.path.dirname(__file__), 'art', 'nua.asc')
     msg_header = u'NEW USER APPliCAtiON'
     newcmds = ini.CFG.get('matrix', 'newcmds').split()
     topscript = ini.CFG.get('matrix', 'topscript')

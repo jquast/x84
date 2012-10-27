@@ -2,15 +2,17 @@
  Main menu script for x/84, http://github.com/jquast/x84
 """
 
+import os
 #pylint: disable=W0614
 #        Unused import from wildcard import
-from bbs import *
+from x84.bbs import *
 
 def refresh():
     " refresh main menu screen "
     term = getterminal ()
     echo (u''.join((term.normal, term.normal_cursor, term.clear, '\r\n')))
-    art = ([Ansi(from_cp437(line)) for line in open(dirname(__file__)+'/art/main.asc')])
+    art = ([Ansi(from_cp437(line)) for line in open(os.path.join(
+        os.path.dirname(__file__), 'art', 'main.asc'))])
     max_len = max([line.__len__() for line in art])
     if max_len <= term.width:
         for line in art:
@@ -36,7 +38,7 @@ def main():
 
     dirty = True
     while True:
-        if pollevent('refresh'):
+        if session.poll_event('refresh'):
             dirty = True
         if dirty:
             dirty = False

@@ -2,9 +2,10 @@
 Last Callers script for x/84, http://github.com/jquast/x84
 """
 
+import os
 #pylint: disable=W0614
 #        Unused import from wildcard import
-from bbs import *
+from x84.bbs import *
 
 def dummy_pager(last_callers):
     term = getterminal()
@@ -13,7 +14,8 @@ def dummy_pager(last_callers):
     echo (term.normal + '\r\n\r\n')
     if term.width > 71:
         echo ('\r\n'.join((line.rstrip().center(term.width).rstrip()
-            for line in open(dirname(__file__)+'/art/lc.asc'))))
+            for line in open(os.path.join(os.path.dirname(__file__),
+                'art', 'lc.asc')))))
     echo (term.normal + '\r\n\r\n')
     for row in range(len(last_callers)):
         echo (last_callers[row].rstrip() + '\r\n')
@@ -31,7 +33,7 @@ def dummy_pager(last_callers):
 def redraw(pager):
     term = getterminal()
     rstr = term.move(0, 0) + term.normal + term.clear
-    for line in open(dirname(__file__)+'/art/lc.asc'):
+    for line in open(os.path.join(os.path.dirname(__file__), 'art', 'lc.asc')):
         rstr += line.center(term.width).rstrip() + '\r\n'
     rstr += pager.border ()
     if len(pager.content) < pager.visible_height:
@@ -101,7 +103,7 @@ def main():
             echo (redraw(pager))
             dirty = False
         inp = getch(1)
-        if pollevent('refresh'):
+        if session.poll_event('refresh'):
             dirty = True
         if inp is not None:
             echo (pager.process_keystroke (inp))

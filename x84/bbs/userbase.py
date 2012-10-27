@@ -1,9 +1,10 @@
 """
 Userbase record access for x/84, https://github.com/jquast/x84/
 """
-import bbs.dbproxy
 import logging
 import bcrypt
+
+import dbproxy
 
 #pylint: disable=C0103
 #        Invalid name "logger" for type constant (should match
@@ -13,20 +14,20 @@ def list_users():
     """
     Returns all user handles.
     """
-    return bbs.dbproxy.DBProxy('userbase').keys()
+    return dbproxy.DBProxy('userbase').keys()
 
 def get_user(handle):
     """
     Returns User record, keyed by handle.
     """
-    return bbs.dbproxy.DBProxy('userbase')[handle]
+    return dbproxy.DBProxy('userbase')[handle]
 
 def find_user(handle):
     """
     Given handle, discover and return matching database key case insensitively.
     The returned value may not be equal to the argument, or None if not found.
     """
-    for key in bbs.dbproxy.DBProxy('userbase').iterkeys():
+    for key in dbproxy.DBProxy('userbase').iterkeys():
         if handle.lower() == key.lower():
             return key
 
@@ -82,19 +83,19 @@ class Group(object):
         """
         Save group record to database.
         """
-        bbs.dbproxy.DBProxy('groupbase')[self.name] = self
+        dbproxy.DBProxy('groupbase')[self.name] = self
 
     def delete(self):
         """
         Delete group record from database, and from .groups of any users.
         """
-        udb = bbs.dbproxy.DBProxy('userbase')
+        udb = dbproxy.DBProxy('userbase')
         for chk_user in self.members:
             user = udb[chk_user]
             if self.name in user.groups:
                 user.group_del (self.name)
                 user.save ()
-        del bbs.dbproxy.DBProxy('groupbase')[self.name]
+        del dbproxy.DBProxy('groupbase')[self.name]
 
 
 class User(object):
@@ -168,7 +169,7 @@ class User(object):
     def __setitem__(self, key, value):
         #pylint: disable=C0111,
         #        Missing docstring
-        uadb = bbs.dbproxy.DBProxy('userattr')
+        uadb = dbproxy.DBProxy('userattr')
         uadb.acquire ()
         attrs = uadb[self.handle]
         attrs.__setitem__(key, value)
@@ -180,7 +181,7 @@ class User(object):
     def __delitem__(self, key):
         #pylint: disable=C0111,
         #        Missing docstring
-        uadb = bbs.dbproxy.DBProxy('userattr')
+        uadb = dbproxy.DBProxy('userattr')
         uadb.acquire ()
         attrs = uadb[self.handle]
         attrs.__detitem__(key)
@@ -193,19 +194,19 @@ class User(object):
     def __getitem__(self, key):
         #pylint: disable=C0111,
         #        Missing docstring
-        return bbs.dbproxy.DBProxy('userattr')[self.handle][key]
+        return dbproxy.DBProxy('userattr')[self.handle][key]
     __getitem__.__doc__ = dict.__getitem__.__doc__
 
     def __len__(self):
         #pylint: disable=C0111,
         #        Missing docstring
-        return bbs.dbproxy.DBProxy('userattr')[self.handle].__len__
+        return dbproxy.DBProxy('userattr')[self.handle].__len__
     __len__.__doc__ = dict.__len__.__doc__
 
     def get(self, key, default=None):
         #pylint: disable=C0111,
         #        Missing docstring
-        uattrs = bbs.dbproxy.DBProxy('userattr')[self.handle]
+        uattrs = dbproxy.DBProxy('userattr')[self.handle]
         return uattrs.get(key, default)
     get.__doc__ = dict.get.__doc__
 
@@ -238,9 +239,9 @@ class User(object):
         assert len(self._handle) > 0, ('handle must be non-zero length')
         assert (None, None) != self._password, ('password must be set')
         assert self._handle != 'anonymous', ('anonymous user my not be saved.')
-        udb = bbs.dbproxy.DBProxy('userbase')
-        adb = bbs.dbproxy.DBProxy('userattr')
-        gdb = bbs.dbproxy.DBProxy('groupbase')
+        udb = dbproxy.DBProxy('userbase')
+        adb = dbproxy.DBProxy('userattr')
+        gdb = dbproxy.DBProxy('groupbase')
         udb.acquire ()
         adb.acquire ()
         gdb.acquire ()
@@ -258,13 +259,13 @@ class User(object):
         """
         Remove user record from database, and as a member of any groups.
         """
-        gdb = bbs.dbproxy.DBProxy('groupbase')
+        gdb = dbproxy.DBProxy('groupbase')
         for gname in self._groups:
             group = gdb[gname]
             if self.handle in group.members:
                 group.remove (self.handle)
                 group.save ()
-        del bbs.dbproxy.DBProxy('userbase')[self.handle]
+        del dbproxy.DBProxy('userbase')[self.handle]
         logger.info ('%s deleted from userbase', self.handle)
 
     @property

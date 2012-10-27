@@ -2,10 +2,9 @@
 editor package for x/84, https://github.com/jquast/x84
 """
 
-import bbs.input
-import bbs.session
-import bbs.ansiwin
-import bbs.output
+import session
+import ansiwin
+import output
 
 PC_KEYSET = { 'refresh': [unichr(12),],
               'backspace': [unichr(8), unichr(127),],
@@ -34,7 +33,7 @@ class LineEditor(object):
         is used. Set to u'' to disable.
         """
         if self._highlight == None:
-            return bbs.session.getterminal().reverse
+            return session.getterminal().reverse
         return self._highlight
 
     @highlight.setter
@@ -101,33 +100,33 @@ class LineEditor(object):
         Reads input until the ENTER or ESCAPE key is pressed (Blocking).
         Allows backspacing. Returns unicode text, or None when cancelled.
         """
-        bbs.output.echo (self.refresh ())
-        term = bbs.session.getterminal()
+        output.echo (self.refresh ())
+        term = session.getterminal()
         while True:
-            inp = bbs.input.getch (timeout=None)
+            inp = session.getsession().read_event('input')
             if inp == term.KEY_EXIT:
                 if 0 != len(self.highlight):
-                    bbs.output.echo (term.normal)
+                    output.echo (term.normal)
                 return None
             elif inp == term.KEY_ENTER:
                 if 0 != len(self.highlight):
-                    bbs.output.echo (term.normal)
+                    output.echo (term.normal)
                 return self.content
             elif inp == term.KEY_BACKSPACE:
                 if len(self.content) > 0:
                     self.content = self.content[:-1]
-                    bbs.output.echo (u'\b \b')
+                    output.echo (u'\b \b')
             elif (type(inp) is not int
                     and ord(inp) >= ord(' ')
                     and (len(self.content) < self.width or self.width == 0)):
                 self.content += inp
                 if self.hidden:
-                    bbs.output.echo (self.hidden)
+                    output.echo (self.hidden)
                 else:
-                    bbs.output.echo (inp)
+                    output.echo (inp)
 
 
-class ScrollingEditor(bbs.ansiwin.AnsiWindow):
+class ScrollingEditor(ansiwin.AnsiWindow):
     """
     A single line editor that scrolls horizontally
     """
@@ -150,9 +149,9 @@ class ScrollingEditor(bbs.ansiwin.AnsiWindow):
     content = u''
 
     def __init__(self, width, yloc, xloc):
-        bbs.ansiwin.AnsiWindow.__init__(self, height=1,
+        ansiwin.AnsiWindow.__init__(self, height=1,
                 width=width, yloc=yloc, xloc=xloc)
-    __init__.__doc__ = bbs.ansiwin.AnsiWindow.__init__.__doc__
+    __init__.__doc__ = ansiwin.AnsiWindow.__init__.__doc__
 
     @property
     def position(self):
@@ -314,7 +313,7 @@ class ScrollingEditor(bbs.ansiwin.AnsiWindow):
         set.
         """
         self.keyset = PC_KEYSET
-        term = bbs.session.getterminal()
+        term = session.getterminal()
         self.keyset['refresh'].append (term.KEY_REFRESH)
         self.keyset['backspace'].append (term.KEY_BACKSPACE)
         self.keyset['enter'].append (term.KEY_ENTER)
@@ -353,7 +352,7 @@ class ScrollingEditor(bbs.ansiwin.AnsiWindow):
         Return unicode sequence suitable for refreshing the entire line and
         placing the cursor.
         """
-        term = bbs.session.getterminal()
+        term = session.getterminal()
         self._horiz_lastshift = self._horiz_shift
         self._horiz_shift = 0
         # re-detect how far we should scroll horizontally,

@@ -1,50 +1,35 @@
 x/84
 ====
 
-x/84 is a python-languaged telnet daemon for modern utf8 terminals. Based on miniboa_, blessings_, sqlitedict_, and multiprocessing_. recordings of sessions are stored in ttyplay_-compatible format files. IBM Codepage 437 to UTF8 helpers are used to translate "ansi art" (such as you would find on the ACiD "dark domains" DVD) to modern terminals.
+x/84 is a python-languaged telnet daemon for modern utf8 terminals. Based on miniboa_, blessings_, sqlitedict_, and multiprocessing_. recordings of sessions are stored in ttyplay_-compatible format files.
 
-A default 'bbs board' is provided in style of renegade, ami/x. This provides some doors for bbs-scene_.org API's such as 'one liners' and 'bbs listers', a telnet-out gateway that translates CP437 to UTF8, messaging, supports example doors dopewars_ and nethack_.
-
-*x/84 is still in development, we welcome any patches and contributions.*
+**ANSI Art**, (such as you would find on the ACiD "dark domains" DVD) is translated for reasonably accurate reproductions on utf8 and cp437 terminals. Plenty of example ansi art is provided in the default 'bbs board', as well as scripts for bbs-scene_.org's 'one liners' and 'bbs list' APIs.
 
 Installation
 ============
 
-This software requires Python_ 2.6 or 2.7.
+1. Install pip_
 
-``git clone https://github.com/jquast/x84.git x84.nxt``
+2. Install x84 from git using pip
 
-1. Install virtualenv,
-
-``curl -o /tmp/virtualenv.py 'https://raw.github.com/pypa/virtualenv/master/virtualenv.py'``
-
-2. Create virtualenv for installing 3rd party packages,
-
-``python2.7 /tmp/virtualenv.py ENV``
-
-3. Activate environment (prompt will change)
-
-``. ENV/bin/activate``
-
-4. Install all third-party modules
-
-``pip install -r requirements.txt``
+``pip install git+https://github.com/jquast/x84.git``
 
 
 Getting Started
 ===============
 
-1. Activate environment (prompt will change)
+1. Execute 'x84',
 
-``. ENV/bin/activate``
-
-2. Execute bbs engine
-
-``python engine.py``
+``x84``
 
 Optional command line arguments,
 ``--config=`` alternate bbs configuration filepath
 ``--logger=`` alternate logging configuration filepath
+
+Developers
+==========
+
+Use ./bin/x84-dev-setup.py [install path] to create a target virtualenv, installing an 'x84' program in that environment that uses the source tree in the current folder.
 
 Connecting
 ==========
@@ -54,56 +39,24 @@ Connecting
 ``python local.py``
 
 
-Compatible Clients (UTF-8)
-==========================
+Compatible Clients
+==================
 
-Any UTF-8 client is compatible, but some fonts do art better than others. For mac systems, 'Andale Mono' works flawlessly.
+Any UTF-8 client is compatible, but some fonts do art better than others. For mac systems, 'Andale Mono' works flawlessly. Other than utf8, only cp437 (IBM-US PC-DOS) is supported.
 
-iTerm
------
-Menu item iTerm -> Preferences, section Profiles, select 'Text' tab, chose 'Andale Mono' font.
- 
-PuTTy
------
-Under preference item Window -> Translation, option 'Remote character set', change 'iso8859-1' to 'UTF-8'.
-
-Terminal.app
-------------
-Menu item Terminal -> Preferences, chose profile 'Pro', (Font Andale Mono), enable 'use bright colors for bold text'.
-
-uxterm
-------
-todo .. bright blink, 256, etc..
-
-
-Semi-compatible Clients (CP437)
-=================================
-
-SyncTerm, mtel
---------------
-
-Select cp437 when prompted by the bbs system (charset.py).
-
-Other 7-bit clients
--------------------
-
-Select cp437 when prompted by the bbs system (charset.py).  Use a font of cp437 encoding, such as *Terminus*.
-
-
-Monitoring
-==========
-
-Sessions are recorded to ``ttyrecordings/`` folder, and can be played with
-ttyplay_ or compatible utility. The ``-p`` option can be used to monitor
-live sessions, analogous to ``tail -f``.
-
+* iTerm: Menu item iTerm -> Preferences, section Profiles, select 'Text' tab, chose 'Andale Mono' font.
+* PuTTy: Under preference item Window -> Translation, option 'Remote character set', change 'iso8859-1' to 'UTF-8'.
+* Terminal.app: Menu item Terminal -> Preferences, chose profile 'Pro', (Font Andale Mono), enable 'use bright colors for bold text'.
+* uxterm: XXX todo.. bright blink?
+* SyncTerm, mtel: Select cp437 when prompted by the bbs system (charset.py).
+* others: Select cp437 when prompted by the bbs system (charset.py).  Use a font of cp437 encoding, such as *Terminus*.
 
 Customizing your board
 ======================
 
-The ``default.ini`` option, *scriptpath*, of section *session*, defines folder ``'default/'``.
+The ``default.ini`` option, *scriptpath*, of section *system*, defines folder ``'default/'``. This can be changed to a folder of your own chosing.
 
-By default, matrix.py_ will chain to nua.py_ for new account creation, top.py_ when authenticated, and main.py_ for a main menu.
+By default, matrix.py_ is called on-connect, which chains to nua.py_ for new account creation, top.py_ when authenticated, and main.py_ for a main menu.
 
 Copy this to a new folder, change the .ini file to point to the new folder, and you can begin customizing your matrix, topscripts, and art files.
 
@@ -128,7 +81,6 @@ charset.py
 ----------
 
 Generally called from top.py_, provides an interface for the user to select a session encoding of ``u'utf8'`` or ``u'cp437'``.
-
 
 lc.py
 -----
@@ -171,14 +123,14 @@ weather.py
 
 An example of using the various user interface elements to display the local weather report.
 
-Globals
-=======
 
-Functions and Classes are exported to the the global namespace of all bbs scripts.  These scripts can be found in the ``bbs/`` sub-folder. the special ``__init__.py`` file defines a list, ``__all__``. All terms of this list are injected into the global namespace of bbs session scripts. It is as if the statement:
+Monitoring
+==========
 
-from bbs import *
+Sessions are recorded to ``ttyrecordings/`` folder, and can be played with
+ttyplay_ or compatible utility. The ``-p`` option can be used to monitor
+live sessions, analogous to ``tail -f``.
 
-is implied. This bbs-specific functions such as getch() and echo().
 
 Other BBS Software
 ==================
@@ -204,6 +156,7 @@ A development-based bbs board is planned.
 .. _sqlitedict: http://pypi.python.org/pypi/sqlitedict
 .. _multiprocessing: http://docs.python.org/library/multiprocessing.html
 .. _ttyplay: http://0xcc.net/ttyrec/index.html.en
+.. _pip: http://guide.python-distribute.org/installation.html#installing-pip
 .. _bbs-scene: http://bbs-scene.org/
 .. _dopewars: http://dopewars.sourceforge.net
 .. _nethack: http://nethack.org/
@@ -212,3 +165,4 @@ A development-based bbs board is planned.
 .. _daydream: da
 .. _mystic: http://mysticbbs.com/
 .. _Python: http://www.python.org/
+.. _Terminus:

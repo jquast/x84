@@ -46,14 +46,6 @@ def start_process(pipe, origin, env):
         env: dictionary of client environment variables
     """
     import bbs.session
-    # now that we are a sub-process, our root handler has dangerously forked
-    # file descriptors. we remove any existing handlers, and re-address our
-    # root logging handler to an IPC event pipe, named 'logging'.
-    root = logging.getLogger()
-    for hdlr in root.handlers:
-        root.removeHandler (hdlr)
-    root.addHandler (bbs.session.IPCLogHandler (pipe))
-
     # curses is initialized for the first time. telnet negotiation did its best
     # to determine the TERM. The default, 'unknown', is equivalent to a dumb
     # terminal.
@@ -62,6 +54,16 @@ def start_process(pipe, origin, env):
 
     # spawn and begin a new session
     new_session = bbs.session.Session (term, pipe, origin, env)
+    print 'XYZSY'
+
+    # our root handler has dangerously forked file descriptors.
+    # remove any existing handlers, and re-address our root logging handler
+    # to an IPC event pipe, named 'logging'.
+    root = logging.getLogger()
+    for hdlr in root.handlers:
+        root.removeHandler (hdlr)
+    root.addHandler (bbs.session.IPCLogHandler (pipe))
+
     try:
         new_session.run ()
     except KeyboardInterrupt:
@@ -79,11 +81,11 @@ class IPCStream(object):
     def __init__(self, channel):
         self.channel = channel
 
-    def write(self, data, is_cp437=False):
+    def write(self, ucs, encoding):
         """
-        Sends output to Pipe.
+        Sends unicode text to Pipe.
         """
-        self.channel.send (('output', (data, is_cp437)))
+        self.channel.send (('output', (ucs, encoding)))
 
     def fileno(self):
         """

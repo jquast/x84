@@ -7,16 +7,19 @@ Session.write() method takes special handling of a session.encoding value
 of 'cp437' for encoding translation.
 """
 
+import os
 #pylint: disable=W0614
 #        Unused import from wildcard import
-from bbs import *
+from x84.bbs import *
 
 def main():
     session, term = getsession(), getterminal()
     if term.number_of_colors == 256:
-        artfile = dirname(__file__)+'/art/plant-256.ans'
+        artfile = os.path.join(os.path.dirname(__file__),
+                'art', 'plant-256.ans')
     else:
-        artfile = dirname(__file__)+'/art/plant.ans'
+        artfile = os.path.join(os.path.dirname(__file__),
+                'art', 'plant.ans')
 
     enc_prompt = (u'Press left/right until artwork looks best. Clients should'
             ' select utf8 encoding and Andale Mono font. Older clients or'
@@ -37,7 +40,7 @@ def main():
         return selector
 
     def refresh(sel):
-        flushevent ('refresh')
+        session.flush_event ('refresh')
         session.encoding = selector.selection
         if sel.selection == 'utf8':
             # ESC %G activates UTF-8 with an unspecified implementation
@@ -77,7 +80,7 @@ def main():
             if selector.moved:
                 # set and refresh art in new encoding
                 refresh (selector)
-        if pollevent('refresh') is not None:
+        if session.poll_event('refresh') is not None:
             logger.info ('refreshed;')
             # instantiate a new selector in case the window size has changed.
             selector = get_selector (session.encoding)

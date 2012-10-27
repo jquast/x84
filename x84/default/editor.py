@@ -1,6 +1,8 @@
 import tempfile
 import os
-from bbs import *
+#pylint: disable=W0614
+#        Unused import from wildcard import
+from x84.bbs import *
 
 def main(sattr):
     session, term = getsession(), getterminal()

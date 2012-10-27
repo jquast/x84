@@ -3,7 +3,6 @@ ROADMAP, 1.0:
 
 Files to make/finish
 --------------------
-setup.py
 local.py
 default/msgreader.py
 default/msgwriter.py / editor.py (utf-8!)

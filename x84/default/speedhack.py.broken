@@ -346,3 +346,10 @@ def main(handle=None):
             elif str(choice) == 'x':
                 gosub ('bbslist')
                 refresh ()
+
+    #cfg_bbs.add_section('dopewars')
+    #cfg_bbs.set('dopewars', 'scorefile', 'data/dopewars.scores')
+    #cfg_bbs.set('dopewars', 'pidfile', 'data/dopewars.pid')
+    #cfg_bbs.set('dopewars', 'logfile', 'data/dopewars.log')
+
+

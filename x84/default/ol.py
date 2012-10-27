@@ -7,14 +7,15 @@
     user = my@email-addr.ess
     pass = my-plaintext-password
 """
-import threading
-import time
-import requests
 import xml.etree.ElementTree
+import threading
+import requests
+import time
+import os
 
 #pylint: disable=W0614
 #        Unused import from wildcard import
-from bbs import *
+from x84.bbs import *
 
 # bbs-scene.org API is 50-character limit max
 MAX_INPUT = 50
@@ -79,7 +80,7 @@ def chk_thread(thread):
                 nlc += 1
         if nlc:
             logger.info ('%d new entries', nlc)
-            broadcastevent ('oneliner_update')
+            session.send_event ('oneliner_update', True)
         else:
             logger.info ('no new bbs-scene.org entries')
         return True
@@ -139,7 +140,8 @@ def banner():
     if term.width >= 78:
         output += term.home + term.normal + term.clear
         # xzip's ansi is line-clean, center-align with terminal width,
-        art = open(dirname(__file__)+'/art/ol.ans').readlines()
+        art = open(os.path.join(
+            os.path.dirname(__file__), 'art', 'ol.ans')).readlines()
         max_ans = max([len(Ansi(from_cp437(line))) for line in art])
         for line in art:
             padded = Ansi(from_cp437(line)).center(max_ans)
@@ -148,8 +150,8 @@ def banner():
     return output + term.normal
 
 def redraw(pager, selector):
-    term = getterminal()
-    flushevent ('oneliner_update')
+    session, term = getsession(), getterminal()
+    session.flush_event ('oneliner_update')
     pager.update(u'\n'.join(get_oltxt()))
     prompt_ole = u'SAY somethiNG ?!'
     output = u''
@@ -205,11 +207,12 @@ def saysomething (dumb=True):
         return None
 
     session.user['lastliner'] = time.time()
+    # post local-onlyw hen bbs-scene.org is not configured
     if not ini.CFG.has_section('bbs-scene'):
-        # post local unless bbs-scene.org is configured
         add_oneline (oneliner.strip())
-        echo ('\r\n' + heard_msg)
-        broadcastevent ('oneliner_update')
+        if not dumb:
+            echo (term.normal + term.move(yloc, 0) + term.clear_eol)
+        session.send_event ('oneliner_update', True)
         return None
     if dumb:
         # post to bbs-scene.org ?
@@ -220,9 +223,10 @@ def saysomething (dumb=True):
         if ch in (u'n', u'N'):
             #  no? then just post locally
             add_oneline (oneliner.strip())
-            broadcastevent ('oneliner_update')
+            session.send_event ('oneliner_update', True)
             return
     else:
+        # fancy prompt, 'post to bbs-scene.org?'
         sel = get_selector()
         sel.colors['selected'] = term.red_reverse
         echo (term.move(sel.yloc-1, sel.xloc) or ('\r\n\r\n'))
@@ -290,13 +294,13 @@ def main ():
     while True:
         # 1. calculate and redraw screen,
         # or enter dumb pager mode (no scrolling)
-        if pollevent('refresh'):
+        if session.poll_event('refresh'):
             pager, selector = get_pager(), get_selector(selector.selection)
             echo (banner())
             dirty = True
         if chk_thread (thread):
             thread = None
-        if pollevent('oneliner_update'):
+        if session.poll_event('oneliner_update'):
             dirty = True
         if dirty and (session.env.get('TERM') != 'unknown' and
                 not session.user.get('expert', False)

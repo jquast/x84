@@ -2,9 +2,10 @@
 'sysop news' script for x/84, https://github.com/jquast/x84
 """
 
+import os
 #pylint: disable=W0614
 #        Unused import from wildcard import
-from bbs import *
+from x84.bbs import *
 
 def dummy_pager(news_txt):
     term = getterminal()
@@ -42,7 +43,8 @@ def redraw(pager):
     rstr = term.normal + '\r\n\r\n'
     if term.width >= 64:
         rstr += '\r\n'.join((line.rstrip().center(term.width).rstrip()
-            for line in open(dirname(__file__)+'/art/news.asc', 'r')))
+            for line in open(os.path.join(
+                os.path.dirname(__file__), 'art', 'news.asc'))))
     rstr += term.normal + '\r\n\r\n'
     if pager is not None:
         rstr += pager.refresh()
@@ -53,11 +55,11 @@ def main():
     import codecs
     session, term = getsession(), getterminal()
     session.activity = 'Reading news'
-    news_path = 'data/news.txt'
+    news_path = os.path.join(os.path.dirname(__file__), 'art', 'news.txt')
     try:
         news_txt = codecs.open(news_path, encoding='utf8').readlines()
     except IOError:
-        news_txt = '`news` has not yet been comprimised.'
+        news_txt = ('`news` has not yet been comprimised.',)
 
     if (session.env.get('TERM') == 'unknown'
             or session.user.get('expert', False) or term.width < 64):
@@ -73,7 +75,7 @@ def main():
             echo (pager.process_keystroke (inp))
             if pager.quit:
                 return
-        if pollevent('refresh'):
+        if session.poll_event('refresh'):
             echo (term.home + term.normal + term.clear)
             pager = get_pager(u'\n'.join(news_txt))
             echo (redraw(pager))

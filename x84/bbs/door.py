@@ -10,11 +10,11 @@ import pty
 import sys
 import os
 
-import bbs.session
-import bbs.exception
-import bbs.output
-import bbs.cp437
-import bbs.ini
+import exception
+import session
+import output
+import cp437
+import ini
 
 #pylint: disable=C0103
 #        Invalid name "logger" for type constant (should match
@@ -49,11 +49,11 @@ class Door(object):
         self.args = (self.cmd,) + args
         self.lang = lang
         if term is None:
-            self.term = bbs.session.getsession().env.get('TERM')
+            self.term = session.getsession().env.get('TERM')
         else:
             self.term = term
         if path is None:
-            self.path = bbs.ini.CFG.get('door', 'path')
+            self.path = ini.CFG.get('door', 'path')
         else:
             self.path = path
 
@@ -69,17 +69,14 @@ class Door(object):
             logger.error ('OSError in pty.fork(): %s', err)
             return
 
-        lines = str(bbs.session.getsession().terminal.height)
-        columns = str(bbs.session.getsession().terminal.width)
-
         # subprocess
         if pid == pty.CHILD:
             sys.stdout.flush ()
             env = { u'LANG': self.lang,
                     u'TERM': self.term,
                     u'PATH': self.path,
-                    u'LINES': lines,
-                    u'COLUMNS': columns,
+                    u'LINES': str(session.getterminal().height),
+                    u'COLUMNS': str(session.getterminal().width),
                     u'HOME': os.getenv('HOME') }
             try:
                 os.execvpe(self.cmd, self.args, env)
@@ -90,8 +87,8 @@ class Door(object):
         # typically, return values from 'input' events are translated keycodes,
         # such as terminal.KEY_ENTER. However, when executing a sub-door, we
         # disable this by setting session.enable_keycodes = False
-        chk_keycodes = bbs.session.getsession().enable_keycodes
-        bbs.session.getsession().enable_keycodes = False
+        swp = session.getsession().enable_keycodes
+        session.getsession().enable_keycodes = False
 
         # execute self._loop() and catch all i/o and o/s errors
         try:
@@ -105,7 +102,7 @@ class Door(object):
                 # otherwise log as an error,
                 logger.error ('OSError: %s', err)
 
-        bbs.session.getsession().enable_keycodes = chk_keycodes
+        session.getsession().enable_keycodes = swp
 
         # retrieve return code
         (pid, status) = os.waitpid (pid, 0)
@@ -121,10 +118,10 @@ class Door(object):
 
     def _loop(self):
         """
-        Poll input and outpout of ptys, raising bbs.exception.ConnectionTimeout
+        Poll input and outpout of ptys, raising exception.ConnectionTimeout
         when session idle time exceeds self.timeout.
         """
-        term = bbs.session.getsession().terminal
+        term = session.getterminal()
         while True:
             # block up to self.time_opoll for screen output
             rlist = (self.master_fd,)
@@ -135,15 +132,15 @@ class Door(object):
                     break
                 if self._TAP:
                     logger.debug ('<-- %r', data)
-                bbs.output.echo (u''.join((bbs.cp437.CP437[ord(ch)] for ch in
+                output.echo (u''.join((cp437.CP437[ord(ch)] for ch in
                     data)) if self.decode_cp437 else data.decode('utf8'))
 
             # block up to self.time_ipoll for keyboard input
-            event, data = bbs.session.getsession().read_events (
+            event, data = session.getsession().read_events (
                     events=('refresh','input'), timeout=self.time_ipoll)
             if ((None, None) == (event, data)
-                    and bbs.session.getsession().idle > self.timeout):
-                raise bbs.exception.ConnectionTimeout ('timeout in door %r',
+                    and session.getsession().idle > self.timeout):
+                raise exception.ConnectionTimeout ('timeout in door %r',
                         self.args,)
             elif event == 'refresh':
                 if data[0] == 'resize':

@@ -13,8 +13,10 @@ import sys
 import os
 import io
 
-import bbs.ini
-import bbs.exception
+import ini
+import userbase
+import exception
+import cp437
 
 #pylint: disable=C0103
 #        Invalid name "logger" for type constant (should match
@@ -28,8 +30,6 @@ def getsession():
     """
     Return session, after a .run() method has been called on any 1 instance.
     """
-    assert SESSION is not None, (
-            'a Session() instance must be initialized with .run() method')
     return SESSION
 
 def getterminal():
@@ -66,12 +66,11 @@ class Session(object):
         self.env = env
         self.lock = threading.Lock()
         self._user = None
-        self._script_stack = [(bbs.ini.CFG.get('matrix','script'),)]
-        self._tap_input = bbs.ini.CFG.getboolean('session','tap_input')
-        self._tap_output = bbs.ini.CFG.getboolean('session','tap_output')
-        self._ttylog_folder = bbs.ini.CFG.get('session', 'ttylog_folder')
-        self._record_tty = bbs.ini.CFG.getboolean('session', 'record_tty')
-        self._ttyrec_folder = bbs.ini.CFG.get('session', 'ttylog_folder')
+        self._script_stack = [(ini.CFG.get('matrix','script'),)]
+        self._tap_input = ini.CFG.getboolean('session','tap_input')
+        self._tap_output = ini.CFG.getboolean('session','tap_output')
+        self._ttyrec_folder = ini.CFG.get('system', 'ttyrecpath')
+        self._record_tty = ini.CFG.getboolean('session', 'record_tty')
         self._script_module = None
         self._fp_ttyrec = None
         self._ttyrec_fname = None
@@ -146,7 +145,7 @@ class Session(object):
         """
         if self._user is not None:
             return self._user
-        return bbs.userbase.User()
+        return userbase.User()
 
     @user.setter
     def user(self, value):
@@ -234,20 +233,20 @@ class Session(object):
                         fallback_stack)
                     self._script_stack = fallback_stack
                     continue
-            except bbs.exception.Goto, err:
+            except exception.Goto, err:
                 logger.debug ('Goto: %s', err)
                 self._script_stack = [err[0] + tuple(err[1:])]
                 continue
-            except bbs.exception.Disconnect, err:
+            except exception.Disconnect, err:
                 logger.info ('User disconnected: %s', err)
                 return
-            except bbs.exception.ConnectionClosed, err:
+            except exception.ConnectionClosed, err:
                 logger.info ('Connection Closed: %s', err)
                 return
-            except bbs.exception.ConnectionTimeout, err:
+            except exception.ConnectionTimeout, err:
                 logger.info ('Connection Timed out: %s', err)
                 return
-            except bbs.exception.ScriptError, err:
+            except exception.ScriptError, err:
                 logger.error ("ScriptError rasied: %s", err)
             except Exception, err:
                 # Pokemon exception.
@@ -267,52 +266,47 @@ class Session(object):
         self.close ()
 
 
-    def write (self, unibytes):
+    def write (self, ucs):
         """
-        Write unicode data to telnet client and record to ttyrec when
-        recording. Always write unicode intended for utf8 decoding.
+        Write unicode data to telnet client. Take special care to encode
+        as 'iso8859-1' actually intended for 'cp437'-encoded terminals.
+
+        Has side effect of updating ttyrec file when recording.
         """
-        if 0 == len(unibytes):
+        if 0 == len(ucs):
             return
-        assert isinstance(unibytes, unicode)
+        assert isinstance(ucs, unicode)
         if self.encoding == 'cp437':
-            from bbs.cp437 import CP437
-            # first, encode as iso8859-1, this will replace a lot
-            # of characters, including artwork, as '?'
-            text = unibytes.encode('iso8859-1', 'replace')
-            # then, iterate over all the unicode glyphs, mapping
-            # back to their bytestring equivalents unless there isn't
-            # a mapping, then use that position in text ('?').
-            unibytes = u''.join([unichr(CP437.index(glyph)) if glyph in CP437
-                else unicode(text[n], 'iso8859-1', 'replace') for n, glyph in
-                enumerate(unibytes)])
-        self.terminal.stream.write (unibytes,
-                is_cp437=(self.encoding == 'cp437'))
+            encoding = 'iso8859-1'
+            # out output terminal is cp437, so we need to take special care to
+            # re-encode things as "iso8859-1" but really encoded for cp437.
+            # For example, u'\u2591' becomes u'\xb0' (unichr(176)),
+            # -- the original ansi shaded block for cp437 terminals.
+            text = ucs.encode(encoding, 'replace')
+            ucs = u''.join([(unichr(cp437.CP437.index(glyph))
+                if glyph in cp437.CP437 else unicode(text[idx], encoding, 'replace'))
+                    for (idx, glyph) in enumerate(ucs)])
+        else:
+            encoding = self.encoding
+        self.terminal.stream.write (ucs, encoding)
+
         if self._tap_output and logger.isEnabledFor(logging.DEBUG):
-            logger.debug ('--> %r.', unibytes)
+            logger.debug ('--> %r.', ucs)
+
         if self._record_tty:
             if not self.is_recording:
                 self.start_recording ()
-            self._ttyrec_write (unibytes)
+            self._ttyrec_write (ucs)
 
-    def flush_event (self, event, timeout=-1):
+    def flush_event (self, event):
         """
         Flush all data buffered for 'event'.
         """
         data = 1
         while None != data:
-            data = self.read_event(event, timeout=timeout)
+            data = self.read_event(event, timeout=-1)
             if data is not None:
                 logger.debug ('flushed (%s, %s)', event, data)
-
-
-    def _event_pop(self, event):
-        """
-        Return foremost item buffered for event.
-        """
-        store = self._buffer[event].pop ()
-        return store
-
 
     def buffer_event (self, event, data=None):
         """
@@ -320,7 +314,7 @@ class Session(object):
         refresh event to be buffered.
         """
         if event == 'ConnectionClosed':
-            raise bbs.exception.ConnectionClosed (data)
+            raise exception.ConnectionClosed (data)
 
         if not self._buffer.has_key(event):
             # create new buffer;
@@ -381,9 +375,23 @@ class Session(object):
         """
         self.pipe.send ((event, data))
 
+    def poll_event(self, event):
+        """
+        Non-blocking poll for session event, returns value, if any. None
+        otherwise.
+        """
+        return self.read_event(event, -1)
+
     def read_event(self, event, timeout=None):
         """
-        Read a single event from the event pipe
+        S.read_event (event, timeout=None) --> data
+
+        Read any data for a single event.
+
+        Blocking by default, or non-blocking when timeout is -1. When timeout
+        is non-zero, specifies length of time to wait for event before
+        returning. If timeout is not None (non-blocking), None is returned if
+        no event has is waiting, or waiting after timeout has elapsed.
         """
         return self.read_events (events=(event,), timeout=timeout)[1]
 
@@ -391,12 +399,8 @@ class Session(object):
         """
            S.read_events (events, timeout=None) --> (event, data)
 
-           Poll for and return the first matched buffered IPC data for events
-           that have arrived in the form of (event, data).
-
-           A timeout of None waits indefinitely, otherwise (None, None) is
-           returned when timeout has exceeded. when timeout of -1 is used, this
-           call is non-blocking.
+           Return the first matched IPC data for any event specified in tuple
+           events, in the form of (event, data).
         """
         (event, data) = (None, None)
         # return immediately any events that are already buffered
@@ -413,8 +417,8 @@ class Session(object):
                 event, data = self.pipe.recv()
                 if event == 'exception':
                     # raise custom exception passed through pipe by name,
-                    if hasattr(bbs.exception, data[0]):
-                        raise getattr(bbs.exception, data[0]), data[1]
+                    if hasattr(exception, data[0]):
+                        raise getattr(exception, data[0]), data[1]
                     # raise a direct exception type, and its value only.
                     raise data[0], data[1]
                 self.buffer_event (event, data)
@@ -427,20 +431,28 @@ class Session(object):
             waitfor = timeleft(stime)
         return (None, None)
 
+    def _event_pop(self, event):
+        """
+        S._event_pop (event) --> data
+
+        Returns foremost item buffered for event.
+        """
+        return self._buffer[event].pop ()
+
     def runscript(self, script_name, *args):
         """
-        Execute the main() callable with optional *args of python script.
+        Execute the main() callable of script identified by 'script_name', with
+        optional *args.
         """
         self._script_stack.append ((script_name,) + args)
         logger.info ('runscript %s, %s.', script_name, args,)
         def _load_script_module():
             """
-            Load and return `scriptpath` as a module (cached).
-            It really begs wether this should be called a 'bbs module' ..
+            Load and return ini folder, `scriptpath` as a module (cached).
             """
             if self._script_module is None:
                 # load default/__init__.py as 'default',
-                script_path = bbs.ini.CFG.get('session', 'scriptpath')
+                script_path = ini.CFG.get('system', 'scriptpath')
                 base_script = os.path.basename(script_path)
                 self._script_module = imp.load_module(base_script,
                         *imp.find_module(script_name, [script_path]))
@@ -452,10 +464,10 @@ class Session(object):
         script = imp.load_module (script_name,
                 *imp.find_module (script_name, [script_module.__path__]))
         if not hasattr(script, 'main'):
-            raise bbs.exception.ScriptError (
+            raise exception.ScriptError (
                 "%s: main() not found." % (script_name,))
         if not callable(script.main):
-            raise bbs.exception.ScriptError (
+            raise exception.ScriptError (
                 "%s: main not callable." % (script_name,))
         value = script.main(*args)
         toss = self._script_stack.pop()
@@ -484,8 +496,8 @@ class Session(object):
             logger.warn ('failed to acquire ttyrec lock')
             time.sleep (0.6)
         self.rotate_recordings (dst)
-        os.rename (os.path.join(self._ttylog_folder, '%s.0' % (src,)),
-            os.path.join(self._ttylog_folder, '%s.0' % (dst,)))
+        os.rename (os.path.join(self._ttyrec_folder, '%s.0' % (src,)),
+            os.path.join(self._ttyrec_folder, '%s.0' % (dst,)))
         # release tty recording lock
         self.send_event('lock-ttyrec', ('release', None))
         self._ttyrec_fname = dst
@@ -499,14 +511,14 @@ class Session(object):
         # if .7 exists, move .7 to .8, obliterating .8; (..repeat)
         # aren't there helper functions for this stuff? :p
         for n in range(TTYREC_ROTATE):
-            src = os.path.join(self._ttylog_folder,
+            src = os.path.join(self._ttyrec_folder,
                     '%s.%d' % (key, (TTYREC_ROTATE - 1) - (n)))
-            dst = os.path.join(self._ttylog_folder,
+            dst = os.path.join(self._ttyrec_folder,
                     '%s.%d' % (key, (TTYREC_ROTATE - 1) - (n - 1)))
             if os.path.exists(src):
                 os.rename (src, dst)
                 logger.debug ('rotate ttyrec %r --> %r', src, dst)
-        dst = os.path.join(self._ttylog_folder, '%s.0' % (key,))
+        dst = os.path.join(self._ttyrec_folder, '%s.0' % (key,))
         assert TTYREC_ROTATE != 0 and not os.path.exists(dst), dst
 
     @property
@@ -569,16 +581,15 @@ class Session(object):
         # ISO 2022 in a way that allows to go back to ISO 2022 again.
         self._ttyrec_write (unichr(27) + u'%G')
 
-    def _ttyrec_write(self, unibytes):
+    def _ttyrec_write(self, ucs):
         """
-        Update ttyrec stream
+        Update ttyrec stream with unicode bytes 'ucs'.
         """
         # write bytestring to ttyrec file packed as timed byte.
         # If the current timed byte is within TTYREC_UCOMPRESS (default: 15,000
         # μsec), rewind stream and re-write the 'length' portion, and append
         # data to end of stream.
         assert self._recording, 'call start_recording() first'
-        assert isinstance(unibytes, unicode), 'unibytes is not unicode'
         timeKey = self.duration
 
         # Round down timeKey to nearest whole number,
@@ -602,7 +613,7 @@ class Session(object):
             self._ttyrec_usec = tm_usec
             self._ttyrec_len_text = textlen
             self._fp_ttyrec.flush ()
-        text = unibytes.encode('utf8', 'replace')
+        text = ucs.encode('utf8', 'replace')
         len_text = len(text)
         if (sec != self._ttyrec_sec
                 or usec - self._ttyrec_usec > TTYREC_UCOMPRESS):

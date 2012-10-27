@@ -1,18 +1,1 @@
-#!/usr/bin/env python
-# TODO: Installer creates this shell script
-# requires path to bash for shebang line,
-#      and path to virtualenv (ENV26)
-#      and path to x84 source code (`dirname $0`)
-import os
-import sys
-import x84
-
-# Root to the BBS package directory
-ROOT = os.path.dirname(sys.modules['x84'].__file__)
-
-# Hack to allow modules within x84 to be imported as modules
-sys.path.append(ROOT)
-
-# Run the BBS
-from engine import main
-sys.exit(main())
+#!/usr/bin/env python -m x84.engine

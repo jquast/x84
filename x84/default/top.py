@@ -7,9 +7,10 @@ and assigned to the session.
 Otherwise the user record of the handle passed is retreived and assigned.
 """
 
+import os
 #pylint: disable=W0614
 #        Unused import from wildcard import
-from bbs import *
+from x84.bbs import *
 
 # generated using lolcat ..
 BADGE256 = (u'\033[38;5;49m2\033[0m\033[38;5;48m5\033[0m\033[38;5;48m6\033[0m'
@@ -28,10 +29,12 @@ def display_intro():
         rstr += term.move (0, 0) + term.clear
         if session.env.get('TERM') != 'unknown':
             if term.width >= 79:
-                rstr += showcp437(dirname(__file__)+'/art/top/*.ans')
+                rstr += showcp437(os.path.join(
+                    os.path.dirname(__file__),'art', 'top', '*.ans'))
         else:
             if term.width >= 76:
-                rstr += showcp437(dirname(__file__)+'/art/top/*.asc')
+                rstr += showcp437(os.path.join(
+                    os.path.dirname(__file__), 'art', 'top', '*.asc'))
 
         if term.number_of_colors == 256:
             rstr += '\r\n\r\n' + BADGE256
@@ -57,9 +60,11 @@ def redraw_quicklogin(ynbar):
     return rstr
 
 def main(handle=None):
+    import logging
     import time
     session, term = getsession(), getterminal()
     session.activity = 'top'
+    logger = logging.getLogger()
     # 1. determine user record,
     if handle in (None, 'anonymous'):
         logger.warn ('anonymous login (source=%s).', session.source)
@@ -96,7 +101,7 @@ def main(handle=None):
                 goto ('main')
             elif yn in (u'n', u'N'):
                 break
-            if pollevent('refresh'):
+            if session.poll_event('refresh'):
                 echo (u'\r\n QUiCk lOGiN? [yn]')
     else:
         ynbar = get_ynbar()
@@ -105,7 +110,7 @@ def main(handle=None):
             inp = getch(1)
             if inp is not None:
                 echo (ynbar.process_keystroke (inp))
-            if pollevent('refresh'):
+            if session.poll_event('refresh'):
                 # redraw yes/no
                 swp = ynbar.selection
                 ynbar = get_ynbar()

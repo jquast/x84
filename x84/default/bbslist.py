@@ -8,10 +8,11 @@
     user = my@email-addr.ess
     pass = my-plaintext-password
 """
-import threading
-import time
-import requests
 import xml.etree.ElementTree
+import threading
+import requests
+import time
+import os
 
 # ideal pager window width, can be smaller tho !
 PAGER_WIDTH = 100
@@ -26,7 +27,7 @@ WAIT_FETCH = 8
 
 #pylint: disable=W0614
 #        Unused import from wildcard import
-from bbs import *
+from x84.bbs import *
 
 class FetchUpdates(threading.Thread):
     url = 'http://bbs-scene.org/api/bbslist.php'
@@ -78,7 +79,7 @@ def chk_thread(thread):
                 nlc += 1
         if nlc:
             logger.info ('%d new entries', nlc)
-            broadcastevent ('bbslist_update')
+            session.send_event ('bbslist_update', True)
         else:
             logger.info ('no new bbs-scene.org entries')
         return True
@@ -138,9 +139,9 @@ def get_bbslist():
     Returns tuple, (bbs_key, display_string)
     """
     output = list()
-    term = getterminal()
+    session, term = getsession(), getterminal()
     colors = (term.bold_white, term.bold_green, term.bold_blue)
-    flushevent ('bbslist_update')
+    session.flush_event ('bbslist_update')
     bbslist = DBProxy('bbslist').items()
     by_software = dict()
 
@@ -210,7 +211,8 @@ def banner():
     if term.width >= 72:
         output += term.home + term.normal + term.clear
         # spidy's ascii is 72-wide (and, like spidy, total nonsense ..,)
-        for line in open(dirname(__file__)+'/art/bbslist.asc'):
+        for line in open(os.path.join
+                (os.path.dirname(__file__), 'art', 'bbslist.asc')):
             output += line.center(72).rstrip() + '\r\n'
     return output + term.normal
 
@@ -293,7 +295,7 @@ def add_bbs():
     bdb[max_id + 1] = bbs
     bdb.release ()
     echo ('\r\n\r\n' + saved_msg % (max_id + 1) + '\r\n')
-    broadcastevent ('bbslist_update')
+    session.send_event ('bbslist_update', True)
     return
 
         # post to bbs-scene.org
@@ -428,13 +430,13 @@ def main ():
     while True:
         # 1. calculate and redraw screen,
         # or enter dumb pager mode (no scrolling)
-        if pollevent('refresh'):
+        if session.poll_event('refresh'):
             pager, lightbar = get_pager(), get_lightbar()
             echo (banner())
             dirty = True
         if chk_thread (thread):
             thread = None
-        if pollevent('bbslist_update'):
+        if session.poll_event('bbslist_update'):
             dirty = True
         if dirty and (session.env.get('TERM') != 'unknown' and
                 not session.user.get('expert', False)

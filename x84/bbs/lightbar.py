@@ -1,9 +1,9 @@
 """
 lightbar package for x/84 BBS, http://github.com/jquast/x84
 """
-import bbs.ansiwin
-import bbs.session
-import bbs.output
+import ansiwin
+import session
+import output
 
 NETHACK_KEYSET = { 'home': [u'y', ],
                    'end': [u'n', ],
@@ -15,7 +15,7 @@ NETHACK_KEYSET = { 'home': [u'y', ],
                    'exit': [u'q', ],
 }
 
-class Lightbar (bbs.ansiwin.AnsiWindow):
+class Lightbar (ansiwin.AnsiWindow):
     """
     This Windowing class offers a classic 'lightbar' interface.
 
@@ -33,7 +33,7 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
         """
         Initialize a lightbar of height, width, y and x position.
         """
-        bbs.ansiwin.AnsiWindow.__init__(self, height, width, yloc, xloc)
+        ansiwin.AnsiWindow.__init__(self, height, width, yloc, xloc)
         self._vitem_idx = 0
         self._vitem_lastidx = 0
         self._vitem_shift = 0
@@ -60,7 +60,7 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
         window-relative row, and displaying any valid entry there, or using
         glyphs['fill'] if out of bounds.
         """
-        term = bbs.session.getsession().terminal
+        term = session.getterminal()
         unibytes = u''
         unibytes += self.pos(self.ypadding + row, self.xpadding)
         entry = self.vitem_shift + row
@@ -102,7 +102,7 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
         """
         Initialize colors['selected'] and colors['unselected'].
         """
-        term = bbs.session.getsession().terminal
+        term = session.getterminal()
         self.colors['selected'] = term.reverse_green
         self.colors['unselected'] = term.white
 
@@ -113,7 +113,7 @@ class Lightbar (bbs.ansiwin.AnsiWindow):
         set.
         """
         self.keyset = NETHACK_KEYSET
-        term = bbs.session.getterminal()
+        term = session.getterminal()
         self.keyset['home'].append (term.KEY_HOME)
         self.keyset['end'].append (term.KEY_END)
         self.keyset['pgup'].append (term.KEY_PPAGE)

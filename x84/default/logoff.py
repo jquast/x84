@@ -4,9 +4,10 @@
 TIMEOUT = 35
 AUTOMSG_LENGTH = 40
 
+import os
 #pylint: disable=W0614
 #        Unused import from wildcard import
-from bbs import *
+from x84.bbs import *
 
 def main():
     import time
@@ -49,7 +50,7 @@ def main():
         and '[n time ago]' of record idx, and return idx, which can differ if
         adjusted to bounds.
         """
-        flushevent ('automsg')
+        session.flush_event ('automsg')
         echo (term.move(max(12, (term.height/2)),
                         max(3, (term.width /2) -(AUTOMSG_LENGTH /2))))
         echo (u''.join((term.normal, term.clear_eol, term.bold_black,)))
@@ -66,7 +67,7 @@ def main():
             .ljust(AUTOMSG_LENGTH),))
         artago = ''.join((term.blue_reverse,
           (u'%s ago' % (timeago(time.time() -t),)) \
-              .ljust (AUTOMSG_LENGTH -ansilen(artmsg))))
+              .ljust (AUTOMSG_LENGTH -len(Ansi(artmsg)))))
         # output & return new index
         echo (term.normal.join((artnick, artmsg, ' ', artago,)))
         return idx
@@ -75,9 +76,9 @@ def main():
         """
         refresh screen, database, and return database index
         """
-        flushevent ('refresh')
+        session.flush_event ('refresh')
         echo (term.move(0,0) + term.clear)
-        showcp437 (dirname(__file__)+'/art/1984.asc')
+        showcp437 (os.path.join(os.path.dirname(__file__), 'art', '1984.asc'))
         idx = refresh_automsg (-1 if idx is None else idx)
         refresh_prompt (prompt_msg)
         return idx
@@ -123,7 +124,7 @@ def main():
                         echo (write_msg .rjust(AUTOMSG_LENGTH))
                     idx = len(db)
                     db[idx] = (time.time(), nick, msg.strip())
-                    broadcastevent ('automsg', (nick, msg.strip(),))
+                    session.send_event ('automsg', True)
                     refresh_automsg (idx)
                     if (None,None) != (y, x):
                         echo (term.move (y, x))
