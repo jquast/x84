@@ -1,4 +1,5 @@
 build
+lint
 x84.egg-info
 ENV
 .DS_Store
