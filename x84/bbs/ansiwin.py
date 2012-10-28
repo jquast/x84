@@ -250,7 +250,7 @@ class AnsiWindow(object):
         import x84.bbs.output
         xloc = self.width / 2 - (
                 min(len(x84.bbs.output.Ansi(ansi_text)) / 2, self.width / 2))
-        return self.pos(self.height, xloc) + ansi_text
+        return self.pos(self.height - 1, xloc) + ansi_text
 
 
     def border(self):
