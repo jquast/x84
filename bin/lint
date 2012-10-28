@@ -1,0 +1,9 @@
+#!/bin/sh
+x84=$(cd `dirname $0`/../x84; pwd)
+find $x84 -name '*.pyc' -type f | xargs rm
+echo 'compileall,'
+python -m compileall -q $x84
+echo 'pylint,'
+pylint --rcfile=`dirname $0`/../.pylint $x84
+echo 'pychecker,'
+pychecker -F `dirname $0`/../.pycheckrc $x84
