@@ -22,8 +22,8 @@ GLYPHSETS = { 'unknown':
             'bot-right': CP437TABLE[unichr(217)],
             'left-vert': CP437TABLE[unichr(179)],
             'right-vert': CP437TABLE[unichr(179)],
-            'top-horizontal': CP437TABLE[unichr(196)],
-            'bot-horizontal': CP437TABLE[unichr(196)],
+            'top-horiz': CP437TABLE[unichr(196)],
+            'bot-horiz': CP437TABLE[unichr(196)],
             'fill': u' ',
             'erase': u' ',
             },
@@ -34,8 +34,8 @@ GLYPHSETS = { 'unknown':
             'bot-right': CP437TABLE[unichr(189)],
             'left-vert': CP437TABLE[unichr(186)],
             'right-vert': CP437TABLE[unichr(186)],
-            'top-horizontal': CP437TABLE[unichr(196)],
-            'bot-horizontal': CP437TABLE[unichr(196)],
+            'top-horiz': CP437TABLE[unichr(196)],
+            'bot-horiz': CP437TABLE[unichr(196)],
             'fill': u' ',
             'erase': u' ',
             },
@@ -265,10 +265,10 @@ class AnsiWindow(object):
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
         rstr = self.colors.get('border', u'')
-        thoriz = self.glyphs.get('top-horiz', u'') * (self.width - 2)
-        bhoriz = self.glyphs.get('bot-horiz', u'') * (self.width - 2)
-        topright = self.glyphs.get('top-right', u'')
-        botright = self.glyphs.get('bot-right', u'')
+        thoriz = self.glyphs.get('top-horiz', u'-') * (self.width - 2)
+        bhoriz = self.glyphs.get('bot-horiz', u'-') * (self.width - 2)
+        topright = self.glyphs.get('top-right', u'/')
+        botright = self.glyphs.get('bot-right', u'/')
         for row in range(0, self.height):
             # top to bottom
             for col in range (0, self.width):
@@ -277,22 +277,22 @@ class AnsiWindow(object):
                     rstr += self.pos(row, col)
                     if (row == 0) and (col == 0):
                         # top left
-                        rstr += self.glyphs.get('top-left', u'')
+                        rstr += self.glyphs.get('top-left', u'/')
                     elif (row == self.height - 1) and (col == 0):
                         # bottom left
-                        rstr += self.glyphs.get('bot-left', u'')
+                        rstr += self.glyphs.get('bot-left', u'V')
                     elif (row == 0):
                         # top right
-                        rstr += self.glyphs.get('top-right', u'')
+                        rstr += self.glyphs.get('top-right', u'V')
                     elif (row == self.height - 1):
                         # bottom right
-                        rstr += self.glyphs.get('bot-right', u'')
+                        rstr += self.glyphs.get('bot-right', u'/')
                     elif col == 0:
                         # left vertical line
-                        rstr += self.glyphs.get('left-vert', u'')
+                        rstr += self.glyphs.get('left-vert', u'|')
                     elif col == self.width - 1:
                         # right vertical line
-                        rstr += self.glyphs.get('right-vert', u'')
+                        rstr += self.glyphs.get('right-vert', u'|')
                 elif (row == 0):
                     # top row (column 1)
                     if thoriz == u'':

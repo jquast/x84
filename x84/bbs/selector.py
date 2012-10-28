@@ -51,6 +51,7 @@ class Selector(AnsiWindow):
         """
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
+        AnsiWin.init_theme(self)
         self.colors ['selected'] = term.reverse
         self.colors ['unselected'] = term.normal
 
