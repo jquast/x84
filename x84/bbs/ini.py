@@ -16,26 +16,30 @@ def init(lookup_bbs, lookup_log):
     If none our found, defaults are initialized, and the last item of each
     tuple is created.
     """
+    #pylint: disable=R0912
+    #        Too many branches (14/12)
     import ConfigParser
     root = logging.getLogger()
     def write_cfg(cfg, filepath):
         """
         Write Config to filepath.
         """
-        root.info ('saving %s', filepath)
-        fptr = open(filepath, 'wb')
-        cfg.write (fptr)
-        fptr.close ()
+        if not os.path.exists(os.path.dirname(filepath)):
+            print ('Creating folder %s\n' % (os.path.dirname(filepath),))
+            os.mkdir (os.path.dirname(filepath))
+        print ('Saving %s\n' % (filepath,))
+        cfg.write (open(filepath, 'wb'))
 
     # we exploit our last argument as, what we presume to be within a folder
     # writable by our process -- engine.py specifys as ~/.x84/somefile.ini
     loaded = False
+    cfg_logfile = lookup_log[-1]
     for cfg_logfile in lookup_log:
         # load-only defaults,
         if os.path.exists(cfg_logfile):
             print ('loading %s' % (cfg_logfile,))
             logging.config.fileConfig (cfg_logfile)
-            loaded=True
+            loaded = True
             break
     if not loaded:
         cfg_log = init_log_ini()
@@ -53,18 +57,19 @@ def init(lookup_bbs, lookup_log):
 
     loaded = False
     cfg_bbs = ConfigParser.SafeConfigParser()
+    cfg_bbsfile = lookup_bbs[-1]
     for cfg_bbsfile in lookup_bbs:
         # load defaults,
         if os.path.exists(cfg_bbsfile):
             cfg_bbs.read (cfg_bbsfile)
             root.info ('loaded %s', cfg_bbsfile)
-            loaded=True
+            loaded = True
             break
     if not loaded:
         cfg_bbs = init_bbs_ini()
         if not os.path.isdir(os.path.dirname(cfg_bbsfile)):
             try:
-                os.makedir (os.path.dirname(cfg_bbsfile))
+                os.mkdir (os.path.dirname(cfg_bbsfile))
             except OSError, err:
                 root.warn ('%s', err)
         try:
@@ -98,6 +103,7 @@ def init_bbs_ini ():
             os.path.join(os.path.expanduser('~/.x84'), 'data'))
     cfg_bbs.set('system', 'ttyrecpath',
         os.path.join(os.path.expanduser('~/.x84'), 'ttyrecordings'))
+    cfg_bbs.set('system', 'timeout', '1984')
 
     cfg_bbs.add_section('telnet')
     cfg_bbs.set('telnet', 'addr', '127.0.0.1')
@@ -118,8 +124,6 @@ def init_bbs_ini ():
     cfg_bbs.set('session', 'tap_input', 'no')
     cfg_bbs.set('session', 'tap_output', 'no')
     cfg_bbs.set('session', 'default_encoding', 'utf8')
-    cfg_bbs.set('session', 'default_ttype', 'linux')
-    cfg_bbs.set('session', 'timeout', '1984')
 
     cfg_bbs.add_section('irc')
     cfg_bbs.set('irc', 'server', 'efnet.xs4all.nl')
@@ -160,7 +164,8 @@ def init_log_ini ():
     cfg_log.set('handlers', 'keys', 'console, info_file')
 
     cfg_log.add_section('handler_console')
-    cfg_log.set('handler_console', 'class', 'x84.bbs.log.ColoredConsoleHandler')
+    cfg_log.set('handler_console', 'class',
+            'x84.bbs.log.ColoredConsoleHandler')
     cfg_log.set('handler_console', 'formatter', 'default')
     cfg_log.set('handler_console', 'args', 'tuple()')
 

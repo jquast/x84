@@ -8,8 +8,7 @@ Command-line launcher and main event loop for x/84
 __author__ = "Johannes Lundberg, Jeffrey Quast"
 __copyright__ = "Copyright 2012"
 __credits__ = ["Johannes Lundberg", "Jeffrey Quast",
-               "Wijnand Modderman-Lenstra", "zipe", "spidy",
-               "Mercyful Fate",]
+               "Wijnand Modderman-Lenstra", "zipe", "spidy", "Mercyful Fate",]
 __license__ = 'ISC'
 __version__ = '1.0rc1'
 __maintainer__ = 'Jeff Quast'
@@ -30,9 +29,9 @@ def main ():
     import sys
     import os
 
-    import terminal
-    import telnet
+    import x84.terminal
     import x84.bbs.ini
+    import x84.telnet
 
     lookup_bbs = ('/etc/x84/default.ini',
             os.path.expanduser('~/.x84/default.ini'))
@@ -50,25 +49,22 @@ def main ():
             lookup_log = (arg,)
     assert 0 == len (tail), 'Unrecognized program arguments: %s' % (tail,)
 
-    if not os.path.exists(os.path.expanduser('~/.x84')):
-        print 'Creating %s' % (os.path.expanduser('~/.x84'))
-        os.mkdir (os.path.expanduser('~/.x84'))
-    # load .ini files
+    # load/create .ini files
     x84.bbs.ini.init (lookup_bbs, lookup_log)
 
     # start telnet server
-    addr_tup = (x84.bbs.ini.CFG.get('telnet', 'addr'),
-        int(x84.bbs.ini.CFG.get('telnet', 'port')),)
-    telnet_server = telnet.TelnetServer (
-        address_pair = addr_tup,
-        on_connect = terminal.on_connect,
-        on_disconnect = terminal.on_disconnect,
-        on_naws = terminal.on_naws)
+    telnet_server = x84.telnet.TelnetServer (
+            (x84.bbs.ini.CFG.get('telnet', 'addr'),
+                x84.bbs.ini.CFG.getint('telnet', 'port'),),
+            x84.terminal.on_connect,
+            x84.terminal.on_disconnect,
+            x84.terminal.on_naws)
 
     try:
         # begin main event loop
         _loop (telnet_server)
     except KeyboardInterrupt:
+        # catch ^C, close all sockets,
         for client in telnet_server.clients.values():
             client.deactivate ()
         telnet_server.poll ()
@@ -84,21 +80,20 @@ def _loop(telnet_server):
     #         Too many statements (73/50)
     import logging
     import time
-    import db
-    import terminal
 
+    import x84.terminal
     import x84.bbs.ini
-    import x84.bbs.exception
+    import x84.db
 
     logger = logging.getLogger()
     logger.info ('listening %s/tcp', telnet_server.port)
-    client_timeout = int(x84.bbs.ini.CFG.get('session', 'timeout', '1984'))
+    timeout = x84.bbs.ini.CFG.getint('system', 'timeout')
     locks = dict ()
     # main event loop
     while True:
         # process telnet i/o
         telnet_server.poll ()
-        for client, pipe, lock in terminal.terminals():
+        for client, pipe, lock in x84.terminal.terminals():
             if not lock.acquire(False):
                 continue
             lock.release ()
@@ -110,11 +105,8 @@ def _loop(telnet_server):
                 pipe.send (('input', inp))
 
             # kick off idle users
-            if client.idle() > client_timeout:
-                logger.info ('%s timeout.', client.addrport())
-                pipe.send (('exception', (
-                    x84.bbs.exception.ConnectionTimeout, None,)))
-                client.deactivate ()
+            if client.idle() > timeout:
+                pipe.send (('disconnect', ('timeout',)))
                 continue
 
             if lock.acquire(False):
@@ -142,7 +134,7 @@ def _loop(telnet_server):
             elif event == 'global':
                 #pylint: disable=W0612
                 #         Unused variable 'o_lock'
-                for o_client, o_pipe, o_lock in terminal.terminals():
+                for o_client, o_pipe, o_lock in x84.terminal.terminals():
                     if o_client != client:
                         o_pipe.send ((event, data,))
 
@@ -151,7 +143,7 @@ def _loop(telnet_server):
                 # with a matching ('db-*',) event. sqlite is used
                 # for now and is quick, but this prevents slow
                 # database queries from locking the i/o event loop.
-                thread = db.DBHandler(pipe, event, data)
+                thread = x84.db.DBHandler(pipe, event, data)
                 thread.start ()
 
             elif event.startswith('lock'):
@@ -160,21 +152,23 @@ def _loop(telnet_server):
                 if method == 'acquire':
                     if not event in locks:
                         locks[event] = time.time ()
-                        logger.debug ('(%r, %r) granted.', event, method)
+                        logger.debug ('%r granted.', data)
                         pipe.send ((event, True,))
                     elif (stale is not None
                             and time.time() - locks[event] > stale):
-                        logger.error ('(%r, %r) stale.', event, method)
+                        logger.error ('%r stale.', data)
                         pipe.send ((event, True,))
                     else:
-                        logger.warn ('(%r, %r) failed.', event, method)
+                        logger.warn ('%r failed.', data)
                         pipe.send ((event, False,))
                 elif method == 'release':
                     if not event in locks:
-                        logger.error ('(%s, %s) not acquired.', event, method)
+                        logger.error ('%r not acquired.', data)
                     else:
                         del locks[event]
-                        logger.debug ('(%s, %s) removed.', event, data)
+                        logger.debug ('%r removed.', data)
+            else:
+                logger.error ('unhandled event %r', data)
 
             #elif event == 'pos':
             #    assert type(data) in (float, int, type(None))
@@ -182,7 +176,7 @@ def _loop(telnet_server):
             #    # returns 'pos-reply' event as a callback
             #    # mechanism, data of (None, None) indicates timeout,
             #    # otherwise (y, x) is cursor position ..
-            #    thread = terminal.POSHandler(pipe, client, lock,
+            #    thread = x84.terminal.POSHandler(pipe, client, lock,
             #        reply_event='pos-reply', timeout=data)
             #    thread.start ()
 

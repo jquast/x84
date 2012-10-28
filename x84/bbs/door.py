@@ -10,11 +10,11 @@ import pty
 import sys
 import os
 
-import exception
-import session
-import output
-import cp437
-import ini
+import x84.bbs.exception
+import x84.bbs.session
+import x84.bbs.output
+import x84.bbs.cp437
+import x84.bbs.ini
 
 #pylint: disable=C0103
 #        Invalid name "logger" for type constant (should match
@@ -35,27 +35,32 @@ class Door(object):
     decode_cp437 = False
     _TAP = False # for debugging
 
-    def __init__(self, cmd='/bin/uname', args=(), lang=u'en_US.UTF-8',
-            term=None, path=None):
+    def __init__(self, cmd='/bin/uname', args=(), env_lang=u'en_US.UTF-8',
+            env_term=None, env_path=None, env_home=None):
         """
         cmd, args = argv[0], argv[1:]
-        lang, term, and path become LANG, TERM, and PATH environment
-        variables. when term is None, the session terminal type is used.
-        When path is None, the .ini 'path' value of section [door] is used.
+        lang, term, and env_path become LANG, TERM, and PATH environment
+        variables. when term is None, the session terminal type is used.  When
+        env_path is None, the .ini 'env_path' value of section [door] is used.
+        When env_home is None, $HOME of the main process is used.
         """
         #pylint: disable=R0913
         #        Too many arguments (7/5)
         self.cmd = cmd
         self.args = (self.cmd,) + args
-        self.lang = lang
-        if term is None:
-            self.term = session.getsession().env.get('TERM')
+        self.env_lang = env_lang
+        if env_term is None:
+            self.env_term = x84.bbs.session.getsession().env.get('TERM')
         else:
-            self.term = term
-        if path is None:
-            self.path = ini.CFG.get('door', 'path')
+            self.env_term = env_term
+        if env_path is None:
+            self.env_path = x84.bbs.ini.CFG.get('door', 'path')
         else:
-            self.path = path
+            self.env_path = env_path
+        if env_home is None:
+            self.env_home = env_home
+        else:
+            self.env_home = os.getenv('HOME')
 
     def run(self):
         """
@@ -69,28 +74,31 @@ class Door(object):
             logger.error ('OSError in pty.fork(): %s', err)
             return
 
+        session = x84.bbs.session.getsession()
+        term = x84.bbs.session.getterminal()
         # subprocess
         if pid == pty.CHILD:
             sys.stdout.flush ()
-            env = { u'LANG': self.lang,
-                    u'TERM': self.term,
-                    u'PATH': self.path,
-                    u'LINES': str(session.getterminal().height),
-                    u'COLUMNS': str(session.getterminal().width),
-                    u'HOME': os.getenv('HOME') }
+            env = { u'LANG': self.env_lang,
+                    u'TERM': self.env_term,
+                    u'PATH': self.env_path,
+                    u'HOME': self.env_home,
+                    u'LINES': '%s' % (term.height,),
+                    u'COLUMNS': '%s' % (term.width,),
+                  }
             try:
                 os.execvpe(self.cmd, self.args, env)
             except OSError, err:
                 logger.error ('OSError, %s: %s', err, self.args,)
                 sys.exit (1)
 
+        # execute self._loop() and catch all i/o and o/s errors
+        #
         # typically, return values from 'input' events are translated keycodes,
         # such as terminal.KEY_ENTER. However, when executing a sub-door, we
         # disable this by setting session.enable_keycodes = False
-        swp = session.getsession().enable_keycodes
-        session.getsession().enable_keycodes = False
-
-        # execute self._loop() and catch all i/o and o/s errors
+        swp = session.enable_keycodes
+        session.enable_keycodes = False
         try:
             logger.info ('exec/%s: %s', pid, ' '.join(self.args))
             self._loop()
@@ -101,18 +109,13 @@ class Door(object):
             if 'Errno 5' not in str(err):
                 # otherwise log as an error,
                 logger.error ('OSError: %s', err)
-
-        session.getsession().enable_keycodes = swp
-
-        # retrieve return code
+        session.enable_keycodes = swp
         (pid, status) = os.waitpid (pid, 0)
         res = status >> 8
-
         if res != 0:
-            logger.warn ('child %s has non-zero exit code: %s', pid, res)
+            logger.error ('%s child %s exit %d', self.cmd, pid, res)
         else:
-            logger.info ('%s child %s exit %s.', self.cmd, pid, res)
-
+            logger.info ('%s child %s exit 0', self.cmd, pid)
         os.close (self.master_fd)
         return res
 
@@ -121,7 +124,7 @@ class Door(object):
         Poll input and outpout of ptys, raising exception.ConnectionTimeout
         when session idle time exceeds self.timeout.
         """
-        term = session.getterminal()
+        term = x84.bbs.session.getterminal()
         while True:
             # block up to self.time_opoll for screen output
             rlist = (self.master_fd,)
@@ -132,16 +135,20 @@ class Door(object):
                     break
                 if self._TAP:
                     logger.debug ('<-- %r', data)
-                output.echo (u''.join((cp437.CP437[ord(ch)] for ch in
-                    data)) if self.decode_cp437 else data.decode('utf8'))
+                # output to terminal as utf8, unless we specify decode_cp437
+                # for special dos-emulated doors such as lord.
+                x84.bbs.output.echo (u''.join(
+                        (x84.bbs.cp437.CP437[ord(ch)] for ch in data)
+                    ) if self.decode_cp437
+                    else data.decode('utf8'))
 
             # block up to self.time_ipoll for keyboard input
-            event, data = session.getsession().read_events (
+            event, data = x84.bbs.session.getsession().read_events (
                     events=('refresh','input'), timeout=self.time_ipoll)
             if ((None, None) == (event, data)
-                    and session.getsession().idle > self.timeout):
-                raise exception.ConnectionTimeout ('timeout in door %r',
-                        self.args,)
+                    and x84.bbs.session.getsession().idle > self.timeout):
+                raise x84.bbs.exception.ConnectionTimeout (
+                        'timeout in door %r', self.args,)
             elif event == 'refresh':
                 if data[0] == 'resize':
                     logger.debug ('send TIOCSWINSZ: %dx%d',

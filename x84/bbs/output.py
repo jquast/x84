@@ -5,7 +5,7 @@ import re
 import math
 import warnings
 
-import session
+import x84.bbs.session
 
 ANSI_PIPE = re.compile(r'(\|\d\d)')
 ANSI_RIGHT = re.compile(r'\033\[(\d{1,4})C')
@@ -18,10 +18,11 @@ def echo(ucs):
     Output unicode bytes and terminal sequences to session terminal.
     non-unicode is accepted, translated as iso8859-1, and a warning is emitted.
     """
+    session = x84.bbs.session.getsession()
     if not isinstance(ucs, unicode):
         warnings.warn('non-unicode: %r' % (ucs,), UnicodeWarning, 2)
-        return session.getsession().write (ucs.decode('iso8859-1'))
-    return session.getsession().write (ucs)
+        return session.write (ucs.decode('iso8859-1'))
+    return session.write (ucs)
 
 class Ansi(unicode):
     """
@@ -216,7 +217,7 @@ class Ansi(unicode):
         Return new terminal sequence, replacing 'pipe codes', such as u'|03'
         with this terminals equivalent attribute sequence.
         """
-        term = session.getterminal()
+        term = x84.bbs.session.getterminal()
         rstr = u''
         ptr = 0
         match = None

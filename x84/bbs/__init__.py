@@ -2,45 +2,45 @@
 x/84 bbs module, https://github.com/jquast/x84
 """
 
-from userbase import list_users, get_user, find_user, User, Group
-from exception import Disconnect, Goto, ConnectionTimeout
-from editor import LineEditor, ScrollingEditor
-from output import echo, timeago, Ansi, chompn
-from ansiwin import AnsiWindow
-from selector import Selector
-from lightbar import Lightbar
-from cp437 import from_cp437
-from dbproxy import DBProxy
-from pager import Pager
-from door import Door
+from x84.bbs.userbase import list_users, get_user, find_user, User, Group
+from x84.bbs.exception import Disconnect, Goto, ConnectionTimeout
+from x84.bbs.editor import LineEditor, ScrollingEditor
+from x84.bbs.output import echo, timeago, Ansi, chompn
+from x84.bbs.ansiwin import AnsiWindow
+from x84.bbs.selector import Selector
+from x84.bbs.lightbar import Lightbar
+from x84.bbs.cp437 import from_cp437
+from x84.bbs.dbproxy import DBProxy
+from x84.bbs.pager import Pager
+from x84.bbs.door import Door
 
 def goto(*args):
     """
     Change bbs script. Does not return.
     """
-    import exception
-    raise exception.Goto(args)
+    import x84.bbs.exception
+    raise x84.bbs.exception.Goto(args)
 
 def disconnect():
     """
     Disconnect session. Does not return.
     """
-    import exception
-    raise exception.Disconnect('disconnect')
+    import x84.bbs.exception
+    raise x84.bbs.exception.Disconnect('disconnect')
 
 def getsession():
     """
     Returns Session of calling process.
     """
-    import session
-    return session.getsession()
+    import x84.bbs.session
+    return x84.bbs.session.getsession()
 
 def getterminal():
     """
     Returns Terminal of calling process.
     """
-    import session
-    return session.getterminal()
+    import x84.bbs.session
+    return x84.bbs.session.getterminal()
 
 def getch(timeout=None):
     """

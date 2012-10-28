@@ -13,10 +13,10 @@ import sys
 import os
 import io
 
-import ini
-import userbase
-import exception
-import cp437
+import x84.bbs.exception
+import x84.bbs.userbase
+import x84.bbs.cp437
+import x84.bbs.ini
 
 #pylint: disable=C0103
 #        Invalid name "logger" for type constant (should match
@@ -66,11 +66,11 @@ class Session(object):
         self.env = env
         self.lock = threading.Lock()
         self._user = None
-        self._script_stack = [(ini.CFG.get('matrix','script'),)]
-        self._tap_input = ini.CFG.getboolean('session','tap_input')
-        self._tap_output = ini.CFG.getboolean('session','tap_output')
-        self._ttyrec_folder = ini.CFG.get('system', 'ttyrecpath')
-        self._record_tty = ini.CFG.getboolean('session', 'record_tty')
+        self._script_stack = [(x84.bbs.ini.CFG.get('matrix','script'),)]
+        self._tap_input = x84.bbs.ini.CFG.getboolean('session','tap_input')
+        self._tap_output = x84.bbs.ini.CFG.getboolean('session','tap_output')
+        self._ttyrec_folder = x84.bbs.ini.CFG.get('system', 'ttyrecpath')
+        self._record_tty = x84.bbs.ini.CFG.getboolean('session', 'record_tty')
         self._script_module = None
         self._fp_ttyrec = None
         self._ttyrec_fname = None
@@ -145,7 +145,7 @@ class Session(object):
         """
         if self._user is not None:
             return self._user
-        return userbase.User()
+        return x84.bbs.userbase.User()
 
     @user.setter
     def user(self, value):
@@ -233,20 +233,20 @@ class Session(object):
                         fallback_stack)
                     self._script_stack = fallback_stack
                     continue
-            except exception.Goto, err:
+            except x84.bbs.exception.Goto, err:
                 logger.debug ('Goto: %s', err)
                 self._script_stack = [err[0] + tuple(err[1:])]
                 continue
-            except exception.Disconnect, err:
+            except x84.bbs.exception.Disconnect, err:
                 logger.info ('User disconnected: %s', err)
                 return
-            except exception.ConnectionClosed, err:
+            except x84.bbs.exception.ConnectionClosed, err:
                 logger.info ('Connection Closed: %s', err)
                 return
-            except exception.ConnectionTimeout, err:
+            except x84.bbs.exception.ConnectionTimeout, err:
                 logger.info ('Connection Timed out: %s', err)
                 return
-            except exception.ScriptError, err:
+            except x84.bbs.exception.ScriptError, err:
                 logger.error ("ScriptError rasied: %s", err)
             except Exception, err:
                 # Pokemon exception.
@@ -283,8 +283,9 @@ class Session(object):
             # For example, u'\u2591' becomes u'\xb0' (unichr(176)),
             # -- the original ansi shaded block for cp437 terminals.
             text = ucs.encode(encoding, 'replace')
-            ucs = u''.join([(unichr(cp437.CP437.index(glyph))
-                if glyph in cp437.CP437 else unicode(text[idx], encoding, 'replace'))
+            ucs = u''.join([(unichr(x84.bbs.cp437.CP437.index(glyph))
+                if glyph in x84.bbs.cp437.CP437
+                else unicode(text[idx], encoding, 'replace'))
                     for (idx, glyph) in enumerate(ucs)])
         else:
             encoding = self.encoding
@@ -314,7 +315,7 @@ class Session(object):
         refresh event to be buffered.
         """
         if event == 'ConnectionClosed':
-            raise exception.ConnectionClosed (data)
+            raise x84.bbs.exception.ConnectionClosed (data)
 
         if not self._buffer.has_key(event):
             # create new buffer;
@@ -417,8 +418,8 @@ class Session(object):
                 event, data = self.pipe.recv()
                 if event == 'exception':
                     # raise custom exception passed through pipe by name,
-                    if hasattr(exception, data[0]):
-                        raise getattr(exception, data[0]), data[1]
+                    if hasattr(x84.bbs.exception, data[0]):
+                        raise getattr(x84.bbs.exception, data[0]), data[1]
                     # raise a direct exception type, and its value only.
                     raise data[0], data[1]
                 self.buffer_event (event, data)
@@ -452,7 +453,7 @@ class Session(object):
             """
             if self._script_module is None:
                 # load default/__init__.py as 'default',
-                script_path = ini.CFG.get('system', 'scriptpath')
+                script_path = x84.bbs.ini.CFG.get('system', 'scriptpath')
                 base_script = os.path.basename(script_path)
                 self._script_module = imp.load_module(base_script,
                         *imp.find_module(script_name, [script_path]))
@@ -464,10 +465,10 @@ class Session(object):
         script = imp.load_module (script_name,
                 *imp.find_module (script_name, [script_module.__path__]))
         if not hasattr(script, 'main'):
-            raise exception.ScriptError (
+            raise x84.bbs.exception.ScriptError (
                 "%s: main() not found." % (script_name,))
         if not callable(script.main):
-            raise exception.ScriptError (
+            raise x84.bbs.exception.ScriptError (
                 "%s: main not callable." % (script_name,))
         value = script.main(*args)
         toss = self._script_stack.pop()

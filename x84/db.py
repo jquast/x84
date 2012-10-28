@@ -1,8 +1,8 @@
 """
 Database request handler for x/84 http://github.com/jquast/x84
 """
-import bbs.exception
-import bbs.ini
+import x84.bbs.exception
+import x84.bbs.ini
 import threading
 import logging
 import sys
@@ -20,7 +20,7 @@ def get_db(schema):
     Returns a shared SqliteDict instance, creating a new one if not found
     """
     FILELOCK.acquire()
-    datapath = bbs.ini.CFG.get('system', 'datapath')
+    datapath = x84.bbs.ini.CFG.get('system', 'datapath')
     if not schema in DATABASES:
         assert schema.isalnum()
         if not os.path.exists(datapath):
@@ -47,6 +47,8 @@ class DBHandler(threading.Thread):
         """
         self.pipe = pipe
         self.event = event
+        assert event[2] in ('-', '='), ('event name must match db[-=]event')
+        self.iterable = event[2] == '='
         self.schema = event[3:]
         self.table = data[0]
         self.cmd = data[1]
@@ -65,24 +67,25 @@ class DBHandler(threading.Thread):
             "'%(cmd)s' not a valid method of <type 'dict'>" % self
         logger.debug ('%s/%s%s', self.schema, self.cmd,
                 '(*%d)' if len(self.args) else '')
+
+        #pylint: disable=W0703
+        #        Catching too general exception Exception
         try:
             if 0 == len(self.args):
                 result = func()
             else:
                 result = func(*self.args)
         except Exception, err:
-            # Pokemon exception.
-            e_type, e_value, e_tb = sys.exc_info()
-            self.pipe.send ((bbs.exception.DatabaseError, (e_type, err)))
-            return
-        if self.event[2] == '-':
-            self.pipe.send ((self.event, result))
-        elif self.event[2] == '=':
-            # wrap iteratable with special marker,
-            self.pipe.send ((self.event, (None, 'StartIteration'),))
-            for item in iter(result):
-                self.pipe.send ((self.event, item,))
-            self.pipe.send ((self.event, (None, StopIteration,),))
-        else:
-            assert False
+            # Pokemon exception; send (err_type, err_value)
+            return self.pipe.send ((x84.bbs.exception.DatabaseError,
+                (sys.exc_info()[0], err)))
 
+        # single value result,
+        if not self.iterable:
+            return self.pipe.send ((self.event, result))
+
+        # iterable value result,
+        self.pipe.send ((self.event, (None, 'StartIteration'),))
+        for item in iter(result):
+            self.pipe.send ((self.event, item,))
+        return self.pipe.send ((self.event, (None, StopIteration,),))

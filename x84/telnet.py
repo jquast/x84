@@ -32,16 +32,14 @@ which is meant for MUD's. This server would not be safe for MUD clients.
 #------------------------------------------------------------------------------
 
 import warnings
-import inspect
 import socket
 import select
 import array
 import time
 import sys
-import os
 import logging
 
-import bbs.exception
+import x84.bbs.exception
 
 #pylint: disable=C0103
 #        Invalid name "logger" for type constant
@@ -157,7 +155,7 @@ class TelnetServer(object):
         for client in recv_ready:
             try:
                 client.socket_recv ()
-            except bbs.exception.ConnectionClosed, err:
+            except x84.bbs.exception.ConnectionClosed, err:
                 logger.debug ('%s connection closed: %s.',
                         client.addrport(), err)
                 client.deactivate()
@@ -168,7 +166,7 @@ class TelnetServer(object):
         for client in slist:
             try:
                 client.socket_send ()
-            except bbs.exception.ConnectionClosed, err:
+            except x84.bbs.exception.ConnectionClosed, err:
                 logger.debug ('%s connection closed: %s.',
                         client.addrport(), err)
                 client.deactivate()
@@ -242,23 +240,24 @@ def name_option(option):
         if option == v and k not in ('SEND', 'IS',)])
     return values if values != '' else str(ord(option))
 
-def debug_option(func):
-    """
-    This function is a decorator that debug prints the 'from' address for
-    callables decorated with this. This helps during telnet negotiation, to
-    understand which function sets or checks local or remote option states.
-    """
-    def wrapper(self, *args):
-        """
-        inner wrapper for debug_option
-        """
-        stack = inspect.stack()
-        logger.debug ('%s:%s %s(%s%s)',
-            os.path.basename(stack[1][1]), stack[1][2],
-            func.__name__, name_option(args[0]),
-            ', %s' % (args[1],) if len(args) == 2 else '')
-        return func(self, *args)
-    return wrapper
+#import inspect
+#def debug_option(func):
+#    """
+#    This function is a decorator that debug prints the 'from' address for
+#    callables decorated with this. This helps during telnet negotiation, to
+#    understand which function sets or checks local or remote option states.
+#    """
+#    def wrapper(self, *args):
+#        """
+#        inner wrapper for debug_option
+#        """
+#        stack = inspect.stack()
+#        logger.debug ('%s:%s %s(%s%s)',
+#            os.path.basename(stack[1][1]), stack[1][2],
+#            func.__name__, name_option(args[0]),
+#            ', %s' % (args[1],) if len(args) == 2 else '')
+#        return func(self, *args)
+#    return wrapper
 
 
 #------------------------------------------------------------------------Telnet
@@ -318,7 +317,8 @@ class TelnetClient(object):
         Buffer unicode string, encoded for client as 'encoding'.
         """
         ## Must be escaped 255 (IAC + IAC) to avoid IAC intepretation
-        self.send_str (ucs.encode(encoding, 'replace').replace(chr(255), 2*chr(255)))
+        self.send_str (ucs.encode(encoding, 'replace')
+                .replace(chr(255), 2*chr(255)))
 
     def deactivate(self):
         """
@@ -433,7 +433,8 @@ class TelnetClient(object):
     def socket_send(self):
         """
         Called by TelnetServer.poll() when send data is ready.  Send any
-        data buffered, trim self.send_buffer to bytes sent, and return number of bytes sent. bbs.exception.ConnectionClosed may be raised.
+        data buffered, trim self.send_buffer to bytes sent, and return number
+        of bytes sent. x84.bbs.exception.ConnectionClosed may be raised.
         """
         if not self.send_ready():
             warnings.warn ('socket_send() called on empty buffer',
@@ -441,12 +442,12 @@ class TelnetClient(object):
             return 0
         def send(send_bytes):
             """
-            raises bbs.exception.ConnectionClosed on sock.send err
+            raises x84.bbs.exception.ConnectionClosed on sock.send err
             """
             try:
                 return self.sock.send(send_bytes)
             except socket.error, err:
-                raise bbs.exception.ConnectionClosed (
+                raise x84.bbs.exception.ConnectionClosed (
                         'socket send %d:%s' % (err[0], err[1],))
         ready_bytes = bytes(''.join(self.send_buffer))
         sent = send(ready_bytes)
@@ -471,16 +472,17 @@ class TelnetClient(object):
         Called by TelnetServer.poll() when recv data is ready.  Read any
         data on socket, processing telnet commands, and buffering all
         other bytestrings to self.recv_buffer.  If data is not received,
-        or the connection is closed, bbs.exception.ConnectionClosed is raised.
+        or the connection is closed, x84.bbs.exception.ConnectionClosed is
+        raised.
         """
         recv = 0
         try:
             data = self.sock.recv (self.BLOCKSIZE_RECV)
             recv = len(data)
             if 0 == recv:
-                raise bbs.exception.ConnectionClosed ('Requested by client')
+                raise x84.bbs.exception.ConnectionClosed ('Closed by client')
         except socket.error, err:
-            raise bbs.exception.ConnectionClosed (
+            raise x84.bbs.exception.ConnectionClosed (
                     'socket errorno %d: %s' % (err[0], err[1],))
         self.bytes_received += recv
         self.last_input_time = time.time()
@@ -512,7 +514,7 @@ class TelnetClient(object):
                 self.telnet_sb_buffer.fromstring (byte)
                 ## Sanity check on length
                 if len(self.telnet_sb_buffer) >= self.SB_MAXLEN:
-                    raise bbs.exception.ConnectionClosed (
+                    raise x84.bbs.exception.ConnectionClosed (
                             'sub-negotiation buffer filled')
             else:
                 ## Just a normal NVT character
@@ -668,7 +670,7 @@ class TelnetClient(object):
                 assert local_status is UNKNOWN
                 logger.debug ('local status, UNKNOWN %s (not sent)',
                         name_option(opt))
-            remote_status = self._check_remote_option(opt)
+            remote_status = self.check_remote_option(opt)
             if remote_status:
                 logger.debug ('remote status, DO %s',
                         name_option(opt))
@@ -706,7 +708,7 @@ class TelnetClient(object):
                 self._iac_wont(SGA)
         elif option == LINEMODE:
             # client demands no linemode.
-            if self._check_remote_option(LINEMODE) is not False:
+            if self.check_remote_option(LINEMODE) is not False:
                 self._note_remote_option(LINEMODE, False)
                 self._iac_wont(LINEMODE)
         else:
@@ -722,15 +724,15 @@ class TelnetClient(object):
         if self._check_reply_pending(option):
             self._note_reply_pending(option, False)
         if option == ECHO:
-            raise bbs.exception.ConnectionClosed \
+            raise x84.bbs.exception.ConnectionClosed \
                 ('Refuse WILL ECHO by client, closing connection.')
         elif option == NAWS:
-            if self._check_remote_option(NAWS) is not True:
+            if self.check_remote_option(NAWS) is not True:
                 self._note_remote_option(NAWS, True)
                 self._note_local_option(NAWS, True)
                 self._iac_do(NAWS)
         elif option == STATUS:
-            if self._check_remote_option(STATUS) is not True:
+            if self.check_remote_option(STATUS) is not True:
                 self._note_remote_option(STATUS, True)
                 self.send_str (bytes(''.join((
                     IAC, SB, STATUS, SEND, IAC, SE)))) # go ahead
@@ -754,14 +756,14 @@ class TelnetClient(object):
             # character when transmitting data characters, or the
             # sender of this command confirms it will now begin suppressing
             # transmission of GAs with transmitted data characters.
-            if self._check_remote_option(SGA) is not True:
+            if self.check_remote_option(SGA) is not True:
                 self._note_remote_option(SGA, True)
                 self._note_local_option(SGA, True)
                 self._iac_will(SGA)
         elif option == NEW_ENVIRON:
             if self._check_reply_pending(NEW_ENVIRON):
                 self._note_reply_pending(NEW_ENVIRON, False)
-            if self._check_remote_option(NEW_ENVIRON) in (False, UNKNOWN):
+            if self.check_remote_option(NEW_ENVIRON) in (False, UNKNOWN):
                 self._note_remote_option(NEW_ENVIRON, True)
                 self._note_local_option(NEW_ENVIRON, True)
                 self._iac_do(NEW_ENVIRON)
@@ -769,7 +771,7 @@ class TelnetClient(object):
         elif option == TTYPE:
             if self._check_reply_pending(TTYPE):
                 self._note_reply_pending(TTYPE, False)
-            if self._check_remote_option(TTYPE) in (False, UNKNOWN):
+            if self.check_remote_option(TTYPE) in (False, UNKNOWN):
                 self._note_remote_option(TTYPE, True)
                 self._iac_do(TTYPE)
                 # trigger SB response
@@ -784,21 +786,21 @@ class TelnetClient(object):
         Process a WONT command option received by DE.
         """
         if option == ECHO:
-            if self._check_remote_option(ECHO) in (True, UNKNOWN):
+            if self.check_remote_option(ECHO) in (True, UNKNOWN):
                 self._note_remote_option(ECHO, False)
                 self._iac_dont(ECHO)
         elif option == SGA:
             if self._check_reply_pending(SGA):
                 self._note_reply_pending(SGA, False)
                 self._note_remote_option(SGA, False)
-            elif self._check_remote_option(SGA) in (True, UNKNOWN):
+            elif self.check_remote_option(SGA) in (True, UNKNOWN):
                 self._note_remote_option(SGA, False)
                 self._iac_dont(SGA)
         elif option == TTYPE:
             if self._check_reply_pending(TTYPE):
                 self._note_reply_pending(TTYPE, False)
                 self._note_remote_option(TTYPE, False)
-            elif self._check_remote_option(TTYPE) in (True, UNKNOWN):
+            elif self.check_remote_option(TTYPE) in (True, UNKNOWN):
                 self._note_remote_option(TTYPE, False)
                 self._iac_dont(TTYPE)
         else:
@@ -923,7 +925,7 @@ class TelnetClient(object):
         self.telnet_opt_dict[option].local_option = state
 
     #@debug_option
-    def _check_remote_option(self, option):
+    def check_remote_option(self, option):
         """
         Test the status of remote negotiated Telnet options.
         """

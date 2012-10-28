@@ -4,3 +4,4 @@ sauce
 requests
 py-bcrypt
 pylint
+PyChecker

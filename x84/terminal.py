@@ -1,16 +1,14 @@
-# -*- coding: utf-8 -*-
 """
 Terminal handler for x/84 bbs.  http://github.com/jquast/x84
 """
-# utf-8 test 很高兴见到你
 import multiprocessing
+import threading
 import logging
 import socket
-import threading
 import time
 import re
 
-import blessings
+import x84.bbs.exception
 
 #pylint: disable=C0103
 #        Invalid name "logger" for type constant
@@ -45,16 +43,14 @@ def start_process(pipe, origin, env):
         termtype: TERM string (used to initialize curses)
         env: dictionary of client environment variables
     """
-    import bbs.session
     # curses is initialized for the first time. telnet negotiation did its best
     # to determine the TERM. The default, 'unknown', is equivalent to a dumb
     # terminal.
-    term = blessings.Terminal (env.get('TERM', 'unknown'), IPCStream(pipe),
+    term = x84.blessings.Terminal (env.get('TERM', 'unknown'), IPCStream(pipe),
             int(env.get('LINES', '24')), int(env.get('COLUMNS', '80')))
 
     # spawn and begin a new session
-    new_session = bbs.session.Session (term, pipe, origin, env)
-    print 'XYZSY'
+    new_session = x84.bbs.session.Session (term, pipe, origin, env)
 
     # our root handler has dangerously forked file descriptors.
     # remove any existing handlers, and re-address our root logging handler
@@ -62,7 +58,7 @@ def start_process(pipe, origin, env):
     root = logging.getLogger()
     for hdlr in root.handlers:
         root.removeHandler (hdlr)
-    root.addHandler (bbs.session.IPCLogHandler (pipe))
+    root.addHandler (x84.bbs.session.IPCLogHandler (pipe))
 
     try:
         new_session.run ()
@@ -207,7 +203,7 @@ class ConnectTelnetTerminal (threading.Thread):
         # This denied telnetlib.py,
         #time.sleep (0.15)
         #if 0 == self.client.bytes_received:
-        #    raise exception.ConnectionClosed (
+        #    raise x84.bbs.exception.ConnectionClosed (
         #            'telnet negotiation ignored by client')
 
     def run(self):
@@ -215,7 +211,6 @@ class ConnectTelnetTerminal (threading.Thread):
         Negotiate and inquire about terminal type, telnet options, window size,
         and tcp socket options before spawning a new session.
         """
-        from bbs import exception
         try:
             self._set_socket_opts ()
             self.banner ()
@@ -223,7 +218,7 @@ class ConnectTelnetTerminal (threading.Thread):
         except socket.error, err:
             logger.info ('Connection closed: %s', err)
             self.client.deactivate ()
-        except exception.ConnectionClosed, err:
+        except x84.bbs.exception.ConnectionClosed, err:
             logger.info ('Connection closed: %s', err)
             self.client.deactivate ()
 
@@ -240,28 +235,26 @@ class ConnectTelnetTerminal (threading.Thread):
         Set socket non-blocking and enable TCP KeepAlive.
         """
         self.client.sock.setblocking (0)
-        self.client.sock.setsockopt (socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        self.client.sock.setsockopt (
+                socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
 
 
     def _try_env(self):
         """
         Try to snarf out some environment variables from unix machines.
         """
-        #pylint: disable=W0212
-        # Access to a protected member _check_remote_option of a client class
-
-        from telnet import NEW_ENVIRON, UNKNOWN
-        if self.client._check_remote_option(NEW_ENVIRON) is True:
+        from x84.telnet import NEW_ENVIRON, UNKNOWN
+        if self.client.check_remote_option(NEW_ENVIRON) is True:
             logger.debug('environment enabled (unsolicted)')
             return
         logger.debug('request-do-env')
         self.client.request_do_env ()
         self.client.socket_send() # push
         st_time = time.time()
-        while self.client._check_remote_option(NEW_ENVIRON) is UNKNOWN \
+        while self.client.check_remote_option(NEW_ENVIRON) is UNKNOWN \
             and self._timeleft(st_time):
             time.sleep (self.TIME_POLL)
-        if self.client._check_remote_option(NEW_ENVIRON) is UNKNOWN:
+        if self.client.check_remote_option(NEW_ENVIRON) is UNKNOWN:
             logger.debug ('failed: NEW_ENVIRON')
             return
 
@@ -313,7 +306,8 @@ class ConnectTelnetTerminal (threading.Thread):
             match = response_pattern.search (inp)
             if match:
                 height, width = match.groups()
-                self.client.rows, self.client.columns = int(height), int(width)
+                self.client.rows = int(height)
+                self.client.columns = int(width)
                 logger.info ('window size: %dx%d (corner-query hack)',
                         self.client.columns, self.client.rows)
                 if self.client.env['TERM'] == 'unknown':
@@ -322,6 +316,7 @@ class ConnectTelnetTerminal (threading.Thread):
                 self.client.env['LINES'] = height
                 self.client.env['COLUMNS'] = width
                 return
+
         logger.debug ('failed: negotiate about window size')
         # set to 80x24 if not detected
         self.client.columns, self.client.rows = 80, 24
@@ -335,7 +330,6 @@ class ConnectTelnetTerminal (threading.Thread):
         """
         Negotiate terminal type (TTYPE) telnet option (on).
         """
-        from bbs import ini
         detected = lambda: self.client.env['TERM'] != 'unknown'
         if detected():
             logger.info ('terminal type: %s (unsolicited)' %
@@ -352,62 +346,60 @@ class ConnectTelnetTerminal (threading.Thread):
                 (self.client.env['TERM'],))
             return
         logger.warn ('failed: terminal type not determined.')
-        self.client.env['TERM'] = ini.CFG.get('session', 'default_ttype')
-        logger.info ('terminal type: %s (default)', self.client.env['TERM'])
 
 # Deprecate; do we really want this?
-class POSHandler(threading.Thread):
-    """
-    This thread requires a client pipe, The telnet terminal is queried for its
-    cursor position, and that position is sent as 'pos' event to the child
-    pipe, otherwise a ('pos-reply', None) is sent if no cursor position is
-    reported within time_pause.
-    """
-    time_poll = 0.01
-    time_pause = 1.75
-    time_wait = 1.30
-    def __init__(self, pipe, client, lock, reply_event='pos-reply'):
-        self.pipe = pipe
-        self.client = client
-        self.lock = lock
-        self.reply_event = reply_event
-        threading.Thread.__init__ (self)
-
-    def _timeleft(self, st_time):
-        """
-        Returns True when difference of current time and t is below timeout
-        """
-        return bool(time.time() -st_time < self.time_wait)
-
-    def run(self):
-        logger.debug ('getpos?')
-        data = (None, None)
-        #pylint: disable=W0612
-        #        Unused variable 'ttype'
-        for (ttype, seq, pattern) in ConnectTelnetTerminal.WINSIZE_TRICK:
-            self.lock.acquire ()
-            self.client.send_str (seq)
-            self.client.socket_send() # push
-            st_time = time.time()
-            while self.client.idle() < self.time_pause \
-            and self._timeleft(st_time):
-                time.sleep (self.time_poll)
-            inp = self.client.get_input()
-            self.lock.release ()
-            match = pattern.search (inp)
-            logger.debug ('x %r/%d', inp, len(inp),)
-            if match:
-                row, col = match.groups()
-                try:
-                    data = (int(row)-1, int(col)-1)
-                    break
-                except ValueError:
-                    pass
-            if len(inp):
-                # holy crap, this isn't for us ;^)
-                self.pipe.send (('input', inp))
-                logger.error ('input bypass %r', inp)
-                continue
-        logger.debug ('send: %s, %r', self.reply_event, data,)
-        self.pipe.send ((self.reply_event, (data,)))
-        return
+#class POSHandler(threading.Thread):
+#    """
+#    This thread requires a client pipe, The telnet terminal is queried for its
+#    cursor position, and that position is sent as 'pos' event to the child
+#    pipe, otherwise a ('pos-reply', None) is sent if no cursor position is
+#    reported within time_pause.
+#    """
+#    time_poll = 0.01
+#    time_pause = 1.75
+#    time_wait = 1.30
+#    def __init__(self, pipe, client, lock, reply_event='pos-reply'):
+#        self.pipe = pipe
+#        self.client = client
+#        self.lock = lock
+#        self.reply_event = reply_event
+#        threading.Thread.__init__ (self)
+#
+#    def _timeleft(self, st_time):
+#        """
+#        Returns True when difference of current time and t is below timeout
+#        """
+#        return bool(time.time() -st_time < self.time_wait)
+#
+#    def run(self):
+#        logger.debug ('getpos?')
+#        data = (None, None)
+#        #pylint: disable=W0612
+#        #        Unused variable 'ttype'
+#        for (ttype, seq, pattern) in ConnectTelnetTerminal.WINSIZE_TRICK:
+#            self.lock.acquire ()
+#            self.client.send_str (seq)
+#            self.client.socket_send() # push
+#            st_time = time.time()
+#            while self.client.idle() < self.time_pause \
+#            and self._timeleft(st_time):
+#                time.sleep (self.time_poll)
+#            inp = self.client.get_input()
+#            self.lock.release ()
+#            match = pattern.search (inp)
+#            logger.debug ('x %r/%d', inp, len(inp),)
+#            if match:
+#                row, col = match.groups()
+#                try:
+#                    data = (int(row)-1, int(col)-1)
+#                    break
+#                except ValueError:
+#                    pass
+#            if len(inp):
+#                # holy crap, this isn't for us ;^)
+#                self.pipe.send (('input', inp))
+#                logger.error ('input bypass %r', inp)
+#                continue
+#        logger.debug ('send: %s, %r', self.reply_event, data,)
+#        self.pipe.send ((self.reply_event, (data,)))
+#        return

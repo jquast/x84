@@ -1,9 +1,9 @@
 """
 Pager class for x/84, http://github.com/jquast/x84/
 """
-import output
-import ansiwin
-import session
+import x84.bbs.output
+import x84.bbs.ansiwin
+import x84.bbs.session
 
 NETHACK_KEYSET = {
         'refresh': [unichr(12), ],
@@ -16,7 +16,7 @@ NETHACK_KEYSET = {
         'exit': [u'q', u'Q', ],
         }
 
-class Pager(ansiwin.AnsiWindow):
+class Pager(x84.bbs.ansiwin.AnsiWindow):
     """
     Scrolling ansi viewer
     """
@@ -28,7 +28,7 @@ class Pager(ansiwin.AnsiWindow):
         """
         Initialize a pager of height, width, y, and x position.
         """
-        ansiwin.AnsiWindow.__init__ (self, height, width, yloc, xloc)
+        x84.bbs.ansiwin.AnsiWindow.__init__ (self, height, width, yloc, xloc)
         self._xpadding = 1
         self._ypadding = 1
         self._col = 0
@@ -104,7 +104,7 @@ class Pager(ansiwin.AnsiWindow):
         override or inherit this method to create a common color and graphic
         set.
         """
-        term = session.getterminal()
+        term = x84.bbs.session.getterminal()
         self.keyset['home'].append (term.KEY_HOME)
         self.keyset['end'].append (term.KEY_END)
         self.keyset['pgup'].append (term.KEY_PPAGE)
@@ -138,9 +138,9 @@ class Pager(ansiwin.AnsiWindow):
         elif keystroke in self.keyset['exit']:
             self._quit = True
         else:
-            session.logger.info ('unhandled, %r', keystroke
+            x84.bbs.session.logger.info ('unhandled, %r', keystroke
                     if type(keystroke) is not int
-                    else session.getterminal().keyname(keystroke))
+                    else x84.bbs.session.getterminal().keyname(keystroke))
         return rstr
 
     def move_home(self):
@@ -199,7 +199,7 @@ class Pager(ansiwin.AnsiWindow):
         visible content row 'start_row' and downward. This can be useful if
         only the last line is modified; only the last line need be refreshed.
         """
-        term = session.getterminal()
+        term = x84.bbs.session.getterminal()
         # draw window contents
         rstr = u''
         row = 0
@@ -208,7 +208,8 @@ class Pager(ansiwin.AnsiWindow):
                 continue
             yloc = row + self.ypadding
             rstr += self.pos (yloc, self.xpadding) + line
-            rstr += u' ' * max(0, self.visible_width - len(output.Ansi(line)))
+            rstr += u' ' * max(0,
+                    self.visible_width - len(x84.bbs.output.Ansi(line)))
         # clear to end of window
         yloc = row + self.ypadding
         while yloc < self.visible_height - 1:
@@ -221,7 +222,7 @@ class Pager(ansiwin.AnsiWindow):
         """
         Update content buffer with lines of ansi unicodes as single unit.
         """
-        self.content = output.Ansi(ucs).wrap(
+        self.content = x84.bbs.output.Ansi(ucs).wrap(
                 self.visible_width - 1).split('\r\n')
         return self.refresh ()
 
@@ -229,6 +230,6 @@ class Pager(ansiwin.AnsiWindow):
         """
         Update content buffer with additional lines of ansi unicodes.
         """
-        self.content.extend (output.Ansi(ucs
+        self.content.extend (x84.bbs.output.Ansi(ucs
             ).wrap(self.visible_width - 1).split('\r\n'))
         return self.move_end() or self.refresh(self.bottom)

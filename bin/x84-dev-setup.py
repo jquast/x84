@@ -46,7 +46,8 @@ def main():
     open(path_tgtlint, 'wb').write(
             "#!/bin/sh\n"
             ". `dirname $(readlink $0)`/activate\n"
-            "pylint --rcfile=`dirname $0`/../.pylint x84\n"
+            "pylint --rcfile=`dirname $0`/../.pylint x84"
+            " | grep -v ': Locally disabling'\n"
             "pychecker -F `dirname $0`/../.pycheckrc x84\n")
 
     os.chmod(path_tgtlint, 0755)

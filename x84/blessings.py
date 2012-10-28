@@ -13,6 +13,8 @@ import sys
 
 
 try:
+    #pylint: disable=W0611
+    #         Unused import IOUnsupportedOperation
     from io import UnsupportedOperation as IOUnsupportedOperation
 except ImportError:
     class IOUnsupportedOperation(Exception):
