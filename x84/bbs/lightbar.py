@@ -103,7 +103,7 @@ class Lightbar (AnsiWindow):
         """
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
-        AnsiWin.init_theme(self)
+        AnsiWindow.init_theme(self)
         self.colors['selected'] = term.reverse_green
         self.colors['unselected'] = term.white
 
