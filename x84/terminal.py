@@ -8,7 +8,6 @@ import socket
 import time
 import re
 
-import x84.bbs.exception
 
 #pylint: disable=C0103
 #        Invalid name "logger" for type constant
@@ -43,6 +42,8 @@ def start_process(pipe, origin, env):
         termtype: TERM string (used to initialize curses)
         env: dictionary of client environment variables
     """
+    import x84.blessings
+    import x84.bbs.session
     # curses is initialized for the first time. telnet negotiation did its best
     # to determine the TERM. The default, 'unknown', is equivalent to a dumb
     # terminal.
@@ -202,6 +203,7 @@ class ConnectTelnetTerminal (threading.Thread):
         self.client.send_str (bytes(chr(27) + '[7l'))
         # This denied telnetlib.py,
         #time.sleep (0.15)
+        #import x84.bbs.exception
         #if 0 == self.client.bytes_received:
         #    raise x84.bbs.exception.ConnectionClosed (
         #            'telnet negotiation ignored by client')
@@ -211,6 +213,7 @@ class ConnectTelnetTerminal (threading.Thread):
         Negotiate and inquire about terminal type, telnet options, window size,
         and tcp socket options before spawning a new session.
         """
+        import x84.bbs.exception
         try:
             self._set_socket_opts ()
             self.banner ()

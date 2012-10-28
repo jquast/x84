@@ -1,9 +1,7 @@
 """
 ansiwin package for x/84, http://github.com/jquast/x84
 """
-import x84.bbs.cp437
-import x84.bbs.session
-import x84.bbs.output
+from x84.bbs.cp437 import CP437TABLE
 
 GLYPHSETS = { 'unknown':
         { 'top-left': u'+',
@@ -18,26 +16,26 @@ GLYPHSETS = { 'unknown':
             'erase': u' ',
             },
         'thin': {
-            'top-left': x84.bbs.cp437.CP437TABLE[unichr(218)],
-            'bot-left': x84.bbs.cp437.CP437TABLE[unichr(192)],
-            'top-right': x84.bbs.cp437.CP437TABLE[unichr(191)],
-            'bot-right': x84.bbs.cp437.CP437TABLE[unichr(217)],
-            'left-vert': x84.bbs.cp437.CP437TABLE[unichr(179)],
-            'right-vert': x84.bbs.cp437.CP437TABLE[unichr(179)],
-            'top-horizontal': x84.bbs.cp437.CP437TABLE[unichr(196)],
-            'bot-horizontal': x84.bbs.cp437.CP437TABLE[unichr(196)],
+            'top-left': CP437TABLE[unichr(218)],
+            'bot-left': CP437TABLE[unichr(192)],
+            'top-right': CP437TABLE[unichr(191)],
+            'bot-right': CP437TABLE[unichr(217)],
+            'left-vert': CP437TABLE[unichr(179)],
+            'right-vert': CP437TABLE[unichr(179)],
+            'top-horizontal': CP437TABLE[unichr(196)],
+            'bot-horizontal': CP437TABLE[unichr(196)],
             'fill': u' ',
             'erase': u' ',
             },
         'vert_thick': {
-            'top-left': x84.bbs.cp437.CP437TABLE[unichr(213)],
-            'bot-left': x84.bbs.cp437.CP437TABLE[unichr(211)],
-            'top-right': x84.bbs.cp437.CP437TABLE[unichr(183)],
-            'bot-right': x84.bbs.cp437.CP437TABLE[unichr(189)],
-            'left-vert': x84.bbs.cp437.CP437TABLE[unichr(186)],
-            'right-vert': x84.bbs.cp437.CP437TABLE[unichr(186)],
-            'top-horizontal': x84.bbs.cp437.CP437TABLE[unichr(196)],
-            'bot-horizontal': x84.bbs.cp437.CP437TABLE[unichr(196)],
+            'top-left': CP437TABLE[unichr(213)],
+            'bot-left': CP437TABLE[unichr(211)],
+            'top-right': CP437TABLE[unichr(183)],
+            'bot-right': CP437TABLE[unichr(189)],
+            'left-vert': CP437TABLE[unichr(186)],
+            'right-vert': CP437TABLE[unichr(186)],
+            'top-horizontal': CP437TABLE[unichr(196)],
+            'bot-horizontal': CP437TABLE[unichr(196)],
             'fill': u' ',
             'erase': u' ',
             },
@@ -74,13 +72,15 @@ class AnsiWindow(object):
         This initializer sets glyphs and colors appropriate for a "theme",
         override this method to create a common color and graphic set.
         """
+        import x84.bbs.session
+        session = x84.bbs.session.getsession()
         term = x84.bbs.session.getterminal()
         if term.number_of_colors != 0:
             self.colors['border'] = term.cyan
             self.colors['highlight'] = term.cyan + term.reverse
             self.colors['lowlight'] = term.normal
             self.colors['normal'] = term.normal
-        if x84.bbs.session.getsession().env.get('TERM') == 'unknown':
+        if session.env.get('TERM') == 'unknown':
             self.glyphs = GLYPHSETS['unknown']
         else:
             self.glyphs = GLYPHSETS['thin']
@@ -158,6 +158,7 @@ class AnsiWindow(object):
         justify Ansi text alignment property and width. When None (default),
         the visible width after padding is used.
         """
+        import x84.bbs.output
         return (x84.bbs.output.Ansi(text).rjust
                 if self.alignment == 'right'
                 else x84.bbs.output.Ansi(text).ljust
@@ -196,6 +197,7 @@ class AnsiWindow(object):
         """
         Returns True if window is in view of the terminal window.
         """
+        import x84.bbs.session
         term = x84.bbs.session.getterminal()
         return (self.xloc > 0 and self.xloc +self.width -1 <= term.width
             and self.yloc > 0 and self.yloc +self.height -1 <= term.height)
@@ -222,6 +224,7 @@ class AnsiWindow(object):
         """
         Returns terminal sequence to move cursor to window-relative position.
         """
+        import x84.bbs.session
         term = x84.bbs.session.getterminal()
         if yloc is None:
             yloc = 0
@@ -234,6 +237,7 @@ class AnsiWindow(object):
         Returns sequence that positions and displays unicode sequence
         'ansi_text' at the title location of the window.
         """
+        import x84.bbs.output
         xloc = self.width / 2 - (
                 min(len(x84.bbs.output.Ansi(ansi_text)) / 2, self.width / 2))
         return self.pos(0, xloc) + ansi_text
@@ -243,6 +247,7 @@ class AnsiWindow(object):
         Returns sequence that positions and displays unicode sequence
         'ansi_text' at the bottom edge of the window.
         """
+        import x84.bbs.output
         xloc = self.width / 2 - (
                 min(len(x84.bbs.output.Ansi(ansi_text)) / 2, self.width / 2))
         return self.pos(self.height, xloc) + ansi_text
@@ -257,12 +262,13 @@ class AnsiWindow(object):
         """
         #pylint: disable=R0912
         #        Too many branches (17/12)
+        import x84.bbs.session
+        term = x84.bbs.session.getterminal()
         rstr = self.colors.get('border', u'')
         thoriz = self.glyphs.get('top-horiz', u'') * (self.width - 2)
         bhoriz = self.glyphs.get('bot-horiz', u'') * (self.width - 2)
         topright = self.glyphs.get('top-right', u'')
         botright = self.glyphs.get('bot-right', u'')
-        term = x84.bbs.session.getterminal()
         for row in range(0, self.height):
             # top to bottom
             for col in range (0, self.width):

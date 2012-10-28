@@ -2,8 +2,8 @@
 ansiwin package for x/84 BBS http://github.com/jquast/x84
 """
 import termios
-import select
 import logging
+import select
 import struct
 import fcntl
 import pty
@@ -35,7 +35,7 @@ class Door(object):
     decode_cp437 = False
     _TAP = False # for debugging
 
-    def __init__(self, cmd='/bin/uname', args=(), env_lang=u'en_US.UTF-8',
+    def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
             env_term=None, env_path=None, env_home=None):
         """
         cmd, args = argv[0], argv[1:]
@@ -58,9 +58,9 @@ class Door(object):
         else:
             self.env_path = env_path
         if env_home is None:
-            self.env_home = env_home
-        else:
             self.env_home = os.getenv('HOME')
+        else:
+            self.env_home = env_home
 
     def run(self):
         """
@@ -79,12 +79,12 @@ class Door(object):
         # subprocess
         if pid == pty.CHILD:
             sys.stdout.flush ()
-            env = { u'LANG': self.env_lang,
-                    u'TERM': self.env_term,
-                    u'PATH': self.env_path,
-                    u'HOME': self.env_home,
-                    u'LINES': '%s' % (term.height,),
-                    u'COLUMNS': '%s' % (term.width,),
+            env = { 'LANG': self.env_lang,
+                    'TERM': self.env_term,
+                    'PATH': self.env_path,
+                    'HOME': self.env_home,
+                    'LINES': '%s' % (term.height,),
+                    'COLUMNS': '%s' % (term.width,),
                   }
             try:
                 os.execvpe(self.cmd, self.args, env)

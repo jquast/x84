@@ -1,9 +1,7 @@
 """
 Pager class for x/84, http://github.com/jquast/x84/
 """
-import x84.bbs.output
-import x84.bbs.ansiwin
-import x84.bbs.session
+from x84.bbs.ansiwin import AnsiWindow
 
 NETHACK_KEYSET = {
         'refresh': [unichr(12), ],
@@ -16,7 +14,7 @@ NETHACK_KEYSET = {
         'exit': [u'q', u'Q', ],
         }
 
-class Pager(x84.bbs.ansiwin.AnsiWindow):
+class Pager(AnsiWindow):
     """
     Scrolling ansi viewer
     """
@@ -28,7 +26,7 @@ class Pager(x84.bbs.ansiwin.AnsiWindow):
         """
         Initialize a pager of height, width, y, and x position.
         """
-        x84.bbs.ansiwin.AnsiWindow.__init__ (self, height, width, yloc, xloc)
+        AnsiWindow.__init__ (self, height, width, yloc, xloc)
         self._xpadding = 1
         self._ypadding = 1
         self._col = 0
@@ -104,6 +102,7 @@ class Pager(x84.bbs.ansiwin.AnsiWindow):
         override or inherit this method to create a common color and graphic
         set.
         """
+        import x84.bbs.session
         term = x84.bbs.session.getterminal()
         self.keyset['home'].append (term.KEY_HOME)
         self.keyset['end'].append (term.KEY_END)
@@ -138,6 +137,7 @@ class Pager(x84.bbs.ansiwin.AnsiWindow):
         elif keystroke in self.keyset['exit']:
             self._quit = True
         else:
+            import x84.bbs.session
             x84.bbs.session.logger.info ('unhandled, %r', keystroke
                     if type(keystroke) is not int
                     else x84.bbs.session.getterminal().keyname(keystroke))
@@ -199,6 +199,8 @@ class Pager(x84.bbs.ansiwin.AnsiWindow):
         visible content row 'start_row' and downward. This can be useful if
         only the last line is modified; only the last line need be refreshed.
         """
+        import x84.bbs.output
+        import x84.bbs.session
         term = x84.bbs.session.getterminal()
         # draw window contents
         rstr = u''
@@ -222,6 +224,7 @@ class Pager(x84.bbs.ansiwin.AnsiWindow):
         """
         Update content buffer with lines of ansi unicodes as single unit.
         """
+        import x84.bbs.output
         self.content = x84.bbs.output.Ansi(ucs).wrap(
                 self.visible_width - 1).split('\r\n')
         return self.refresh ()
@@ -230,6 +233,7 @@ class Pager(x84.bbs.ansiwin.AnsiWindow):
         """
         Update content buffer with additional lines of ansi unicodes.
         """
+        import x84.bbs.output
         self.content.extend (x84.bbs.output.Ansi(ucs
             ).wrap(self.visible_width - 1).split('\r\n'))
         return self.move_end() or self.refresh(self.bottom)

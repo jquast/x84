@@ -1,8 +1,7 @@
 """
 lightbar package for x/84 BBS, http://github.com/jquast/x84
 """
-import x84.bbs.ansiwin
-import x84.bbs.session
+from x84.bbs.ansiwin import AnsiWindow
 
 NETHACK_KEYSET = { 'home': [u'y', ],
                    'end': [u'n', ],
@@ -14,7 +13,7 @@ NETHACK_KEYSET = { 'home': [u'y', ],
                    'exit': [u'q', ],
 }
 
-class Lightbar (x84.bbs.ansiwin.AnsiWindow):
+class Lightbar (AnsiWindow):
     """
     This Windowing class offers a classic 'lightbar' interface.
 
@@ -59,6 +58,7 @@ class Lightbar (x84.bbs.ansiwin.AnsiWindow):
         window-relative row, and displaying any valid entry there, or using
         glyphs['fill'] if out of bounds.
         """
+        import x84.bbs.session
         term = x84.bbs.session.getterminal()
         unibytes = u''
         unibytes += self.pos(self.ypadding + row, self.xpadding)
@@ -101,6 +101,7 @@ class Lightbar (x84.bbs.ansiwin.AnsiWindow):
         """
         Initialize colors['selected'] and colors['unselected'].
         """
+        import x84.bbs.session
         term = x84.bbs.session.getterminal()
         self.colors['selected'] = term.reverse_green
         self.colors['unselected'] = term.white
@@ -111,8 +112,9 @@ class Lightbar (x84.bbs.ansiwin.AnsiWindow):
         override or inherit this method to create a common color and graphic
         set.
         """
-        self.keyset = NETHACK_KEYSET
+        import x84.bbs.session
         term = x84.bbs.session.getterminal()
+        self.keyset = NETHACK_KEYSET
         self.keyset['home'].append (term.KEY_HOME)
         self.keyset['end'].append (term.KEY_END)
         self.keyset['pgup'].append (term.KEY_PPAGE)

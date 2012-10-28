@@ -2,9 +2,7 @@
 editor package for x/84, https://github.com/jquast/x84
 """
 
-import x84.bbs.session
-import x84.bbs.ansiwin
-import x84.bbs.output
+from x84.bbs.ansiwin import AnsiWindow
 
 PC_KEYSET = { 'refresh': [unichr(12),],
               'backspace': [unichr(8), unichr(127),],
@@ -32,6 +30,7 @@ class LineEditor(object):
         economic and terminal-agnostic 'input field'. By default term.reverse
         is used. Set to u'' to disable.
         """
+        import x84.bbs.session
         if self._highlight == None:
             return x84.bbs.session.getterminal().reverse
         return self._highlight
@@ -100,10 +99,13 @@ class LineEditor(object):
         Reads input until the ENTER or ESCAPE key is pressed (Blocking).
         Allows backspacing. Returns unicode text, or None when cancelled.
         """
+        import x84.bbs.session
+        import x84.bbs.output
         x84.bbs.output.echo (self.refresh ())
+        session = x84.bbs.session.getsession()
         term = x84.bbs.session.getterminal()
         while True:
-            inp = x84.bbs.session.getsession().read_event('input')
+            inp = session.read_event('input')
             if inp == term.KEY_EXIT:
                 if 0 != len(self.highlight):
                     x84.bbs.output.echo (term.normal)
@@ -126,7 +128,7 @@ class LineEditor(object):
                     x84.bbs.output.echo (inp)
 
 
-class ScrollingEditor(x84.bbs.ansiwin.AnsiWindow):
+class ScrollingEditor(AnsiWindow):
     """
     A single line editor that scrolls horizontally
     """
@@ -149,9 +151,9 @@ class ScrollingEditor(x84.bbs.ansiwin.AnsiWindow):
     content = u''
 
     def __init__(self, width, yloc, xloc):
-        x84.bbs.ansiwin.AnsiWindow.__init__(self, height=1,
+        AnsiWindow.__init__(self, height=1,
                 width=width, yloc=yloc, xloc=xloc)
-    __init__.__doc__ = x84.bbs.ansiwin.AnsiWindow.__init__.__doc__
+    __init__.__doc__ = AnsiWindow.__init__.__doc__
 
     @property
     def position(self):
@@ -312,8 +314,9 @@ class ScrollingEditor(x84.bbs.ansiwin.AnsiWindow):
         override or inherit this method to create a common color and graphic
         set.
         """
-        self.keyset = PC_KEYSET
+        import x84.bbs.session
         term = x84.bbs.session.getterminal()
+        self.keyset = PC_KEYSET
         self.keyset['refresh'].append (term.KEY_REFRESH)
         self.keyset['backspace'].append (term.KEY_BACKSPACE)
         self.keyset['enter'].append (term.KEY_ENTER)
@@ -352,6 +355,7 @@ class ScrollingEditor(x84.bbs.ansiwin.AnsiWindow):
         Return unicode sequence suitable for refreshing the entire line and
         placing the cursor.
         """
+        import x84.bbs.session
         term = x84.bbs.session.getterminal()
         self._horiz_lastshift = self._horiz_shift
         self._horiz_shift = 0

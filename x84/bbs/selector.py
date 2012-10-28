@@ -4,8 +4,7 @@ Left/Right lightbar choice selector for x/84, https://github.com/jquast/x84
 from __future__ import division
 import math
 
-import x84.bbs.session
-import x84.bbs.ansiwin
+from x84.bbs.ansiwin import AnsiWindow
 
 VI_KEYSET = { 'refresh': [unichr(12),],
               'toggle': [u' ',],
@@ -20,7 +19,7 @@ VI_KEYSET = { 'refresh': [unichr(12),],
 import logging
 logger = logging.getLogger()
 
-class Selector(x84.bbs.ansiwin.AnsiWindow):
+class Selector(AnsiWindow):
     """
     A two-state horizontal lightbar interface.
     """
@@ -40,7 +39,7 @@ class Selector(x84.bbs.ansiwin.AnsiWindow):
         self._moved = False
         self._quit = False
         self._selected = False
-        x84.bbs.ansiwin.AnsiWindow.__init__(self,
+        AnsiWindow.__init__(self,
                 height=1, width=width, yloc=yloc, xloc=xloc)
         self.init_theme ()
         self.keyset = VI_KEYSET
@@ -50,6 +49,7 @@ class Selector(x84.bbs.ansiwin.AnsiWindow):
         """
         Initialize colors['selected'] and colors['unselected'].
         """
+        import x84.bbs.session
         term = x84.bbs.session.getterminal()
         self.colors ['selected'] = term.reverse
         self.colors ['unselected'] = term.normal
@@ -59,6 +59,7 @@ class Selector(x84.bbs.ansiwin.AnsiWindow):
         Merge curses-detected application keys into a VI_KEYSET-formatted
         keyset, for keys 'refresh', 'left', 'right', 'enter', and 'exit'.
         """
+        import x84.bbs.session
         term = x84.bbs.session.getsession().terminal
         self.keyset['refresh'].append (term.KEY_REFRESH)
         self.keyset['left'].append (term.KEY_LEFT)
@@ -86,6 +87,7 @@ class Selector(x84.bbs.ansiwin.AnsiWindow):
         elif keystroke in self.keyset['enter']:
             self._selected = True
         else:
+            import x84.bbs.session
             logger.info ('unhandled, %r', keystroke
                     if type(keystroke) is not int
                     else x84.bbs.session.getterminal().keyname(keystroke))
@@ -161,6 +163,7 @@ class Selector(x84.bbs.ansiwin.AnsiWindow):
         """
         Return terminal sequence suitable for re-drawing left/right menubar.
         """
+        import x84.bbs.session
         term = x84.bbs.session.getterminal()
         rstr = self.pos(0, 0)
         attrs = (self.colors['selected'], self.colors['unselected'])
