@@ -31,7 +31,7 @@ class Lightbar (AnsiWindow):
         """
         Initialize a lightbar of height, width, y and x position.
         """
-        x84.bbs.ansiwin.AnsiWindow.__init__(self, height, width, yloc, xloc)
+        AnsiWindow.__init__(self, height, width, yloc, xloc)
         self._vitem_idx = 0
         self._vitem_lastidx = 0
         self._vitem_shift = 0
