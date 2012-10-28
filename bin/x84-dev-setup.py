@@ -1,3 +1,4 @@
+#!/usr/env/bin python
 """
 setup virtualenv for x/84,
 for source developers only !
@@ -26,7 +27,9 @@ def main():
 
     path_install = sys.argv[1]
     path_tgtbin = os.path.join(path_install, 'bin', 'x84')
-    path_symlink = os.path.join(os.path.dirname(__file__), 'x84-dev')
+    path_tgtlint = os.path.join(path_install, 'bin', 'lint')
+    path_x84sym = os.path.join(os.path.dirname(__file__), 'x84-dev')
+    path_lintsym = os.path.join(os.path.dirname(__file__), 'lint')
     path_x84 = os.path.join(os.path.dirname(__file__), os.path.pardir)
     path_requirements = os.path.join(path_x84, 'requirements.txt')
     path_pip = os.path.join(path_install, 'bin', 'pip')
@@ -39,17 +42,31 @@ def main():
     # install x84, but it symlinks to our source tree (-e)
     subprocess.call([path_pip, 'install', '-e', path_x84])
 
+    # write out shell script that calls the virtualenv-pylint & pychecker
+    open(path_tgtlint, 'wb').write(
+            "#!/bin/sh\n"
+            ". `dirname $(readlink $0)`/activate\n"
+            "pylint --rcfile=`dirname $0`/../.pylint x84\n"
+            "pychecker -F `dirname $0`/../.pycheckrc x84\n")
+
+    os.chmod(path_tgtlint, 0755)
+    if os.path.exists(path_lintsym) and os.path.islink(path_lintsym):
+        os.unlink (path_lintsym)
+    os.symlink(os.path.abspath(path_tgtlint), path_lintsym)
+
     # write out shell script that calls the virtualenv-python
     open(path_tgtbin, 'wb').write(
             "#!/bin/sh\n"
             ". `dirname $(readlink $0)`/activate\n"
             "python -m x84.engine $*\n")
     os.chmod(path_tgtbin, 0755)
-    if os.path.exists(path_symlink) and os.path.islink(path_symlink):
-        os.unlink (path_symlink)
-    os.symlink(os.path.abspath(path_tgtbin), path_symlink)
+    if os.path.exists(path_x84sym) and os.path.islink(path_x84sym):
+        os.unlink (path_x84sym)
+    os.symlink(os.path.abspath(path_tgtbin), path_x84sym)
+
     sys.stdout.write ('Installation complete, to launch x/84, run:\n\n')
-    sys.stdout.write ('    %s\n\n' % (path_symlink,))
+    sys.stdout.write ('    %s\n\n' % (path_x84sym,))
+
 
 if __name__ == '__main__':
     main()
