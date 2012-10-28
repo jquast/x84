@@ -80,13 +80,14 @@ def chk_thread(thread):
                 nlc += 1
         if nlc:
             logger.info ('%d new entries', nlc)
-            session.send_event ('oneliner_update', True)
+            session.buffer_event ('oneliner_update', True)
         else:
             logger.info ('no new bbs-scene.org entries')
         return True
 
 def add_oneline (msg):
     import time
+    session = getsession()
     udb = DBProxy('oneliner')
     udb.acquire ()
     udb[max([int(key) for key in udb.keys()] or [0]) + 1] = {
@@ -96,12 +97,16 @@ def add_oneline (msg):
         'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
     }
     udb.release ()
+    session.buffer_event ('oneliner_update', True)
+    session.send_event ('global', ('oneliner_update', True))
 
 def get_oltxt():
     term = getterminal()
-    output = list()
     colors = (term.bold_white, term.bold_green, term.bold_blue)
-    for idx, onel in sorted(DBProxy('oneliner').iteritems())[BUF_HISTORY * -1:]:
+    hist= [(int(k), v) for (k, v) in DBProxy('oneliner').iteritems()]
+    hist.sort ()
+    output = list()
+    for idx, onel in hist[BUF_HISTORY * -1:]:
         color = colors[int(idx) % len(colors)]
         atime = timeago(time.time() - time.mktime (
             time.strptime(onel['timestamp'], '%Y-%m-%d %H:%M:%S'))).strip()
@@ -153,13 +158,13 @@ def redraw(pager, selector):
     session, term = getsession(), getterminal()
     session.flush_event ('oneliner_update')
     pager.update(u'\n'.join(get_oltxt()))
+    pager.move_end ()
     prompt_ole = u'SAY somethiNG ?!'
     output = u''
-    output += pager.move_end () or pager.refresh()
-    output += pager.border()
+    output += pager.refresh() + pager.border()
     output += term.move(selector.yloc - 2, selector.xloc)
     output += term.bold_green (prompt_ole.center(selector.width).rstrip())
-    output += selector.refresh()
+    output += term.clear_eol + selector.refresh()
     return output
 
 def dummy_pager():
@@ -187,7 +192,7 @@ def saysomething (dumb=True):
     session, term = getsession(), getterminal()
     prompt_api = u'MAkE AN ASS Of YOURSElf ON bbS-SCENE.ORG?!'
     prompt_say = u'SAY WhAt ?! '
-    heard_msg = u'YOUR MESSAGE hAS bEEN VOiCEd.'
+    #heard_msg = u'YOUR MESSAGE hAS bEEN VOiCEd.'
     heard_api = u'YOUR MESSAGE hAS bEEN brOAdCAStEd.'
 
     yloc = term.height - 3
@@ -210,9 +215,6 @@ def saysomething (dumb=True):
     # post local-onlyw hen bbs-scene.org is not configured
     if not ini.CFG.has_section('bbs-scene'):
         add_oneline (oneliner.strip())
-        if not dumb:
-            echo (term.normal + term.move(yloc, 0) + term.clear_eol)
-        session.send_event ('oneliner_update', True)
         return None
     if dumb:
         # post to bbs-scene.org ?
@@ -223,7 +225,6 @@ def saysomething (dumb=True):
         if ch in (u'n', u'N'):
             #  no? then just post locally
             add_oneline (oneliner.strip())
-            session.send_event ('oneliner_update', True)
             return
     else:
         # fancy prompt, 'post to bbs-scene.org?'
@@ -301,6 +302,7 @@ def main ():
         if chk_thread (thread):
             thread = None
         if session.poll_event('oneliner_update'):
+            #echo (banner())
             dirty = True
         if dirty and (session.env.get('TERM') != 'unknown' and
                 not session.user.get('expert', False)
