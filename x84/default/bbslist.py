@@ -15,12 +15,6 @@ import logging
 import time
 import os
 
-# ideal pager window width, can be smaller tho !
-PAGER_WIDTH = 100
-# MAX BBS NAME
-MAX_BBSNAME = 30
-# MAX LOCATION
-MAX_LOCATION = 20
 # a good union choie of bbs-scene fetch and local keys,
 XML_KEYS = ('bbsname', 'sysop', 'software', 'address', 'port', 'location',)
 # how long to wait in dummy mode
@@ -110,6 +104,8 @@ def get_bbslist():
     """
     session, term = getsession(), getterminal()
     output = list()
+    MAX_BBSNAME = 20
+    MAX_LOCATION = 15
     colors = (term.bold_white, term.bold_green, term.bold_blue)
     session.flush_event ('bbslist_update')
     bbslist = DBProxy('bbslist').items()
@@ -170,28 +166,28 @@ def get_bbsinfo(key):
         rstr += comment
     rstr += u'\n'
 
-def get_lightbar(selection=None):
+def get_lightbar(position=None):
     term = getterminal ()
-    lightbar = Lightbar(height=7, width=50, yloc=8,
-            xloc=max(1, (term.width / 2) - (PAGER_WIDTH - 2)))
+    #width = min(70, term.width - 2)
+    #lightbar = Lightbar(height=7,
+    #        width=width,
+    #        yloc=8,
+    #        xloc=max(1, (term.width / 2) - (PAGER_WIDTH - 2)))
     lightbar.keyset['enter'].extend((u't', u'T'))
     lightbar.update (get_bbslist())
     lightbar.colors['selected'] = term.green_reverse
     lightbar.colors['border'] = term.green
-# how do we select an item?
-#    if selection is not None:
-#        for key, value in selection.content:
-#            if key == selection:
-#                lightbar.selection =
+    if position is not None:
+        lightbar.position = position
     return lightbar
 
 def get_pager():
     term = getterminal ()
     # calc bottom-edge of lightbar (see: get_lightbar!)
     yloc = 15
-    xloc = max(1, (term.width / 2) - ((PAGER_WIDTH-2) / 2))
-    width = min(term.width-2, PAGER_WIDTH)
-    height = min(3, (term.height - yloc - 2))
+    xloc = max(1, (term.width/2)-(50/2))
+    width = max(term.width-2, 50)
+    height = max(3, (term.height - yloc - 2))
     pager = Pager(height, width, yloc, xloc)
     pager.colors['border'] = term.blue
     return pager
@@ -446,7 +442,7 @@ def main ():
         # 1. calculate and redraw screen,
         # or enter dumb pager mode (no scrolling)
         if session.poll_event('refresh'):
-            pager, lightbar = get_pager(), get_lightbar()
+            pager, lightbar = get_pager(), get_lightbar(lightbar.position)
             echo (banner())
             dirty = True
         if chk_thread (thread):
