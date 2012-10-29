@@ -66,7 +66,7 @@ class DBHandler(threading.Thread):
         assert callable(func), \
             "'%(cmd)s' not a valid method of <type 'dict'>" % self
         logger.debug ('%s/%s%s', self.schema, self.cmd,
-                '(*%d)' % (len(self.args)) if len(self.args) else '')
+                '(*%d)' % (len(self.args)) if len(self.args) else '()')
 
         #pylint: disable=W0703
         #        Catching too general exception Exception
