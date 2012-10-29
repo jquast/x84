@@ -10,6 +10,7 @@
 import xml.etree.ElementTree
 import threading
 import requests
+import logging
 import time
 import os
 
@@ -32,6 +33,7 @@ class FetchUpdates(threading.Thread):
     content = list ()
 
     def run(self):
+        logger = logging.getLogger()
         usernm = ini.CFG.get('bbs-scene', 'user')
         passwd = ini.CFG.get('bbs-scene', 'pass')
         logger.info ('fetching %r ..', self.url)
@@ -70,6 +72,8 @@ def wait_for(thread):
 def chk_thread(thread):
     # check if bbs-scene.org thread finished, if so, farm
     # its data and send updates if there is one,
+    logger = logging.getLogger()
+    session = getsession()
     if thread is not None and not thread.is_alive():
         udb = DBProxy('oneliner')
         udbkeys = udb.keys()
@@ -159,6 +163,9 @@ def redraw(pager, selector):
     session.flush_event ('oneliner_update')
     pager.update(u'\n'.join(get_oltxt()))
     pager.move_end ()
+    pager.colors['border'] = term.white
+    pager.glyphs['left-vert'] = u' '
+    pager.glyphs['right-vert'] = u' '
     prompt_ole = u'SAY somethiNG ?!'
     output = u''
     output += pager.refresh() + pager.border()
@@ -194,6 +201,7 @@ def saysomething (dumb=True):
     prompt_say = u'SAY WhAt ?! '
     #heard_msg = u'YOUR MESSAGE hAS bEEN VOiCEd.'
     heard_api = u'YOUR MESSAGE hAS bEEN brOAdCAStEd.'
+    logger = logging.getLogger()
 
     yloc = term.height - 3
     xloc = max(0, ((term.width / 2) - (MAX_INPUT / 2)))

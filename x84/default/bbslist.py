@@ -11,6 +11,7 @@
 import xml.etree.ElementTree
 import threading
 import requests
+import logging
 import time
 import os
 
@@ -34,6 +35,7 @@ class FetchUpdates(threading.Thread):
     content = list ()
 
     def run(self):
+        logger = logging.getLogger()
         usernm = ini.CFG.get('bbs-scene', 'user')
         passwd = ini.CFG.get('bbs-scene', 'pass')
         logger.info ('fetching %r ..', self.url)
@@ -69,80 +71,51 @@ def wait_for(thread):
 
 def chk_thread(thread):
     # check if bbs-scene.org thread finished
+    logger = logging.getLogger()
+    session = getsession()
     if thread is not None and not thread.is_alive():
-        udb = DBProxy('bbslist')
-        udbkeys = udb.keys()
+        udbkeys = DBProxy('bbslist').keys()
         nlc = 0
         for key, value in thread.content:
             if key not in udbkeys:
-                udb[key] = value
+                DBProxy('bbslist')[key] = value
+                #DBProxy('bbslist', 'comments')[key] = dict()
+                #DBProxy('bbslist', 'ratings')[key] = dict()
+                print "SAVED", repr(DBProxy('bbslist')[key])
                 nlc += 1
         if nlc:
             logger.info ('%d new entries', nlc)
-            session.send_event ('bbslist_update', True)
+            session.send_event ('global', ('bbslist_update', True))
+            session.buffer_event ('bbslist_update', True)
         else:
             logger.info ('no new bbs-scene.org entries')
         return True
 
-
-#            echo ('%-27s %-16s %-18s %s' \
-#              % ('- BBS Name', 'Software', '+o', 'rating -'))
 
 def calc_rating(ratings):
     term = getterminal()
     #pylint: disable=W0612
     total = sum([float(rating) for (usr, rating) in ratings] or [0.0])
     stars = total / (len(ratings) or 1)
-    return ((term.bright_green('*') * int(max(4, stars))
+    return ((term.bold_green('*') * int(max(4, stars))
                 + term.bold_black('-') * int(4 - stars)) if stars > 3.5
-            else (term.bright_white('*') * int(max(4, stars))
+            else (term.bold_white('*') * int(max(4, stars))
                 + term.bold_black('-') * int(4 - stars)) if stars > 2.9
-            else (term.bright_blue('*') * int(max(4, stars))
+            else (term.bold_blue('*') * int(max(4, stars))
                 + term.bold_black('-') * int(4 - stars)))
-
-
-#            elif bbsname and data in u'iI':
-#                dirty = True
-#                p = ParaClass (y=10, x=2, w=76, h=14, xpad=1, ypad=1)
-#                p.lowlight ()
-#                cr = ''
-#                for nick, comment in comments:
-#                    rating = None
-#                    for r_nick, rating in ratings:
-#                        if r_nick == nick:
-#                            break
-#                        rating = None
-#                    cr += '%s%s%s%s\n  %s\n' % \
-#                        (term.bold_blue, nick, term.normal,
-#                            ' %s%s%s:' % (term.bold_red,'*'
-# *rating,term.normal)
-#                            if rating else ':',
-#                         comment)
-#                p.update ('%saddress: telnet://%s%s\nsysop: %s\n' \
-#                           '%ssoftware:%s\n%s%s' \
-#                           % (term.normal, host,
-#                             ':%s' % (port,) if port not in (23, None)
-# else '',
-#                             sysop,
-#                             'number of ratings: %i\n' % (len(ratings)) \
-#                                 if ratings else '',
-#                             software, '\n' if comments else '', cr ))
-#                p.title ('<return/spacebar> return to list', align='top')
-#                k = getch()
-#                if k in (' ',term.KEY_ENTER, term.KEY_ESCAPE):
-#                    continue
-#                p.run (k)
-#
 
 def get_bbslist():
     """
     Returns tuple, (bbs_key, display_string)
     """
-    output = list()
     session, term = getsession(), getterminal()
+    output = list()
     colors = (term.bold_white, term.bold_green, term.bold_blue)
     session.flush_event ('bbslist_update')
     bbslist = DBProxy('bbslist').items()
+    #ratings = DBProxy('bbslist', 'ratings').items()
+    ratings = list()
+    comments = list()
     by_software = dict()
 
     # sort by bbs software ^_*
@@ -165,23 +138,42 @@ def get_bbslist():
                 ( bbs['bbsname'].rjust(MAX_BBSNAME)),
                 u'  ', bbs['location'].rjust(MAX_LOCATION),
                 u'  ', bbs['sysop'].rjust(ini.CFG.getint('nua', 'max_user')),
-                u'  ', calc_rating (bbs.get('ratings', list())),
-                u' %-2d' % (len(bbs.get('comments', list()))),)) ))
+                u'  ', calc_rating (ratings),
+                u' %-2d' % (len(comments)),)) ))
     return output
 
 def get_bbsinfo(key):
-    if key is None:
-        return u'no selection ..'
-    # XX theres that 50 again
-    if not key in DBProxy('bbslist'):
-        return u' -    n/a   -'.center(50)
-    return u'xidk'
+    term = getterminal()
+    bbs = DBProxy('bbslist')[key]
+    rstr = u''
+    rstr += (term.blue('bbsname')
+            + term.bold_blue(u': ')
+            + bbs['bbsname']
+            + term.bold_blue('  +o ')
+            + bbs['sysop'] + u'\n')
+    rstr += (term.blue('address')
+            + term.bold_blue(': ')
+            + bbs['address']
+            + term.bold_blue(':')
+            + bbs['port'] + u'\n')
+    rstr += (term.blue('software')
+            + term.bold_blue(': ')
+            + bbs['software']
+            + u', ' + term.blue('location')
+            + term.bold_blue(': ')
+            + bbs['location'] + '\n')
+    rstr += u'\n'
+    comments = DBProxy('bbslist', 'comments')[key]
+    for handle, comment in comments.iteritems():
+        rstr += '\n' + term.green(handle)
+        rstr += term.bold_green(':')
+        rstr += comment
+    rstr += u'\n'
 
 def get_lightbar(selection=None):
     term = getterminal ()
-    # 50 is just estimated ...
-    lightbar = Lightbar(height=max(5, term.height - 15), width=50,
-            yloc=10, xloc=max(0, (term.width / 2) - (50 / 2)))
+    lightbar = Lightbar(height=7, width=50, yloc=8,
+            xloc=max(1, (term.width / 2) - (PAGER_WIDTH - 2)))
     lightbar.keyset['enter'].extend((u't', u'T'))
     lightbar.update (get_bbslist())
     lightbar.colors['selected'] = term.green_reverse
@@ -196,10 +188,10 @@ def get_lightbar(selection=None):
 def get_pager():
     term = getterminal ()
     # calc bottom-edge of lightbar (see: get_lightbar!)
-    yloc = min(16, 10 + max(5, term.height - 15))
-    xloc = max(3, (term.width / 2) - (PAGER_WIDTH / 2))
-    width = min(term.width - 6, PAGER_WIDTH)
-    height = min(3, (term.height - yloc - 3))
+    yloc = 15
+    xloc = max(1, (term.width / 2) - ((PAGER_WIDTH-2) / 2))
+    width = min(term.width-2, PAGER_WIDTH)
+    height = min(3, (term.height - yloc - 2))
     pager = Pager(height, width, yloc, xloc)
     pager.colors['border'] = term.blue
     return pager
@@ -213,22 +205,36 @@ def banner():
         # spidy's ascii is 72-wide (and, like spidy, total nonsense ..,)
         for line in open(os.path.join
                 (os.path.dirname(__file__), 'art', 'bbslist.asc')):
-            output += line.center(72).rstrip() + '\r\n'
+            output += line.center(72).center(term.width).rstrip() + '\r\n'
     return output + term.normal
 
 def redraw(pager, lightbar):
+    term = getterminal()
     output = u''
-    pager.update(u'\n'.join(get_bbsinfo(lightbar.selected)))
-    output += lightbar.refresh() + pager.refresh()
-    output += lightbar.border() + pager.border()
-    return output
+    if lightbar.selection != (None, None):
+        print 'key', lightbar.selection
+        info = get_bbsinfo(lightbar.selection[0])
+        print repr(info)
+        pager.update (info)
+    else:
+        pager.update (u' -- no selection --'.center(pager.visible_width))
+    output += lightbar.refresh()
+    output += pager.refresh()
+    output += lightbar.border()
+    #output += pager.border()
+    output += lightbar.footer (
+            term.bold_green(' a') + '/' + term.green('dd')
+            + term.bold_green(' c') + '/' + term.green('omment')
+            + term.bold_green(' r') + '/' + term.green('rate')
+            + term.bold_green(' t') + '/' + term.green('elnet'))
+    return output + term.nroaml
 
 def dummy_pager():
     term = getterminal()
     indent = 6
     def disp_entry(char, blurb):
         return (term.bold_blue('(') + term.blue_reverse(char)
-                + term.bold_blue + ')' + term.bright_white (' '+blurb))
+                + term.bold_blue + ')' + term.bold_white (' '+blurb))
     prompt = u', '.join(disp_entry(char, blurb) for char, blurb in (
         ('a', 'add',), ('c', 'comment',), ('r', 'rate',),
         ('t', 'telnet',), ('q', 'quit',)))
@@ -259,7 +265,7 @@ def dummy_pager():
     return
 
 def add_bbs():
-    term = getterminal()
+    session, term = getsession(), getterminal()
     echo (term.move(term.height, 0))
     empty_msg = u'VAlUE iS NOt OPtiONAl.'
     cancel_msg = u"ENtER 'quit' tO CANCEl."
@@ -268,9 +274,9 @@ def add_bbs():
     for key in XML_KEYS:
         splice = len(key) - (len(key) / 3)
         prefix = (u'\r\n\r\n  '
-                + term.boldblue(key[:splice])
+                + term.bold_blue(key[:splice])
                 + term.bold_black(key[splice:])
-                + term.bright_white(': '))
+                + term.bold_white(': '))
         led = LineEditor(40) # !?
         led.highlight = term.green_reverse
         while True:
@@ -279,26 +285,36 @@ def add_bbs():
             if value is not None and (
                     value.strip().lower().replace(',','') == 'quit'):
                 return
-            if key in (u'bbsname', u'software', u'address'):
+            if key in ('bbsname', 'software', 'address'):
                 if value is None or 0 == len(value):
                     echo (u'\r\n' + term.bold_red(empty_msg))
                     echo (u'\r\n' + cancel_msg)
                     continue
-            if key in (u'port') and value is None or 0 == len(value):
+            if key in ('port') and value is None or 0 == len(value):
                 value = '23'
-            # TODO: telnet test
+            # TODO: telnet connect test, of course !
             bbs[key] = value
             break
     bdb = DBProxy('bbslist')
+    #cdb = DBProxy('bbslist', 'comments')
+    #rdb = DBProxy('bbslist', 'ratings')
     bdb.acquire ()
-    max_id = max([int(key) for key in bdb.iterkeys()])
-    bdb[max_id + 1] = bbs
+    #cdb.acquire ()
+    #rdb.acquire ()
+    key = max([int(key) for key in bdb.keys()] or [0]) + 1
+    bdb[key] = bbs
+    print 'saved', repr(bdb[key])
+    #cdb[key] = dict()
+    #rdb[key] = dict()
     bdb.release ()
-    echo ('\r\n\r\n' + saved_msg % (max_id + 1) + '\r\n')
-    session.send_event ('bbslist_update', True)
+    #cdb.release ()
+    #rdb.release ()
+    echo ('\r\n\r\n' + saved_msg % (key) + '\r\n')
+    session.send_event ('global', ('bbslist_update', True))
+    session.buffer_event ('bbslist_update', True)
     return
 
-        # post to bbs-scene.org
+#        # post to bbs-scene.org
 #        url = 'http://bbs-scene.org/api/onelinerz.xml'
 #        usernm = ini.CFG.get('bbs-scene', 'user')
 #        passwd = ini.CFG.get('bbs-scene', 'pass')
@@ -333,24 +349,22 @@ def add_bbs():
 #        return thread
 
 
-def process_keystroke(inp, key):
+def process_keystroke(inp, key=None):
     session = getsession ()
-    if key is None:
-        return None
-    elif inp is None:
+    if inp is None:
         return False
     elif type(inp) is int:
         return False
-    elif inp.lower() == 't':
+    elif inp.lower() == u't' and key is not None:
         bbs = DBProxy('bbslist')[key]
         gosub ('telnet', bbs['address'], bbs['port'],)
-    elif inp.lower() == 'a':
+    elif inp.lower() == u'a':
         add_bbs ()
-    elif inp.lower() == 'c':
+    elif inp.lower() == u'c' and key is not None:
         add_comment (key)
-    elif inp.lower() == 'r':
+    elif inp.lower() == u'r' and key is not None:
         rate_bbs (key)
-    elif inp.lower() == 'd' and session.user.is_sysop:
+    elif inp.lower() == u'd' and session.user.is_sysop and key is not None:
         del DBProxy('bbslist')[key]
     else:
         return False # unhandled
@@ -414,6 +428,7 @@ def rate_bbs(key):
 def main ():
     session, term = getsession(), getterminal()
     pager, lightbar = get_pager(), get_lightbar()
+    logger = logging.getLogger()
 
     thread = None
     if ini.CFG.has_section('bbs-scene'):
@@ -464,9 +479,13 @@ def main ():
             if (lightbar.quit or pager.quit):
                 return
             key, output = lightbar.selection
+            if process_keystroke(inp, key):
+                # processed as bbs-lister keystroke ('r'ate, etc.,)
+                logger.info ('handled %s, %s', inp, key)
+                session.buffer_event('refresh', ('redraw',))
             logger.info ('selected key, output (%s, %r)', key, output)
             # pressed return, 'telnet !'
-            if (lightbar.selected):
+            if lightbar.selected:
                 #pylint: disable=W0612
                 #        Unused variable, 'output'
                 bbs = DBProxy('bbslist')[lightbar.selection[0]]
@@ -475,7 +494,6 @@ def main ():
                 lightbar.selected = False
                 # force screen clear to erase prompts/etc,
                 session.buffer_event ('refresh', ('redraw',))
-            elif process_keystroke(inp, lightbar.selection[0]):
-                # processed as bbs-lister keystroke ('r'ate, etc.,)
-                session.buffer_event('refresh', ('redraw',))
+            else:
+                logger.info
 
