@@ -28,7 +28,12 @@ def main():
     path_install = sys.argv[1]
     path_tgtbin = os.path.join(path_install, 'bin', 'x84')
     path_tgtlint = os.path.join(path_install, 'bin', 'lint')
-    path_x84sym = os.path.join(os.path.dirname(__file__), 'x84-dev')
+    path_x84sym = os.path.abspath(os.path.join(
+        os.path.dirname(__file__),
+        'x84-dev'))
+    path_x84sym2 = os.path.abspath(os.path.join(
+        os.path.dirname(__file__),
+        os.path.pardir, 'x84', 'run'))
     path_lintsym = os.path.join(os.path.dirname(__file__), 'lint')
     path_x84 = os.path.join(os.path.dirname(__file__), os.path.pardir)
     path_requirements = os.path.join(path_x84, 'requirements.txt')
@@ -46,6 +51,8 @@ def main():
     open(path_tgtlint, 'wb').write(
             "#!/bin/sh\n"
             ". `dirname $(readlink $0)`/activate\n"
+            "find `dirname $0`/.. -type f -name '*.pyc' -print0"
+            " | xargs -0 rm\n"
             "pylint --rcfile=`dirname $0`/../.pylint x84"
             " | grep -v ': Locally disabling'\n"
             "pychecker -F `dirname $0`/../.pycheckrc x84\n")
@@ -65,8 +72,13 @@ def main():
         os.unlink (path_x84sym)
     os.symlink(os.path.abspath(path_tgtbin), path_x84sym)
 
+    if os.path.exists(path_x84sym2) and os.path.islink(path_x84sym2):
+        os.unlink (path_x84sym2)
+    os.symlink(os.path.abspath(path_tgtbin), path_x84sym2)
+
     sys.stdout.write ('Installation complete, to launch x/84, run:\n\n')
     sys.stdout.write ('    %s\n\n' % (path_x84sym,))
+    sys.stdout.write ('    %s\n\n' % (path_x84sym2,))
 
 
 if __name__ == '__main__':
