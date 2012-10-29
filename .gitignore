@@ -2,6 +2,8 @@ build
 lint
 x84.egg-info
 ENV
+x84-dev
+run
 .DS_Store
 *.pyc
 *.swp
