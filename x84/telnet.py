@@ -240,7 +240,7 @@ def name_option(option):
         if option == v and k not in ('SEND', 'IS',)])
     return values if values != '' else str(ord(option))
 
-#import inspect
+#import os, inspect
 #def debug_option(func):
 #    """
 #    This function is a decorator that debug prints the 'from' address for
@@ -413,10 +413,9 @@ class TelnetClient(object):
 
     def request_ttype(self):
         """
-        Request sub-negotiation ttype.  See RFC 779.
-        A successful response will set self.env['TERM']
+        Begins TERMINAL-TYPE negotiation
         """
-        self.send_str (bytes(''.join((IAC, SB, TTYPE, SEND, IAC, SE))))
+        self._iac_do(TTYPE)
 
     def send_ready(self):
         """
@@ -730,6 +729,7 @@ class TelnetClient(object):
             if self.check_remote_option(NAWS) is not True:
                 self._note_remote_option(NAWS, True)
                 self._note_local_option(NAWS, True)
+                # agree to use NAWS,
                 self._iac_do(NAWS)
         elif option == STATUS:
             if self.check_remote_option(STATUS) is not True:
@@ -766,17 +766,13 @@ class TelnetClient(object):
             if self.check_remote_option(NEW_ENVIRON) in (False, UNKNOWN):
                 self._note_remote_option(NEW_ENVIRON, True)
                 self._note_local_option(NEW_ENVIRON, True)
-                self._iac_do(NEW_ENVIRON)
                 self.request_env ()
         elif option == TTYPE:
             if self._check_reply_pending(TTYPE):
                 self._note_reply_pending(TTYPE, False)
             if self.check_remote_option(TTYPE) in (False, UNKNOWN):
                 self._note_remote_option(TTYPE, True)
-                self._iac_do(TTYPE)
-                # trigger SB response
-                self.send_str (bytes(''.join( \
-                    (IAC, SB, TTYPE, SEND, IAC, SE))))
+                self.send_str (bytes(''.join((IAC, SB, TTYPE, SEND, IAC, SE))))
         else:
             logger.warn ('%s: unhandled will: %r (ignored).',
                 self.addrport(), name_option(option))
@@ -963,6 +959,7 @@ class TelnetClient(object):
 
     #---[ Telnet Command Shortcuts ]-------------------------------------------
 
+    #@debug_option
     def _iac_do(self, option):
         """
         Send a Telnet IAC "DO" sequence.
