@@ -3,6 +3,8 @@ telnet client for X/84 BBS, https://github.com/jquast/x84/
 """
 TIME_POLL = 0.05
 
+import telnetlib
+import sys
 #pylint: disable=W0614
 #        Unused import from wildcard import
 from x84.bbs import *
@@ -10,32 +12,30 @@ from x84.bbs import *
 def main(host, port=None):
     """
     Call script with argument host and optional argument port to connect to a
-    telnet server. ^] to exit.
+    telnet server. ctrl-^ to disconnect.
     """
-    import telnetlib
-    import sys
     session, term = getsession(), getterminal()
-    session.activity = 'telneting to %s' % (host,)
-    port = port if port is not None else 23
+    session.activity = 'connecting to %s' % (host,)
+    port = int(port) if port is not None else 23
     telnet_client = telnetlib.Telnet()
 
     echo (term.clear)
-    echo (u'\r\nTrying %s... ' % (host,))
-    oflush ()
+    echo (u'\r\nTrying %s:%s... ' % (host, port,))
     try:
         telnet_client.open (host, port)
-    except:
-        type, value, tb = sys.exc_info ()
-        echo (u'%s%s' % (color(*LIGHTRED), value))
-        echo (u'\r\n\r\n%s%s' % (color(), 'press any key'))
+    except Exception, err:
+        e_type, e_value, e_tb = sys.exc_info ()
+        echo (term.bold_red('%s: %s\r\n' % (e_type, e_value,)))
+        echo (u'\r\n\r\n press any key ..')
         getch ()
         return
 
     echo (u'\r\nConnected to %s.' % (host,))
-    echo (u"\r\nEscape character is '^].'")
-    getch (1)
+    echo (u"\r\nEscape character is 'ctrl-^.'")
+    session.activity = 'connected to %s' % (host,)
+    getch (3)
 
-    chk = session.enable_keycodes
+    swp = session.enable_keycodes
     session.enable_keycodes = False
     while True:
         inp = getch (timeout=TIME_POLL)
@@ -44,20 +44,21 @@ def main(host, port=None):
             if 0 != len(unistring):
                 echo (unistring)
 
-            if inp == '\035': # ^]
+            if inp == unichr(30): # ^^
                 telnet_client.close ()
-                echo (u'\r\n%sConnection closed.' % (term.clear_el +
-                    term.normal))
+                echo (u'\r\n%sConnection closed.' % (term.clear_el + term.normal))
+                break
             elif inp == '\r':
                 telnet_client.write ('\r\x00') # RFC telnet return ..
             elif inp is not None:
                 telnet_client.write (inp)
-        except:
-            exctype, value, tb = sys.exc_info ()
-            echo (u''.join((term.normal, term.clear_el,)))
-            echo (u''.join(('\r\n\r\n', term.bold_red, repr(value))))
+        except Exception, err:
+            e_type, e_value, e_tb = sys.exc_info ()
+            echo (term.normal)
+            echo (term.bold_red('%s: %s\r\n' % (e_type, e_value,)))
             break
     echo (u''.join(('\r\n\r\n', term.clear_el, term.normal, 'press any key')))
+    session.flush_event ('input')
     getch ()
-    session.enable_keycodes = chk
+    session.enable_keycodes = swp
     return
