@@ -1,5 +1,6 @@
 
-""" bbs lister for x/84, http://github.com/jquast/x84
+"""
+bbs lister for x/84, http://github.com/jquast/x84
 
   To use the (optional) http://bbs-scene.org API,
   configure a section in your .ini file:
@@ -18,7 +19,6 @@ import os
 # a good union choie of bbs-scene fetch and local keys,
 XML_KEYS = ('bbsname', 'sysop', 'software', 'address', 'port', 'location',)
 # how long to wait in dummy mode
-WAIT_FETCH = 8
 
 #pylint: disable=W0614
 #        Unused import from wildcard import
@@ -27,7 +27,6 @@ from x84.bbs import *
 class FetchUpdates(threading.Thread):
     url = 'http://bbs-scene.org/api/bbslist.php'
     content = list ()
-
     def run(self):
         logger = logging.getLogger()
         usernm = ini.CFG.get('bbs-scene', 'user')
@@ -43,19 +42,19 @@ class FetchUpdates(threading.Thread):
         else:
             logger.info ('bbs-scene.org returned %d in %2.2fs',
                     req.status_code, time.time() - stime)
-
-        # can throw exceptions when xml is invalid
         xml_nodes = xml.etree.ElementTree.XML(req.content).findall('node')
         for node in xml_nodes:
             self.content.append ((node.find('id').text, dict(
                 ((key, node.find(key).text.strip()) for key in XML_KEYS)),))
 
 def wait_for(thread):
+    # for dummy threads, wait for return value before listing,
+    wait_fetch = 8
     if thread.is_alive():
         echo ("\r\n\r\nfetching bbs-scene.org bbs list.. "
                 "(%s)s\b\b%s" % (' ' * 2, '\b' * 2,))
-        for num in range(WAIT_FETCH):
-            echo ('%2d%s' % (WAIT_FETCH - num - 1, '\b' * 2,))
+        for num in range(wait_fetch):
+            echo ('%2d%s' % (wait_fetch - num - 1, '\b' * 2,))
             if not thread.is_alive():
                 return
             thread.join (1)
@@ -70,32 +69,20 @@ def chk_thread(thread):
     if thread is not None and not thread.is_alive():
         udbkeys = DBProxy('bbslist').keys()
         nlc = 0
-        for key, value in thread.content:
+        for key, bbs in thread.content:
             if key not in udbkeys:
                 DBProxy('bbslist')[key] = value
-                #DBProxy('bbslist', 'comments')[key] = dict()
-                #DBProxy('bbslist', 'ratings')[key] = dict()
-                print "SAVED", repr(DBProxy('bbslist')[key])
+                DBProxy('bbslist', 'comments')[key] = list()
+                DBProxy('bbslist', 'ratings')[key] = list()
                 nlc += 1
         if nlc:
             logger.info ('%d new entries', nlc)
-            session.send_event ('global', ('bbslist_update', True))
-            session.buffer_event ('bbslist_update', True)
+            session.send_event ('global', ('bbslist_update', None))
+            session.buffer_event ('bbslist_update')
         else:
             logger.info ('no new bbs-scene.org entries')
         return True
 
-
-def calc_rating(ratings):
-    total = sum([float(rating) for (usr, rating) in ratings] or [0.0])
-    stars = max(4, total / (len(ratings) or 1))
-    return u' ' + u'*' * (stars - (4 - stars))
-    #return ((term.bold_green('*') * int(min(4, stars))
-    #            + term.bold_black('-') * int(4 - stars)) if stars > 3.5
-    #        else (term.bold_white('*') * int(min(4, stars))
-    #            + term.bold_black('-') * int(4 - stars)) if stars > 2.9
-    #        else (term.bold_blue('*') * int(min(4, stars))
-    #            + term.bold_black('-') * int(4 - stars)))
 
 def get_bbslist():
     """
@@ -105,27 +92,27 @@ def get_bbslist():
     output = list()
     #colors = (term.bold_white, term.bold_green, term.bold_blue)
     session.flush_event ('bbslist_update')
-    bbslist = DBProxy('bbslist').items()
-    #ratings = DBProxy('bbslist', 'ratings').items()
-    ratings = list()
-    comments = list()
-    by_software = dict()
+    def calc_rating(ratings):
+        total = sum([float(rating)
+            for (usr, rating) in ratings] or [(None, 0.0)])
+        stars = max(4, total / (len(ratings) or 1))
+        return u' ' + u'*' * (stars - (4 - stars))
+
     max_bbs = 25
     max_loc = 20
     max_sysop = 15
 
+    def get_bysoftware(bbslist):
+        by_group = dict()
+        for (key, bbs) in bbslist:
+            grp = bbs['software'].split()[0].title()
+            if not grp in by_group:
+                by_group[grp] = [(key, bbs)]
+                continue
+            by_group[grp].append ((key, bbs))
+        return by_group
 
-
-    # sort by bbs software ^_*
-    def abbr(software):
-        return u''.join((ch.lower()
-            for ch in software.split()[0]
-            if ch.isalpha()))
-    for key, bbs in bbslist:
-        group_by = abbr(bbs['software'])
-        by_software[group_by] = (by_software.get(group_by, list())
-                + [(key, bbs)])
-    max_sysop = ini.CFG.getint('nua', 'max_user')
+    by_software = get_bysoftware(DBProxy('bbslist').items())
     for idx, (bbs_sw, bbs_keys) in enumerate(sorted(by_software.items())):
         output.append ((None, (u' %s  %2d ' % (bbs_sw,
             len(bbs_keys))).rjust(64, '-')))
@@ -142,13 +129,12 @@ def get_bbslist():
                 sysop= u' '.join(sysop.split()[:-1])
             if len(sysop) > max_sysop:
                 sysop = sysop[:max_sysop-1] + '$'
-            output.append ((key,
-                bbsname.ljust(max_bbs)
-                + location.ljust(max_loc)
-                + sysop.rjust(max_sysop)
-                + calc_rating (ratings)
-                + u' %-2d' % (len(comments))))
-    #print output
+            rowstr = (bbsname.ljust(max_bbs)
+                    + location.ljust(max_loc)
+                    + sysop.rjust(max_sysop)
+                    + calc_rating (DBProxy('bbslist', 'ratings')[key])
+                    + u' %-2d' % (len(DBProxy('bbslist', 'comments')[key])))
+            output.append ((key, rowstr))
     return output
 
 def get_bbsinfo(key):
@@ -178,35 +164,34 @@ def get_bbsinfo(key):
         rstr += term.bold_green(':')
         rstr += comment
     rstr += u'\n'
+    return rstr
 
-def get_lightbar(position=None):
+def get_ui(position=None):
     term = getterminal ()
-    lightbar = Lightbar(height=max(5, term.height - 20), width=67, yloc=8,
-            xloc=max(1, (term.width / 2) - (67 / 2)))
+    yloc = 8
+    height = max(5, term.height - 20)
+    width = 67
+    xloc = max(1, (term.width / 2) - (67 / 2))
+    lightbar = Lightbar(height, width, yloc, xloc)
+
+    yloc = lightbar.yloc + lightbar.height + 2
+    height = max(3, (term.height - yloc - 2))
+    pager = Pager(height, width, yloc, xloc)
+
     lightbar.keyset['enter'].extend((u't', u'T'))
     lightbar.update (get_bbslist())
     lightbar.colors['selected'] = term.green_reverse
     lightbar.colors['border'] = term.green
+    pager.colors['border'] = term.blue
     if position is not None:
         lightbar.position = position
-    return lightbar
-
-def get_pager():
-    term = getterminal ()
-    # calc bottom-edge of lightbar (see: get_lightbar!)
-    yloc = 15
-    xloc = max(1, (term.width/2)-(50/2))
-    width = max(term.width-2, 50)
-    height = max(3, (term.height - yloc - 2))
-    pager = Pager(height, width, yloc, xloc)
-    pager.colors['border'] = term.blue
-    return pager
+    return (pager, lightbar)
 
 def banner():
     term = getterminal()
     output = u''
     output += '\r\n\r\n'
-    if term.width >= 72:
+    if term.width >= 69:
         output += term.home + term.normal + term.clear
         # spidy's ascii is 72-wide (and, like spidy, total nonsense ..,)
         for line in open(os.path.join
@@ -216,18 +201,16 @@ def banner():
 
 def redraw(pager, lightbar):
     term = getterminal()
-    output = u''
     if lightbar.selection != (None, None):
-        print 'key', lightbar.selection
-        info = get_bbsinfo(lightbar.selection[0])
-        print repr(info)
-        pager.update (info)
+        pager.update(get_bbsinfo(lightbar.selection[0]))
     else:
         pager.update (u' -- no selection --'.center(pager.visible_width))
+    output = u''
     output += lightbar.refresh()
     output += pager.refresh()
     output += lightbar.border()
-    #output += pager.border()
+    output += pager.border()
+    output += pager.footer('whatsup')
     output += lightbar.footer (
             term.bold_green(' a') + '/' + term.green('dd')
             + term.bold_green(' c') + '/' + term.green('omment')
@@ -301,23 +284,13 @@ def add_bbs():
             # TODO: telnet connect test, of course !
             bbs[key] = value
             break
-    bdb = DBProxy('bbslist')
-    #cdb = DBProxy('bbslist', 'comments')
-    #rdb = DBProxy('bbslist', 'ratings')
-    bdb.acquire ()
-    #cdb.acquire ()
-    #rdb.acquire ()
-    key = max([int(key) for key in bdb.keys()] or [0]) + 1
-    bdb[key] = bbs
-    print 'saved', repr(bdb[key])
-    #cdb[key] = dict()
-    #rdb[key] = dict()
-    bdb.release ()
-    #cdb.release ()
-    #rdb.release ()
+    key = max([int(key) for key in DBProxy('bbslist').keys()] or [0]) + 1
+    DBProxy('bbslist')[key] = bbs
+    DBProxy('bbslist', 'comments')[key] = list()
+    DBProxy('bbslist', 'ratings')[key] = list()
     echo ('\r\n\r\n' + saved_msg % (key) + '\r\n')
-    session.send_event ('global', ('bbslist_update', True))
-    session.buffer_event ('bbslist_update', True)
+    session.send_event ('global', ('bbslist_update', None,))
+    session.buffer_event ('bbslist_update')
     return
 
 #        # post to bbs-scene.org
@@ -433,7 +406,7 @@ def rate_bbs(key):
 
 def main ():
     session, term = getsession(), getterminal()
-    pager, lightbar = get_pager(), get_lightbar()
+    pager, lightbar = get_ui(None)
     logger = logging.getLogger()
 
     thread = None
@@ -452,7 +425,7 @@ def main ():
         # 1. calculate and redraw screen,
         # or enter dumb pager mode (no scrolling)
         if session.poll_event('refresh'):
-            pager, lightbar = get_pager(), get_lightbar(lightbar.position)
+            pager, lightbar = get_ui(lightbar.position)
             echo (banner())
             dirty = True
         if chk_thread (thread):
