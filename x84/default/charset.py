@@ -81,7 +81,6 @@ def main():
                 # set and refresh art in new encoding
                 refresh (selector)
         if session.poll_event('refresh') is not None:
-            logger.info ('refreshed;')
             # instantiate a new selector in case the window size has changed.
             selector = get_selector (session.encoding)
             refresh (selector)
