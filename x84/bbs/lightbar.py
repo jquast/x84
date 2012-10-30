@@ -81,21 +81,17 @@ class Lightbar (AnsiWindow):
 
     def refresh_quick (self):
         """
-        Redraw only the 'dirty' portions after a 'move' has occured unless
-        the page has shifted, then a full refresh is necessary.
+        Redraw only the 'dirty' portions after a 'move' has occured;
+        otherwise redraw entire contents (page has shifted).
         """
-        unibytes = u''
-        if (self._vitem_lastshift != self.vitem_shift
-                and self._vitem_lastshift != - 1):
-            # page shift, refresh entire page
-            unibytes += self.refresh ()
-        elif self.moved:
-            if self._vitem_lastidx != -1:
-                # unselected old entry
-                unibytes += self.refresh_row (self._vitem_lastidx)
-                # and selected new entry
-                unibytes += self.refresh_row (self.vitem_idx)
-        return unibytes
+        if self.moved:
+            if (self._vitem_lastshift != self.vitem_shift):
+                # page shift, refresh entire page
+                return self.refresh ()
+            # unhighlight last selection, highlight new
+            return (self.refresh_row(self.vitem_idx)
+                    + self.refresh_row(self._vitem_lastidx))
+        return u''
 
     def init_theme(self):
         """
@@ -222,6 +218,16 @@ class Lightbar (AnsiWindow):
         item, shift = self.position
         return self.content[shift:shift + self.visible_height]
 
+    @property
+    def visible_bottom(self):
+        """
+        Visible bottom-most item of lightbar.
+        """
+        if self.vitem_shift + (self.visible_height -1) > len(self.content):
+            return len(self.content)
+        else:
+            return self.visible_height
+
     @position.setter
     def position(self, pos_tuple):
         #pylint: disable=C0111
@@ -274,7 +280,7 @@ class Lightbar (AnsiWindow):
         """
         # if selected item is out of range of new list, then scroll to last
         # page, and move selection to end of screen,
-        if self.vitem_shift and self.index +1 > len(self.content):
+        if self.vitem_shift and (self.index + 1) > len(self.content):
             self.vitem_shift = len(self.content) - self.visible_height + 1
             self.vitem_idx = self.visible_height - 2
 
@@ -299,12 +305,9 @@ class Lightbar (AnsiWindow):
         if self.vitem_idx + 1 < self.visible_bottom:
             # move down 1 row
             self.vitem_idx += 1
-            # unhighlight last selection, highlight new
-            return (self.refresh_row(self.vitem_idx)
-                    + self.refresh_row(self._vitem_lastidx))
         elif self.vitem_idx < len(self.content):
             self.vitem_shift += 1
-        return self.refresh ()
+        return self.refresh_quick()
 
     def move_up(self):
         """
@@ -315,12 +318,9 @@ class Lightbar (AnsiWindow):
         elif self.vitem_idx >= 1:
             # move up 1 row
             self.vitem_idx -= 1
-            # unhighlight last selection, highlight new
-            return (self.refresh_row(self.vitem_idx)
-                    + self.refresh_row(self._vitem_lastidx))
         elif self.vitem_shift > 0:
             self.vitem_shift -= 1
-        return self.refresh ()
+        return self.refresh_quick ()
 
     def move_pagedown(self):
         """
@@ -331,11 +331,8 @@ class Lightbar (AnsiWindow):
             if self.vitem_idx == len(self.content) - 1:
                 return u'' # already at end
             self.vitem_idx = len(self.content) - 1
-            # unhighlight last selection, highlight new
-            return (self.refresh (self.vitem_idx)
-                    + self.refresh_row(self._vitem_lastidx))
-        elif (self.vitem_shift + self.visible_height < len(self.content)
-                -self.visible_height):
+        elif (self.vitem_shift + self.visible_height
+                < (len(self.content) - self.visible_height)):
             # previous page
             self.vitem_shift = self.vitem_shift + self.visible_height
         elif self.vitem_shift != len(self.content) - self.visible_height:
@@ -344,7 +341,7 @@ class Lightbar (AnsiWindow):
         else:
             # already at last page, goto end
             return self.move_end ()
-        return self.refresh ()
+        return self.refresh_quick ()
 
     def move_pageup(self):
         """
@@ -361,7 +358,7 @@ class Lightbar (AnsiWindow):
         else:
             # already at first page, goto home
             return self.move_home ()
-        return self.refresh ()
+        return self.refresh_quick ()
 
     def move_home(self):
         """
@@ -371,7 +368,7 @@ class Lightbar (AnsiWindow):
             return u'' # already at home
         self.vitem_idx = 0
         self.vitem_shift = 0
-        return self.refresh ()
+        return self.refresh_quick ()
 
     def move_end(self):
         """
@@ -381,22 +378,7 @@ class Lightbar (AnsiWindow):
             if self.vitem_idx == len(self.content) - 1:
                 return u'' # already at end
             self.vitem_idx = len(self.content) - 1
-            # unhighlight last selection, highlight new
-            return (self.refresh (self.vitem_idx)
-                    + self.refresh_row(self._vitem_lastidx))
         else:
-            self.vitem_shift = len(self.content) -self.visible_height
+            self.vitem_shift = len(self.content) - self.visible_height
             self.vitem_idx = self.visible_height - 1
-        return self.refresh ()
-
-    @property
-    def visible_bottom(self):
-        """
-        Visible bottom-most item of lightbar.
-        """
-        if self.vitem_shift + (self.visible_height -1) > len(self.content):
-            return len(self.content)
-        else:
-            return self.visible_height
-
-
+        return self.refresh_quick ()
