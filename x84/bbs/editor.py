@@ -372,7 +372,7 @@ class ScrollingEditor(AnsiWindow):
         data = self.trim_char + self.content[scroll:]
         eeol = (self.glyphs.get('erase', u' ')
                 * (self.visible_width - len(data)))
-        return ( term.normal + data + eeol + self.fixate )
+        return ( term.normal + data + eeol + self.fixate() )
 
     def _enter(self):
         """
