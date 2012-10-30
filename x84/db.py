@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 FILELOCK = threading.Lock()
 DATABASES = {}
 
-def get_db(schema):
+def get_db(schema, tablename='unnamed'):
     """
     Returns a shared SqliteDict instance, creating a new one if not found
     """
@@ -26,10 +26,10 @@ def get_db(schema):
         if not os.path.exists(datapath):
             os.makedirs (datapath)
         dbpath = os.path.join(datapath, '%s.sqlite3' % (schema,),)
-        DATABASES[schema] = sqlitedict.SqliteDict(filename=dbpath,
-                tablename='unnamed', autocommit=True)
+        DATABASES[(schema, tablename)] = sqlitedict.SqliteDict(filename=dbpath,
+                tablename=tablename, autocommit=True)
     FILELOCK.release ()
-    return DATABASES[schema]
+    return DATABASES[(schema, tablename)]
 
 class DBHandler(threading.Thread):
     """
@@ -59,7 +59,7 @@ class DBHandler(threading.Thread):
         """
         Execute database command and return results to session pipe.
         """
-        dictdb = get_db(self.schema)
+        dictdb = get_db(self.schema, self.table)
         assert hasattr(dictdb, self.cmd), \
             "'%(cmd)s' not a valid method of <type 'dict'>" % self
         func = getattr(dictdb, self.cmd)
