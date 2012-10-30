@@ -100,7 +100,7 @@ def try_pass(user):
         echo (status_auth)
         if user.auth (password):
             goto (topscript, user.handle)
-    echo ('\r\n\r\n')
+    echo (u'\r\n\r\n')
     denied (badpass_msg % (user.handle,))
     return
 
