@@ -164,7 +164,7 @@ class AnsiWindow(object):
                 else x84.bbs.output.Ansi(text).ljust
                 if self.alignment == 'left'
                 else x84.bbs.output.Ansi(text).center
-                )(width if width is not None else self.width)
+                )(width if width is not None else self.visible_width)
 
     @property
     def visible_height(self):
