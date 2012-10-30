@@ -87,16 +87,15 @@ def chk_thread(thread):
 
 
 def calc_rating(ratings):
-    term = getterminal()
-    #pylint: disable=W0612
     total = sum([float(rating) for (usr, rating) in ratings] or [0.0])
-    stars = total / (len(ratings) or 1)
-    return ((term.bold_green('*') * int(max(4, stars))
-                + term.bold_black('-') * int(4 - stars)) if stars > 3.5
-            else (term.bold_white('*') * int(max(4, stars))
-                + term.bold_black('-') * int(4 - stars)) if stars > 2.9
-            else (term.bold_blue('*') * int(max(4, stars))
-                + term.bold_black('-') * int(4 - stars)))
+    stars = max(4, total / (len(ratings) or 1))
+    return u' ' + u'*' * (stars - (4 - stars))
+    #return ((term.bold_green('*') * int(min(4, stars))
+    #            + term.bold_black('-') * int(4 - stars)) if stars > 3.5
+    #        else (term.bold_white('*') * int(min(4, stars))
+    #            + term.bold_black('-') * int(4 - stars)) if stars > 2.9
+    #        else (term.bold_blue('*') * int(min(4, stars))
+    #            + term.bold_black('-') * int(4 - stars)))
 
 def get_bbslist():
     """
@@ -104,15 +103,18 @@ def get_bbslist():
     """
     session, term = getsession(), getterminal()
     output = list()
-    MAX_BBSNAME = 20
-    MAX_LOCATION = 15
-    colors = (term.bold_white, term.bold_green, term.bold_blue)
+    #colors = (term.bold_white, term.bold_green, term.bold_blue)
     session.flush_event ('bbslist_update')
     bbslist = DBProxy('bbslist').items()
     #ratings = DBProxy('bbslist', 'ratings').items()
     ratings = list()
     comments = list()
     by_software = dict()
+    max_bbs = 25
+    max_loc = 20
+    max_sysop = 15
+
+
 
     # sort by bbs software ^_*
     def abbr(software):
@@ -123,19 +125,30 @@ def get_bbslist():
         group_by = abbr(bbs['software'])
         by_software[group_by] = (by_software.get(group_by, list())
                 + [(key, bbs)])
+    max_sysop = ini.CFG.getint('nua', 'max_user')
     for idx, (bbs_sw, bbs_keys) in enumerate(sorted(by_software.items())):
-        color = colors[int(idx) % len(colors)]
-        output.append ((None, term.bold_black('-' * 4),
-            term.white('-'), term.bold_white('-('),
-            color('%2d' % (len(bbs_keys))), term.bold_white(')'),
-            color(bbs_sw),))
-        for key, bbs in bbslist:
-            output.append ((key, u''.join((
-                ( bbs['bbsname'].rjust(MAX_BBSNAME)),
-                u'  ', bbs['location'].rjust(MAX_LOCATION),
-                u'  ', bbs['sysop'].rjust(ini.CFG.getint('nua', 'max_user')),
-                u'  ', calc_rating (ratings),
-                u' %-2d' % (len(comments)),)) ))
+        output.append ((None, (u' %s  %2d ' % (bbs_sw,
+            len(bbs_keys))).rjust(64, '-')))
+        for key, bbs in bbs_keys:
+            location = bbs['location'].strip()
+            while len(location) > max_loc and ' ' in location:
+                location = u' '.join(location.split()[:-1])
+            location = location[:max_loc].strip()
+            bbsname = bbs['bbsname'].strip()
+            if len(bbsname) > max_bbs:
+                bbsname = bbsname[:max_bbs-1] + '$'
+            sysop = bbs['sysop'].strip()
+            while len(sysop) > max_sysop and ' ' in sysop:
+                sysop= u' '.join(sysop.split()[:-1])
+            if len(sysop) > max_sysop:
+                sysop = sysop[:max_sysop-1] + '$'
+            output.append ((key,
+                bbsname.ljust(max_bbs)
+                + location.ljust(max_loc)
+                + sysop.rjust(max_sysop)
+                + calc_rating (ratings)
+                + u' %-2d' % (len(comments))))
+    #print output
     return output
 
 def get_bbsinfo(key):
@@ -168,11 +181,8 @@ def get_bbsinfo(key):
 
 def get_lightbar(position=None):
     term = getterminal ()
-    #width = min(70, term.width - 2)
-    #lightbar = Lightbar(height=7,
-    #        width=width,
-    #        yloc=8,
-    #        xloc=max(1, (term.width / 2) - (PAGER_WIDTH - 2)))
+    lightbar = Lightbar(height=max(5, term.height - 20), width=67, yloc=8,
+            xloc=max(1, (term.width / 2) - (67 / 2)))
     lightbar.keyset['enter'].extend((u't', u'T'))
     lightbar.update (get_bbslist())
     lightbar.colors['selected'] = term.green_reverse
@@ -475,11 +485,12 @@ def main ():
             if (lightbar.quit or pager.quit):
                 return
             key, output = lightbar.selection
+            #echo (output)
             if process_keystroke(inp, key):
                 # processed as bbs-lister keystroke ('r'ate, etc.,)
                 logger.info ('handled %s, %s', inp, key)
                 session.buffer_event('refresh', ('redraw',))
-            logger.info ('selected key, output (%s, %r)', key, output)
+            #logger.info ('selected key, output (%s, %r)', key, output)
             # pressed return, 'telnet !'
             if lightbar.selected:
                 #pylint: disable=W0612
