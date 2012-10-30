@@ -345,19 +345,19 @@ class Session(object):
         self._last_input_time = time.time()
         if self._tap_input and logger.isEnabledFor(logging.DEBUG):
             logger.debug ('<-- %r.', data)
-        if False == self.enable_keycodes:
+        if not self.enable_keycodes:
             # send keyboard bytes in as-is, unmanipulated
-            self._buffer['input'].insert (0, data)
-            return
+            return self._buffer['input'].insert (0, data)
+
         # translate ^L to KEY_REFRESH in getch() stream, but
         # also send a ('refresh', ('input',)) event for signaling
-        ctrl_l = list((('input', self.terminal.KEY_REFRESH),))
-
+        ctrl_l = self.terminal.KEY_REFRESH
         # perform keycode translation with modified blessings/curses
         for keystroke in self.terminal.trans_input(data, self.encoding):
-            if keystroke == chr(12): # ^L
-                self._buffer['refresh'] = ctrl_l
+            if keystroke in (chr(12), ctrl_l):
                 self._buffer['input'].insert (0, self.terminal.KEY_REFRESH)
+                self._buffer['refresh'] = list((('input', ctrl_l),))
+                continue
             self._buffer['input'].insert (0, keystroke)
 
     def send_event (self, event, data):
