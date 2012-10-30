@@ -3,10 +3,10 @@ lightbar package for x/84 BBS, http://github.com/jquast/x84
 """
 from x84.bbs.ansiwin import AnsiWindow
 
-NETHACK_KEYSET = { 'home': [u'y', ],
-                   'end': [u'n', ],
-                   'pgup': [u'h', ],
-                   'pgdown': [u'l', ],
+NETHACK_KEYSET = { 'home': [u'y', '0'],
+                   'end': [u'n', 'G'],
+                   'pgup': [u'h', u'b',],
+                   'pgdown': [u'l', u'f',],
                    'up': [u'k', ],
                    'down': [u'j', ],
                    'enter': [u'\r', ],
@@ -69,7 +69,7 @@ class Lightbar (AnsiWindow):
         unibytes += (self.colors['selected']
                 if entry == self.index
                 else self.colors['unselected'])
-        unibytes += self.content[entry][1]
+        unibytes += self.align(self.content[entry][1])
         return unibytes + term.normal
 
     def refresh (self):
@@ -120,7 +120,7 @@ class Lightbar (AnsiWindow):
         self.keyset['end'].append (term.KEY_END)
         self.keyset['pgup'].append (term.KEY_PPAGE)
         self.keyset['pgdown'].append (term.KEY_NPAGE)
-        self.keyset['up'].append (term.KEY_KEY_UP)
+        self.keyset['up'].append (term.KEY_UP)
         self.keyset['down'].append (term.KEY_DOWN)
         self.keyset['enter'].append (term.KEY_ENTER)
         self.keyset['exit'].append (term.KEY_EXIT)
@@ -295,33 +295,48 @@ class Lightbar (AnsiWindow):
         Move selection down one row.
         """
         if self.index >= len(self.content):
-            return u''
+            return u'' # already at bottom
         if self.vitem_idx + 1 < self.visible_bottom:
+            # move down 1 row
             self.vitem_idx += 1
+            # unhighlight last selection, highlight new
+            return (self.refresh_row(self.vitem_idx)
+                    + self.refresh_row(self._vitem_lastidx))
         elif self.vitem_idx < len(self.content):
             self.vitem_shift += 1
-        return u''
+        return self.refresh ()
 
     def move_up(self):
         """
         Move selection up one row.
         """
         if 0 == self.index:
-            return u''
+            return u'' # already at top
         elif self.vitem_idx >= 1:
+            # move up 1 row
             self.vitem_idx -= 1
+            # unhighlight last selection, highlight new
+            return (self.refresh_row(self.vitem_idx)
+                    + self.refresh_row(self._vitem_lastidx))
         elif self.vitem_shift > 0:
             self.vitem_shift -= 1
-        return u''
+        return self.refresh ()
 
     def move_pagedown(self):
         """
         Move selection down one page.
         """
         if len(self.content) < self.visible_height:
+            # move to last entry
+            if self.vitem_idx == len(self.content) - 1:
+                return u'' # already at end
             self.vitem_idx = len(self.content) - 1
+            # unhighlight last selection, highlight new
+            return (self.refresh (self.vitem_idx)
+                    + self.refresh_row(self._vitem_lastidx))
         elif (self.vitem_shift + self.visible_height < len(self.content)
                 -self.visible_height):
+            # previous page
             self.vitem_shift = self.vitem_shift + self.visible_height
         elif self.vitem_shift != len(self.content) - self.visible_height:
             # shift window to last page
@@ -329,7 +344,7 @@ class Lightbar (AnsiWindow):
         else:
             # already at last page, goto end
             return self.move_end ()
-        return u''
+        return self.refresh ()
 
     def move_pageup(self):
         """
@@ -338,33 +353,41 @@ class Lightbar (AnsiWindow):
         if len(self.content) < self.visible_height - 1:
             self.vitem_idx = 0
         if self.vitem_shift - self.visible_height > 0:
+            # previous page
             self.vitem_shift = self.vitem_shift - self.visible_height
         elif self.vitem_shift > 0:
+            # shift window to first page
             self.vitem_shift = 0
         else:
             # already at first page, goto home
             return self.move_home ()
-        return
+        return self.refresh ()
 
     def move_home(self):
         """
         Move selection to the very top and first entry of the list.
         """
-        if (0, 0) != (self.vitem_idx, self.vitem_shift):
-            self.vitem_idx = 0
-            self.vitem_shift = 0
-        return u''
+        if (0, 0) == (self.vitem_idx, self.vitem_shift):
+            return u'' # already at home
+        self.vitem_idx = 0
+        self.vitem_shift = 0
+        return self.refresh ()
 
     def move_end(self):
         """
         Move selection to the very last and final entry of the list.
         """
         if len(self.content) < self.visible_height:
+            if self.vitem_idx == len(self.content) - 1:
+                return u'' # already at end
             self.vitem_idx = len(self.content) - 1
+            # unhighlight last selection, highlight new
+            return (self.refresh (self.vitem_idx)
+                    + self.refresh_row(self._vitem_lastidx))
         else:
             self.vitem_shift = len(self.content) -self.visible_height
             self.vitem_idx = self.visible_height - 1
-        return u''
+        return self.refresh ()
 
     @property
     def visible_bottom(self):
