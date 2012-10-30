@@ -256,7 +256,7 @@ class Session(object):
                 for line in traceback.format_exception_only(e_type, e_value):
                     logger.error (line.rstrip())
                 if not self.lock.acquire(False):
-                    logger.error ('re-instantiating over locked thread !')
+                    logger.error ('session.lock forcefully unacquired')
                     self.lock = threading.Lock()
             if 0 != len(self._script_stack):
                 # recover from a general exception or script error
