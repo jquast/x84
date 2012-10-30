@@ -59,7 +59,7 @@ class TelnetServer(object):
     Poll sockets for new connections and sending/receiving data from clients.
     """
     MAX_CONNECTIONS = 1000
-    TIME_POLL = 0.01
+    TIME_POLL = 0.05
     LISTEN_BACKLOG = 5
     ## Dictionary of active clients, (file descriptor, TelnetClient,)
     clients = {}
