@@ -657,16 +657,17 @@ class TelnetClient(object):
         self.send_str (bytes(''.join((IAC, SB, STATUS, IS))))
         for opt in NEGOTIATE_STATUS:
             local_status = self._check_local_option(opt)
-            if local_status:
+            if local_status is True:
                 logger.debug ('local status, DO %s',
                         name_option(opt))
                 self.send_str(bytes(''.join((DO, opt))))
-            elif local_status:
+            elif local_status is False:
                 logger.debug ('local status, DONT %s',
                         name_option(opt))
                 self.send_str(bytes(''.join((DONT, opt))))
             else:
-                assert local_status is UNKNOWN
+                assert local_status is UNKNOWN, (
+                        'Unhandled local status, %r' % (local_status,))
                 logger.debug ('local status, UNKNOWN %s (not sent)',
                         name_option(opt))
             remote_status = self.check_remote_option(opt)
