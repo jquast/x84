@@ -12,6 +12,7 @@ def redraw(pager, le):
     rstr = u''
     rstr += pager.border()
     rstr += pager.refresh ()
+    print repr(le.glyphs['top-horiz'], 'top-horiz')
     rstr += le.border ()
     rstr += le.refresh ()
     #rstr += le.fixate ()
@@ -23,7 +24,8 @@ def get_ui(ucs=u'', ypos=None):
     pager.colors['border'] = term.bold_green
     pager.glyphs['left-vert'] = pager.glyphs['right-vert'] = u''
     pager.update (ucs)
-    le = ScrollingEditor(term.width, pager.bottom if ypos == None else ypos, 0)
+    yloc = pager.visible_bottom if ypos is None else ypos
+    le = ScrollingEditor(term.width, yloc, 1)
     le.glyphs['bot-horiz'] = le.glyphs['top-horiz'] = u''
     le.colors['border'] = term.bold_white
     return pager, le
@@ -41,8 +43,11 @@ def main(uattr=u'draft'):
     Retreive and store unicode bytes to user attribute keyed by 'uattr';
     """
     session, term = getsession(), getterminal()
-    pager, le = get_ui(
-            DBProxy('userattr')[session.user.handle].get(uattr, u''), 0)
+    #pager, le = get_ui(
+    #        DBProxy('userattr')[session.user.handle].get(uattr, u''), 0)
+    test = open(os.path.join(os.path.dirname(__file__),
+        'art', 'news.txt')).read().decode('utf8').strip()
+    pager, le = get_ui(test, 0)
     pager.move_end ()
     ypos = pager.bottom
     xpos = Ansi(pager.content[-1]).__len__()
@@ -54,9 +59,17 @@ def main(uattr=u'draft'):
         if dirty:
             echo (banner())
             echo (redraw(pager, le))
-            echo (term.move(ypos, xpos))
             dirty = False
-        ch = getch(1)
+        inp = getch()
+        res = le.process_keystroke (inp)
+        print repr(inp), repr(res)
+        echo (res)
+        if le.quit:
+            break
+        if le.carriage_returned:
+            # woak
+            break
+
         #if ch == '/':
             #pager.footer ('q-uit, s-save')
             #ch = getch()
