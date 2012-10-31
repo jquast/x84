@@ -130,29 +130,34 @@ class LineEditor(object):
 
 class ScrollingEditor(AnsiWindow):
     """
-    A single line editor that scrolls horizontally
+    A single line Editor fully aware of its (y, x).
+    Infinite horizontal scrolling is enabled with the enable_scrolling
+    property. When True, scrolling amount is limited using max_length.
     """
     #pylint: disable=R0902,R0904
     #        Too many instance attributes (14/7)
     #        Too many public methods (33/20)
-    _horiz_shift = 0
-    _horiz_pos = 0
-
-    _enable_scrolling = False
-    _horiz_lastshift = 0
-    _scroll_pct = 35.0
-    _margin_pct = 20.0
-    _carriage_returned = False
-    _max_length = 0
-    _quit = False
-    _bell = False
-    _trim_char = '$ '
-    keyset = dict()
-    content = u''
-
     def __init__(self, width, yloc, xloc):
+        """
+        Construct a Line editor at (y,x) location of width (n).
+        """
+        self._horiz_shift = 0
+        self._horiz_pos = 0
+        self._enable_scrolling = False
+        self._horiz_lastshift = 0
+        self._scroll_pct = 35.0
+        self._margin_pct = 20.0
+        self._carriage_returned = False
+        self._max_length = 0
+        self._quit = False
+        self._bell = False
+        self._trim_char = '$ '
+        self.keyset = PC_KEYSET
+        self.content = u''
         AnsiWindow.__init__(self, height=1,
                 width=width, yloc=yloc, xloc=xloc)
+        self.init_keystrokes ()
+
     __init__.__doc__ = AnsiWindow.__init__.__doc__
 
     @property
@@ -320,7 +325,7 @@ class ScrollingEditor(AnsiWindow):
         self.keyset['refresh'].append (term.KEY_REFRESH)
         self.keyset['backspace'].append (term.KEY_BACKSPACE)
         self.keyset['enter'].append (term.KEY_ENTER)
-        self.keyset['quit'].append (term.KEY_EXIT)
+        self.keyset['exit'].append (term.KEY_EXIT)
 
     def process_keystroke(self, keystroke):
         """
@@ -332,9 +337,9 @@ class ScrollingEditor(AnsiWindow):
         elif keystroke in self.keyset['backspace']:
             return self.backspace ()
         elif keystroke in self.keyset['enter']:
-            self._enter ()
+            self._carriage_returned = True
             return u''
-        elif keystroke in self.keyset['quit']:
+        elif keystroke in self.keyset['exit']:
             self._quit = True
             return u''
         elif type(keystroke) is int:
@@ -350,6 +355,7 @@ class ScrollingEditor(AnsiWindow):
         xpos = self._xpadding + self._horiz_pos + x_adjust
         return self.pos(1, xpos)
 
+    # XXX refactor
     def refresh(self):
         """
         Return unicode sequence suitable for refreshing the entire line and
@@ -360,6 +366,7 @@ class ScrollingEditor(AnsiWindow):
         self._horiz_lastshift = self._horiz_shift
         self._horiz_shift = 0
         # re-detect how far we should scroll horizontally,
+        # not ansi safe, mind you!
         col_pos = 0
         #pylint: disable=W0612
         #        Unused variable 'loop_cnt'
@@ -368,18 +375,14 @@ class ScrollingEditor(AnsiWindow):
                 # shift window horizontally
                 self._horiz_shift += self.scroll_amt
                 col_pos -= self.scroll_amt
-        scroll = self._horiz_shift - len(self.trim_char)
-        data = self.trim_char + self.content[scroll:]
+        if self._horiz_shift:
+            scroll = self._horiz_shift - len(self.trim_char)
+            data = self.trim_char + self.content[scroll:]
+        else:
+            data = self.content
         eeol = (self.glyphs.get('erase', u' ')
                 * (self.visible_width - len(data)))
         return ( term.normal + data + eeol + self.fixate() )
-
-    def _enter(self):
-        """
-        Return key was pressed, mark self.return_carriage True, and otherwise
-        do nothing. The caller should check this variable.
-        """
-        self._carriage_returned = True
 
     def backspace(self):
         """
@@ -394,7 +397,7 @@ class ScrollingEditor(AnsiWindow):
                 # shift left,
                 self._horiz_shift -= self.scroll_amt
                 self._horiz_pos += self.scroll_amt
-                rstr += self.refresh ()
+                rstr += self.refresh () # XXX
         rstr += self.fixate(-1)
         rstr += ' \b'
         self._horiz_pos -= 1
