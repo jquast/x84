@@ -25,7 +25,3 @@ class Goto (Exception):
 class ScriptError (Exception):
     """Thrown when runscript fails to locate script."""
     pass
-
-class DatabaseError (Exception):
-    """Thrown when an error occured issuing a db proxy request."""
-    pass
