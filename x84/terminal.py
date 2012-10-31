@@ -179,7 +179,6 @@ class ConnectTelnetTerminal (threading.Thread):
         #   Which translates to:
         # (IAC WILL ECHO) (IAC WILL SUPPRESS-GO-AHEAD)
         # (IAC DO SUPPRESS-GO-AHEAD).
-        time.sleep (0.25) # allow time for natural negotiation
         self.client.request_will_echo ()
         self.client.request_will_sga ()
         self.client.request_do_sga ()
