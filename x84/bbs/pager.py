@@ -89,9 +89,18 @@ class Pager(AnsiWindow):
         return self.content[self.position:self.position + self.visible_height]
 
     @property
+    def visible_bottom(self):
+        """
+        Returns bottom-most window row that contains content
+        """
+        if self.bottom < len(self.visible_height):
+            return self.bottom
+        return len(self.visible_content) - 1
+
+    @property
     def bottom(self):
         """
-        Returns bottom-most position of window that contains content
+        Returns bottom-most position that contains content
         """
         return max(0, len(self.content) - self.visible_height)
 
@@ -193,32 +202,27 @@ class Pager(AnsiWindow):
             return self.refresh ()
         return u''
 
+    def refresh_row(self, row):
+        """
+        Return unicode string suitable for refreshing pager window at
+        visible row.
+        """
+        ucs = (self.visible_content[row]
+                if row < len(self.visible_content) else u'')
+        return self.pos(row + self.ypadding, self.xpadding) + self.align(ucs)
+
     def refresh(self, start_row=0):
         """
         Return unicode string suitable for refreshing pager window from
-        visible content row 'start_row' and downward. This can be useful if
-        only the last line is modified; only the last line need be refreshed.
+        optional visible content row 'start_row' and downward. This can be
+        useful if only the last line is modified; or in an 'insert' operation,
+        only the last line need be refreshed.
         """
-        import x84.bbs.output
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
-        # draw window contents
-        rstr = u''
-        row = 0
-        for row, line in enumerate(self.visible_content):
-            if row < start_row:
-                continue
-            yloc = row + self.ypadding
-            rstr += self.pos (yloc, self.xpadding) + line
-            rstr += u' ' * max(0,
-                    self.visible_width - len(x84.bbs.output.Ansi(line)))
-        # clear to end of window
-        yloc = row + self.ypadding
-        while yloc < self.visible_height - 1:
-            yloc += 1
-            rstr += self.pos (yloc, self.xpadding)
-            rstr += u' ' * (self.visible_width)
-        return rstr + term.normal
+        return u''.join([self.refresh_row(row)
+                for row in range(start_row, len(self.visible_content))]
+                + [term.normal])
 
     def update(self, ucs):
         """
