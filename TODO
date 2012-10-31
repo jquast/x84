@@ -18,6 +18,10 @@ default/wfc.py
 default/plan.py (browse, xmodem up/down)
 default/pwreset.py
 
+? telnet.py
+BINARY mode correctly; ftp://kermit.columbia.edu/kermit/f/telnet.txt
+we just use '\r\n' in echo, and strip \0 from \r in get_input, etc.,
+
 DOCS
 ----
 * create wiki articles:
