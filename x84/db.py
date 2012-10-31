@@ -75,10 +75,9 @@ class DBHandler(threading.Thread):
                 result = func()
             else:
                 result = func(*self.args)
-        except Exception, err:
-            # Pokemon exception; send (err_type, err_value)
-            return self.pipe.send ((x84.bbs.exception.DatabaseError,
-                (sys.exc_info()[0], err)))
+        except Exception as exception:
+            # Pokemon exception; package & raise from session process,
+            return self.pipe.send (('exception', exception,))
 
         # single value result,
         if not self.iterable:

@@ -417,11 +417,7 @@ class Session(object):
             if self.pipe.poll (None if waitfor == float('inf') else waitfor):
                 event, data = self.pipe.recv()
                 if event == 'exception':
-                    # raise custom exception passed through pipe by name,
-                    if hasattr(x84.bbs.exception, data[0]):
-                        raise getattr(x84.bbs.exception, data[0]), data[1]
-                    # raise a direct exception type, and its value only.
-                    raise data[0], data[1]
+                    raise data
                 self.buffer_event (event, data)
                 if event in events:
                     return (event, self._event_pop(event))
