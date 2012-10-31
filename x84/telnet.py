@@ -47,19 +47,18 @@ logger = logging.getLogger()
 
 #--[ Telnet Options ]----------------------------------------------------------
 from telnetlib import LINEMODE, NAWS, NEW_ENVIRON, ENCRYPT
-from telnetlib import BINARY, SGA, ECHO, STATUS, TTYPE
+from telnetlib import BINARY, SGA, ECHO, STATUS, TTYPE, TSPEED, LFLOW
 from telnetlib import IAC, DONT, DO, WONT, WILL
 from telnetlib import SE, NOP, DM, BRK, IP, AO, AYT, EC, EL, GA, SB
 IS      = chr(0)        # Sub-process negotiation IS command
 SEND    = chr(1)        # Sub-process negotiation SEND command
-NEGOTIATE_STATUS = (ECHO, SGA, LINEMODE, TTYPE, NAWS, NEW_ENVIRON,)
 
 class TelnetServer(object):
     """
     Poll sockets for new connections and sending/receiving data from clients.
     """
     MAX_CONNECTIONS = 1000
-    TIME_POLL = 0.05
+    TIME_POLL = 0.01
     LISTEN_BACKLOG = 5
     ## Dictionary of active clients, (file descriptor, TelnetClient,)
     clients = {}
@@ -363,15 +362,6 @@ class TelnetClient(object):
         self._note_reply_pending(ECHO, True)
 
 
-    def request_wont_echo(self):
-        """
-        Tell the DE that we would like to stop echoing their text.
-        See RFC 857.
-        """
-        self._iac_wont(ECHO)
-        self._note_reply_pending(ECHO, True)
-
-
     def request_do_sga(self):
         """
         Request to Negotiate SGA.  See ...
@@ -399,10 +389,6 @@ class TelnetClient(object):
         """
         Request sub-negotiation NEW_ENVIRON. See RFC 1572.
         """
-        # chr(0) indicates VAR request,
-        #  followed by variable name,
-        # chr(3) indicates USERVAR request,
-        # chr(0)
         self.send_str (bytes(''.join((IAC, SB, NEW_ENVIRON, SEND, chr(0)))))
         self.send_str (bytes(chr(0).join( \
             ("USER", "TERM", "SHELL", "COLUMNS", "LINES", "LC_CTYPE",
@@ -416,6 +402,7 @@ class TelnetClient(object):
         Begins TERMINAL-TYPE negotiation
         """
         self._iac_do(TTYPE)
+        self._note_reply_pending(TTYPE, True)
 
     def send_ready(self):
         """
@@ -439,18 +426,19 @@ class TelnetClient(object):
             warnings.warn ('socket_send() called on empty buffer',
                     RuntimeWarning, 2)
             return 0
+        ready_bytes = bytes(''.join(self.send_buffer))
+        self.send_buffer = array.array('c')
+
         def send(send_bytes):
             """
-            raises x84.bbs.exception.ConnectionClosed on sock.send err
+            throws x84.bbs.exception.ConnectionClosed on sock.send err
             """
             try:
                 return self.sock.send(send_bytes)
             except socket.error, err:
                 raise x84.bbs.exception.ConnectionClosed (
                         'socket send %d:%s' % (err[0], err[1],))
-        ready_bytes = bytes(''.join(self.send_buffer))
         sent = send(ready_bytes)
-        self.send_buffer = array.array('c')
         if sent < len(ready_bytes):
             # re-buffer data that could not be pushed to socket;
             self.send_buffer.fromstring (ready_bytes[sent:])
@@ -635,11 +623,11 @@ class TelnetClient(object):
                 # let DE know we refuse to send encrypted data.
                 self._iac_wont(ENCRYPT)
         elif option == STATUS:
-            # DE wants us to report our status
+            # DE wants to know if we support STATUS,
             if self._check_local_option(option) is not True:
                 self._note_local_option(option, True)
                 self._iac_will(STATUS)
-                self._send_status ()
+                self.send_status ()
         else:
             if self._check_local_option(option) is UNKNOWN:
                 self._note_local_option(option, False)
@@ -647,43 +635,31 @@ class TelnetClient(object):
                     self.addrport(), name_option(option))
                 self._iac_wont(option)
 
-    def _send_status(self):
+    def send_status(self):
         """
-        Process a DO STATUS command option received by DE.
-        The sender of the WILL STATUS is free to transmit status
-        information, spontaneously or in response to a request
-        from the sender of the DO.
+        Process a DO STATUS sub-negotiation received by DE. (rfc859)
         """
+        # warning:
         self.send_str (bytes(''.join((IAC, SB, STATUS, IS))))
-        for opt in NEGOTIATE_STATUS:
-            local_status = self._check_local_option(opt)
-            if local_status is True:
-                logger.debug ('local status, DO %s',
-                        name_option(opt))
+        logger.error ('send IAC+SB+STATUS+IS')
+        for opt, status in self.telnet_opt_dict.items():
+            # my_want_state_is_will
+            if status.local_option is True:
+                self.send_str(bytes(''.join((WILL, opt))))
+                logger.debug ('send WILL %s', name_option(opt))
+            elif status.reply_pending is True and opt in (ECHO, SGA):
+                self.send_str(bytes(''.join((WILL, opt))))
+                logger.debug ('send WILL %s (want)', name_option(opt))
+            # his_want_state_is_will
+            elif status.remote_option is True:
                 self.send_str(bytes(''.join((DO, opt))))
-            elif local_status is False:
-                logger.debug ('local status, DONT %s',
-                        name_option(opt))
-                self.send_str(bytes(''.join((DONT, opt))))
-            else:
-                assert local_status is UNKNOWN, (
-                        'Unhandled local status, %r' % (local_status,))
-                logger.debug ('local status, UNKNOWN %s (not sent)',
-                        name_option(opt))
-            remote_status = self.check_remote_option(opt)
-            if remote_status:
-                logger.debug ('remote status, DO %s',
-                        name_option(opt))
+                logger.debug ('send DO %s', name_option(opt))
+            elif (status.reply_pending is True
+                    and opt in (NEW_ENVIRON, NAWS, TTYPE)):
                 self.send_str(bytes(''.join((DO, opt))))
-            elif remote_status:
-                logger.debug ('remote status, DONT %s',
-                        name_option(opt))
-                self.send_str(bytes(''.join((DONT, opt))))
-            else:
-                assert remote_status is UNKNOWN
-                logger.debug ('remote status, UNKNOWN %s (not sent)',
-                        name_option(opt))
+                logger.debug ('send DO %s (want)', name_option(opt))
         self.send_str (bytes(''.join((IAC, SE))))
+        logger.error ('send IAC+SE')
 
     def _handle_dont(self, option):
         """
@@ -695,6 +671,7 @@ class TelnetClient(object):
             if self._check_local_option(BINARY) is not False:
                 self._note_local_option (BINARY, False)
                 self._iac_wont(BINARY) # agree
+                # but what does this mean; really? :-)
         elif option == ECHO:
             # client demands we do not echo
             if self._check_local_option(ECHO) is not False:
@@ -822,11 +799,8 @@ class TelnetClient(object):
             self._sb_env (buf[2:].tostring())
         elif (NAWS,) == (buf[0],):
             self._sb_naws (buf)
-        elif (STATUS, SEND) == buf([0], buf[1]):
-            self._send_status ()
-            # Sender requests receiver to transmit his (the receiver's)
-            # perception of the current status of Telnet
-            # options. The code for SEND is 1. (See below.)
+        elif (STATUS, SEND) == (buf[0], buf[1]):
+            self.send_status ()
         else:
             logger.error ('unsupported subnegotiation, %s: %r',
                     name_option(buf[0]), buf,)
@@ -968,6 +942,7 @@ class TelnetClient(object):
         logger.debug ('send IAC DO %s', name_option(option))
         self.send_str (bytes(''.join((IAC, DO, option))))
 
+    #@debug_option
     def _iac_dont(self, option):
         """
         Send a Telnet IAC "DONT" sequence.
@@ -975,6 +950,7 @@ class TelnetClient(object):
         logger.debug ('send IAC DONT %s', name_option(option))
         self.send_str (bytes(''.join((IAC, DONT, option))))
 
+    #@debug_option
     def _iac_will(self, option):
         """
         Send a Telnet IAC "WILL" sequence.
@@ -982,6 +958,7 @@ class TelnetClient(object):
         logger.debug ('send IAC WILL %s', name_option(option))
         self.send_str (bytes(''.join((IAC, WILL, option))))
 
+    #@debug_option
     def _iac_wont(self, option):
         """
         Send a Telnet IAC "WONT" sequence.
