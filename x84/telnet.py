@@ -389,13 +389,14 @@ class TelnetClient(object):
         """
         Request sub-negotiation NEW_ENVIRON. See RFC 1572.
         """
-        self.send_str (bytes(''.join((IAC, SB, NEW_ENVIRON, SEND, chr(0)))))
-        self.send_str (bytes(chr(0).join( \
+        rstr = bytes(''.join((IAC, SB, NEW_ENVIRON, SEND, chr(0))))
+        rstr += bytes(chr(0).join( \
             ("USER", "TERM", "SHELL", "COLUMNS", "LINES", "LC_CTYPE",
             "XTERM_LOCALE", "DISPLAY", "SSH_CLIENT", "SSH_CONNECTION",
             "SSH_TTY", "HOME", "HOSTNAME", "PWD", "MAIL", "LANG", "PWD",
-            "UID", "USER_ID", "EDITOR", "LOGNAME"))))
-        self.send_str (bytes(''.join((chr(3), IAC, SE))))
+            "UID", "USER_ID", "EDITOR", "LOGNAME")))
+        rstr += bytes(''.join((chr(3), IAC, SE)))
+        self.send_str (rstr)
 
     def request_ttype(self):
         """
@@ -640,26 +641,26 @@ class TelnetClient(object):
         Process a DO STATUS sub-negotiation received by DE. (rfc859)
         """
         # warning:
-        self.send_str (bytes(''.join((IAC, SB, STATUS, IS))))
-        logger.error ('send IAC+SB+STATUS+IS')
+        rstr = bytes(''.join((IAC, SB, STATUS, IS)))
         for opt, status in self.telnet_opt_dict.items():
             # my_want_state_is_will
             if status.local_option is True:
-                self.send_str(bytes(''.join((WILL, opt))))
                 logger.debug ('send WILL %s', name_option(opt))
+                rstr += bytes(''.join((WILL, opt)))
             elif status.reply_pending is True and opt in (ECHO, SGA):
-                self.send_str(bytes(''.join((WILL, opt))))
                 logger.debug ('send WILL %s (want)', name_option(opt))
+                rstr += bytes(''.join((WILL, opt)))
             # his_want_state_is_will
             elif status.remote_option is True:
-                self.send_str(bytes(''.join((DO, opt))))
                 logger.debug ('send DO %s', name_option(opt))
+                rstr += bytes(''.join((DO, opt)))
             elif (status.reply_pending is True
                     and opt in (NEW_ENVIRON, NAWS, TTYPE)):
-                self.send_str(bytes(''.join((DO, opt))))
                 logger.debug ('send DO %s (want)', name_option(opt))
-        self.send_str (bytes(''.join((IAC, SE))))
-        logger.error ('send IAC+SE')
+                rstr += bytes(''.join((DO, opt)))
+        rstr += bytes(''.join((IAC, SE)))
+        logger.debug ('send %s', ' '.join(name_option(opt) for opt in rstr))
+        self.send_str (rstr)
 
     def _handle_dont(self, option):
         """
