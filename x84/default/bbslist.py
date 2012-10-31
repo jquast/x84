@@ -69,7 +69,7 @@ def chk_thread(thread):
     if thread is not None and not thread.is_alive():
         udbkeys = DBProxy('bbslist').keys()
         nlc = 0
-        for key, bbs in thread.content:
+        for key, value in thread.content:
             if key not in udbkeys:
                 DBProxy('bbslist')[key] = value
                 DBProxy('bbslist', 'comments')[key] = list()
@@ -94,7 +94,7 @@ def get_bbslist():
     session.flush_event ('bbslist_update')
     def calc_rating(ratings):
         total = sum([float(rating)
-            for (usr, rating) in ratings] or [(None, 0.0)])
+            for (usr, rating) in ratings] or [0.0])
         stars = max(4, total / (len(ratings) or 1))
         return u' ' + u'*' * (stars - (4 - stars))
 
