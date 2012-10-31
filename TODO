@@ -44,6 +44,15 @@ OSX: iTerm2, Terminal.app
 Windows: PuTTy, SyncTerm, mtel, telnet (-t vtnt?)
 BSD/Linux: uxterm, bsdtelnet, linux console
 
+PARKING LOT
+===========
+Lord / dosemu / freedos / dosbox eample
+flesh out fileserver ... zIPE's call.
+  at least hook on_* methods
+  file stats, ftpd admin door, etc.
+19:34  airwalk you need 1) gl like ftp support
+19:34  airwalk and 2) zipscript-c support
+
 it is possible with multiprocessing module,
 http://docs.python.org/library/multiprocessing.html#using-a-remote-manager
 for a ./local.py, to instantiate a modified bbs.Session,
@@ -53,11 +62,4 @@ and register as a client to a running engine.py,
     but if you trust the clients, this is a way to build a 'farm'
     of bbs systems .. and may be how local.py should run;
 
-PARKING LOT
-===========
-Lord / dosemu / freedos / dosbox eample
-flesh out fileserver ... zIPE's call.
-  at least hook on_* methods
-  file stats, ftpd admin door, etc.
-19:34  airwalk you need 1) gl like ftp support
-19:34  airwalk and 2) zipscript-c support
+
