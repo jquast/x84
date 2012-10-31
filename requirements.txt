@@ -2,6 +2,5 @@ sqlitedict
 xmodem
 sauce
 requests
-py-bcrypt
 pylint
 PyChecker

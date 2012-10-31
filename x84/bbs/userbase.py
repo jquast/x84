@@ -2,7 +2,6 @@
 Userbase record access for x/84, https://github.com/jquast/x84/
 """
 import logging
-import bcrypt
 
 import x84.bbs.dbproxy
 
@@ -30,6 +29,51 @@ def find_user(handle):
     for key in x84.bbs.dbproxy.DBProxy('userbase').iterkeys():
         if handle.lower() == key.lower():
             return key
+
+def digestpw_bcrypt(password, salt = None):
+    """
+    Password digest using bcrypt (optional)
+    """
+    import bcrypt
+    if not salt:
+        salt = bcrypt.gensalt()
+    return salt, bcrypt.hashpw(password, salt)
+
+def digestpw_internal(password, salt = None):
+    """
+    Password digest using regular python libs
+    """
+    import hashlib
+    import base64
+    import os
+    if not salt:
+        salt = base64.b64encode(os.urandom(32))
+    digest = salt + password
+    for x in range(0,100000):
+      digest = hashlib.sha256(digest).hexdigest()
+    return salt, digest
+
+def digestpw_plaintext(password, salt = None):
+    """
+    No password digest, just store the passwords in plain text
+    """
+    if not salt:
+        salt = 'none'
+    return salt, password
+
+def digestpw_init(password_digest):
+    """
+    Set which password digest routine to use
+    """
+    global digestpw
+    if password_digest == 'bcrypt':
+        digestpw = digestpw_bcrypt
+    elif password_digest == 'internal':
+        digestpw = digestpw_internal
+    elif password_digest == 'plaintext':
+        digestpw = digestpw_plaintext
+    else:
+        assert False, ('Invalid value for "system.password_digest"')
 
 class Group(object):
     """
@@ -149,9 +193,7 @@ class User(object):
     def password(self, value):
         #pylint: disable=C0111
         #         Missing docstring
-        salt = bcrypt.gensalt()
-        hashed = bcrypt.hashpw(value, salt)
-        self._password = (salt, hashed)
+        self._password = digestpw(value)
         logger.info ('%s set new password', self.handle)
 
     def auth(self, try_pass):
@@ -163,8 +205,8 @@ class User(object):
         assert type(try_pass) is unicode
         assert len(try_pass) > 0
         assert self.password != (None, None), ('account is without password')
-        (salt, hashed) = self.password
-        return hashed == bcrypt.hashpw(try_pass, salt)
+        salt = self.password[0]
+        return self.password == digestpw(try_pass,salt)
 
     def __setitem__(self, key, value):
         #pylint: disable=C0111,

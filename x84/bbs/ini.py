@@ -104,6 +104,7 @@ def init_bbs_ini ():
     cfg_bbs.set('system', 'ttyrecpath',
         os.path.join(os.path.expanduser('~/.x84'), 'ttyrecordings'))
     cfg_bbs.set('system', 'timeout', '1984')
+    cfg_bbs.set('system', 'password_digest', 'internal')
 
     cfg_bbs.add_section('telnet')
     cfg_bbs.set('telnet', 'addr', '127.0.0.1')

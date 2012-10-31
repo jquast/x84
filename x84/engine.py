@@ -31,6 +31,7 @@ def main ():
 
     import x84.terminal
     import x84.bbs.ini
+    import x84.bbs.userbase
     import x84.telnet
 
     lookup_bbs = ('/etc/x84/default.ini',
@@ -51,6 +52,10 @@ def main ():
 
     # load/create .ini files
     x84.bbs.ini.init (lookup_bbs, lookup_log)
+
+    # initilization
+    x84.bbs.userbase.digestpw_init(
+      x84.bbs.ini.CFG.get('system','password_digest'))
 
     # start telnet server
     telnet_server = x84.telnet.TelnetServer (
