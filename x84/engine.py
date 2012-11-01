@@ -48,7 +48,8 @@ def main ():
             lookup_bbs = (arg,)
         elif opt in ('--logger',):
             lookup_log = (arg,)
-    assert 0 == len (tail), 'Unrecognized program arguments: %s' % (tail,)
+    if len(tail):
+        sys.stderr.write ('Unrecognized program arguments: %s\n' % (tail,))
 
     # load/create .ini files
     x84.bbs.ini.init (lookup_bbs, lookup_log)

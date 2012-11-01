@@ -214,7 +214,7 @@ class User(object):
         uadb = x84.bbs.dbproxy.DBProxy('userattr')
         uadb.acquire ()
         attrs = uadb[self.handle]
-        attrs.__setitem__(key, value)
+        attrs[key] = value
         uadb[self.handle] = attrs
         uadb.release ()
         logger.info ('%s[%s]=%r', self.handle, key, value)
