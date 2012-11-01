@@ -65,5 +65,7 @@ def main():
             dirty = True
         elif choice == u'v':
             gosub('editor', '.nethackrc')
+            dirty = True
         elif choice == u'p':
             gosub('editor', '.plan')
+            dirty = True
