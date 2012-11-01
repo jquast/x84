@@ -86,7 +86,7 @@ def main():
     idx = refresh_all ()
     chk_events = ('input', 'automsg', 'refresh',)
     while True:
-        event, data = session.read_event(chk_events, timeout=TIMEOUT)
+        event, data = session.read_events(chk_events, timeout=TIMEOUT)
         if (event, data) == (None, None):
             # timeout
             raise ConnectionTimeout, 'login prompt'
