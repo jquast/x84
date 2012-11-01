@@ -168,18 +168,9 @@ class ScrollingEditor(AnsiWindow):
     @property
     def eol(self):
         """
-        Return True when end of line is reached and no more input can be
-        accepted.
+        Return True when no more input can be accepted (end of line).
         """
-        if self.enable_scrolling:
-            if not self.max_length:
-                return False # infinite scrolling
-            return len(self.content) >= self.max_length
-        if len(self.content) >= self.max_length:
-            return True
-        if self.content >= self.visible_width:
-            return True
-        return False
+        return len(self.content) >= self.max_length
 
     @property
     def trim_char(self):
@@ -421,17 +412,21 @@ class ScrollingEditor(AnsiWindow):
         character addition caused the window to scroll horizontally.
         Otherwise, the input is simply returned to be displayed ('local echo').
         """
+        print 'add', repr(u_chr)
         if self.eol:
+            print 'EOL'
             return u''
         # append to input
         self.content += u_chr
         if self._horiz_pos >= (self.visible_width):
+            print 'SCROLLZ'
             # we have to scroll to display this output,
             self._horiz_shift += self.scroll_amt
             self._horiz_pos -= self.scroll_amt - 1
             return self.refresh ()
         # return character appended
         self._horiz_pos += 1
+        print 'retSELF'
         return u_chr
 
 
