@@ -106,9 +106,8 @@ class Pager(AnsiWindow):
 
     def init_keystrokes(self):
         """
-        This initializer sets glyphs and colors appropriate for a "theme",
-        override or inherit this method to create a common color and graphic
-        set.
+        This initializer sets keys appropriate for navigation.
+        override or inherit this method to create a common keyset.
         """
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
