@@ -156,7 +156,6 @@ class ScrollingEditor(AnsiWindow):
         self.content = u''
         AnsiWindow.__init__(self, 1, width, yloc, xloc)
         self.init_keystrokes ()
-
     __init__.__doc__ = AnsiWindow.__init__.__doc__
 
     @property
