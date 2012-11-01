@@ -99,6 +99,13 @@ class Door(object):
         # disable this by setting session.enable_keycodes = False
         swp = session.enable_keycodes
         session.enable_keycodes = False
+        # input must be flushed of keycodes!
+        readahead = u''.join([inp
+            for inp in session.flush_event ('input')
+            if type(inp) is not int])
+        if 0 != len(readahead):
+            # place non-keycodes back in buffer %-&
+            session.buffer_event ('input', readahead)
         try:
             logger.info ('exec/%s: %s', pid, ' '.join(self.args))
             self._loop()
