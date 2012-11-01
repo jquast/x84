@@ -475,6 +475,7 @@ class Session(object):
         """
         Close session.
         """
+        logger.debug ('session close')
         if self.is_recording:
             self.stop_recording()
 
