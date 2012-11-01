@@ -12,8 +12,6 @@ GLYPHSETS = { 'ascii':
             'right-vert': u'|',
             'top-horiz': u'-',
             'bot-horiz': u'-',
-            'fill': u' ',
-            'erase': u' ',
             },
         # classic line-drawing characters
         'thin': {
@@ -25,8 +23,6 @@ GLYPHSETS = { 'ascii':
             'right-vert': CP437TABLE[unichr(179)],
             'top-horiz': CP437TABLE[unichr(196)],
             'bot-horiz': CP437TABLE[unichr(196)],
-            'fill': u' ',
-            'erase': u' ',
             },
         }
 
@@ -38,8 +34,6 @@ class AnsiWindow(object):
     """
     #pylint: disable=R0902
     #        Too many instance attributes (8/7)
-    _glyphs = dict()
-    _colors = dict()
 
     def __init__(self, height, width, yloc, xloc):
         """
@@ -50,11 +44,17 @@ class AnsiWindow(object):
         self.width = width
         self.yloc = yloc
         self.xloc = xloc
-        self.glyphs = dict()
-        self.init_theme ()
         self._xpadding = 1
         self._ypadding = 1
         self._alignment = 'left'
+        self.glyphs = dict()
+        self.colors = dict()
+        self.init_theme ()
+        import x84.bbs.session
+        term = x84.bbs.session.getterminal()
+        assert self.isinview(), ('AnsiWindow(height=%s, width=%s, yloc=%s, xloc=%s)'
+                ' not in viewport Terminal(height=%s, width=%s)' % (height, width,
+                    yloc, xloc, term.height, term.width))
 
     def init_theme(self):
         """
@@ -67,37 +67,11 @@ class AnsiWindow(object):
         self.colors['normal'] = term.normal
         if term.number_of_colors != 0:
             self.colors['border'] = term.cyan
+
+        self.glyphs['erase'] = u' '
         self.glyphs = GLYPHSETS['ascii']
         if session.env.get('TERM') != 'unknown':
             self.glyphs = GLYPHSETS['thin']
-
-    @property
-    def glyphs(self):
-        """
-        Key table for unicode characters for draw routines.
-        """
-        return self._glyphs
-
-    @glyphs.setter
-    def glyphs(self, value):
-        #pylint: disable=E0102
-        #        method already defined line
-        #pylint: disable=C0111
-        #        Missing docstring
-        self._glyphs = value
-
-    @property
-    def colors(self):
-        """
-        Key table for terminal color sequences for draw routines.
-        """
-        return self._colors
-
-    @colors.setter
-    def colors(self, value):
-        #pylint: disable=C0111
-        #        Missing docstring
-        self._colors = value
 
     @property
     def xpadding(self):
@@ -185,8 +159,8 @@ class AnsiWindow(object):
         """
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
-        return (self.xloc > 0 and self.xloc +self.width -1 <= term.width
-            and self.yloc > 0 and self.yloc +self.height -1 <= term.height)
+        return (self.xloc >= 0 and self.xloc + self.width <= term.width
+            and self.yloc >= 0 and self.yloc + self.height <= term.height)
 
     def iswithin(self, win):
         """
@@ -242,42 +216,38 @@ class AnsiWindow(object):
     def border(self):
         """
         Return a unicode sequence suitable for drawing a border of this window
-        using self.colors['border'] and glyphs: 'top-left', 'top-horiz',
-        'top-right', 'left-vert', 'right-vert', 'bot-left', 'bot-horiz', and
-        'bot-right'.
+        using self.colors 'border', 'normal' and glyphs:
+        'top-left', 'top-horiz', 'top-right', 'left-vert', 'right-vert',
+        'bot-left', 'bot-horiz', and 'bot-right'.
         """
         #pylint: disable=R0912
         #        Too many branches (17/12)
         import x84.bbs.session
-        rstr = self.colors.get('border', u'')
+        topright = self.glyphs.get('top-right', u'*')
         thoriz = self.glyphs.get('top-horiz', u'-') * (self.width - 2)
+        topleft = self.glyphs.get('top-left', u'/')
+        leftvert = self.glyphs.get('left-vert', u'|')
+        rightvert = self.glyphs.get('right-vert', u'|')
+        botleft = self.glyphs.get('bot-left', u'V')
         bhoriz = self.glyphs.get('bot-horiz', u'-') * (self.width - 2)
-        topright = self.glyphs.get('top-right', u'/')
         botright = self.glyphs.get('bot-right', u'/')
+        rstr = u''
         for row in range(0, self.height):
-            # top to bottom
             for col in range (0, self.width):
-                # left to right
                 if (col == 0) or (col == self.width - 1):
                     rstr += self.pos(row, col)
                     if (row == 0) and (col == 0):
-                        # top left
-                        rstr += self.glyphs.get('top-left', u'/')
+                        rstr += topleft
                     elif (row == self.height - 1) and (col == 0):
-                        # bottom left
-                        rstr += self.glyphs.get('bot-left', u'V')
+                        rstr += botleft
                     elif (row == 0):
-                        # top right
-                        rstr += self.glyphs.get('top-right', u'V')
+                        rstr += topright
                     elif (row == self.height - 1):
-                        # bottom right
-                        rstr += self.glyphs.get('bot-right', u'/')
+                        rstr += botright
                     elif col == 0:
-                        # left vertical line
-                        rstr += self.glyphs.get('left-vert', u'|')
+                        rstr += leftvert
                     elif col == self.width - 1:
-                        # right vertical line
-                        rstr += self.glyphs.get('right-vert', u'|')
+                        rstr += rightvert
                 elif (row == 0):
                     # top row (column 1)
                     if thoriz == u'':
@@ -285,9 +255,7 @@ class AnsiWindow(object):
                             # prepare for top-right, (horiz skipped)
                             rstr += self.pos(row, self.width -1)
                     else:
-                        # horizontal line
                         rstr += thoriz
-                    # top-right,
                     rstr += topright
                     break
                 elif (row == self.height - 1):
@@ -302,15 +270,16 @@ class AnsiWindow(object):
                     # top-right,
                     rstr += botright
                     break
-        rstr += self.colors.get('border', u'')
-        return rstr + self.glyphs['normal']
+        return (self.colors.get('border', u'') +
+                rstr +
+                self.colors.get('normal', u''))
 
     def erase(self):
         """
         Erase window contents (including border)
         """
         return self.pos(0, 0) + u''.join([self.pos(y, 0) +
-            self.glyphs.get('erase', u'') for y in range(self.height)])
+            self.glyphs.get('erase', u' ') for y in range(self.height)])
 
     def clear(self):
         """
