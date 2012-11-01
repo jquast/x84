@@ -93,7 +93,7 @@ class Pager(AnsiWindow):
         """
         Returns bottom-most window row that contains content
         """
-        if self.bottom < len(self.visible_height):
+        if self.bottom < self.visible_height:
             return self.bottom
         return len(self.visible_content) - 1
 
@@ -103,7 +103,6 @@ class Pager(AnsiWindow):
         Returns bottom-most position that contains content
         """
         return max(0, len(self.content) - self.visible_height)
-
 
     def init_keystrokes(self):
         """
