@@ -270,6 +270,7 @@ class ConnectTelnetTerminal (threading.Thread):
             logger.debug ('window size: %sx%s (unsolicited)',
                     self.client.env.get('COLUMNS'),
                     self.client.env.get('LINES'),)
+            return
         self.client.request_do_naws ()
         self.client.socket_send() # push
         st_time = time.time()
