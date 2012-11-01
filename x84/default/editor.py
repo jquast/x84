@@ -12,7 +12,6 @@ def redraw(pager, le):
     rstr = u''
     rstr += pager.border()
     rstr += pager.refresh ()
-    print repr(le.glyphs['top-horiz'], 'top-horiz')
     rstr += le.border ()
     rstr += le.refresh ()
     #rstr += le.fixate ()
@@ -21,13 +20,15 @@ def redraw(pager, le):
 def get_ui(ucs=u'', ypos=None):
     term = getterminal()
     pager = Pager(term.height - 2, term.width, 1, 0)
-    pager.colors['border'] = term.bold_green
-    pager.glyphs['left-vert'] = pager.glyphs['right-vert'] = u''
+    pager.colors['border'] = term.bold_blue
+    pager.glyphs['left-vert'] = pager.glyphs['right-vert'] = u'|'
     pager.update (ucs)
     yloc = pager.visible_bottom if ypos is None else ypos
-    le = ScrollingEditor(term.width, yloc, 1)
-    le.glyphs['bot-horiz'] = le.glyphs['top-horiz'] = u''
-    le.colors['border'] = term.bold_white
+    # actually, should - 1 for border ?!
+    le = ScrollingEditor(term.width, yloc, 0)
+    le.glyphs['bot-horiz'] = le.glyphs['top-horiz'] = u'-'
+    le.colors['border'] = term.bold_green
+    print 'yloc', yloc
     return pager, le
 
 def prompt_commands(pager):
@@ -47,14 +48,12 @@ def main(uattr=u'draft'):
     #        DBProxy('userattr')[session.user.handle].get(uattr, u''), 0)
     test = open(os.path.join(os.path.dirname(__file__),
         'art', 'news.txt')).read().decode('utf8').strip()
-    pager, le = get_ui(test, 0)
-    pager.move_end ()
-    ypos = pager.bottom
+    pager, le = get_ui(test)
     xpos = Ansi(pager.content[-1]).__len__()
     dirty = True
     while True:
         if session.poll_event('refresh'):
-            pager, le = get_ui(u'\n'.join(pager.content), ypos)
+            pager, le = get_ui(u'\n'.join(pager.content), le.yloc)
             dirty = True
         if dirty:
             echo (banner())
