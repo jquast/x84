@@ -154,8 +154,7 @@ class ScrollingEditor(AnsiWindow):
         self._trim_char = '$ '
         self.keyset = PC_KEYSET
         self.content = u''
-        AnsiWindow.__init__(self, height=1,
-                width=width, yloc=yloc, xloc=xloc)
+        AnsiWindow.__init__(self, 1, width, yloc, xloc)
         self.init_keystrokes ()
 
     __init__.__doc__ = AnsiWindow.__init__.__doc__
