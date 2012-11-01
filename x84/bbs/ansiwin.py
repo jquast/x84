@@ -3,7 +3,7 @@ ansiwin package for x/84, http://github.com/jquast/x84
 """
 from x84.bbs.cp437 import CP437TABLE
 
-GLYPHSETS = { 'unknown':
+GLYPHSETS = { 'ascii':
         { 'top-left': u'+',
             'bot-left': u'+',
             'top-right': u'+',
@@ -15,6 +15,7 @@ GLYPHSETS = { 'unknown':
             'fill': u' ',
             'erase': u' ',
             },
+        # classic line-drawing characters
         'thin': {
             'top-left': CP437TABLE[unichr(218)],
             'bot-left': CP437TABLE[unichr(192)],
@@ -22,18 +23,6 @@ GLYPHSETS = { 'unknown':
             'bot-right': CP437TABLE[unichr(217)],
             'left-vert': CP437TABLE[unichr(179)],
             'right-vert': CP437TABLE[unichr(179)],
-            'top-horiz': CP437TABLE[unichr(196)],
-            'bot-horiz': CP437TABLE[unichr(196)],
-            'fill': u' ',
-            'erase': u' ',
-            },
-        'vert_thick': {
-            'top-left': CP437TABLE[unichr(213)],
-            'bot-left': CP437TABLE[unichr(211)],
-            'top-right': CP437TABLE[unichr(183)],
-            'bot-right': CP437TABLE[unichr(189)],
-            'left-vert': CP437TABLE[unichr(186)],
-            'right-vert': CP437TABLE[unichr(186)],
             'top-horiz': CP437TABLE[unichr(196)],
             'bot-horiz': CP437TABLE[unichr(196)],
             'fill': u' ',
@@ -75,14 +64,11 @@ class AnsiWindow(object):
         import x84.bbs.session
         session = x84.bbs.session.getsession()
         term = x84.bbs.session.getterminal()
+        self.colors['normal'] = term.normal
         if term.number_of_colors != 0:
             self.colors['border'] = term.cyan
-            self.colors['highlight'] = term.cyan + term.reverse
-            self.colors['lowlight'] = term.normal
-            self.colors['normal'] = term.normal
-        if session.env.get('TERM') == 'unknown':
-            self.glyphs = GLYPHSETS['unknown']
-        else:
+        self.glyphs = GLYPHSETS['ascii']
+        if session.env.get('TERM') != 'unknown':
             self.glyphs = GLYPHSETS['thin']
 
     @property
@@ -263,7 +249,6 @@ class AnsiWindow(object):
         #pylint: disable=R0912
         #        Too many branches (17/12)
         import x84.bbs.session
-        term = x84.bbs.session.getterminal()
         rstr = self.colors.get('border', u'')
         thoriz = self.glyphs.get('top-horiz', u'-') * (self.width - 2)
         bhoriz = self.glyphs.get('bot-horiz', u'-') * (self.width - 2)
@@ -318,7 +303,7 @@ class AnsiWindow(object):
                     rstr += botright
                     break
         rstr += self.colors.get('border', u'')
-        return rstr + term.normal
+        return rstr + self.glyphs['normal']
 
     def erase(self):
         """
