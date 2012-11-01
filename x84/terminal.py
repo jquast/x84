@@ -64,7 +64,6 @@ def start_process(pipe, origin, env):
     except KeyboardInterrupt:
         raise SystemExit
     logger.info('%s/%s end process', new_session.pid, new_session.handle)
-    pipe.send (('shutdown', ('process exit',))) # debugging
     pipe.send (('disconnect', ('process exit',)))
     new_session.close ()
 
