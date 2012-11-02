@@ -28,7 +28,7 @@ def main():
 
     save_msg = u"\r\n\r\n'%s' is now your preferred encoding ..\r\n"
 
-    if TERM == 'unknown' or session.user.get('expert', False):
+    if session.env.get('TERM') == 'unknown' or session.user.get('expert', False):
         echo ('\r\n (U) UTF-8 encoding or (C) CP437 encoding [uc] ?\b\b')
         while True:
             inp = getch()
