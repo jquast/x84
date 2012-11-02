@@ -151,7 +151,7 @@ class Session(object):
         #pylint: disable=C0111
         #         Missing docstring
         self._user = value
-        logger.info ('user=%r', value.handle)
+        logger.info ('user = %r', value.handle)
         if self.is_recording and self._ttyrec_fname != value.handle:
             # mv None.0 -> userName.0
             self.rename_recording (self._ttyrec_fname, value.handle)
@@ -512,7 +512,8 @@ class Session(object):
                     '%s.%d' % (key, (TTYREC_ROTATE - 1) - (n - 1)))
             if os.path.exists(src):
                 os.rename (src, dst)
-                logger.debug ('rotate ttyrec %r --> %r', src, dst)
+                logger.debug ('mv %r -> %r',
+                        src, os.path.basename(dst))
         dst = os.path.join(self._ttyrec_folder, '%s.0' % (key,))
         assert TTYREC_ROTATE != 0 and not os.path.exists(dst), dst
 
