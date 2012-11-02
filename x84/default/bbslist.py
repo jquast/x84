@@ -157,7 +157,7 @@ def get_bbsinfo(key):
             + bbs['location'] + '\n')
     rstr += u'\n'
     comments = DBProxy('bbslist', 'comments')[key]
-    for handle, comment in comments.iteritems():
+    for handle, comment in comments:
         rstr += '\n' + term.green(handle)
         rstr += term.bold_green(':')
         rstr += comment
