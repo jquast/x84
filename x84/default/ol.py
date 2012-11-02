@@ -151,9 +151,9 @@ def banner():
         # xzip's ansi is line-clean, center-align with terminal width,
         art = open(os.path.join(
             os.path.dirname(__file__), 'art', 'ol.ans')).readlines()
-        max_ans = max([len(Ansi(from_cp437(line))) for line in art])
+        max_ans = max([len(Ansi(from_cp437(line.rstrip()))) for line in art])
         for line in art:
-            padded = Ansi(from_cp437(line)).center(max_ans)
+            padded = Ansi(from_cp437(line.rstrip())).center(max_ans)
             output += term.normal + term.blue # minor fix for this art ;/
             output += Ansi(padded).center(term.width).rstrip() + '\r\n'
     return output + term.normal
