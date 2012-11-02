@@ -537,7 +537,6 @@ class TelnetClient(object):
             ## Stop capturing a sub-negotiation string
             self.telnet_got_sb = False
             self._sb_decoder()
-            logger.debug ('decoded (SE)')
         elif cmd == IP:
             self.deactivate ()
             logger.warn ('Interrupt Process (IP); closing.')
