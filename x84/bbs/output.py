@@ -29,7 +29,9 @@ def echo(ucs):
 class Ansi(unicode):
     """
     A unicode class that is poorly aware of the effect ansi sequences have on
-    length.
+    length, most importantly offers a correct terminal display length of ansi
+    art and east asian characters, so that it can be aligned on non-80x25
+    terminals, and used with the center, rjust, and ljust alignment methods.
     """
     # pylint: disable=R0904,R0924
     #         Too many public methods (45/20)
@@ -40,26 +42,32 @@ class Ansi(unicode):
         """
         Return the printed length of a string that contains (some types) of
         ansi sequences. Although accounted for, strings containing sequences
-        such as cls() will not give accurate returns.
+        such as cls() will not give accurate returns. backspace, delete, and
+        double-wide east-asian
         """
-        #if not unichr(27) in self:
-        #    return unicode.__len__(self)
         # 'nxt' points to first *ch beyond current ansi sequence, if any.
-        # 'width' is currently estimated display length (in theory).
+        # 'width' is currently estimated display length.
         nxt, width = 0, 0
+
+        # i regret the heavy re-instantiation of Ansi() ..
         for idx in range(0, unicode.__len__(self)):
             width += Ansi(self[idx:]).anspadd()
             if idx == nxt:
                 nxt = idx + Ansi(self[idx:]).seqlen()
             if nxt <= idx:
-                # for 'East Sian Fullwidth' and 'East Asian Wide',
-                # character can take 2 cells, see
-                # http://www.unicode.org/reports/tr11/
-                # http://www.gossamer-threads.com/lists/python/bugs/972834
-                # we just use wcswidth, since thats what terminals use !
-                #logger.error ('checking %r', self[idx],)
+                # 'East Asian Fullwidth' and 'East Asian Wide' characters
+                # can take 2 cells, see http://www.unicode.org/reports/tr11/
+                # and http://www.gossamer-threads.com/lists/python/bugs/972834
+                #
+                # we just use wcswidth, since that is what terminal client
+                # implementors seem to be using, and on linux, and posix?
                 wide = wcswidth(self[idx])
-                assert wide != -1, ('indeterminate length %r' % (self[idx],))
+
+                # my own NVT addition: allow -1 to be added to width when
+                # 127 and 8 are used (BACKSPACE, DEL)
+                assert wide != -1 and wide not in (u'\b', unichr(127)), (
+                        'indeterminate length %r' % (self[idx],))
+
                 width += wide
                 nxt = idx + Ansi(self[idx:]).seqlen() + 1
         return width
@@ -189,10 +197,12 @@ class Ansi(unicode):
         """
          S.seqfill() -> unicode
 
-           Pad string S with the terminal "cursor right" sequence,
-           ``<ESC>[<N>C``, used to compress ansi art,replaced with
-           padded u' 's.  At the cost of extra bytes, this prevents 'bleeding'
-           when scrolling artwork.
+           Pad string S, previously filled with the terminal
+           "cursor right" sequence, ``<ESC>[<N>C``, with space character ' ',
+           also used as 'erase'. Ansi art can also be compressed in this way,
+           by replacing with padded u' 's, we can scroll such artwork
+           bi-directionally or within pager windows without 'bleeding' at the
+           cost of extra bytes.
         """
         ptr = 0
         rstr = u''
