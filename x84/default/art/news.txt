@@ -200,8 +200,8 @@ Greetings in various languages:
 
   Hello world, Καλημέρα κόσμε, コンニチハ
 
-Box drawing alignment tests:                                          █
-                                                                      ▉
+Box drawing alignment tests: █
+                             ▉
   ╔══╦══╗  ┌──┬──┐  ╭──┬──╮
   ║┌─╨─┐║  │╔═╧═╗│  │╒═╪═╕│
   ║│╲ ╱│║  │║   ║│  ││ │ ││
