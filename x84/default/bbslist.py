@@ -109,9 +109,9 @@ def get_bbslist():
                 by_group[grp] = [(key, bbs)]
                 continue
             by_group[grp].append ((key, bbs))
-        return by_group
+        return by_group.items()
 
-    for idx, (bbs_sw, bbs_keys) in enumerate(sorted(by_software.items())):
+    for idx, (bbs_sw, bbs_keys) in enumerate(sorted(get_bysoftware())):
         output.append ((None, (u' %s  %2d ' % (bbs_sw,
             len(bbs_keys))).rjust(64, '-')))
         for key, bbs in bbs_keys:
