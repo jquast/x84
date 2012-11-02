@@ -172,7 +172,7 @@ class Door(object):
                     logger.debug ('--> %r' % (data[:n_written],))
                 if n_written != len(data):
                     # we wrote none or some of our keyboard input, but not all.
-                    # re-buffer remaining bytes back into session for next poll ..
+                    # re-buffer remaining bytes back into session for next poll
                     session.buffer_input (data[n_written:])
                     # haven't seen this yet, prove to me it works ..
                     logger.warn ('buffer_input(%r)', data[n_written:])
