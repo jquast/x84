@@ -227,7 +227,6 @@ class ConnectTelnetTerminal (threading.Thread):
         """
         return bool(time.time() -st_time < self.TIME_WAIT)
 
-
     def _set_socket_opts(self):
         """
         Set socket non-blocking and enable TCP KeepAlive.
@@ -256,7 +255,6 @@ class ConnectTelnetTerminal (threading.Thread):
             logger.debug ('failed: NEW_ENVIRON')
             return
 
-
     def _try_naws(self):
         """
         Negotiate about window size (NAWS) telnet option (on).
@@ -281,6 +279,8 @@ class ConnectTelnetTerminal (threading.Thread):
                     self.client.env.get('LINES'))
             return
         logger.debug ('failed: negotiate about window size')
+
+# TODO: test corner hack, everybody is doin the NAWS, wtf!
 
         # Try #2 ... this works for most any screen
         # send to client --> pos(999,999)
@@ -331,7 +331,7 @@ class ConnectTelnetTerminal (threading.Thread):
         """
         detected = lambda: self.client.env['TERM'] != 'unknown'
         if detected():
-            logger.info ('terminal type: %s (unsolicited)' %
+            logger.debug ('terminal type: %s (unsolicited)' %
                 (self.client.env['TERM'],))
             return
         logger.debug ('request-terminal-type')
@@ -341,7 +341,7 @@ class ConnectTelnetTerminal (threading.Thread):
         while not detected() and self._timeleft(st_time):
             time.sleep (self.TIME_POLL)
         if detected():
-            logger.info ('terminal type: %s (negotiated)' %
+            logger.debug ('terminal type: %s (negotiated)' %
                 (self.client.env['TERM'],))
             return
         logger.warn ('failed: terminal type not determined.')
