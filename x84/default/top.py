@@ -83,7 +83,6 @@ def main(handle=None):
 
     # 4. if no preferred charset run charset.py selector
     if session.user.get('charset', None) is None:
-        logger.warn (session.user.get('charset', None))
         gosub ('charset')
     else:
         # load default charset
