@@ -63,11 +63,11 @@ def main():
 
     if (session.env.get('TERM') == 'unknown'
             or session.user.get('expert', False) or term.width < 64):
-        dummy_pager (news_txt.split('\n'))
+        dummy_pager ([line.rstrip() for line in news_txt.split('\n')])
         return
 
     echo (term.home + term.normal + term.clear)
-    pager = get_pager(u'\n'.join(news_txt))
+    pager = get_pager(u'\n'.join([line.rstrip() for line in news_txt]))
     echo (redraw(pager))
     while True:
         inp = getch(1)
