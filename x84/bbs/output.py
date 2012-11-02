@@ -4,8 +4,10 @@ Output and Ansi art unicode helpers for x/84, https://github.com/jquast/x84
 import re
 import math
 import warnings
+import unicodedata
 
-import x84.bbs.session
+from x84.bbs.session import getterminal, getsession
+from x84.bbs.wcswidth import wcswidth
 
 ANSI_PIPE = re.compile(r'(\|\d\d)')
 ANSI_RIGHT = re.compile(r'\033\[(\d{1,4})C')
@@ -18,7 +20,7 @@ def echo(ucs):
     Output unicode bytes and terminal sequences to session terminal.
     non-unicode is accepted, translated as iso8859-1, and a warning is emitted.
     """
-    session = x84.bbs.session.getsession()
+    session = getsession()
     if not isinstance(ucs, unicode):
         warnings.warn('non-unicode: %r' % (ucs,), UnicodeWarning, 2)
         return session.write (ucs.decode('iso8859-1'))
@@ -40,8 +42,8 @@ class Ansi(unicode):
         ansi sequences. Although accounted for, strings containing sequences
         such as cls() will not give accurate returns.
         """
-        if not unichr(27) in self:
-            return unicode.__len__(self)
+        #if not unichr(27) in self:
+        #    return unicode.__len__(self)
         # 'nxt' points to first *ch beyond current ansi sequence, if any.
         # 'width' is currently estimated display length (in theory).
         nxt, width = 0, 0
@@ -50,7 +52,15 @@ class Ansi(unicode):
             if idx == nxt:
                 nxt = idx + Ansi(self[idx:]).seqlen()
             if nxt <= idx:
-                width += 1
+                # for 'East Sian Fullwidth' and 'East Asian Wide',
+                # character can take 2 cells, see
+                # http://www.unicode.org/reports/tr11/
+                # http://www.gossamer-threads.com/lists/python/bugs/972834
+                # we just use wcswidth, since thats what terminals use !
+                #logger.error ('checking %r', self[idx],)
+                wide = wcswidth(self[idx])
+                assert wide != -1, ('indeterminate length %r' % (self[idx],))
+                width += wide
                 nxt = idx + Ansi(self[idx:]).seqlen() + 1
         return width
 
@@ -217,7 +227,7 @@ class Ansi(unicode):
         Return new terminal sequence, replacing 'pipe codes', such as u'|03'
         with this terminals equivalent attribute sequence.
         """
-        term = x84.bbs.session.getterminal()
+        term = getterminal()
         rstr = u''
         ptr = 0
         match = None
