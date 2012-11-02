@@ -67,3 +67,7 @@ def main():
             gosub('editor', '.nethackrc')
         elif choice == u'p':
             gosub('editor', '.plan')
+        elif choice == u'H':
+            from guppy import hpy
+            h=hpy()
+            print (h.heap()&str).bysize
