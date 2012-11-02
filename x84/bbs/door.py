@@ -99,6 +99,14 @@ class Door(object):
         # disable this by setting session.enable_keycodes = False
         swp = session.enable_keycodes
         session.enable_keycodes = False
+        # input must be flushed of keycodes!
+        readahead = u''.join([inp
+            for inp in session.flush_event ('input')
+            if type(inp) is not int])
+        logger.debug ('readahead, %r', readahead)
+        if 0 != len(readahead):
+            # place non-keycodes back in buffer %-&
+            session.buffer_event ('input', readahead)
         try:
             logger.info ('exec/%s: %s', pid, ' '.join(self.args))
             self._loop()
@@ -125,6 +133,7 @@ class Door(object):
         when session idle time exceeds self.timeout.
         """
         term = x84.bbs.session.getterminal()
+        session = x84.bbs.session.getsession()
         while True:
             # block up to self.time_opoll for screen output
             rlist = (self.master_fd,)
@@ -143,10 +152,9 @@ class Door(object):
                     else data.decode('utf8'))
 
             # block up to self.time_ipoll for keyboard input
-            event, data = x84.bbs.session.getsession().read_events (
-                    events=('refresh','input'), timeout=self.time_ipoll)
-            if ((None, None) == (event, data)
-                    and x84.bbs.session.getsession().idle > self.timeout):
+            event, data = session.read_events (
+                    ('refresh', 'input',), self.time_ipoll)
+            if ((None, None) == (event, data) and session.idle > self.timeout):
                 raise x84.bbs.exception.ConnectionTimeout (
                         'timeout in door %r', self.args,)
             elif event == 'refresh':
@@ -156,8 +164,14 @@ class Door(object):
                     fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ,
                             struct.pack('HHHH', term.height, term.width, 0, 0))
             elif event == 'input':
-                if self._TAP:
-                    logger.debug ('--> %r' % (data,))
-                while 0 != len(data):
-                    n_written = os.write(self.master_fd, data)
-                    data = data[n_written:]
+                # needs testing (replay vim special keys input ?)
+                n_written = os.write(self.master_fd, data)
+                if n_written == 0:
+                    logger.warn ('fight 0-byte write; exit, right?')
+                elif self._TAP:
+                    logger.debug ('--> %r' % (data[:n_written],))
+                if n_written != len(data):
+                    # we wrote none or some of our keyboard input, but not all.
+                    # re-buffer remaining bytes back into session for next poll ..
+                    session.buffer_input (data[n_written:])
+                    logger.debug ('buffer_input(%r)', data[n_written:])

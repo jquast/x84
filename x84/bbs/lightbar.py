@@ -56,7 +56,7 @@ class Lightbar (AnsiWindow):
         """
         Return unicode byte sequence suitable for moving to location ypos of
         window-relative row, and displaying any valid entry there, or using
-        glyphs['fill'] if out of bounds.
+        glyphs['erase'] if out of bounds.
         """
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
@@ -65,7 +65,7 @@ class Lightbar (AnsiWindow):
         entry = self.vitem_shift + row
         if entry >= len(self.content):
             # out-of-bounds;
-            return self.glyphs['fill'] * self.visible_width
+            return self.glyphs['erase'] * self.visible_width
         unibytes += (self.colors['selected']
                 if entry == self.index
                 else self.colors['unselected'])

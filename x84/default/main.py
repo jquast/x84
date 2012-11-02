@@ -65,9 +65,11 @@ def main():
             dirty = True
         elif choice == u'v':
             gosub('editor', '.nethackrc')
+            dirty = True
         elif choice == u'p':
             gosub('editor', '.plan')
         elif choice == u'H':
             from guppy import hpy
             h=hpy()
             print (h.heap()&str).bysize
+            dirty = True
