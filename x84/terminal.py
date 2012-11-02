@@ -50,17 +50,19 @@ def start_process(pipe, origin, env):
             int(env.get('LINES', '24')), int(env.get('COLUMNS', '80')))
 
     # spawn and begin a new session
-    new_session = x84.bbs.session.Session (term, pipe, origin, env)
+    session = x84.bbs.session.Session (term, pipe, origin, env)
 
     # our root handler has dangerously forked file descriptors.
-    # remove any existing handlers, and re-address our root logging handler
-    # to an IPC event pipe, named 'logging'.
+    # remove any existing handlers in this sub-process, and re-address
+    # our root logging handler to an IPC event pipe. Henceforth,
+    # events are emitted to the engine as an event named 'logging'.
     root = logging.getLogger()
     for hdlr in root.handlers:
         root.removeHandler (hdlr)
     root.addHandler (x84.bbs.session.IPCLogHandler (pipe))
-    new_session.run ()
-    logger.info ('%s/%s end of sub-process', new_session.pid, new_session.handle)
+    session.run ()
+
+    logger.info ('%s/%s end of sub-process', session.pid, session.handle)
     pipe.send (('exit', True))
 
 class IPCStream(object):
@@ -91,19 +93,19 @@ class IPCStream(object):
 
 def on_disconnect(client):
     """
-    Discover the matching client in registry and remove it.
     """
     from x84.bbs.exception import Disconnect
-    logger.debug ('%s Disconnected', client.addrport())
+    #pylint: disable=W0612
+    #        Unused variable 'o_lock'
     for o_client, o_pipe, o_lock in terminals():
         if client == o_client:
+            logger.debug ('%s Disconnected', client.addrport())
             o_pipe.send (('exception', (Disconnect('Requested by Client'))))
             return
-    logger.warn ('Failed to find terminal of on_disconnect event')
+    logger.info ('%s Disconnected', client.addrport())
 
 def on_connect(client):
     """
-    Spawn a ConnectTelnetTerminal() thread for each new connection.
     """
     logger.info ('%s Connected', client.addrport())
     thread = ConnectTelnetTerminal(client)
@@ -181,12 +183,14 @@ class ConnectTelnetTerminal (threading.Thread):
 
         # wait for some bytes to be received, and if we get any bytes,
         # at least make sure to get some more, and then -- wait a bit!
+        logger.debug ('pausing for negotiation')
         st_time = time.time()
         mrk_bytes = self.client.bytes_received
         while (0 == mrk_bytes or mrk_bytes == self.client.bytes_received) \
             and time.time() -st_time < (0.25):
             time.sleep (self.TIME_POLL)
-        time.sleep (self.TIME_POLL *2)
+        time.sleep (self.TIME_POLL)
+        logger.debug ('negotiating options')
         self._try_env ()
         # this will set .terminal_type if -still- undetected,
         # or otherwise overwrite it if it is detected different,
@@ -196,12 +200,6 @@ class ConnectTelnetTerminal (threading.Thread):
         self._try_naws ()
         # disable line-wrapping http://www.termsys.demon.co.uk/vtansi.htm
         self.client.send_str (bytes(chr(27) + '[7l'))
-        # This denied telnetlib.py,
-        #time.sleep (0.15)
-        #import x84.bbs.exception
-        #if 0 == self.client.bytes_received:
-        #    raise x84.bbs.exception.ConnectionClosed (
-        #            'telnet negotiation ignored by client')
 
     def run(self):
         """
@@ -234,7 +232,6 @@ class ConnectTelnetTerminal (threading.Thread):
         self.client.sock.setblocking (0)
         self.client.sock.setsockopt (
                 socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-
 
     def _try_env(self):
         """
@@ -278,10 +275,16 @@ class ConnectTelnetTerminal (threading.Thread):
                     self.client.env.get('COLUMNS'),
                     self.client.env.get('LINES'))
             return
+
         logger.debug ('failed: negotiate about window size')
+        self._try_cornerquery()
 
-# TODO: test corner hack, everybody is doin the NAWS, wtf!
-
+    def _try_cornerquery(self):
+        """
+        This is akin to X11's 'xresize', move the cursor to the corner of the
+        terminal (999,999) and request the terminal to report their cursor
+        position.
+        """
         # Try #2 ... this works for most any screen
         # send to client --> pos(999,999)
         # send to client --> report cursor position
@@ -324,7 +327,6 @@ class ConnectTelnetTerminal (threading.Thread):
         self.client.env['LINES'] = str(self.client.rows)
         self.client.env['COLUMNS'] = str(self.client.columns)
 
-
     def _try_ttype(self):
         """
         Negotiate terminal type (TTYPE) telnet option (on).
@@ -345,60 +347,3 @@ class ConnectTelnetTerminal (threading.Thread):
                 (self.client.env['TERM'],))
             return
         logger.warn ('failed: terminal type not determined.')
-
-# Deprecate; do we really want this?
-#class POSHandler(threading.Thread):
-#    """
-#    This thread requires a client pipe, The telnet terminal is queried for its
-#    cursor position, and that position is sent as 'pos' event to the child
-#    pipe, otherwise a ('pos-reply', None) is sent if no cursor position is
-#    reported within time_pause.
-#    """
-#    time_poll = 0.01
-#    time_pause = 1.75
-#    time_wait = 1.30
-#    def __init__(self, pipe, client, lock, reply_event='pos-reply'):
-#        self.pipe = pipe
-#        self.client = client
-#        self.lock = lock
-#        self.reply_event = reply_event
-#        threading.Thread.__init__ (self)
-#
-#    def _timeleft(self, st_time):
-#        """
-#        Returns True when difference of current time and t is below timeout
-#        """
-#        return bool(time.time() -st_time < self.time_wait)
-#
-#    def run(self):
-#        logger.debug ('getpos?')
-#        data = (None, None)
-#        #pylint: disable=W0612
-#        #        Unused variable 'ttype'
-#        for (ttype, seq, pattern) in ConnectTelnetTerminal.WINSIZE_TRICK:
-#            self.lock.acquire ()
-#            self.client.send_str (seq)
-#            self.client.socket_send() # push
-#            st_time = time.time()
-#            while self.client.idle() < self.time_pause \
-#            and self._timeleft(st_time):
-#                time.sleep (self.time_poll)
-#            inp = self.client.get_input()
-#            self.lock.release ()
-#            match = pattern.search (inp)
-#            logger.debug ('x %r/%d', inp, len(inp),)
-#            if match:
-#                row, col = match.groups()
-#                try:
-#                    data = (int(row)-1, int(col)-1)
-#                    break
-#                except ValueError:
-#                    pass
-#            if len(inp):
-#                # holy crap, this isn't for us ;^)
-#                self.pipe.send (('input', inp))
-#                logger.error ('input bypass %r', inp)
-#                continue
-#        logger.debug ('send: %s, %r', self.reply_event, data,)
-#        self.pipe.send ((self.reply_event, (data,)))
-#        return
