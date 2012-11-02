@@ -5,7 +5,6 @@ import x84.bbs.exception
 import x84.bbs.ini
 import threading
 import logging
-import sys
 import os
 import sqlitedict
 #pylint: disable=C0103
@@ -17,7 +16,7 @@ DATABASES = {}
 
 def get_db(schema, tablename='unnamed'):
     """
-    Open and return thread-shared SqliteDict instance, creating a new one if not found
+    Open or Create and return SqliteDict instance
     """
     FILELOCK.acquire()
     datapath = x84.bbs.ini.CFG.get('system', 'datapath')
