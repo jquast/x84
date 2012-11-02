@@ -61,6 +61,7 @@ def get_pager(lcalls):
     return pager
 
 def lc_retrieve():
+    import time
     term = getterminal()
     udb = dict ()
     for handle in list_users():
@@ -76,7 +77,7 @@ def lc_retrieve():
         rstr += ( term.bright_yellow(origin[:len(origin) / 2])
                 + term.bright_yellow(origin[len(origin) / 2:])
                 + u' ' * (max(1, padd_location - len(origin))) + u' ')
-        rstr += ( term.bright_yellow(timeago(tm_lc))
+        rstr += ( term.bright_yellow(timeago(time.time() - tm_lc))
                 + term.red(' ago  n') + term.bright_yellow('C')
                 + term.red('/') + term.bright_red(str(nc)) + u'\n')
     return rstr.rstrip()
