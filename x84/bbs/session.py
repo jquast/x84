@@ -237,18 +237,25 @@ class Session(object):
             except Exception, err:
                 # Pokemon exception.
                 e_type, e_value, e_tb = sys.exc_info()
+                self.write (self.terminal.bold_red + u'\r\n')
                 for line in traceback.format_tb(e_tb):
                     logger.error (line.rstrip())
+                    self.write (line.rstrip() + u'\r\n')
                 for line in traceback.format_exception_only(e_type, e_value):
                     logger.error (line.rstrip())
+                    self.write (line.rstrip() + u'\r\n')
                 if not self.lock.acquire(False):
                     logger.error ('session.lock forcefully unacquired')
                     self.lock = threading.Lock()
             if 0 != len(self._script_stack):
                 # recover from a general exception or script error
                 fault = self._script_stack.pop()
-                logger.info ('%s after general exception with %s.', 'Resume' \
-                    if 0 != len(self._script_stack) else 'Stop', fault)
+                oper = 'RESUME'
+                if 0 == len(self._script_stack):
+                    oper = 'STOP'
+                msg = ('%s after general exception in %s.' % (oper, fault,))
+                logger.info (msg)
+                self.write (msg + self.terminal.normal + u'\r\n\r\n')
         self.close ()
 
 
