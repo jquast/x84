@@ -48,7 +48,8 @@ def main ():
             lookup_bbs = (arg,)
         elif opt in ('--logger',):
             lookup_log = (arg,)
-    assert 0 == len (tail), 'Unrecognized program arguments: %s' % (tail,)
+    if len(tail):
+        sys.stderr.write ('Unrecognized program arguments: %s\n' % (tail,))
 
     # load/create .ini files
     x84.bbs.ini.init (lookup_bbs, lookup_log)
@@ -127,7 +128,9 @@ def _loop(telnet_server):
                 client.deactivate ()
                 continue
 
-            if event == 'disconnect':
+            if event == 'exit':
+                x84.terminal.unregister_terminal (client, pipe, lock)
+                pipe.close ()
                 client.deactivate ()
 
             elif event == 'logger':
@@ -173,7 +176,7 @@ def _loop(telnet_server):
                         del locks[event]
                         logger.debug ('lock %r removed.', data)
             else:
-                logger.error ('unhandled event %r', (event, data))
+                logger.error ('unhandled %r', (event, data))
 
             #elif event == 'pos':
             #    assert type(data) in (float, int, type(None))

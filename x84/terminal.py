@@ -1,7 +1,6 @@
 """
 Terminal handler for x/84 bbs.  http://github.com/jquast/x84
 """
-import multiprocessing
 import threading
 import logging
 import socket
@@ -60,15 +59,9 @@ def start_process(pipe, origin, env):
     for hdlr in root.handlers:
         root.removeHandler (hdlr)
     root.addHandler (x84.bbs.session.IPCLogHandler (pipe))
-
-    try:
-        new_session.run ()
-    except KeyboardInterrupt:
-        raise SystemExit
-
-    logger.info('%s/%s end process', new_session.pid, new_session.handle)
-    new_session.close ()
-    pipe.send (('disconnect', ('process exit',)))
+    new_session.run ()
+    logger.info ('%s/%s end of sub-process', new_session.pid, new_session.handle)
+    pipe.send (('exit', True))
 
 class IPCStream(object):
     """
@@ -100,11 +93,13 @@ def on_disconnect(client):
     """
     Discover the matching client in registry and remove it.
     """
-    logger.info ('%s Disconnected', client.addrport())
+    from x84.bbs.exception import Disconnect
+    logger.debug ('%s Disconnected', client.addrport())
     for o_client, o_pipe, o_lock in terminals():
         if client == o_client:
-            unregister_terminal (o_client, o_pipe, o_lock)
-            return True
+            o_pipe.send (('exception', (Disconnect('Requested by Client'))))
+            return
+    logger.warn ('Failed to find terminal of on_disconnect event')
 
 def on_connect(client):
     """
@@ -161,6 +156,7 @@ class ConnectTelnetTerminal (threading.Thread):
         server end (engine.py) polls the parent end of a pipe, while the client
         (session.py) polls the child.
         """
+        import multiprocessing
         parent_conn, child_conn = multiprocessing.Pipe()
         lock = threading.Lock()
         child_args = (child_conn, self.client.addrport(), self.client.env,)
@@ -218,10 +214,10 @@ class ConnectTelnetTerminal (threading.Thread):
             self.banner ()
             self._spawn_session ()
         except socket.error, err:
-            logger.info ('Connection closed: %s', err)
+            logger.debug ('Connection closed: %s', err)
             self.client.deactivate ()
         except x84.bbs.exception.ConnectionClosed, err:
-            logger.info ('Connection closed: %s', err)
+            logger.debug ('Connection closed: %s', err)
             self.client.deactivate ()
 
     def _timeleft(self, st_time):
@@ -270,6 +266,7 @@ class ConnectTelnetTerminal (threading.Thread):
             logger.debug ('window size: %sx%s (unsolicited)',
                     self.client.env.get('COLUMNS'),
                     self.client.env.get('LINES'),)
+            return
         self.client.request_do_naws ()
         self.client.socket_send() # push
         st_time = time.time()

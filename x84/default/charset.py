@@ -26,7 +26,23 @@ def main():
             ' clients with appropriate 8-bit fontsets can select cp437, though'
             ' some characters may appear as "?".')
 
-    save_msg = u"\r\n\r\n'%s' is now your preferred encoding.\r\n"
+    save_msg = u"\r\n\r\n'%s' is now your preferred encoding ..\r\n"
+
+    if TERM == 'unknown' or session.user.get('expert', False):
+        echo ('\r\n (U) UTF-8 encoding or (C) CP437 encoding [uc] ?\b\b')
+        while True:
+            inp = getch()
+            if inp in (u'u', u'U'):
+                session.encoding = 'utf8'
+                break
+            elif inp in (u'c', u'C'):
+                session.encoding = 'cp437'
+                break
+        session.user['charset'] = session.encoding
+        echo (save_msg % (session.encoding,))
+        getch (1.0)
+        return
+
 
     def get_selector(selection):
         """
@@ -69,7 +85,7 @@ def main():
         if inp == term.KEY_ENTER:
             session.user['charset'] = session.encoding
             echo (save_msg % (session.encoding,))
-            getch (0.5)
+            getch (1.0)
             return
         elif inp is not None:
             selector.process_keystroke (inp)

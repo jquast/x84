@@ -90,7 +90,6 @@ def get_bbslist():
     """
     session, term = getsession(), getterminal()
     output = list()
-    #colors = (term.bold_white, term.bold_green, term.bold_blue)
     session.flush_event ('bbslist_update')
     def calc_rating(ratings):
         total = sum([float(rating)
@@ -99,12 +98,12 @@ def get_bbslist():
         return u' ' + u'*' * (stars - (4 - stars))
 
     max_bbs = 25
-    max_loc = 20
+    max_loc = 17
     max_sysop = 15
 
-    def get_bysoftware(bbslist):
+    def get_bysoftware():
         by_group = dict()
-        for (key, bbs) in bbslist:
+        for (key, bbs) in DBProxy('bbslist').iteritems():
             grp = bbs['software'].split()[0].title()
             if not grp in by_group:
                 by_group[grp] = [(key, bbs)]
@@ -112,7 +111,6 @@ def get_bbslist():
             by_group[grp].append ((key, bbs))
         return by_group
 
-    by_software = get_bysoftware(DBProxy('bbslist').items())
     for idx, (bbs_sw, bbs_keys) in enumerate(sorted(by_software.items())):
         output.append ((None, (u' %s  %2d ' % (bbs_sw,
             len(bbs_keys))).rjust(64, '-')))
@@ -201,6 +199,7 @@ def banner():
 
 def redraw(pager, lightbar):
     term = getterminal()
+    echo (pager.border() + pager.footer(' loading ... '))
     if lightbar.selection != (None, None):
         pager.update(get_bbsinfo(lightbar.selection[0]))
     else:

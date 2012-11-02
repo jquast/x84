@@ -123,7 +123,7 @@ class Door(object):
         if res != 0:
             logger.error ('%s child %s exit %d', self.cmd, pid, res)
         else:
-            logger.info ('%s child %s exit 0', self.cmd, pid)
+            logger.debug ('%s exit', self.cmd)
         os.close (self.master_fd)
         return res
 
