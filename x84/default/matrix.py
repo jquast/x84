@@ -74,7 +74,7 @@ def get_username(handle=u''):
     elif ynq in (u'y', u'Y'):
         # new user application
         goto (nuascript, handle)
-    echo ('\r\n')
+    echo (u'\r\n')
     return u''
 
 
