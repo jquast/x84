@@ -12,31 +12,6 @@ import sqlitedict
 logger = logging.getLogger(__name__)
 
 FILELOCK = threading.Lock()
-DATABASES = {}
-
-def get_db(schema, tablename='unnamed'):
-    """
-    Open or Create and return SqliteDict instance
-    """
-    FILELOCK.acquire()
-    datapath = x84.bbs.ini.CFG.get('system', 'datapath')
-    if not schema in DATABASES:
-        assert schema.isalnum()
-        if not os.path.exists(datapath):
-            os.makedirs (datapath)
-        dbpath = os.path.join(datapath, '%s.sqlite3' % (schema,),)
-        DATABASES[(schema, tablename)] = sqlitedict.SqliteDict(filename=dbpath,
-                tablename=tablename, autocommit=True)
-    FILELOCK.release ()
-    return DATABASES[(schema, tablename)]
-
-def close_db(schema, tablename='unnamed'):
-    """
-    Closes SqliteDict instance
-    """
-    FILELOCK.acquire()
-    del DATABASES[(schema, tablename)]
-    FILELOCK.release()
 
 class DBHandler(threading.Thread):
     """
@@ -55,6 +30,9 @@ class DBHandler(threading.Thread):
         self.pipe = pipe
         self.event = event
         assert event[2] in ('-', '='), ('event name must match db[-=]event')
+        assert schema.isalnum() and os.path.sep not in schema
+        folder = x84.bbs.ini.CFG.get('system', 'datapath')
+        self.filepath = os.path.join(folder, '%s.sqlite3' % (schema,),)
         self.iterable = event[2] == '='
         self.schema = event[3:]
         self.table = data[0]
@@ -66,35 +44,56 @@ class DBHandler(threading.Thread):
         """
         Execute database command and return results to session pipe.
         """
-        dictdb = get_db(self.schema, self.table)
+
+        FILELOCK.acquire()
+        if not os.path.exists(os.path.dirname(self.filepath)):
+            os.makedirs (os.path.dirname(self.filepath))
+        dictdb = sqlitedict.SqliteDict(filename=self.filepath,
+                tablename=self.table, autocommit=True)
+        FILELOCK.release ()
+
         assert hasattr(dictdb, self.cmd), \
             "'%(cmd)s' not a valid method of <type 'dict'>" % self
+
         func = getattr(dictdb, self.cmd)
+
         assert callable(func), \
             "'%(cmd)s' not a valid method of <type 'dict'>" % self
+
         logger.debug ('%s/%s%s', self.schema, self.cmd,
                 '(*%d)' % (len(self.args)) if len(self.args) else '()')
 
-        #pylint: disable=W0703
-        #        Catching too general exception Exception
-        try:
-            if 0 == len(self.args):
-                result = func()
-            else:
-                result = func(*self.args)
-        except Exception as exception:
-            # Pokemon exception; package & raise from session process,
-            close_db (self.schema, self.table)
-            return self.pipe.send (('exception', exception,))
-
         # single value result,
         if not self.iterable:
-            close_db (self.schema, self.table)
-            return self.pipe.send ((self.event, result))
+            try:
+                if 0 == len(self.args):
+                    result = func()
+                else:
+                    result = func(*self.args)
+            except Exception as exception:
+                # Pokemon exception; package & raise from session process,
+                self.pipe.send (('exception', exception,))
+                dictdb.close ()
+                return
+            self.pipe.send ((self.event, result))
+            dictdb.close ()
+            return
 
         # iterable value result,
         self.pipe.send ((self.event, (None, 'StartIteration'),))
-        for item in iter(result):
-            self.pipe.send ((self.event, item,))
-        close_db (self.schema, self.table)
-        return self.pipe.send ((self.event, (None, StopIteration,),))
+        try:
+            if 0 == len(self.args):
+                for item in func():
+                    self.pipe.send ((self.event, item,))
+            else:
+                for item in func(*self.args):
+                    self.pipe.send ((self.event, item,))
+        except Exception as exception:
+            # Pokemon exception; package & raise from session process,
+            self.pipe.send (('exception', exception,))
+            dictdb.close ()
+            return
+
+        self.pipe.send ((self.event, (None, StopIteration,),))
+        dictdb.close ()
+        return
