@@ -49,8 +49,10 @@ def digestpw_internal(password, salt = None):
     if not salt:
         salt = base64.b64encode(os.urandom(32))
     digest = salt + password
-    for x in range(0,100000):
-      digest = hashlib.sha256(digest).hexdigest()
+    #pylint: disable=W0612:
+    #        Unused variable 'loop_cnt'
+    for loop_cnt in range(0, 100000):
+        digest = hashlib.sha256(digest).hexdigest()
     return salt, digest
 
 def digestpw_plaintext(password, salt = None):
@@ -206,7 +208,7 @@ class User(object):
         assert len(try_pass) > 0
         assert self.password != (None, None), ('account is without password')
         salt = self.password[0]
-        return self.password == digestpw(try_pass,salt)
+        return self.password == digestpw(try_pass, salt)
 
     def __setitem__(self, key, value):
         #pylint: disable=C0111,
