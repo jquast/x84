@@ -248,8 +248,10 @@ class User(object):
     def get(self, key, default=None):
         #pylint: disable=C0111,
         #        Missing docstring
-        uattrs = x84.bbs.dbproxy.DBProxy('userattr')[self.handle]
-        return uattrs.get(key, default)
+        if self.handle in x84.bbs.dbproxy.DBProxy('userattr'):
+            uattrs = x84.bbs.dbproxy.DBProxy('userattr')[self.handle]
+            return uattrs.get(key, default)
+        return default
     get.__doc__ = dict.get.__doc__
 
     @property
