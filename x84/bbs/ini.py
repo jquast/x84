@@ -158,7 +158,7 @@ def init_log_ini ():
     cfg_log.add_section('formatter_default')
     cfg_log.set('formatter_default', 'format',
             '%(levelname)s %(filename)s:%(lineno)s '
-            '%(processName)s%(threadName)s - %(message)s')
+            '%(processName)s - %(message)s')
     cfg_log.set('formatter_default', 'class', 'logging.Formatter')
 
     cfg_log.add_section('handlers')
@@ -185,11 +185,18 @@ def init_log_ini ():
             (os.path.join(os.path.expanduser('~/.x84'), 'debug.log'),))
 
     cfg_log.add_section('loggers')
-    cfg_log.set('loggers', 'keys', 'root')
+    cfg_log.set('loggers', 'keys', 'root, sqlitedict')
 
     cfg_log.add_section('logger_root')
     cfg_log.set('logger_root', 'level', 'INFO')
     cfg_log.set('logger_root', 'formatter', 'default')
     cfg_log.set('logger_root', 'handlers', 'console,info_file')
 
+    # squelche sqlitedict's info on open, its rather long
+    cfg_log.add_section('logger_sqlitedict')
+    cfg_log.set('logger_sqlitedict', 'level', 'WARN')
+    cfg_log.set('logger_sqlitedict', 'formatter', 'default')
+    cfg_log.set('logger_sqlitedict', 'handlers', 'console, info_file')
+    cfg_log.set('logger_sqlitedict', 'qualname', 'sqlitedict')
+    cfg_log.set('logger_sqlitedict', 'propagate', '0')
     return cfg_log
