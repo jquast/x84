@@ -201,7 +201,7 @@ class Session(object):
         #pylint: disable=C0111
         #         Missing docstring
         if value != self._enable_keycodes:
-            logger.info ('enable_keycodes=%s', value)
+            logger.debug ('enable_keycodes=%s', value)
             self._enable_keycodes = value
 
     @property
@@ -303,13 +303,13 @@ class Session(object):
         """
         Flush all return all data buffered for 'event'.
         """
-        data = 1
         flushed = list()
-        while None != data:
+        while True:
             data = self.read_event(event, timeout=-1)
-            if data is not None:
-                flushed.append (data)
-                logger.debug ('flushed (%s, %s)', event, data)
+            if data is None:
+                logger.debug ('flushed from %s: %r', event, flushed)
+                return flushed
+            flushed.append (data)
         return flushed
 
     def buffer_event (self, event, data=None):
