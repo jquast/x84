@@ -13,10 +13,10 @@ def refresh():
     echo (u''.join((term.normal, term.normal_cursor, term.clear, '\r\n')))
     art = ([Ansi(from_cp437(line)) for line in open(os.path.join(
         os.path.dirname(__file__), 'art', 'main.asc'))])
-    max_len = max([line.__len__() for line in art])
+    max_len = max([line.rstrip().__len__() for line in art])
     if max_len <= term.width:
         for line in art:
-            echo (line.center(term.width).rstrip() + '\r\n')
+            echo (line.rstrip().center(term.width).rstrip() + '\r\n')
     def disp_entry(char, blurb):
         return Ansi(term.bold_blue('(') + term.blue_reverse(char)
                 + term.bold_blue + ')' + term.bright_white (' '+blurb))
