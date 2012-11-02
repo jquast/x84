@@ -103,9 +103,9 @@ class Door(object):
         readahead = u''.join([inp
             for inp in session.flush_event ('input')
             if type(inp) is not int])
-        logger.debug ('readahead, %r', readahead)
         if 0 != len(readahead):
             # place non-keycodes back in buffer %-&
+            logger.debug ('readahead, %r', readahead)
             session.buffer_event ('input', readahead)
         try:
             logger.info ('exec/%s: %s', pid, ' '.join(self.args))
