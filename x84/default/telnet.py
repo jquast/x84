@@ -46,7 +46,7 @@ def main(host, port=None):
 
             if inp == unichr(30): # ^^
                 telnet_client.close ()
-                echo (u'\r\n%sConnection closed.' % (term.clear_el + term.normal))
+                echo (u'\r\n' + term.clear_el + term.normal)
                 break
             elif inp == '\r':
                 telnet_client.write ('\r\x00') # RFC telnet return ..
@@ -57,6 +57,7 @@ def main(host, port=None):
             echo (term.normal)
             echo (term.bold_red('%s: %s\r\n' % (e_type, e_value,)))
             break
+    echo (u'\r\nConnection closed.\r\n')
     echo (u''.join(('\r\n\r\n', term.clear_el, term.normal, 'press any key')))
     session.flush_event ('input')
     getch ()
