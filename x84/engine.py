@@ -124,7 +124,10 @@ def _loop(telnet_server):
             # session i/o sent from child process
             try:
                 event, data = pipe.recv()
-            except EOFError:
+
+            except (EOFError, IOError):
+            #    IOError: [Errno 104] Connection reset by peer
+                logger.exception ('deactivating client: ')
                 client.deactivate ()
                 continue
 
