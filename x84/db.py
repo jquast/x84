@@ -17,7 +17,7 @@ DATABASES = {}
 
 def get_db(schema, tablename='unnamed'):
     """
-    Returns a shared SqliteDict instance, creating a new one if not found
+    Open and return thread-shared SqliteDict instance, creating a new one if not found
     """
     FILELOCK.acquire()
     datapath = x84.bbs.ini.CFG.get('system', 'datapath')
@@ -30,6 +30,14 @@ def get_db(schema, tablename='unnamed'):
                 tablename=tablename, autocommit=True)
     FILELOCK.release ()
     return DATABASES[(schema, tablename)]
+
+def close_db(schema, tablename='unnamed'):
+    """
+    Closes SqliteDict instance
+    """
+    FILELOCK.acquire()
+    del DATABASES[(schema, tablename)]
+    FILELOCK.release()
 
 class DBHandler(threading.Thread):
     """
@@ -77,14 +85,17 @@ class DBHandler(threading.Thread):
                 result = func(*self.args)
         except Exception as exception:
             # Pokemon exception; package & raise from session process,
+            close_db (self.schema, self.table)
             return self.pipe.send (('exception', exception,))
 
         # single value result,
         if not self.iterable:
+            close_db (self.schema, self.table)
             return self.pipe.send ((self.event, result))
 
         # iterable value result,
         self.pipe.send ((self.event, (None, 'StartIteration'),))
         for item in iter(result):
             self.pipe.send ((self.event, item,))
+        close_db (self.schema, self.table)
         return self.pipe.send ((self.event, (None, StopIteration,),))
