@@ -59,13 +59,9 @@ def start_process(pipe, origin, env):
     for hdlr in root.handlers:
         root.removeHandler (hdlr)
     root.addHandler (x84.bbs.session.IPCLogHandler (pipe))
-    try:
-        new_session.run ()
-    except KeyboardInterrupt:
-        raise SystemExit
-    logger.info('%s/%s end process', new_session.pid, new_session.handle)
-    pipe.send (('disconnect', ('process exit',)))
-    new_session.close ()
+    new_session.run ()
+    logger.info ('%s/%s end of sub-process', new_session.pid, new_session.handle)
+    pipe.send (('exit', True))
 
 class IPCStream(object):
     """
@@ -98,10 +94,10 @@ def on_disconnect(client):
     Discover the matching client in registry and remove it.
     """
     from x84.bbs.exception import Disconnect
-    logger.info ('%s Disconnected', client.addrport())
+    logger.debug ('%s Disconnected', client.addrport())
     for o_client, o_pipe, o_lock in terminals():
         if client == o_client:
-            o_pipe.send (('exception', (Disconnect, 'Requested by Client')))
+            o_pipe.send (('exception', (Disconnect('Requested by Client'))))
             return
     logger.warn ('Failed to find terminal of on_disconnect event')
 
@@ -218,10 +214,10 @@ class ConnectTelnetTerminal (threading.Thread):
             self.banner ()
             self._spawn_session ()
         except socket.error, err:
-            logger.info ('Connection closed: %s', err)
+            logger.debug ('Connection closed: %s', err)
             self.client.deactivate ()
         except x84.bbs.exception.ConnectionClosed, err:
-            logger.info ('Connection closed: %s', err)
+            logger.debug ('Connection closed: %s', err)
             self.client.deactivate ()
 
     def _timeleft(self, st_time):
