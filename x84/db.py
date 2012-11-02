@@ -30,14 +30,14 @@ class DBHandler(threading.Thread):
         self.pipe = pipe
         self.event = event
         assert event[2] in ('-', '='), ('event name must match db[-=]event')
-        assert schema.isalnum() and os.path.sep not in schema
-        folder = x84.bbs.ini.CFG.get('system', 'datapath')
-        self.filepath = os.path.join(folder, '%s.sqlite3' % (schema,),)
         self.iterable = event[2] == '='
         self.schema = event[3:]
         self.table = data[0]
         self.cmd = data[1]
         self.args = data[2]
+        assert self.schema.isalnum() and os.path.sep not in self.schema
+        folder = x84.bbs.ini.CFG.get('system', 'datapath')
+        self.filepath = os.path.join(folder, '%s.sqlite3' % (self.schema,),)
         threading.Thread.__init__ (self)
 
     def run(self):
