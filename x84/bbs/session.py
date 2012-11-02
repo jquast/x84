@@ -13,7 +13,6 @@ import sys
 import os
 import io
 
-import x84.bbs.exception
 import x84.bbs.userbase
 import x84.bbs.cp437
 import x84.bbs.ini
@@ -219,35 +218,22 @@ class Session(object):
 
         Client scripts manipulate control flow of scripts using goto and gosub.
         """
-        fallback_stack = self._script_stack
+        from x84.bbs.exception import Goto, Disconnect, ConnectionClosed
+        from x84.bbs.exception import ConnectionTimeout, ScriptError
         while len(self._script_stack) > 0:
             logger.debug ('script_stack: %r', self._script_stack)
             try:
-                #pylint: disable=W0612
-                #        Unused variable 'lastscript'
-                #        Unused variable 'value'
-                lastscript = self._script_stack[-1]
-                value = self.runscript (*self._script_stack.pop())
-                if not self._script_stack:
-                    logger.error ('_script_stack = <fallback_stack: %r>', \
-                        fallback_stack)
-                    self._script_stack = fallback_stack
-                    continue
-            except x84.bbs.exception.Goto, err:
+                return self.runscript (*self._script_stack.pop())
+            except Goto, err:
                 logger.debug ('Goto: %s', err)
                 self._script_stack = [err[0] + tuple(err[1:])]
                 continue
-            except x84.bbs.exception.Disconnect, err:
-                logger.info ('User disconnected: %s', err)
-                return
-            except x84.bbs.exception.ConnectionClosed, err:
-                logger.info ('Connection Closed: %s', err)
-                return
-            except x84.bbs.exception.ConnectionTimeout, err:
-                logger.info ('Connection Timed out: %s', err)
-                return
-            except x84.bbs.exception.ScriptError, err:
-                logger.error ("ScriptError rasied: %s", err)
+            except (Disconnect, ConnectionClosed,
+                    ConnectionTimeout, ScriptError), err:
+                e_type, e_value, e_tb = sys.exc_info()
+                for line in traceback.format_exception_only(e_type, e_value):
+                    logger.info (line.rstrip())
+                break
             except Exception, err:
                 # Pokemon exception.
                 e_type, e_value, e_tb = sys.exc_info()
@@ -316,6 +302,8 @@ class Session(object):
         """
         if event == 'ConnectionClosed':
             raise x84.bbs.exception.ConnectionClosed (data)
+        elif event == 'exception':
+            raise data
 
         if not self._buffer.has_key(event):
             # create new buffer;
@@ -416,8 +404,6 @@ class Session(object):
         while waitfor > 0:
             if self.pipe.poll (None if waitfor == float('inf') else waitfor):
                 event, data = self.pipe.recv()
-                if event == 'exception':
-                    raise data
                 self.buffer_event (event, data)
                 if event in events:
                     return (event, self._event_pop(event))
@@ -442,7 +428,8 @@ class Session(object):
         optional *args.
         """
         self._script_stack.append ((script_name,) + args)
-        logger.info ('runscript %s, %s.', script_name, args,)
+        logger.info ('RUN %s%s', script_name,
+                '%r' % (args,) if 0 != len(args) else '')
         def _load_script_module():
             """
             Load and return ini folder, `scriptpath` as a module (cached).
