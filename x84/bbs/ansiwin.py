@@ -222,7 +222,6 @@ class AnsiWindow(object):
         """
         #pylint: disable=R0912
         #        Too many branches (17/12)
-        import x84.bbs.session
         topright = self.glyphs.get('top-right', u'*')
         thoriz = self.glyphs.get('top-horiz', u'-') * (self.width - 2)
         topleft = self.glyphs.get('top-left', u'/')
