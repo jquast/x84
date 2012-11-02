@@ -39,7 +39,7 @@ import time
 import sys
 import logging
 
-import x84.bbs.exception
+from x84.bbs.exception import ConnectionClosed
 
 #pylint: disable=C0103
 #        Invalid name "logger" for type constant
@@ -154,7 +154,7 @@ class TelnetServer(object):
         for client in recv_ready:
             try:
                 client.socket_recv ()
-            except x84.bbs.exception.ConnectionClosed, err:
+            except ConnectionClosed, err:
                 logger.debug ('%s connection closed: %s.',
                         client.addrport(), err)
                 client.deactivate()
@@ -165,7 +165,7 @@ class TelnetServer(object):
         for client in slist:
             try:
                 client.socket_send ()
-            except x84.bbs.exception.ConnectionClosed, err:
+            except ConnectionClosed, err:
                 logger.debug ('%s connection closed: %s.',
                         client.addrport(), err)
                 client.deactivate()
@@ -421,7 +421,7 @@ class TelnetClient(object):
         """
         Called by TelnetServer.poll() when send data is ready.  Send any
         data buffered, trim self.send_buffer to bytes sent, and return number
-        of bytes sent. x84.bbs.exception.ConnectionClosed may be raised.
+        of bytes sent. throws ConnectionClosed
         """
         if not self.send_ready():
             warnings.warn ('socket_send() called on empty buffer',
@@ -432,13 +432,12 @@ class TelnetClient(object):
 
         def send(send_bytes):
             """
-            throws x84.bbs.exception.ConnectionClosed on sock.send err
+            throws ConnectionClosed on sock.send err
             """
             try:
                 return self.sock.send(send_bytes)
             except socket.error, err:
-                raise x84.bbs.exception.ConnectionClosed (
-                        'socket send %d:%s' % (err[0], err[1],))
+                raise ConnectionClosed ('socket send %d: %s' % (err[0], err[1],))
         sent = send(ready_bytes)
         if sent < len(ready_bytes):
             # re-buffer data that could not be pushed to socket;
@@ -468,10 +467,9 @@ class TelnetClient(object):
             data = self.sock.recv (self.BLOCKSIZE_RECV)
             recv = len(data)
             if 0 == recv:
-                raise x84.bbs.exception.ConnectionClosed ('Closed by client')
+                raise ConnectionClosed ('Closed by client')
         except socket.error, err:
-            raise x84.bbs.exception.ConnectionClosed (
-                    'socket errorno %d: %s' % (err[0], err[1],))
+            raise ConnectionClosed ('socket errno %d: %s' % (err[0], err[1],))
         self.bytes_received += recv
         self.last_input_time = time.time()
 
@@ -502,8 +500,7 @@ class TelnetClient(object):
                 self.telnet_sb_buffer.fromstring (byte)
                 ## Sanity check on length
                 if len(self.telnet_sb_buffer) >= self.SB_MAXLEN:
-                    raise x84.bbs.exception.ConnectionClosed (
-                            'sub-negotiation buffer filled')
+                    raise ConnectionClosed ('sub-negotiation buffer filled')
             else:
                 ## Just a normal NVT character
                 self._recv_byte (byte)
@@ -702,8 +699,8 @@ class TelnetClient(object):
         if self._check_reply_pending(option):
             self._note_reply_pending(option, False)
         if option == ECHO:
-            raise x84.bbs.exception.ConnectionClosed \
-                ('Refuse WILL ECHO by client, closing connection.')
+            raise ConnectionClosed (
+                    'Refuse WILL ECHO by client, closing connection.')
         elif option == NAWS:
             if self.check_remote_option(NAWS) is not True:
                 self._note_remote_option(NAWS, True)
@@ -715,18 +712,11 @@ class TelnetClient(object):
                 self._note_remote_option(STATUS, True)
                 self.send_str (bytes(''.join((
                     IAC, SB, STATUS, SEND, IAC, SE)))) # go ahead
-        elif option == ENCRYPT:
-            # DE is willing to send encrypted data
-            # denied
-            if self._check_local_option(ENCRYPT) is not False:
-                self._note_local_option(ENCRYPT, False)
-                # let DE know we refuse to receive encrypted data.
-                self._iac_dont(ENCRYPT)
-        elif option == LINEMODE:
-            if self._check_local_option(LINEMODE) is not False:
-                self._note_local_option(LINEMODE, False)
-                # let DE know we refuse to do linemode
-                self._iac_dont(LINEMODE)
+        elif option in (LINEMODE, LFLOW, TSPEED, ENCRYPT):
+            if self._check_local_option(option) is not False:
+                self._note_local_option(option, False)
+                # let DE know we refuse to do linemode, encryption, etc.
+                self._iac_dont(option)
         elif option == SGA:
             #  IAC WILL SUPPRESS-GO-AHEAD
             #
