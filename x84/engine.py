@@ -128,7 +128,9 @@ def _loop(telnet_server):
                 client.deactivate ()
                 continue
 
-            if event == 'disconnect':
+            if event == 'exit':
+                x84.terminal.unregister_terminal (client, pipe, lock)
+                pipe.close ()
                 client.deactivate ()
 
             elif event == 'logger':
@@ -174,7 +176,7 @@ def _loop(telnet_server):
                         del locks[event]
                         logger.debug ('lock %r removed.', data)
             else:
-                logger.error ('unhandled event %r', (event, data))
+                logger.error ('unhandled %r', (event, data))
 
             #elif event == 'pos':
             #    assert type(data) in (float, int, type(None))
