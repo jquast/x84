@@ -217,7 +217,7 @@ class User(object):
         attrs[key] = value
         uadb[self.handle] = attrs
         uadb.release ()
-        logger.info ('%s[%s]=%r', self.handle, key, value)
+        logger.info ('%s[%s] = %r', self.handle, key, value)
     __setitem__.__doc__ = dict.__setitem__.__doc__
 
     def __delitem__(self, key):
