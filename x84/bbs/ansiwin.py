@@ -52,9 +52,10 @@ class AnsiWindow(object):
         self.init_theme ()
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
-        assert self.isinview(), ('AnsiWindow(height=%s, width=%s, yloc=%s, xloc=%s)'
-                ' not in viewport Terminal(height=%s, width=%s)' % (height, width,
-                    yloc, xloc, term.height, term.width))
+        assert self.isinview(), (
+                'AnsiWindow(height=%s, width=%s, yloc=%s, xloc=%s)'
+                ' not in viewport Terminal(height=%s, width=%s)'
+                % (height, width, yloc, xloc, term.height, term.width))
 
     def init_theme(self):
         """
