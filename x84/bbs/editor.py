@@ -4,11 +4,11 @@ editor package for x/84, https://github.com/jquast/x84
 
 from x84.bbs.ansiwin import AnsiWindow
 
-PC_KEYSET = { 'refresh': [unichr(12),],
-              'backspace': [unichr(8), unichr(127),],
-              'enter': [u'\r',],
-              'exit': [unichr(27),],
-              }
+PC_KEYSET = {'refresh': [unichr(12), ],
+             'backspace': [unichr(8), unichr(127), ],
+             'enter': [u'\r', ],
+             'exit': [unichr(27), ], }
+
 
 class LineEditor(object):
     """
@@ -31,7 +31,7 @@ class LineEditor(object):
         is used. Set to u'' to disable.
         """
         import x84.bbs.session
-        if self._highlight == None:
+        if self._highlight is None:
             return x84.bbs.session.getterminal().reverse
         return self._highlight
 
@@ -101,31 +101,31 @@ class LineEditor(object):
         """
         import x84.bbs.session
         import x84.bbs.output
-        x84.bbs.output.echo (self.refresh ())
+        x84.bbs.output.echo(self.refreshs())
         session = x84.bbs.session.getsession()
         term = x84.bbs.session.getterminal()
         while True:
             inp = session.read_event('input')
             if inp == term.KEY_EXIT:
                 if 0 != len(self.highlight):
-                    x84.bbs.output.echo (term.normal)
+                    x84.bbs.output.echo(term.normal)
                 return None
             elif inp == term.KEY_ENTER:
                 if 0 != len(self.highlight):
-                    x84.bbs.output.echo (term.normal)
+                    x84.bbs.output.echo(term.normal)
                 return self.content
             elif inp == term.KEY_BACKSPACE:
                 if len(self.content) > 0:
                     self.content = self.content[:-1]
-                    x84.bbs.output.echo (u'\b \b')
+                    x84.bbs.output.echo(u'\b \b')
             elif (type(inp) is not int
                     and ord(inp) >= ord(' ')
                     and (len(self.content) < self.width or self.width == 0)):
                 self.content += inp
                 if self.hidden:
-                    x84.bbs.output.echo (self.hidden)
+                    x84.bbs.output.echo(self.hidden)
                 else:
-                    x84.bbs.output.echo (inp)
+                    x84.bbs.output.echo(inp)
 
 
 class ScrollingEditor(AnsiWindow):
@@ -155,7 +155,7 @@ class ScrollingEditor(AnsiWindow):
         self.keyset = PC_KEYSET
         self.content = u''
         AnsiWindow.__init__(self, 1, width, yloc, xloc)
-        self.init_keystrokes ()
+        self.init_keystrokes()
     __init__.__doc__ = AnsiWindow.__init__.__doc__
 
     @property
@@ -311,10 +311,10 @@ class ScrollingEditor(AnsiWindow):
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
         self.keyset = PC_KEYSET
-        self.keyset['refresh'].append (term.KEY_REFRESH)
-        self.keyset['backspace'].append (term.KEY_BACKSPACE)
-        self.keyset['enter'].append (term.KEY_ENTER)
-        self.keyset['exit'].append (term.KEY_EXIT)
+        self.keyset['refresh'].append(term.KEY_REFRESH)
+        self.keyset['backspace'].append(term.KEY_BACKSPACE)
+        self.keyset['enter'].append(term.KEY_ENTER)
+        self.keyset['exit'].append(term.KEY_EXIT)
 
     def process_keystroke(self, keystroke):
         """
@@ -322,9 +322,9 @@ class ScrollingEditor(AnsiWindow):
         """
         self._quit = False
         if keystroke in self.keyset['refresh']:
-            return self.refresh ()
+            return self.refresh()
         elif keystroke in self.keyset['backspace']:
-            return self.backspace ()
+            return self.backspace()
         elif keystroke in self.keyset['enter']:
             self._carriage_returned = True
             return u''
@@ -333,7 +333,7 @@ class ScrollingEditor(AnsiWindow):
             return u''
         elif type(keystroke) is int:
             return u''
-        return self.add (keystroke)
+        return self.add(keystroke)
 
     def fixate(self, x_adjust=0):
         """
@@ -371,7 +371,7 @@ class ScrollingEditor(AnsiWindow):
             data = self.content
         eeol = (self.glyphs.get('erase', u' ')
                 * (self.visible_width - len(data)))
-        return ( term.normal + data + eeol + self.fixate() )
+        return (term.normal + data + eeol + self.fixate())
 
     def backspace(self):
         """
@@ -386,7 +386,7 @@ class ScrollingEditor(AnsiWindow):
                 # shift left,
                 self._horiz_shift -= self.scroll_amt
                 self._horiz_pos += self.scroll_amt
-                rstr += self.refresh () # XXX
+                rstr += self.refresh()
         rstr += self.fixate(-1)
         rstr += ' \b'
         self._horiz_pos -= 1
@@ -402,7 +402,7 @@ class ScrollingEditor(AnsiWindow):
         self._horiz_pos = 0
         self.content = u''
         for u_chr in unicodestring:
-            self.add (u_chr)
+            self.add(u_chr)
 
     def add(self, u_chr):
         """
@@ -423,10 +423,8 @@ class ScrollingEditor(AnsiWindow):
             # we have to scroll to display this output,
             self._horiz_shift += self.scroll_amt
             self._horiz_pos -= self.scroll_amt - 1
-            return self.refresh ()
+            return self.refresh()
         # return character appended
         self._horiz_pos += 1
         print 'retSELF'
         return u_chr
-
-
