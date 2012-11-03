@@ -224,11 +224,11 @@ class Pager(AnsiWindow):
 
     def update(self, ucs):
         """
-        Update content buffer with lines of ansi unicodes as single unit.
+        Update content buffer with '\n'-delimited lines of Ansi.
         """
         import x84.bbs.output
         self.content = x84.bbs.output.Ansi(ucs).wrap(
-                self.visible_width - 1).split('\r\n')
+                self.visible_width).split('\r\n')
         return self.refresh ()
 
     def append(self, ucs):
