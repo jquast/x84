@@ -11,16 +11,14 @@
 __url__ = u'https://github.com/jquast/x84/'
 
 import os
-#pylint: disable=W0614
-#        Unused import from wildcard import
 from x84.bbs import getterminal, getsession, ini, echo, goto, Door, getch
 from x84.bbs import get_user, LineEditor, gosub, find_user
 
+
 def denied(msg):
     term = getterminal()
-    echo (msg)
-    echo (term.normal + u'\r\n\r\n')
-    getch (1.0)
+    echo(msg + term.normal)
+    getch(1.0)
 
 
 def get_username(handle=u''):
@@ -30,9 +28,9 @@ def get_username(handle=u''):
     (default=no). A unicode handle of non-zero length is returned when the
     login handle matches a userbase record.
     """
-    term = getterminal ()
+    term = getterminal()
     prompt_user = u'\r\n  user: '
-    apply_msg = u'\r\n\r\n  --> Create new account? [ynq]   <--' + '\b'*5
+    apply_msg = u'\r\n\r\n  --> Create new account? [ynq]   <--' + '\b' * 5
     allow_apply = ini.CFG.getboolean('nua', 'allow_apply')
     enable_anonymous = ini.CFG.getboolean('matrix', 'enable_anonymous')
     newcmds = ini.CFG.get('matrix', 'newcmds').split()
@@ -43,43 +41,44 @@ def get_username(handle=u''):
     nuascript = ini.CFG.get('nua', 'script')
     byecmds = ini.CFG.get('matrix', 'byecmds').split()
 
-    echo (prompt_user)
-    handle = LineEditor(max_user, handle).read ()
+    echo(prompt_user)
+    handle = LineEditor(max_user, handle).read()
     if handle is None or 0 == len(handle):
         return u''
     elif handle.lower() in newcmds:
         if allow_apply:
-            gosub ('nua', u'')
+            gosub('nua', u'')
             return u''
-        denied (term.bright_red + denied_msg)
+        denied(term.bright_red + denied_msg)
         return u''
     elif handle.lower() in byecmds:
-        goto ('logoff')
+        goto('logoff')
     elif handle.lower() == u'anonymous':
         if enable_anonymous:
-            goto (topscript, 'anonymous')
-        denied (badanon_msg % (handle,))
+            goto(topscript, 'anonymous')
+        denied(badanon_msg % (handle,))
         return u''
     u_handle = find_user(handle)
     if u_handle is not None:
-        return u_handle # matched
+        return u_handle  # matched
     if allow_apply is False:
-        denied (term.bright_red(denied_msg))
+        denied(term.bright_red(denied_msg))
         return u''
 
-    echo (apply_msg)
-    ynq = getch ()
+    echo(apply_msg)
+    ynq = getch()
     if ynq in (u'q', u'Q', term.KEY_EXIT):
         # goodbye
-        goto ('logoff')
+        goto('logoff')
     elif ynq in (u'y', u'Y'):
         # new user application
-        goto (nuascript, handle)
-    echo (u'\r\n')
+        goto(nuascript, handle)
+    echo(u'\r\n')
     return u''
 
+
 def try_reset(user):
-    echo ('\r\n\r\nreset password (by e-mail)? [yn]')
+    echo(u'reset password (by e-mail)? [yn]')
     while True:
         inp = getch()
         if inp in (u'y', u'Y'):
@@ -87,31 +86,32 @@ def try_reset(user):
         elif inp in (u'n', u'N'):
             return False
 
+
 def try_pass(user):
     session, term = getsession(), getterminal()
     prompt_pass = u'\r\n\r\n  pass: '
     status_auth = u'\r\n\r\n  ' + term.yellow_reverse(u"Encrypting ..")
     topscript = ini.CFG.get('matrix', 'topscript', 'top')
-    badpass_msg = (u'\r\n  ' + term.red_reverse +
-            u"'%s' login failed." + term.normal)
+    badpass_msg = (u'\r\n\r\n' + term.red_reverse +
+                   u"'%s' login failed." + term.normal)
     max_pass = int(ini.CFG.get('nua', 'max_pass', '32'))
     # prompt for password, disable input tap during, mask input with 'x',
     # and authenticate against user record, performing a script change to
     # topscript if sucessful.
-    echo (prompt_pass)
-    chk = session._tap_input # <-- save
+    echo(prompt_pass)
+    chk = session._tap_input  # <-- save
     session._tap_input = False
     le = LineEditor(max_pass)
     le.hidden = u'x'
-    password = le.read ()
-    session._tap_input = chk # restore -->
+    password = le.read()
+    session._tap_input = chk  # restore -->
     if password is not None and 0 != len(password):
-        echo (status_auth)
-        if user.auth (password):
-            goto (topscript, user.handle)
-    echo (u'\r\n\r\n')
-    denied (badpass_msg % (user.handle,))
+        echo(status_auth)
+        if user.auth(password):
+            goto(topscript, user.handle)
+    denied(badpass_msg % (user.handle,))
     return
+
 
 def uname():
     """
@@ -119,11 +119,11 @@ def uname():
     """
     for uname_filepath in ('/usr/bin/uname', '/bin/uname'):
         if os.path.exists(uname_filepath):
-            Door (uname_filepath, args=('-a',)).run()
+            Door(uname_filepath, args=('-a',)).run()
             break
 
 
-def main ():
+def main():
     import logging
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
@@ -134,28 +134,29 @@ def main ():
     bbsname = ini.CFG.get('system', 'bbsname')
     max_tries = 10
 
-    session.flush_event ('refresh')
-    echo (term.normal + u'\r\nConnected to %s, see %s for source\r\n' % (
+    session.flush_event('refresh')
+    echo(term.normal + u'\r\nConnected to %s, see %s for source\r\n' % (
         bbsname, __url__))
-    uname ()
-    echo (u'\r\n')
+    uname()
+    echo(u'\r\n')
     if term.width >= 76:
         for line in open(os.path.join
-                (os.path.dirname(__file__), 'art', '1984.asc'), 'r'):
-            echo (line.rstrip().center(term.width).rstrip() + u'\r\n')
-        echo (u'\r\n')
+                         (os.path.dirname(__file__), 'art', '1984.asc'), 'r'):
+            echo(line.rstrip().center(term.width).rstrip() + u'\r\n')
+        echo(u'\r\n')
     if session.env.get('TERM') == 'unknown':
-        echo (u'! TERM is unknown\r\n\r\n')
+        echo(u'! TERM is unknown\r\n\r\n')
     if enable_anonymous:
-        echo (anon_allowed_msg)
+        echo(anon_allowed_msg)
     for n in range(0, max_tries):
         handle = get_username(handle)
         if handle != u'':
             user = get_user(handle)
-            try_pass (user)
+            try_pass(user)
+            echo(u'\r\n\r\n')
             if enable_pwreset:
-                try_reset (user)
+                try_reset(user)
             else:
-                logger.info ('%r failed password', handle)
-    logger.info ('maximum tries exceeded')
-    goto ('logoff')
+                logger.info('%r failed password', handle)
+    logger.info('maximum tries exceeded')
+    goto('logoff')
