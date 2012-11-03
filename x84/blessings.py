@@ -79,13 +79,13 @@ class Terminal(object):
         #pylint: disable=W0212,E1101
         # Access to a protected member _capability_names of a client class
         # Function 'has_key' has no '_capability_names' member
-        self._keymap = dict([(curses.tigetstr(cap).decode('utf-8'),
-            keycode) for (keycode,cap) in
-            curses.has_key._capability_names.iteritems() if
-            curses.tigetstr(cap) is not None])
+        self._keymap = dict([(curses.tigetstr(cap).decode('utf-8'), keycode)
+                             for (keycode, cap) in
+                             curses.has_key._capability_names.iteritems()
+                             if curses.tigetstr(cap) is not None])
 
         # various terminal default sequences mappings
-        self._keymap.update ([
+        self._keymap.update([
             (chr(10), self.KEY_ENTER), (chr(13), self.KEY_ENTER),
             (chr(8), self.KEY_BACKSPACE), (chr(127), self.KEY_BACKSPACE),
             (chr(27) + "OA", self.KEY_UP), (chr(27) + "OB", self.KEY_DOWN),
@@ -96,7 +96,7 @@ class Terminal(object):
             (chr(27) + "C", self.KEY_RIGHT), (chr(27) + "D", self.KEY_LEFT),
             (chr(27) + "?x", self.KEY_UP), (chr(27) + "?r", self.KEY_DOWN),
             (chr(27) + "?v", self.KEY_RIGHT), (chr(27) + "?t", self.KEY_LEFT),
-            (chr(27) + "[H", self.KEY_HOME), (chr(27) + "[F", self.KEY_END),])
+            (chr(27) + "[H", self.KEY_HOME), (chr(27) + "[F", self.KEY_END), ])
 
     # Sugary names for commonly-used capabilities, intended to help avoid trips
     # to the terminfo man page and comments in your code:
@@ -173,7 +173,8 @@ class Terminal(object):
         Return any matching keycode name for a given keycode.
         """
         for key in (attr for attr in dir(self)
-                if attr.startswith('KEY_') and keycode == getattr(self, attr)):
+                    if attr.startswith('KEY_')
+                    and keycode == getattr(self, attr)):
             return key
         return str(None)
 
@@ -196,8 +197,9 @@ class Terminal(object):
         """Return a tuple of (terminal height, terminal width)."""
         if self.stream == sys.__stdout__:
             try:
-                return struct.unpack('hhhh', fcntl.ioctl(sys.__stdout__,
-                    termios.TIOCGWINSZ, chr(0) * 8))[0:2]
+                return struct.unpack(
+                    'hhhh', fcntl.ioctl(sys.__stdout__, termios.TIOCGWINSZ,
+                                        chr(0) * 8))[0:2]
             except IOError:
                 pass
         return (self.rows, self.columns)
@@ -341,30 +343,30 @@ class Terminal(object):
             return code.decode('utf-8')
         return u''
 
-    def trans_input (self, data, encoding='utf8'):
+    def trans_input(self, data, encoding='utf8'):
         """
         Yield either a unicode byte or a curses key constant as integer.
         If data is a bytestring, it is converted to unicode using encoding.
         """
         if isinstance(data, str):
-            data = data.decode (encoding, 'replace')
+            data = data.decode(encoding, 'replace')
 
         def scan_keymap(text):
             """
             Return sequence and keycode if text begins with any known sequence.
             """
             for (keyseq, keycode) in self._keymap.iteritems():
-                if text.startswith (keyseq):
+                if text.startswith(keyseq):
                     return (keyseq, keycode)
-            return (None, None) # no match
+            return (None, None)  # no match
 
         while len(data):
-            if ('\r','\x00') == (data[0], data[1] if 1 != len(data) else None):
+            if ('\r', '\x00') == (data[0], data[1] if 1 != len(data) else None):
                 # skip beyond nul (nvt telnet)
-                yield self.KEY_ENTER #data[0]
+                yield self.KEY_ENTER
                 data = data[2:]
                 continue
-            if ('\r','\n') == (data[0], data[1] if 1 != len(data) else None):
+            if ('\r', '\n') == (data[0], data[1] if 1 != len(data) else None):
                 # skip beyond \n (putty, SyncTerm)
                 yield self.KEY_ENTER
                 data = data[2:]
@@ -417,7 +419,7 @@ def derivative_colors(colors):
 
 
 COLORS = set(['black', 'red', 'green', 'yellow', 'blue',
-    'magenta', 'cyan', 'white'])
+              'magenta', 'cyan', 'white'])
 COLORS.update(derivative_colors(COLORS))
 COMPOUNDABLES = (COLORS |
                  set(['bold', 'underline', 'reverse', 'blink', 'dim', 'italic',
@@ -453,7 +455,7 @@ class ParametrizingString(unicode):
             # 3. However, appear to be a plain Unicode string otherwise so
             # concats work.
             lookup = self.encode('utf-8')
-            parametrized = curses.tparm(lookup, *args).decode ('utf-8')
+            parametrized = curses.tparm(lookup, *args).decode('utf-8')
             return (parametrized if self._normal is None else
                     FormattingString(parametrized, self._normal))
         except curses.error:
@@ -545,5 +547,3 @@ def split_into_formatters(compound):
         else:
             merged_segs.append(spx)
     return merged_segs
-
-
