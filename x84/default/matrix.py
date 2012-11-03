@@ -13,7 +13,8 @@ __url__ = u'https://github.com/jquast/x84/'
 import os
 #pylint: disable=W0614
 #        Unused import from wildcard import
-from x84.bbs import *
+from x84.bbs import getterminal, getsession, ini, echo, goto, Door, getch
+from x84.bbs import get_user, LineEditor, gosub, find_user
 
 def denied(msg):
     term = getterminal()
@@ -33,7 +34,7 @@ def get_username(handle=u''):
     prompt_user = u'\r\n  user: '
     apply_msg = u'\r\n\r\n  --> Create new account? [ynq]   <--' + '\b'*5
     allow_apply = ini.CFG.getboolean('nua', 'allow_apply')
-    allow_anonymous = ini.CFG.getboolean('matrix', 'enable_anonymous')
+    enable_anonymous = ini.CFG.getboolean('matrix', 'enable_anonymous')
     newcmds = ini.CFG.get('matrix', 'newcmds').split()
     topscript = ini.CFG.get('matrix', 'topscript')
     denied_msg = u'\r\n\r\nfiRSt, YOU MUSt AbANdON YOUR libERtIES.'
@@ -55,7 +56,7 @@ def get_username(handle=u''):
     elif handle.lower() in byecmds:
         goto ('logoff')
     elif handle.lower() == u'anonymous':
-        if allow_anonymous:
+        if enable_anonymous:
             goto (topscript, 'anonymous')
         denied (badanon_msg % (handle,))
         return u''
@@ -77,6 +78,14 @@ def get_username(handle=u''):
     echo (u'\r\n')
     return u''
 
+def try_reset(user):
+    echo ('\r\n\r\nreset password (by e-mail)? [yn]')
+    while True:
+        inp = getch()
+        if inp in (u'y', u'Y'):
+            return gosub('pwreset', user.handle)
+        elif inp in (u'n', u'N'):
+            return False
 
 def try_pass(user):
     session, term = getsession(), getterminal()
@@ -108,7 +117,6 @@ def uname():
     """
     On unix systems with uname, call with -a on connect
     """
-    import os
     for uname_filepath in ('/usr/bin/uname', '/bin/uname'):
         if os.path.exists(uname_filepath):
             Door (uname_filepath, args=('-a',)).run()
@@ -121,7 +129,8 @@ def main ():
     session, term = getsession(), getterminal()
     handle = (session.env.get('USER', '') .decode('iso8859-1', 'replace'))
     anon_allowed_msg = u"'anonymous' login enabled.\r\n"
-    allow_anonymous = ini.CFG.getboolean('matrix', 'enable_anonymous')
+    enable_anonymous = ini.CFG.getboolean('matrix', 'enable_anonymous')
+    enable_pwreset = ini.CFG.getboolean('matrix', 'enable_pwreset')
     bbsname = ini.CFG.get('system', 'bbsname')
     max_tries = 10
 
@@ -137,13 +146,16 @@ def main ():
         echo (u'\r\n')
     if session.env.get('TERM') == 'unknown':
         echo (u'! TERM is unknown\r\n\r\n')
-    if allow_anonymous:
+    if enable_anonymous:
         echo (anon_allowed_msg)
     for n in range(0, max_tries):
         handle = get_username(handle)
         if handle != u'':
             user = get_user(handle)
             try_pass (user)
-            logger.info ('%r failed password', handle)
+            if enable_pwreset:
+                try_reset (user)
+            else:
+                logger.info ('%r failed password', handle)
     logger.info ('maximum tries exceeded')
     goto ('logoff')
