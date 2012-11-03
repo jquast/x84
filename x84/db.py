@@ -19,6 +19,9 @@ class DBHandler(threading.Thread):
     method name and its arguments, and the return value is sent to the session
     pipe with the same 'event' name.
     """
+
+    #pylint: disable=R0902
+    #        Too many instance attributes (8/7)
     def __init__(self, pipe, event, data):
         """ Arguments:
               pipe: parent end of multiprocessing.Pipe()
@@ -51,15 +54,11 @@ class DBHandler(threading.Thread):
         dictdb = sqlitedict.SqliteDict(filename=self.filepath,
                 tablename=self.table, autocommit=True)
         FILELOCK.release ()
-
-        assert hasattr(dictdb, self.cmd), \
-            "'%(cmd)s' not a valid method of <type 'dict'>" % self
-
+        assert hasattr(dictdb, self.cmd), (
+                "'%(cmd)s' not a valid method of <type 'dict'>" % self)
         func = getattr(dictdb, self.cmd)
-
-        assert callable(func), \
-            "'%(cmd)s' not a valid method of <type 'dict'>" % self
-
+        assert callable(func), (
+            "'%(cmd)s' not a valid method of <type 'dict'>" % self)
         logger.debug ('%s/%s%s', self.schema, self.cmd,
                 '(*%d)' % (len(self.args)) if len(self.args) else '()')
 
@@ -70,6 +69,8 @@ class DBHandler(threading.Thread):
                     result = func()
                 else:
                     result = func(*self.args)
+            #pylint: disable=W0703
+            #         Catching too general exception
             except Exception as exception:
                 # Pokemon exception; package & raise from session process,
                 self.pipe.send (('exception', exception,))
@@ -88,6 +89,8 @@ class DBHandler(threading.Thread):
             else:
                 for item in func(*self.args):
                     self.pipe.send ((self.event, item,))
+        #pylint: disable=W0703
+        #         Catching too general exception
         except Exception as exception:
             # Pokemon exception; package & raise from session process,
             self.pipe.send (('exception', exception,))
