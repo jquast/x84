@@ -77,7 +77,7 @@ def main(handle):
     while True:
         echo (term.normal + u'\r\n\r\n')
         echo (prompt_passkey)
-        try_passkey = LineEditor(width)
+        try_passkey = LineEditor(width).read()
         if try_passkey is None or 0 == len(try_passkey):
             echo (term.normal + msg_cancelled)
             logger.warn ('%r cancelled passkey', handle)
