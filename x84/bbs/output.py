@@ -14,6 +14,7 @@ ANSI_CODEPAGE = re.compile(r'\033\([A-Z]')
 ANSI_WILLMOVE = re.compile(r'\033\[[HJuABCDEF]')
 ANSI_WONTMOVE = re.compile(r'\033\[[sm]')
 
+
 def echo(ucs):
     """
     Display unicode terminal sequence.
@@ -21,8 +22,8 @@ def echo(ucs):
     session = getsession()
     if not isinstance(ucs, unicode):
         warnings.warn('non-unicode: %r' % (ucs,), UnicodeWarning, 2)
-        return session.write (ucs.decode('iso8859-1'))
-    return session.write (ucs)
+        return session.write(ucs.decode('iso8859-1'))
+    return session.write(ucs)
 
 
 def timeago(secs, precision=0):
@@ -41,12 +42,13 @@ def timeago(secs, precision=0):
     days, hours = divmod(hours, 24)
     weeks, days = divmod(days, 7)
     years, weeks = divmod(weeks, 52)
-    first, second = ((years, weeks) if years >= 1.0 else
-                     (weeks, days) if weeks >= 1.0 else
-                     (days, hours) if days >= 1.0 else
-                     (hours, mins) if hours >= 1.0 else
-                     (mins, secs))
-    return ('%2d%2.*f' % (first, precision, second,))
+    ((num1, num2), (label1, label2)) = (
+        ((years, weeks), ('y', 'w')) if years >= 1.0 else
+        ((weeks, days), ('w', 'd')) if weeks >= 1.0 else
+        ((days, hours), ('d', 'h')) if days >= 1.0 else
+        ((hours, mins), ('h', 'm')) if hours >= 1.0 else
+        ((mins, secs), ('m', 's')))
+    return ('%2d%s%2.*f%s' % (num1, label1, precision, num2, label2,))
 
 
 class Ansi(unicode):
@@ -95,23 +97,23 @@ class Ansi(unicode):
                 # my own NVT addition: allow -1 to be added to width when
                 # 127 and 8 are used (BACKSPACE, DEL)
                 assert wide != -1 or ucs in (u'\b', unichr(127)), (
-                        'indeterminate length %r' % (self[idx],))
+                    'indeterminate length %r' % (self[idx],))
                 width += wide
                 nxt = idx + Ansi(self[idx:]).seqlen() + 1
         return width
 
     def ljust(self, width):
-        return self + u' '*(max(0, width - self.__len__()))
+        return self + u' ' * (max(0, width - self.__len__()))
     ljust.__doc__ = unicode.ljust.__doc__
 
     def rjust(self, width):
-        return u' '*(max(0, width - self.__len__())) + self
+        return u' ' * (max(0, width - self.__len__())) + self
     rjust.__doc__ = unicode.rjust.__doc__
 
     def center(self, width):
         split = max(0.0, float(width) - self.__len__()) / 2
         return (u' ' * (max(0, int(math.floor(split)))) + self
-              + u' ' * (max(0, int(math.ceil(split)))))
+                + u' ' * (max(0, int(math.ceil(split)))))
     center.__doc__ = unicode.center.__doc__
 
     def wrap(self, width):
@@ -137,7 +139,6 @@ class Ansi(unicode):
             lines.append(' '.join(line))
         return '\r\n'.join(lines)
 
-
     def is_movement(self):
         """
         S.is_movement() -> bool
@@ -160,7 +161,7 @@ class Ansi(unicode):
         elif slen < 3:
             # unknown
             return False
-        elif ANSI_CODEPAGE.match (self):
+        elif ANSI_CODEPAGE.match(self):
             return False
         elif (self[0], self[1], self[2]) == (u'#', u'8'):
             # 'fill the screen'
@@ -272,7 +273,7 @@ class Ansi(unicode):
         ptr = 0
         match = None
         for match in ANSI_PIPE.finditer(self):
-            value = int(self[match.start()+len('|'):match.end()], 10)
+            value = int(self[match.start() + len('|'):match.end()], 10)
             rstr += self[ptr:match.start()] + term.color(value)
             ptr = match.end()
         if match is None:
@@ -294,20 +295,18 @@ class Ansi(unicode):
         #        Too many branches (22/12)
         slen = unicode.__len__(self)
         if 0 == slen:
-            return 0 # empty string
+            return 0  # empty string
         elif self[0] != unichr(27):
-            return 0 # not a sequence
+            return 0  # not a sequence
         elif 1 == slen:
-            return 0 # just esc,
+            return 0  # just esc,
         elif self[1] == u'c':
-            return 2 # reset
+            return 2  # reset
         elif 2 == slen:
-            return 0 # not a sequence
+            return 0  # not a sequence
         elif (self[1], self[2]) == (u'#', u'8'):
-            return 3 # fill screen (DEC)
-        elif ANSI_CODEPAGE.match (self):
-            return 3
-        elif ANSI_WONTMOVE.match(self):
+            return 3  # fill screen (DEC)
+        elif ANSI_CODEPAGE.match(self) or ANSI_WONTMOVE.match(self):
             return 3
         elif ANSI_WILLMOVE.match(self):
             return 4
@@ -358,4 +357,3 @@ class Ansi(unicode):
             return 0
         # unknown...
         return 0
-
