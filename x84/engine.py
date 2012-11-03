@@ -8,14 +8,15 @@ Command-line launcher and main event loop for x/84
 __author__ = "Johannes Lundberg, Jeffrey Quast"
 __copyright__ = "Copyright 2012"
 __credits__ = ["Johannes Lundberg", "Jeffrey Quast",
-               "Wijnand Modderman-Lenstra", "zipe", "spidy", "Mercyful Fate",]
+               "Wijnand Modderman-Lenstra", "zipe", "spidy", "Mercyful Fate"]
 __license__ = 'ISC'
 __version__ = '1.0rc1'
 __maintainer__ = 'Jeff Quast'
 __email__ = 'dingo@1984.ws'
 __status__ = 'Development'
 
-def main ():
+
+def main():
     """
     x84 main entry point. The system begins and ends here.
 
@@ -35,13 +36,13 @@ def main ():
     import x84.telnet
 
     lookup_bbs = ('/etc/x84/default.ini',
-            os.path.expanduser('~/.x84/default.ini'))
+                  os.path.expanduser('~/.x84/default.ini'))
     lookup_log = ('/etc/x84/logging.ini',
-            os.path.expanduser('~/.x84/logging.ini'))
+                  os.path.expanduser('~/.x84/logging.ini'))
     try:
         opts, tail = getopt.getopt(sys.argv[1:], ":", ('config', 'logger',))
     except getopt.GetoptError, err:
-        sys.stderr.write ('%s\n' % (err,))
+        sys.stderr.write('%s\n' % (err,))
         return 1
     for opt, arg in opts:
         if opt in ('--config',):
@@ -49,32 +50,33 @@ def main ():
         elif opt in ('--logger',):
             lookup_log = (arg,)
     if len(tail):
-        sys.stderr.write ('Unrecognized program arguments: %s\n' % (tail,))
+        sys.stderr.write('Unrecognized program arguments: %s\n' % (tail,))
 
     # load/create .ini files
-    x84.bbs.ini.init (lookup_bbs, lookup_log)
+    x84.bbs.ini.init(lookup_bbs, lookup_log)
 
     # initilization
     x84.bbs.userbase.digestpw_init(
-      x84.bbs.ini.CFG.get('system','password_digest'))
+        x84.bbs.ini.CFG.get('system', 'password_digest'))
 
     # start telnet server
-    telnet_server = x84.telnet.TelnetServer (
-            (x84.bbs.ini.CFG.get('telnet', 'addr'),
-                x84.bbs.ini.CFG.getint('telnet', 'port'),),
-            x84.terminal.on_connect,
-            x84.terminal.on_disconnect,
-            x84.terminal.on_naws)
+    telnet_server = x84.telnet.TelnetServer((
+        x84.bbs.ini.CFG.get('telnet', 'addr'),
+        x84.bbs.ini.CFG.getint('telnet', 'port'),),
+        x84.terminal.on_connect,
+        x84.terminal.on_disconnect,
+        x84.terminal.on_naws)
 
     try:
         # begin main event loop
-        _loop (telnet_server)
+        _loop(telnet_server)
     except KeyboardInterrupt:
         # catch ^C, close all sockets,
         for client in telnet_server.clients.values():
-            client.deactivate ()
-        telnet_server.poll ()
+            client.deactivate()
+        telnet_server.poll()
         raise SystemExit
+
 
 def _loop(telnet_server):
     """
@@ -92,33 +94,33 @@ def _loop(telnet_server):
     import x84.db
 
     logger = logging.getLogger()
-    logger.info ('listening %s/tcp', telnet_server.port)
+    logger.info('listening %s/tcp', telnet_server.port)
     timeout = x84.bbs.ini.CFG.getint('system', 'timeout')
-    locks = dict ()
+    locks = dict()
     # main event loop
     while True:
         # process telnet i/o
-        telnet_server.poll ()
+        telnet_server.poll()
         for client, pipe, lock in x84.terminal.terminals():
             if not lock.acquire(False):
                 continue
-            lock.release ()
+            lock.release()
 
             # process telnet input (keypress sequences)
             if client.input_ready() and lock.acquire(False):
                 lock.release()
                 inp = client.get_input()
-                pipe.send (('input', inp))
+                pipe.send(('input', inp))
 
             # kick off idle users
             if client.idle() > timeout:
-                pipe.send (('disconnect', ('timeout',)))
+                pipe.send(('disconnect', ('timeout',)))
                 continue
 
             if lock.acquire(False):
                 # process bbs session i/o
-                lock.release ()
-                if not pipe.poll ():
+                lock.release()
+                if not pipe.poll():
                     continue
 
             # session i/o sent from child process
@@ -127,27 +129,27 @@ def _loop(telnet_server):
 
             except (EOFError, IOError):
             #    IOError: [Errno 104] Connection reset by peer
-                logger.exception ('deactivating client: ')
-                client.deactivate ()
+                logger.exception('deactivating client: ')
+                client.deactivate()
                 continue
 
             if event == 'exit':
-                x84.terminal.unregister_terminal (client, pipe, lock)
-                pipe.close ()
-                client.deactivate ()
+                x84.terminal.unregister_terminal(client, pipe, lock)
+                pipe.close()
+                client.deactivate()
 
             elif event == 'logger':
-                logger.handle (data)
+                logger.handle(data)
 
             elif event == 'output':
-                client.send_unicode (ucs=data[0], encoding=data[1])
+                client.send_unicode(ucs=data[0], encoding=data[1])
 
             elif event == 'global':
                 #pylint: disable=W0612
                 #         Unused variable 'o_lock'
                 for o_client, o_pipe, o_lock in x84.terminal.terminals():
                     if o_client != client:
-                        o_pipe.send ((event, data,))
+                        o_pipe.send((event, data,))
 
             elif event.startswith('db'):
                 # db query-> database dictionary method, callback
@@ -155,42 +157,31 @@ def _loop(telnet_server):
                 # for now and is quick, but this prevents slow
                 # database queries from locking the i/o event loop.
                 thread = x84.db.DBHandler(pipe, event, data)
-                thread.start ()
+                thread.start()
 
             elif event.startswith('lock'):
                 # fine-grained lock acquire and release, non-blocking
                 method, stale = data
                 if method == 'acquire':
                     if not event in locks:
-                        locks[event] = time.time ()
-                        logger.debug ('lock %r granted.', data)
-                        pipe.send ((event, True,))
+                        locks[event] = time.time()
+                        logger.debug('lock %r granted.', data)
+                        pipe.send((event, True,))
                     elif (stale is not None
                             and time.time() - locks[event] > stale):
-                        logger.error ('lock %r stale.', data)
-                        pipe.send ((event, True,))
+                        logger.error('lock %r stale.', data)
+                        pipe.send((event, True,))
                     else:
-                        logger.warn ('lock %r failed.', data)
-                        pipe.send ((event, False,))
+                        logger.warn('lock %r failed.', data)
+                        pipe.send((event, False,))
                 elif method == 'release':
                     if not event in locks:
-                        logger.error ('lock %r not acquired.', data)
+                        logger.error('lock %r not acquired.', data)
                     else:
                         del locks[event]
-                        logger.debug ('lock %r removed.', data)
+                        logger.debug('lock %r removed.', data)
             else:
-                logger.error ('unhandled %r', (event, data))
-
-            #elif event == 'pos':
-            #    assert type(data) in (float, int, type(None))
-            #    # 'pos' query: 'what is the cursor position ?'
-            #    # returns 'pos-reply' event as a callback
-            #    # mechanism, data of (None, None) indicates timeout,
-            #    # otherwise (y, x) is cursor position ..
-            #    thread = x84.terminal.POSHandler(pipe, client, lock,
-            #        reply_event='pos-reply', timeout=data)
-            #    thread.start ()
-
+                logger.error('unhandled %r', (event, data))
 
 if __name__ == '__main__':
-    exit(main ())
+    exit(main())
