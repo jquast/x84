@@ -16,8 +16,7 @@ ANSI_WONTMOVE = re.compile(r'\033\[[sm]')
 
 def echo(ucs):
     """
-    Output unicode bytes and terminal sequences to session terminal.
-    non-unicode is accepted, translated as iso8859-1, and a warning is emitted.
+    Display unicode terminal sequence.
     """
     session = getsession()
     if not isinstance(ucs, unicode):
@@ -28,47 +27,44 @@ def echo(ucs):
 
 def timeago(secs, precision=0):
     """
-    Pass float or int in seconds, and return string of 0d 0h 0s format,
-    but only the two most relative, fe:
-    asctime(126.32) returns 2m6s,
-    asctime(10.9999, 2)   returns 10.99s
+    timago(float[,int])
+
+    Pass a duration of time and return human readable shorthand, fe.
+
+    asctime(126.32) -> ' 2m 6s',
+    asctime(70.9999, 2) -> ' 1m 10.99s'
     """
     # split by days, mins, hours, secs
-    years, weeks, days, mins, hours = 0, 0, 0, 0, 0
-    mins,  secs  = divmod(secs, 60)
-    hours, mins  = divmod(mins, 60)
-    days,  hours = divmod(hours, 24)
-    weeks, days  = divmod(days, 7)
+    years = weeks = days = mins = hours = 0
+    mins, secs = divmod(secs, 60)
+    hours, mins = divmod(mins, 60)
+    days, hours = divmod(hours, 24)
+    weeks, days = divmod(days, 7)
     years, weeks = divmod(weeks, 52)
-    years, weeks, days, hours, mins = (
-            int(years), int(weeks), int(days), int(hours), int(mins))
-    # return printable string
-    if years > 0:
-        return '%3s%-3s' % (str(years)+'y', str(weeks)+'w',)
-    if weeks > 0:
-        return '%3s%-3s' % (str(weeks)+'w', str(days)+'d',)
-    if days > 0:
-        return '%3s%-3s' % (str(days)+'d', str(hours)+'h',)
-    elif hours > 0:
-        return '%3s%-3s' % (str(hours)+'h', str(mins)+'m',)
-    elif mins > 0:
-        return '%3s%-3s' % (str(mins)+'m', str(int(secs))+'s',)
-    else:
-        fmt = '%.'+str(precision)+'f s'
-        return fmt % secs
+    first, second = ((years, weeks) if years >= 1.0 else
+                     (weeks, days) if weeks >= 1.0 else
+                     (days, hours) if days >= 1.0 else
+                     (hours, mins) if hours >= 1.0 else
+                     (mins, secs))
+    return ('%2d%2.*f' % (first, precision, second,))
 
 
 class Ansi(unicode):
     """
-    A unicode class that is poorly aware of the effect ansi sequences have on
-    length, most importantly offers a correct terminal display length of ansi
-    art and east asian characters, so that it can be aligned on non-80x25
-    terminals, and used with the center, rjust, and ljust alignment methods.
+    This unicode variation understands the effect of ansi sequences of
+    printable length, as well as double-wide east asian characters on
+    terminals, properly implementing .rjust, .ljust, .center, and .len.
+
+    Other ANSI functions also provided as methods.
     """
     # pylint: disable=R0904,R0924
     #         Too many public methods (45/20)
     #         Badly implemented Container, implements __getitem__,
     #           __len__ but not __delitem__, __setitem__.
+
+    # this is really bad; this is old kludge dating as far back as 2002 from a
+    # prior period when ansi was implemented without blessings, shoehorned into
+    # this unicode-derived class ..
 
     def __len__(self):
         """
@@ -98,7 +94,7 @@ class Ansi(unicode):
 
                 # my own NVT addition: allow -1 to be added to width when
                 # 127 and 8 are used (BACKSPACE, DEL)
-                assert wide != -1 and ucs not in (u'\b', unichr(127)), (
+                assert wide != -1 or ucs in (u'\b', unichr(127)), (
                         'indeterminate length %r' % (self[idx],))
                 width += wide
                 nxt = idx + Ansi(self[idx:]).seqlen() + 1
@@ -289,9 +285,9 @@ class Ansi(unicode):
         """
         S.is_sequence() -> integer
 
-        Returns non-zero for string S that begins with an ansi sequence, with value
-        of bytes until sequence is complete. Use as a 'next' pointer to skip past
-        sequences.
+        Returns non-zero for string S that begins with an ansi sequence, with
+        value of bytes until sequence is complete. Use as a 'next' pointer to
+        skip past sequences.
         """
         #pylint: disable=R0911,R0912
         #        Too many return statements (19/6)
