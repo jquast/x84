@@ -5,7 +5,7 @@ x/84 bbs module, https://github.com/jquast/x84
 from x84.bbs.userbase import list_users, get_user, find_user, User, Group
 from x84.bbs.exception import Disconnect, Goto, ConnectionTimeout
 from x84.bbs.editor import LineEditor, ScrollingEditor
-from x84.bbs.output import echo, timeago, Ansi, chompn
+from x84.bbs.output import echo, timeago, Ansi
 from x84.bbs.ansiwin import AnsiWindow
 from x84.bbs.selector import Selector
 from x84.bbs.lightbar import Lightbar
@@ -76,4 +76,4 @@ def showcp437 (filepattern):
       if '*' in filepattern or '?' in filepattern \
         else open(filepattern, 'rb')
     term = getterminal()
-    return chompn(from_cp437(sauce.SAUCE(fobj).__str__())) + term.normal
+    return Ansi(from_cp437(sauce.SAUCE(fobj).__str__())).wrap(80) + term.normal

@@ -4,7 +4,6 @@ Output and Ansi art unicode helpers for x/84, https://github.com/jquast/x84
 import re
 import math
 import warnings
-import unicodedata
 
 from x84.bbs.session import getterminal, getsession
 from x84.bbs.wcswidth import wcswidth
@@ -25,6 +24,39 @@ def echo(ucs):
         warnings.warn('non-unicode: %r' % (ucs,), UnicodeWarning, 2)
         return session.write (ucs.decode('iso8859-1'))
     return session.write (ucs)
+
+
+def timeago(secs, precision=0):
+    """
+    Pass float or int in seconds, and return string of 0d 0h 0s format,
+    but only the two most relative, fe:
+    asctime(126.32) returns 2m6s,
+    asctime(10.9999, 2)   returns 10.99s
+    """
+    # split by days, mins, hours, secs
+    years, weeks, days, mins, hours = 0, 0, 0, 0, 0
+    mins,  secs  = divmod(secs, 60)
+    hours, mins  = divmod(mins, 60)
+    days,  hours = divmod(hours, 24)
+    weeks, days  = divmod(days, 7)
+    years, weeks = divmod(weeks, 52)
+    years, weeks, days, hours, mins = (
+            int(years), int(weeks), int(days), int(hours), int(mins))
+    # return printable string
+    if years > 0:
+        return '%3s%-3s' % (str(years)+'y', str(weeks)+'w',)
+    if weeks > 0:
+        return '%3s%-3s' % (str(weeks)+'w', str(days)+'d',)
+    if days > 0:
+        return '%3s%-3s' % (str(days)+'d', str(hours)+'h',)
+    elif hours > 0:
+        return '%3s%-3s' % (str(hours)+'h', str(mins)+'m',)
+    elif mins > 0:
+        return '%3s%-3s' % (str(mins)+'m', str(int(secs))+'s',)
+    else:
+        fmt = '%.'+str(precision)+'f s'
+        return fmt % secs
+
 
 class Ansi(unicode):
     """
@@ -61,13 +93,13 @@ class Ansi(unicode):
                 #
                 # we just use wcswidth, since that is what terminal client
                 # implementors seem to be using, and on linux, and posix?
-                wide = wcswidth(self[idx])
+                ucs = self[idx]
+                wide = wcswidth(ucs)
 
                 # my own NVT addition: allow -1 to be added to width when
                 # 127 and 8 are used (BACKSPACE, DEL)
-                assert wide != -1 and wide not in (u'\b', unichr(127)), (
+                assert wide != -1 and ucs not in (u'\b', unichr(127)), (
                         'indeterminate length %r' % (self[idx],))
-
                 width += wide
                 nxt = idx + Ansi(self[idx:]).seqlen() + 1
         return width
@@ -90,9 +122,15 @@ class Ansi(unicode):
         """
         Like textwrap.wrap, but honor existing linebreaks and understand
         printable length of a unicode string that contains ANSI sequences.
+
+        Always returns NVT \\r\\n newlines
         """
         lines = []
-        for paragraph in self.split('\n'):
+        import logging
+        logger = logging.getLogger()
+        logger.error (repr(self))
+        logger.error (repr(self.split('\r\n')))
+        for paragraph in self.splitlines():
             line = []
             len_line = 0
             for word in paragraph.rstrip().split(' '):
@@ -329,51 +367,3 @@ class Ansi(unicode):
         # unknown...
         return 0
 
-def timeago(secs, precision=0):
-    """
-    Pass float or int in seconds, and return string of 0d 0h 0s format,
-    but only the two most relative, fe:
-    asctime(126.32) returns 2m6s,
-    asctime(10.9999, 2)   returns 10.99s
-    """
-    # split by days, mins, hours, secs
-    years, weeks, days, mins, hours = 0, 0, 0, 0, 0
-    mins,  secs  = divmod(secs, 60)
-    hours, mins  = divmod(mins, 60)
-    days,  hours = divmod(hours, 24)
-    weeks, days  = divmod(days, 7)
-    years, weeks = divmod(weeks, 52)
-    years, weeks, days, hours, mins = (
-            int(years), int(weeks), int(days), int(hours), int(mins))
-    # return printable string
-    if years > 0:
-        return '%3s%-3s' % (str(years)+'y', str(weeks)+'w',)
-    if weeks > 0:
-        return '%3s%-3s' % (str(weeks)+'w', str(days)+'d',)
-    if days > 0:
-        return '%3s%-3s' % (str(days)+'d', str(hours)+'h',)
-    elif hours > 0:
-        return '%3s%-3s' % (str(hours)+'h', str(mins)+'m',)
-    elif mins > 0:
-        return '%3s%-3s' % (str(mins)+'m', str(int(secs))+'s',)
-    else:
-        fmt = '%.'+str(precision)+'f s'
-        return fmt % secs
-
-
-def chompn (unibytes):
-    """
-    This chomp utility is unique for its purpose. firstly, it removes only
-    trailing \\n and \\r characters, and replaces single \\r's with \\r\\n
-    """
-    unibytes = unibytes.rstrip()
-    def cbreak(num, glyph, ubytes):
-        #pylint: disable=C0111
-        #        Missing docstring
-        if (num < len(ubytes) and glyph == u'\x0a'
-                and ubytes[num + 1] != u'\x0d'):
-            return u'\x0a\x0d'
-        else:
-            return glyph
-    return u''.join([cbreak(idx, glyph, unibytes)
-        for idx, glyph in enumerate(unibytes)])
