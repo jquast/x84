@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 FILELOCK = threading.Lock()
 
+
 class DBHandler(threading.Thread):
     """
     This handler receives a "database command", in the form of a dictionary
@@ -41,7 +42,7 @@ class DBHandler(threading.Thread):
         assert self.schema.isalnum() and os.path.sep not in self.schema
         folder = x84.bbs.ini.CFG.get('system', 'datapath')
         self.filepath = os.path.join(folder, '%s.sqlite3' % (self.schema,),)
-        threading.Thread.__init__ (self)
+        threading.Thread.__init__(self)
 
     def run(self):
         """
@@ -50,17 +51,17 @@ class DBHandler(threading.Thread):
 
         FILELOCK.acquire()
         if not os.path.exists(os.path.dirname(self.filepath)):
-            os.makedirs (os.path.dirname(self.filepath))
-        dictdb = sqlitedict.SqliteDict(filename=self.filepath,
-                tablename=self.table, autocommit=True)
-        FILELOCK.release ()
+            os.makedirs(os.path.dirname(self.filepath))
+        dictdb = sqlitedict.SqliteDict(
+            filename=self.filepath, tablename=self.table, autocommit=True)
+        FILELOCK.release()
         assert hasattr(dictdb, self.cmd), (
-                "'%(cmd)s' not a valid method of <type 'dict'>" % self)
+            "'%(cmd)s' not a valid method of <type 'dict'>" % self)
         func = getattr(dictdb, self.cmd)
         assert callable(func), (
             "'%(cmd)s' not a valid method of <type 'dict'>" % self)
-        logger.debug ('%s/%s%s', self.schema, self.cmd,
-                '(*%d)' % (len(self.args)) if len(self.args) else '()')
+        logger.debug('%s/%s%s', self.schema, self.cmd,
+                     '(*%d)' % (len(self.args)) if len(self.args) else '()')
 
         # single value result,
         if not self.iterable:
@@ -73,30 +74,30 @@ class DBHandler(threading.Thread):
             #         Catching too general exception
             except Exception as exception:
                 # Pokemon exception; package & raise from session process,
-                self.pipe.send (('exception', exception,))
-                dictdb.close ()
+                self.pipe.send(('exception', exception,))
+                dictdb.close()
                 return
-            self.pipe.send ((self.event, result))
-            dictdb.close ()
+            self.pipe.send((self.event, result))
+            dictdb.close()
             return
 
         # iterable value result,
-        self.pipe.send ((self.event, (None, 'StartIteration'),))
+        self.pipe.send((self.event, (None, 'StartIteration'),))
         try:
             if 0 == len(self.args):
                 for item in func():
-                    self.pipe.send ((self.event, item,))
+                    self.pipe.send((self.event, item,))
             else:
                 for item in func(*self.args):
-                    self.pipe.send ((self.event, item,))
+                    self.pipe.send((self.event, item,))
         #pylint: disable=W0703
         #         Catching too general exception
         except Exception as exception:
             # Pokemon exception; package & raise from session process,
-            self.pipe.send (('exception', exception,))
-            dictdb.close ()
+            self.pipe.send(('exception', exception,))
+            dictdb.close()
             return
 
-        self.pipe.send ((self.event, (None, StopIteration,),))
-        dictdb.close ()
+        self.pipe.send((self.event, (None, StopIteration,),))
+        dictdb.close()
         return
