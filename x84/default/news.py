@@ -14,7 +14,7 @@ def dummy_pager(news_txt):
     echo (redraw(None))
     for row in range(len(news_txt)):
         echo (news_txt[row].rstrip() + '\r\n')
-        if not nonstop and row > 0 and 0 == (row % (term.height-1)):
+        if not nonstop and row > 0 and 0 == (row % (term.height-3)):
             echo (prompt_msg)
             inp = getch()
             if inp in (u's', u'S', u'q', u'Q', term.KEY_EXIT):
@@ -35,7 +35,7 @@ def get_pager(news_txt):
     pager.xpadding = 1
     pager.ypadding = 1
     pager.colors['border'] = term.red
-    pager.update (news_txt)
+    pager.update ('\n'.join(news_txt))
     return pager
 
 def redraw(pager):
@@ -57,7 +57,8 @@ def main():
     session.activity = 'Reading news'
     news_path = os.path.join(os.path.dirname(__file__), 'art', 'news.txt')
     try:
-        news_txt = [line for line in codecs.open(news_path, 'rb', 'utf8')]
+        news_txt = [line.rstrip()
+                for line in codecs.open(news_path, 'rb', 'utf8')]
     except IOError:
         news_txt = ['`news` has not yet been comprimised.',]
 
