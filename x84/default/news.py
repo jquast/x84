@@ -57,17 +57,17 @@ def main():
     session.activity = 'Reading news'
     news_path = os.path.join(os.path.dirname(__file__), 'art', 'news.txt')
     try:
-        news_txt = codecs.open(news_path, encoding='utf8').readlines()
+        news_txt = [line for line in codecs.open(news_path, 'rb', 'utf8')]
     except IOError:
-        news_txt = ('`news` has not yet been comprimised.',)
+        news_txt = ['`news` has not yet been comprimised.',]
 
     if (session.env.get('TERM') == 'unknown'
             or session.user.get('expert', False) or term.width < 64):
-        dummy_pager ([line.rstrip() for line in news_txt.split('\n')])
+        dummy_pager (news_txt)
         return
 
     echo (term.home + term.normal + term.clear)
-    pager = get_pager(u'\n'.join([line.rstrip() for line in news_txt]))
+    pager = get_pager(news_txt)
     echo (redraw(pager))
     while True:
         inp = getch(1)
@@ -77,5 +77,5 @@ def main():
                 return
         if session.poll_event('refresh'):
             echo (term.home + term.normal + term.clear)
-            pager = get_pager(u'\n'.join(news_txt))
+            pager = get_pager(news_txt)
             echo (redraw(pager))
