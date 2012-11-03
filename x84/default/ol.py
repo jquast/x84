@@ -14,9 +14,8 @@ import logging
 import time
 import os
 
-#pylint: disable=W0614
-#        Unused import from wildcard import
-from x84.bbs import *
+from x84.bbs import ini, echo, getch, getsession, getterminal, Ansi, DBProxy
+from x84.bbs import Pager, timeago, Selector, from_cp437, LineEditor
 
 # bbs-scene.org API is 50-character limit max
 MAX_INPUT = 50
@@ -28,46 +27,50 @@ XML_HISTORY = 84
 # this long for bbs-scene.org updates ('x' cancels)
 WAIT_FETCH = 3
 
+
 class FetchUpdates(threading.Thread):
     url = 'http://bbs-scene.org/api/onelinerz?limit=%d' % (XML_HISTORY,)
-    content = list ()
+    content = list()
 
     def run(self):
         logger = logging.getLogger()
         usernm = ini.CFG.get('bbs-scene', 'user')
         passwd = ini.CFG.get('bbs-scene', 'pass')
-        logger.info ('fetching %r ..', self.url)
+        logger.info('fetching %r ..', self.url)
         stime = time.time()
-        req = requests.get (self.url, auth=(usernm, passwd))
+        req = requests.get(self.url, auth=(usernm, passwd))
         if 200 != req.status_code:
-            logger.error (req.content)
-            logger.error ('bbs-scene.org returned %s', req.status_code)
+            logger.error(req.content)
+            logger.error('bbs-scene.org returned %s', req.status_code)
             return
         else:
-            logger.info ('bbs-scene.org returned %d in %2.2fs',
-                    req.status_code, time.time() - stime)
+            logger.info('bbs-scene.org returned %d in %2.2fs',
+                        req.status_code, time.time() - stime)
 
         # can throw exceptions when xml is invalid, as a thread, nobody needs
         # to catch it. theres some things that should be CDATA wrapped ..
         xml_nodes = xml.etree.ElementTree.XML(req.content).findall('node')
         for node in xml_nodes:
-            self.content.append ((node.find('id').text, dict(
-                ((key, node.find(key).text.strip()) for key in (
-                'oneliner', 'alias', 'bbsname', 'timestamp',))),))
+            self.content.append(
+                (node.find('id').text, dict(
+                    ((key, node.find(key).text.strip()) for key in
+                     ('oneliner', 'alias', 'bbsname', 'timestamp',))),))
+
 
 def wait_for(thread):
     # for dummy or small terminals, wait until a request
     # thread has gotten content before continuing, *up to t WAIT_FETCH seconds
     if thread.is_alive():
-        echo ("\r\n\r\nfetching bbs-scene.org oneliners .. "
-                "(%s)s\b\b%s" % (' ' * 2, '\b' * 2,))
+        echo(u"\r\n\r\nfetching bbs-scene.org oneliners .. "
+             "(%s)s\b\b%s" % (' ' * 2, '\b' * 2,))
         for num in range(WAIT_FETCH):
-            echo ('%2d%s' % (WAIT_FETCH - num - 1, '\b' * 2,))
+            echo(u'%2d%s' % (WAIT_FETCH - num - 1, '\b' * 2,))
             if not thread.is_alive():
                 return
-            thread.join (1)
+            thread.join(.1)
             if getch(0) == u'q':
                 return
+
 
 def chk_thread(thread):
     # check if bbs-scene.org thread finished, if so, farm
@@ -83,38 +86,40 @@ def chk_thread(thread):
                 udb[key] = value
                 nlc += 1
         if nlc:
-            logger.info ('%d new entries', nlc)
-            session.buffer_event ('oneliner_update', True)
+            logger.info('%d new entries', nlc)
+            session.buffer_event('oneliner_update', True)
         else:
-            logger.info ('no new bbs-scene.org entries')
+            logger.info('no new bbs-scene.org entries')
         return True
 
-def add_oneline (msg):
+
+def add_oneline(msg):
     import time
     session = getsession()
     udb = DBProxy('oneliner')
-    udb.acquire ()
+    udb.acquire()
     udb[max([int(key) for key in udb.keys()] or [0]) + 1] = {
         'oneliner': msg,
         'alias': getsession().handle,
         'bbsname': ini.CFG.get('system', 'bbsname'),
         'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
     }
-    udb.release ()
-    session.buffer_event ('oneliner_update', True)
-    session.send_event ('global', ('oneliner_update', True))
+    udb.release()
+    session.buffer_event('oneliner_update', True)
+    session.send_event('global', ('oneliner_update', True))
+
 
 def get_oltxt():
     term = getterminal()
     colors = (term.bold_white, term.bold_green, term.bold_blue)
-    hist= [(int(k), v) for (k, v) in DBProxy('oneliner').iteritems()]
-    hist.sort ()
+    hist = [(int(k), v) for (k, v) in DBProxy('oneliner').iteritems()]
+    hist.sort()
     output = list()
     for idx, onel in hist[BUF_HISTORY * -1:]:
         color = colors[int(idx) % len(colors)]
-        atime = timeago(time.time() - time.mktime (
+        atime = timeago(time.time() - time.mktime(
             time.strptime(onel['timestamp'], '%Y-%m-%d %H:%M:%S'))).strip()
-        output.append (u''.join((
+        output.append(u''.join((
             term.bold_white('('), color(onel['alias']),
             term.bold_black(u'/'), onel['bbsname'],
             term.bold_white(u')'), color(u': '),
@@ -123,24 +128,27 @@ def get_oltxt():
             term.bold_black(u' ago'),)))
     return output[(BUF_HISTORY * -1):]
 
+
 def get_selector(selection=u'No'):
-    term = getterminal ()
-    selector = Selector(yloc=term.height - 1,
-            xloc=(term.width / 2) - 25,
-            width=50, left=u'Yes', right=u'No')
+    term = getterminal()
+    selector = Selector(
+        yloc=term.height - 1, xloc=(term.width / 2) - 25,
+        width=50, left=u'Yes', right=u'No')
     selector.keyset['left'].extend((u'y', u'Y'))
     selector.keyset['right'].extend((u'y', u'Y'))
     selector.selection = selection
     selector.colors['selected'] = term.green_reverse
     return selector
 
+
 def get_pager():
-    term = getterminal ()
+    term = getterminal()
     xloc = max(3, (term.width / 2) - 50)
     width = min(term.width - 6, 100)
     pager = Pager(yloc=9, xloc=xloc, height=term.height - 12, width=width)
     pager.colors['border'] = term.blue
     return pager
+
 
 def banner():
     term = getterminal()
@@ -154,15 +162,16 @@ def banner():
         max_ans = max([len(Ansi(from_cp437(line.rstrip()))) for line in art])
         for line in art:
             padded = Ansi(from_cp437(line.rstrip())).center(max_ans)
-            output += term.normal + term.blue # minor fix for this art ;/
+            output += term.normal + term.blue  # minor fix for this art ;/
             output += Ansi(padded).center(term.width).rstrip() + '\r\n'
     return output + term.normal
 
+
 def redraw(pager, selector):
     session, term = getsession(), getterminal()
-    session.flush_event ('oneliner_update')
+    session.flush_event('oneliner_update')
     pager.update(u'\n'.join(get_oltxt()))
-    pager.move_end ()
+    pager.move_end()
     pager.colors['border'] = term.white
     pager.glyphs['left-vert'] = u' '
     pager.glyphs['right-vert'] = u' '
@@ -170,32 +179,37 @@ def redraw(pager, selector):
     output = u''
     output += pager.refresh() + pager.border()
     output += term.move(selector.yloc - 2, selector.xloc)
-    output += term.bold_green (prompt_ole.center(selector.width).rstrip())
+    output += term.bold_green(prompt_ole.center(selector.width).rstrip())
     output += term.clear_eol + selector.refresh()
     return output
 
+
 def dummy_pager():
     term = getterminal()
-    tail = 10
+    tail = term.height - 5
     indent = 4
     prompt_ole = u'SAY somethiNG ?!'
-    echo (u'\r\n\r\n')
+    nlines = 0
     for record in get_oltxt()[(tail * -1):]:
         # convert from record to a width-wrapped, indented
         # text-wrapped record, for real small terminals ^_*
         wrapped = Ansi(record.rstrip()).wrap(term.width - indent)
-        echo ((u'\r\n' + u' ' * indent).join(wrapped.split(u'\r\n')) + u'\r\n')
-    echo (term.normal + u'\r\n\r\n')
-    echo (prompt_ole + u' [yn]')
+        echo((u'\r\n' + u' ' * indent).join(wrapped.split(u'\r\n')) + u'\r\n')
+        nlines += len(wrapped.split(u'\r\n'))
+        if nlines >= (term.height - 5):
+            break
+    echo(term.normal + u'\r\n\r\n')
+    echo(prompt_ole + u' [yn]')
     while True:
         ch = getch()
         if ch in (u'n', u'N', u'q', term.KEY_EXIT):
             break
         if ch in (u'y', u'Y'):
-            return saysomething (dumb=True)
+            return saysomething(dumb=True)
     return
 
-def saysomething (dumb=True):
+
+def saysomething(dumb=True):
     session, term = getsession(), getterminal()
     prompt_api = u'MAkE AN ASS Of YOURSElf ON bbS-SCENE.ORG?!'
     prompt_say = u'SAY WhAt ?! '
@@ -206,47 +220,47 @@ def saysomething (dumb=True):
     yloc = term.height - 3
     xloc = max(0, ((term.width / 2) - (MAX_INPUT / 2)))
     if dumb:
-        echo (u'\r\n\r\n' + term.bold_blue(prompt_say))
+        echo(u'\r\n\r\n' + term.bold_blue(prompt_say))
     else:
-        echo (term.move(yloc, xloc) or u'\r\n\r\n')
-        echo (term.bold_blue(prompt_say))
+        echo(term.move(yloc, xloc) or u'\r\n\r\n')
+        echo(term.bold_blue(prompt_say))
     ole = LineEditor(MAX_INPUT)
     ole.highlight = term.green_reverse
-    oneliner = ole.read ()
+    oneliner = ole.read()
     if oneliner is None or 0 == len(oneliner.strip()):
         if not dumb:
             # clear input line,
-            echo (term.normal + term.move(yloc, 0) + term.clear_eol)
+            echo(term.normal + term.move(yloc, 0) + term.clear_eol)
         return None
 
     session.user['lastliner'] = time.time()
     # post local-onlyw hen bbs-scene.org is not configured
     if not ini.CFG.has_section('bbs-scene'):
-        add_oneline (oneliner.strip())
+        add_oneline(oneliner.strip())
         return None
     if dumb:
         # post to bbs-scene.org ?
-        echo ('\r\n\r\n' + bold_blue(prompt_api) + u' [yn]')
+        echo('\r\n\r\n' + term.bold_blue(prompt_api) + u' [yn]')
         ch = getch(1)
         while ch not in (u'y', u'Y', u'n', u'N'):
             ch = getch()
         if ch in (u'n', u'N'):
             #  no? then just post locally
-            add_oneline (oneliner.strip())
+            add_oneline(oneliner.strip())
             return
     else:
         # fancy prompt, 'post to bbs-scene.org?'
         sel = get_selector()
         sel.colors['selected'] = term.red_reverse
-        echo (term.move(sel.yloc-1, sel.xloc) or ('\r\n\r\n'))
-        echo (term.blue_reverse(prompt_api.center(sel.width)))
-        echo (sel.refresh())
+        echo(term.move(sel.yloc - 1, sel.xloc) or ('\r\n\r\n'))
+        echo(term.blue_reverse(prompt_api.center(sel.width)))
+        echo(sel.refresh())
         while not sel.selected and not sel.quit:
-            echo (sel.process_keystroke(getch()))
+            echo(sel.process_keystroke(getch()))
         session.buffer_event('refresh', 'dirty')
         if sel.quit or sel.selection == sel.right:
-            echo (term.normal + term.move(yloc, 0) + term.clear_eol)
-            echo (term.move (sel.yloc, 0) + term.clear_eol)
+            echo(term.normal + term.move(yloc, 0) + term.clear_eol)
+            echo(term.move(sel.yloc, 0) + term.clear_eol)
             return None
 
     # This is an AJAX effect.
@@ -259,39 +273,40 @@ def saysomething (dumb=True):
             u'alias': session.user.handle,
             u'bbsname': ini.CFG.get('system', 'bbsname')}
     # post to bbs-scene.rog
-    req = requests.post (url, auth=(usernm, passwd), data=data)
+    req = requests.post(url, auth=(usernm, passwd), data=data)
     if (req.status_code != 200 or
-            (xml.etree.ElementTree.XML (req.content)
+            (xml.etree.ElementTree.XML(req.content)
                 .find('success').text != 'true')):
-        echo (u'\r\n\r\n%srequest failed,\r\n', term.clear_eol)
-        echo (u'%r' % (req.content,))
-        echo (u'\r\n\r\n%s(code : %s).\r\n', term.clear_eol, req.status_code)
-        echo (u'\r\n%sPress any key ..', term.clear_eol)
-        logger.warn ('bbs-scene.org api request failed')
-        getch ()
+        echo(u'\r\n\r\n%srequest failed,\r\n', term.clear_eol)
+        echo(u'%r' % (req.content,))
+        echo(u'\r\n\r\n%s(code : %s).\r\n', term.clear_eol, req.status_code)
+        echo(u'\r\n%sPress any key ..', term.clear_eol)
+        logger.warn('bbs-scene.org api request failed')
+        getch()
         return
-    logger.info ('bbs-scene.org api (%d): %r/%r', req.status_code,
-            session.user.handle, oneliner.strip())
+    logger.info('bbs-scene.org api (%d): %r/%r', req.status_code,
+                session.user.handle, oneliner.strip())
     thread = FetchUpdates()
-    thread.start ()
+    thread.start()
     if not dumb:
         # clear line w/input bar,
-        echo (term.normal + term.move(yloc, 0) + term.clear_eol)
+        echo(term.normal + term.move(yloc, 0) + term.clear_eol)
         # clear line w/selector
-        echo (term.move (sel.yloc, 0) + term.clear_eol)
+        echo(term.move(sel.yloc, 0) + term.clear_eol)
     else:
-        echo ('\r\n\r\n' + heard_api)
-        getch (2)
+        echo('\r\n\r\n' + heard_api)
+        getch(2)
     return thread
 
-def main ():
+
+def main():
     session, term = getsession(), getterminal()
     pager, selector = get_pager(), get_selector()
 
     thread = None
     if ini.CFG.has_section('bbs-scene'):
         thread = FetchUpdates()
-        thread.start ()
+        thread.start()
         session.activity = u'one-liners [bbs-scene.org]'
     else:
         session.activity = u'one-liners'
@@ -299,45 +314,45 @@ def main ():
     # flag a pager update,
     dirty = True
     # force screen clear on first loop,
-    session.buffer_event ('refresh', ('init',))
+    session.buffer_event('refresh', ('init',))
     while True:
         # 1. calculate and redraw screen,
         # or enter dumb pager mode (no scrolling)
         if session.poll_event('refresh'):
             pager, selector = get_pager(), get_selector(selector.selection)
-            echo (banner())
+            echo(banner())
             dirty = True
-        if chk_thread (thread):
+        if chk_thread(thread):
             thread = None
         if session.poll_event('oneliner_update'):
             #echo (banner())
             dirty = True
-        if dirty and (session.env.get('TERM') != 'unknown' and
-                not session.user.get('expert', False)
-                and term.width >= 78 and term.height >= 20):
+        if dirty and (session.env.get('TERM') != 'unknown'
+                      and not session.user.get('expert', False)
+                      and term.width >= 78 and term.height >= 20):
             # smart terminal
-            echo (redraw(pager, selector))
+            echo(redraw(pager, selector))
             dirty = False
         elif dirty:
             # dumb terminal
             if thread is not None:
-                wait_for (thread)
-            if chk_thread (thread):
+                wait_for(thread)
+            if chk_thread(thread):
                 thread = None
-            echo (u'\r\n\r\n')
+            echo(u'\r\n\r\n')
             return dummy_pager()
 
         # 2. detect and process keyboard input,
-        inp = getch (1)
+        inp = getch(1)
         if inp is not None:
             # input is multiplexed to both interfaces
-            echo (pager.process_keystroke (inp))
-            echo (selector.process_keystroke (inp))
+            echo(pager.process_keystroke(inp))
+            echo(selector.process_keystroke(inp))
 
             # selected 'yes' & return, 'say something'
             if (selector.selected and selector.selection == selector.left):
                 # re-assign thread so that it is checked for updates
-                thread = saysomething (dumb=False)
+                thread = saysomething(dumb=False)
                 # undo 'selected' state of yes/no bar,
                 selector.selected = False
 
