@@ -101,7 +101,7 @@ class LineEditor(object):
         """
         import x84.bbs.session
         import x84.bbs.output
-        x84.bbs.output.echo(self.refreshs())
+        x84.bbs.output.echo(self.refresh())
         session = x84.bbs.session.getsession()
         term = x84.bbs.session.getterminal()
         while True:
