@@ -437,7 +437,9 @@ class TelnetClient(object):
             try:
                 return self.sock.send(send_bytes)
             except socket.error, err:
-                raise ConnectionClosed('socket send %d: %s' % (err[0], err[1],))
+                raise ConnectionClosed(
+                        'socket send %d: %s' % (err[0], err[1],))
+
         sent = send(ready_bytes)
         if sent < len(ready_bytes):
             # re-buffer data that could not be pushed to socket;
