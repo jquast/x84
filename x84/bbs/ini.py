@@ -89,6 +89,7 @@ def init_bbs_ini ():
     Returns ConfigParser instance of bbs system defaults
     """
     import ConfigParser
+    import getpass, socket # used to construct default e-mail
     cfg_bbs = ConfigParser.SafeConfigParser()
 
     cfg_bbs.add_section('system')
@@ -105,6 +106,9 @@ def init_bbs_ini ():
         os.path.join(os.path.expanduser('~/.x84'), 'ttyrecordings'))
     cfg_bbs.set('system', 'timeout', '1984')
     cfg_bbs.set('system', 'password_digest', 'internal')
+    cfg_bbs.set('system', 'mail_addr', '%s@%s'
+            % (getpass.getuser(), socket.gethostname()))
+    cfg_bbs.set('system', 'mail_smtphost', 'localhost')
 
     cfg_bbs.add_section('telnet')
     cfg_bbs.set('telnet', 'addr', '127.0.0.1')
@@ -119,6 +123,7 @@ def init_bbs_ini ():
     cfg_bbs.set('matrix', 'script', 'matrix')
     cfg_bbs.set('matrix', 'topscript', 'top')
     cfg_bbs.set('matrix', 'enable_anonymous', 'no')
+    cfg_bbs.set('matrix', 'enable_pwreset', 'yes')
 
     cfg_bbs.add_section('session')
     cfg_bbs.set('session', 'record_tty', 'yes')
