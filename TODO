@@ -16,7 +16,6 @@ default/si.py <-- merge in torus.py
 default/ttyplay.py
 default/wfc.py
 default/plan.py (browse, xmodem up/down)
-default/pwreset.py
 
 ? telnet.py
 BINARY mode correctly; ftp://kermit.columbia.edu/kermit/f/telnet.txt
