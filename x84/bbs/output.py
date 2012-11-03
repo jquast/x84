@@ -126,10 +126,6 @@ class Ansi(unicode):
         Always returns NVT \\r\\n newlines
         """
         lines = []
-        import logging
-        logger = logging.getLogger()
-        logger.error (repr(self))
-        logger.error (repr(self.split('\r\n')))
         for paragraph in self.splitlines():
             line = []
             len_line = 0
