@@ -22,7 +22,8 @@ XML_KEYS = ('bbsname', 'sysop', 'software', 'address', 'port', 'location',)
 
 #pylint: disable=W0614
 #        Unused import from wildcard import
-from x84.bbs import *
+from x84.bbs import echo, ini, getch, getsession, DBProxy, LineEditor
+from x84.bbs import Lightbar, Pager, getterminal, gosub, Ansi
 
 class FetchUpdates(threading.Thread):
     url = 'http://bbs-scene.org/api/bbslist.php'
@@ -51,13 +52,13 @@ def wait_for(thread):
     # for dummy threads, wait for return value before listing,
     wait_fetch = 8
     if thread.is_alive():
-        echo ("\r\n\r\nfetching bbs-scene.org bbs list.. "
-                "(%s)s\b\b%s" % (' ' * 2, '\b' * 2,))
+        echo (u"\r\n\r\nfetching bbs-scene.org bbs list.. "
+                u"(%s)s\b\b%s" % (' ' * 2, '\b' * 2,))
         for num in range(wait_fetch):
-            echo ('%2d%s' % (wait_fetch - num - 1, '\b' * 2,))
+            echo ('%2d%s' % (wait_fetch - num - 1, u'\b' * 2,))
             if not thread.is_alive():
                 return
-            thread.join (1)
+            thread.join (0.1)
             if getch(0) == u'q':
                 # undocumented: q cancels -- in case it ever goes down D:
                 return
