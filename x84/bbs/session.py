@@ -237,7 +237,7 @@ class Session(object):
             except Exception, err:
                 # Pokemon exception.
                 e_type, e_value, e_tb = sys.exc_info()
-                self.write (self.terminal.bold_red + u'\r\n')
+                self.write (self.terminal.normal + u'\r\n')
                 for line in traceback.format_tb(e_tb):
                     logger.error (line.rstrip())
                     self.write (line.rstrip() + u'\r\n')
@@ -253,9 +253,11 @@ class Session(object):
                 oper = 'RESUME'
                 if 0 == len(self._script_stack):
                     oper = 'STOP'
-                msg = ('%s after general exception in %s.' % (oper, fault,))
+                msg = ('%s after general exception in %s.' % (oper, fault[0],))
                 logger.info (msg)
-                self.write (msg + self.terminal.normal + u'\r\n\r\n')
+                self.write (u'\r\n\r\n' +
+                        (self.terminal.bold_green(msg) if oper == 'RESUME' else
+                        self.terminal.bold_red(msg)) + self.terminal.normal)
         self.close ()
 
 
@@ -313,6 +315,8 @@ class Session(object):
         if event == 'ConnectionClosed':
             raise x84.bbs.exception.ConnectionClosed (data)
         elif event == 'exception':
+            #pylint: disable=E0702
+            #        Raising NoneType while only classes, (..) allowed
             raise data
 
         if not self._buffer.has_key(event):
