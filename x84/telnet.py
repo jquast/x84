@@ -46,10 +46,10 @@ from x84.bbs.exception import ConnectionClosed
 logger = logging.getLogger()
 
 #--[ Telnet Options ]----------------------------------------------------------
-from telnetlib import LINEMODE, NAWS, NEW_ENVIRON, ENCRYPT
+from telnetlib import LINEMODE, NAWS, NEW_ENVIRON, ENCRYPT, AUTHENTICATION
 from telnetlib import BINARY, SGA, ECHO, STATUS, TTYPE, TSPEED, LFLOW
-from telnetlib import IAC, DONT, DO, WONT, WILL
-from telnetlib import SE, NOP, DM, BRK, IP, AO, AYT, EC, EL, GA, SB
+from telnetlib import XDISPLOC, IAC, DONT, DO, WONT, WILL, SE, NOP, DM, BRK
+from telnetlib import IP, AO, AYT, EC, EL, GA, SB
 IS      = chr(0)        # Sub-process negotiation IS command
 SEND    = chr(1)        # Sub-process negotiation SEND command
 
@@ -713,7 +713,7 @@ class TelnetClient(object):
                 self._note_remote_option(STATUS, True)
                 self.send_str (bytes(''.join((
                     IAC, SB, STATUS, SEND, IAC, SE)))) # go ahead
-        elif option in (LINEMODE, LFLOW, TSPEED, ENCRYPT):
+        elif option in (LINEMODE, LFLOW, TSPEED, ENCRYPT, AUTHENTICATION):
             if self._check_local_option(option) is not False:
                 self._note_local_option(option, False)
                 # let DE know we refuse to do linemode, encryption, etc.
@@ -737,12 +737,19 @@ class TelnetClient(object):
                 self._note_remote_option(NEW_ENVIRON, True)
                 self._note_local_option(NEW_ENVIRON, True)
                 self.request_env ()
+        elif option == XDISPLOC:
+            if self._check_reply_pending(XDISPLOC):
+                self._note_reply_pending(XDISPLOC, False)
+            if self.check_remote_option(XDISPLOC):
+                self._note_remote_option(XDISPLOC, True)
+                self._iac_do(XDISPLOC)
+                self.send_str(bytes(''.join((IAC, SB, XDISPLOC, SEND, IAC, SE))))
         elif option == TTYPE:
             if self._check_reply_pending(TTYPE):
                 self._note_reply_pending(TTYPE, False)
             if self.check_remote_option(TTYPE) in (False, UNKNOWN):
                 self._note_remote_option(TTYPE, True)
-                self.send_str (bytes(''.join((IAC, SB, TTYPE, SEND, IAC, SE))))
+                self.send_str(bytes(''.join((IAC, SB, TTYPE, SEND, IAC, SE))))
         else:
             logger.warn ('%s: unhandled will: %r (ignored).',
                 self.addrport(), name_option(option))
@@ -787,6 +794,8 @@ class TelnetClient(object):
             return
         elif (TTYPE, IS) == (buf[0], buf[1]):
             self._sb_ttype (buf[2:].tostring())
+        elif (XDISPLOC, IS) == (buf[0], buf[1]):
+            self._sb_xdisploc (buf[2:].tostring())
         elif (NEW_ENVIRON, IS) == (buf[0], buf[1],):
             self._sb_env (buf[2:].tostring())
         elif (NAWS,) == (buf[0],):
@@ -798,6 +807,20 @@ class TelnetClient(object):
                     name_option(buf[0]), buf,)
         self.telnet_sb_buffer = ''
 
+    def _sb_xdisploc(self, bytestring):
+        """
+        Process incoming subnegotiation XDISPLAY
+        """
+        prev_display = self.env.get('DISPLAY', None)
+        if prev_display is None:
+            logger.info ("env['DISPLAY'] = %r.", bytestring)
+        elif prev_display != bytestring:
+            logger.info ("env['DISPLAY'] = %r by XDISPLOC was:%s.",
+                    bytestring, prev_display)
+        else:
+            logger.debug ('XDSIPLOC ignored (DISPLAY already set).')
+        self.env['DISPLAY'] = bytestring
+
     def _sb_ttype(self, bytestring):
         """
         Processes incoming subnegotiation TTYPE
@@ -805,10 +828,10 @@ class TelnetClient(object):
         term_str = bytestring.lower()
         prev_term = self.env.get('TERM', None)
         if prev_term is None:
-            logger.info ("env['TERM'] = %r.", term_str,)
+            logger.info ("env['TERM'] = %r.", term_str)
         elif prev_term != term_str:
             logger.info ("env['TERM'] = %r by TTYPE%s.", term_str,
-                    'was: %s' %(prev_term,) if prev_term != 'unknown' else '')
+                    ', was: %s' %(prev_term,) if prev_term != 'unknown' else '')
         else:
             logger.debug ('TTYPE ignored (TERM already set).')
         self.env['TERM'] = term_str
