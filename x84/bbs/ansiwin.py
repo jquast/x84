@@ -3,28 +3,28 @@ ansiwin package for x/84, http://github.com/jquast/x84
 """
 from x84.bbs.cp437 import CP437TABLE
 
-GLYPHSETS = { 'ascii':
-        { 'top-left': u'+',
-            'bot-left': u'+',
-            'top-right': u'+',
-            'bot-right': u'+',
-            'left-vert': u'|',
-            'right-vert': u'|',
-            'top-horiz': u'-',
-            'bot-horiz': u'-',
-            },
-        # classic line-drawing characters
-        'thin': {
-            'top-left': CP437TABLE[unichr(218)],
-            'bot-left': CP437TABLE[unichr(192)],
-            'top-right': CP437TABLE[unichr(191)],
-            'bot-right': CP437TABLE[unichr(217)],
-            'left-vert': CP437TABLE[unichr(179)],
-            'right-vert': CP437TABLE[unichr(179)],
-            'top-horiz': CP437TABLE[unichr(196)],
-            'bot-horiz': CP437TABLE[unichr(196)],
-            },
-        }
+GLYPHSETS = {
+    'ascii': {
+        'top-left': u'+',
+        'bot-left': u'+',
+        'top-right': u'+',
+        'bot-right': u'+',
+        'left-vert': u'|',
+        'right-vert': u'|',
+        'top-horiz': u'-',
+        'bot-horiz': u'-', },
+    'thin': {
+        'top-left': CP437TABLE[unichr(218)],
+        'bot-left': CP437TABLE[unichr(192)],
+        'top-right': CP437TABLE[unichr(191)],
+        'bot-right': CP437TABLE[unichr(217)],
+        'left-vert': CP437TABLE[unichr(179)],
+        'right-vert': CP437TABLE[unichr(179)],
+        'top-horiz': CP437TABLE[unichr(196)],
+        'bot-horiz': CP437TABLE[unichr(196)],
+    },
+}
+
 
 class AnsiWindow(object):
     """
@@ -49,13 +49,13 @@ class AnsiWindow(object):
         self._alignment = 'left'
         self.glyphs = dict()
         self.colors = dict()
-        self.init_theme ()
+        self.init_theme()
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
         assert self.isinview(), (
-                'AnsiWindow(height=%s, width=%s, yloc=%s, xloc=%s)'
-                ' not in viewport Terminal(height=%s, width=%s)'
-                % (height, width, yloc, xloc, term.height, term.width))
+            'AnsiWindow(height=%s, width=%s, yloc=%s, xloc=%s)'
+            ' not in viewport Terminal(height=%s, width=%s)'
+            % (height, width, yloc, xloc, term.height, term.width))
 
     def init_theme(self):
         """
@@ -90,7 +90,7 @@ class AnsiWindow(object):
     @property
     def ypadding(self):
         """
-        Horizontal padding of window border
+        Veritcal padding of window border
         """
         return self._ypadding
 
@@ -160,26 +160,28 @@ class AnsiWindow(object):
         """
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
-        return (self.xloc >= 0 and self.xloc + self.width <= term.width
-            and self.yloc >= 0 and self.yloc + self.height <= term.height)
+        return (self.xloc >= 0
+                and self.xloc + self.width <= term.width
+                and self.yloc >= 0
+                and self.yloc + self.height <= term.height)
 
     def iswithin(self, win):
         """
         Returns True if our window is within the bounds of window
         """
         return (self.yloc >= win.yloc
-            and self.yloc + self.height <= win.yloc + win.height
-            and self.xloc >= win.xloc
-            and self.xloc + self.width <= win.xloc + win.width)
+                and self.yloc + self.height <= win.yloc + win.height
+                and self.xloc >= win.xloc
+                and self.xloc + self.width <= win.xloc + win.width)
 
     def willfit(self, win):
         """
         Returns True if target window is within our bounds
         """
         return (win.yloc >= self.yloc
-            and win.yloc + win.height <= self.yloc + self.height
-            and win.xloc >= self.xloc
-            and win.xloc + win.w <= self.xloc + self.width)
+                and win.yloc + win.height <= self.yloc + self.height
+                and win.xloc >= self.xloc
+                and win.xloc + win.w <= self.xloc + self.width)
 
     def pos(self, yloc=None, xloc=None):
         """
@@ -191,7 +193,7 @@ class AnsiWindow(object):
             yloc = 0
         if xloc is None:
             xloc = 0
-        return term.move (yloc + self.yloc, xloc + self.xloc)
+        return term.move(yloc + self.yloc, xloc + self.xloc)
 
     def title(self, ansi_text):
         """
@@ -200,7 +202,7 @@ class AnsiWindow(object):
         """
         import x84.bbs.output
         xloc = self.width / 2 - (
-                min(len(x84.bbs.output.Ansi(ansi_text)) / 2, self.width / 2))
+            min(len(x84.bbs.output.Ansi(ansi_text)) / 2, self.width / 2))
         return self.pos(0, xloc) + ansi_text
 
     def footer(self, ansi_text):
@@ -210,9 +212,8 @@ class AnsiWindow(object):
         """
         import x84.bbs.output
         xloc = self.width / 2 - (
-                min(len(x84.bbs.output.Ansi(ansi_text)) / 2, self.width / 2))
+            min(len(x84.bbs.output.Ansi(ansi_text)) / 2, self.width / 2))
         return self.pos(self.height - 1, xloc) + ansi_text
-
 
     def border(self):
         """
@@ -233,7 +234,7 @@ class AnsiWindow(object):
         botright = self.glyphs.get('bot-right', u'/')
         rstr = u''
         for row in range(0, self.height):
-            for col in range (0, self.width):
+            for col in range(0, self.width):
                 if (col == 0) or (col == self.width - 1):
                     rstr += self.pos(row, col)
                     if (row == 0) and (col == 0):
@@ -253,7 +254,7 @@ class AnsiWindow(object):
                     if thoriz == u'':
                         if topright != u'':
                             # prepare for top-right, (horiz skipped)
-                            rstr += self.pos(row, self.width -1)
+                            rstr += self.pos(row, self.width - 1)
                     else:
                         rstr += thoriz
                     rstr += topright
@@ -263,7 +264,7 @@ class AnsiWindow(object):
                     if bhoriz == u'':
                         if botright != u'':
                             # prepare for bot-right, (horiz skipped)
-                            rstr += self.pos(row, self.width -1)
+                            rstr += self.pos(row, self.width - 1)
                     else:
                         # horizontal line
                         rstr += bhoriz
@@ -278,14 +279,15 @@ class AnsiWindow(object):
         """
         Erase window contents (including border)
         """
-        return self.pos(0, 0) + u''.join([self.pos(y, 0) +
-            self.glyphs.get('erase', u' ') for y in range(self.height)])
+        return u''.join([self.pos(y, 0) +
+                         (self.glyphs.get('erase', u' ') * self.width)
+                         for y in range(self.height)])
 
     def clear(self):
         """
         Erase only window contents, border remains.
         """
-        rstr = self.pos(1, 1)
-        rstr += u''.join([self.pos(y, 1) + self.glyphs.get('erase', u'')
-            for y in range(self.height -2)])
-        return rstr
+        return u''.join([self.pos(self.ypadding, self.xpadding) +
+                         (self.glyphs.get('erase', u'')
+                          * self.visible_width)
+                         for yloc in range(self.visible_height)])
