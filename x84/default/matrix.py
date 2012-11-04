@@ -78,7 +78,8 @@ def get_username(handle=u''):
 
 
 def try_reset(user):
-    echo(u'reset password (by e-mail)? [yn]')
+    prompt_reset = u'RESEt PASSWORD (bY E-MAil)? [yn]'
+    echo(prompt_reset)
     while True:
         inp = getch()
         if inp in (u'y', u'Y'):
