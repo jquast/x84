@@ -224,9 +224,12 @@ class User(object):
         #        Missing docstring
         adb = x84.bbs.dbproxy.DBProxy('userbase', 'attrs')
         adb.acquire()
-        attrs = adb[self.handle]
-        attrs.__setitem__(key, value)
-        adb[self.handle] = attrs
+        if not self.handle in adb:
+            adb[self.handle] = dict([(key, value),])
+        else:
+            attrs = adb[self.handle]
+            attrs.__setitem__(key, value)
+            adb[self.handle] = attrs
         adb.release()
         logger.info('%r setting %r = %r', self.handle, key, value)
     __setitem__.__doc__ = dict.__setitem__.__doc__
@@ -288,27 +291,26 @@ class User(object):
 
     def save(self):
         """
-        Save user record to databases.
+        (re-)Save user record to databases. Changes to user record to not
+        automaticly persist. a call to the .save method must be done.
         """
         assert type(self._handle) is unicode, ('handle must be unicode')
         assert len(self._handle) > 0, ('handle must be non-zero length')
         assert (None, None) != self._password, ('password must be set')
         assert self._handle != 'anonymous', ('anonymous user my not be saved.')
         udb = x84.bbs.dbproxy.DBProxy('userbase')
-        adb = x84.bbs.dbproxy.DBProxy('userbase', 'attrs')
-        gdb = x84.bbs.dbproxy.DBProxy('groupbase')
         udb.acquire()
-        adb.acquire()
-        gdb.acquire()
         if 0 == len(udb) and self.is_sysop is False:
             logger.warn('%s: First new user becomes sysop.', self.handle)
             self.group_add(u'sysop')
         udb[self.handle] = self
-        adb[self.handle] = dict()
-        self._apply_groups(gdb)
-        udb.release()
+        adb = x84.bbs.dbproxy.DBProxy('userbase', 'attrs')
+        adb.acquire()
+        if not self.handle in adb:
+            adb[self.handle] = dict()
         adb.release()
-        gdb.release()
+        self._apply_groups(x84.bbs.dbproxy.DBProxy('groupbase'))
+        udb.release()
 
     def delete(self):
         """
@@ -401,6 +403,7 @@ class User(object):
         """
         Inspect all groupbase members and enforce referential integrity.
         """
+        gdb.acquire()
         for chk_grp in self._groups:
             if not chk_grp in gdb:
                 gdb[chk_grp] = Group(chk_grp, set([self.handle]))
@@ -414,3 +417,4 @@ class User(object):
             if gname not in self._groups and self.handle in group.members:
                 group.remove(self.handle)
                 group.save()
+        gdb.release()
