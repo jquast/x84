@@ -84,6 +84,7 @@ def try_reset(user):
         if inp in (u'y', u'Y'):
             return gosub('pwreset', user.handle)
         elif inp in (u'n', u'N'):
+            echo (u'\r\n\r\n')
             return False
 
 
