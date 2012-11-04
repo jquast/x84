@@ -302,7 +302,7 @@ class Lightbar (AnsiWindow):
         """
         Move selection down one row.
         """
-        if self.index >= len(self.content):
+        if self.index >= len(self.content) - 1:
             return u''  # already at bottom
         if self.vitem_idx + 1 < self.visible_bottom:
             # move down 1 row
