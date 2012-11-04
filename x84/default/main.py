@@ -29,7 +29,6 @@ def refresh():
     echo (disp_entry ('g', 'goodbye').ljust(term.width/5))
     echo (disp_entry ('c', 'charset').ljust(term.width/5))
     echo (term.move(len(art) - 6, term.width / 4) or '\r\n')
-    echo (disp_entry ('v', 'vi .nethackrc').ljust(term.width/5))
     echo (disp_entry ('p', 'vi .plan').ljust(term.width/5))
     echo (u'\r\n\r\n')
 
@@ -63,11 +62,9 @@ def main():
         elif choice == u'c':
             gosub('charset')
             dirty = True
-        elif choice == u'v':
-            gosub('editor', '.nethackrc')
-            dirty = True
         elif choice == u'p':
             gosub('editor', '.plan')
+            dirty = True
         elif choice == u'H':
             from guppy import hpy
             h=hpy()
