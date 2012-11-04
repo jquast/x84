@@ -165,21 +165,21 @@ def _loop(telnet_server):
                 if method == 'acquire':
                     if not event in locks:
                         locks[event] = time.time()
-                        logger.debug('lock %r granted.', data)
+                        logger.debug('lock %r granted.', (event, data))
                         pipe.send((event, True,))
                     elif (stale is not None
                             and time.time() - locks[event] > stale):
-                        logger.error('lock %r stale.', data)
+                        logger.error('lock %r stale.', (event, data))
                         pipe.send((event, True,))
                     else:
-                        logger.warn('lock %r failed.', data)
+                        logger.warn('lock %r failed.', (event, data))
                         pipe.send((event, False,))
                 elif method == 'release':
                     if not event in locks:
-                        logger.error('lock %r not acquired.', data)
+                        logger.error('lock %r not acquired.', (event, data))
                     else:
                         del locks[event]
-                        logger.debug('lock %r removed.', data)
+                        logger.debug('lock %r removed.', (event, data))
             else:
                 logger.error('unhandled %r', (event, data))
 
