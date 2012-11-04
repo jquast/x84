@@ -3,15 +3,16 @@ lightbar package for x/84 BBS, http://github.com/jquast/x84
 """
 from x84.bbs.ansiwin import AnsiWindow
 
-NETHACK_KEYSET = { 'home': [u'y', '0'],
-                   'end': [u'n', 'G'],
-                   'pgup': [u'h', u'b',],
-                   'pgdown': [u'l', u'f',],
-                   'up': [u'k', ],
-                   'down': [u'j', ],
-                   'enter': [u'\r', ],
-                   'exit': [u'q', ],
-}
+NETHACK_KEYSET = {'home': [u'y', '0'],
+                  'end': [u'n', 'G'],
+                  'pgup': [u'h', u'b'],
+                  'pgdown': [u'l', u'f'],
+                  'up': [u'k'],
+                  'down': [u'j'],
+                  'enter': [u'\r'],
+                  'exit': [u'q'],
+                  }
+
 
 class Lightbar (AnsiWindow):
     """
@@ -25,7 +26,7 @@ class Lightbar (AnsiWindow):
     #         Too many instance attributes (15/7)
     #pylint: disable=R0904
     #         Too many public methods (29/20)
-    content = list ()
+    content = list()
 
     def __init__(self, height, width, yloc, xloc):
         """
@@ -67,19 +68,19 @@ class Lightbar (AnsiWindow):
             # out-of-bounds;
             return self.glyphs['erase'] * self.visible_width
         unibytes += (self.colors['selected']
-                if entry == self.index
-                else self.colors['unselected'])
+                     if entry == self.index
+                     else self.colors['unselected'])
         unibytes += self.align(self.content[entry][1])
         return unibytes + term.normal
 
-    def refresh (self):
+    def refresh(self):
         """
         Refresh full lightbar window contents
         """
-        return u''.join(self.refresh_row (ypos) for ypos in
-                range(self.visible_bottom))
+        return u''.join(self.refresh_row(ypos) for ypos in
+                        range(self.visible_bottom))
 
-    def refresh_quick (self):
+    def refresh_quick(self):
         """
         Redraw only the 'dirty' portions after a 'move' has occured;
         otherwise redraw entire contents (page has shifted).
@@ -87,10 +88,10 @@ class Lightbar (AnsiWindow):
         if self.moved:
             if (self._vitem_lastshift != self.vitem_shift):
                 # page shift, refresh entire page
-                return self.refresh ()
+                return self.refresh()
             # unhighlight last selection, highlight new
-            return (self.refresh_row(self.vitem_idx)
-                    + self.refresh_row(self._vitem_lastidx))
+            return (self.refresh_row(self._vitem_lastidx)
+                    + self.refresh_row(self.vitem_idx))
         return u''
 
     def init_theme(self):
@@ -112,14 +113,14 @@ class Lightbar (AnsiWindow):
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
         self.keyset = NETHACK_KEYSET
-        self.keyset['home'].append (term.KEY_HOME)
-        self.keyset['end'].append (term.KEY_END)
-        self.keyset['pgup'].append (term.KEY_PPAGE)
-        self.keyset['pgdown'].append (term.KEY_NPAGE)
-        self.keyset['up'].append (term.KEY_UP)
-        self.keyset['down'].append (term.KEY_DOWN)
-        self.keyset['enter'].append (term.KEY_ENTER)
-        self.keyset['exit'].append (term.KEY_EXIT)
+        self.keyset['home'].append(term.KEY_HOME)
+        self.keyset['end'].append(term.KEY_END)
+        self.keyset['pgup'].append(term.KEY_PPAGE)
+        self.keyset['pgdown'].append(term.KEY_NPAGE)
+        self.keyset['up'].append(term.KEY_UP)
+        self.keyset['down'].append(term.KEY_DOWN)
+        self.keyset['enter'].append(term.KEY_ENTER)
+        self.keyset['exit'].append(term.KEY_EXIT)
 
     def process_keystroke(self, key):
         """
@@ -128,17 +129,17 @@ class Lightbar (AnsiWindow):
         self._moved = False
         rstr = u''
         if key in self.keyset['home']:
-            rstr += self.move_home ()
+            rstr += self.move_home()
         elif key in self.keyset['end']:
-            rstr += self.move_end ()
+            rstr += self.move_end()
         elif key in self.keyset['pgup']:
-            rstr += self.move_pageup ()
+            rstr += self.move_pageup()
         elif key in self.keyset['pgdown']:
-            rstr += self.move_pagedown ()
+            rstr += self.move_pagedown()
         elif key in self.keyset['up']:
-            rstr += self.move_up ()
+            rstr += self.move_up()
         elif key in self.keyset['down']:
-            rstr += self.move_down ()
+            rstr += self.move_down()
         elif key in self.keyset['enter']:
             self.selected = True
         elif key in self.keyset['exit']:
@@ -148,9 +149,9 @@ class Lightbar (AnsiWindow):
     @property
     def moved(self):
         """
-        Returns: True if last call to process_keystroke() caused a new entry to
-        be selected. The caller can send keystrokes and check this flag to
-        indicate wether the current selection should be re-examined.
+        Returns: True if last call to process_keystroke() caused a new entry
+        to be selected. The caller can send keystrokes and check this flag
+        to indicate wether the current selection should be re-examined.
         """
         return self._moved
 
@@ -223,7 +224,7 @@ class Lightbar (AnsiWindow):
         """
         Visible bottom-most item of lightbar.
         """
-        if self.vitem_shift + (self.visible_height -1) > len(self.content):
+        if self.vitem_shift + (self.visible_height - 1) > len(self.content):
             return len(self.content)
         else:
             return self.visible_height
@@ -233,7 +234,7 @@ class Lightbar (AnsiWindow):
         #pylint: disable=C0111
         #         Missing docstring
         self.vitem_idx, self.vitem_shift = pos_tuple
-        self._chk_bounds ()
+        self._chk_bounds()
 
     @property
     def vitem_idx(self):
@@ -274,7 +275,7 @@ class Lightbar (AnsiWindow):
             self._vitem_shift = value
             self._moved = True
 
-    def _chk_bounds (self):
+    def _chk_bounds(self):
         """
         Shift pages and selection until a selection is within bounds
         """
@@ -301,7 +302,7 @@ class Lightbar (AnsiWindow):
         Move selection down one row.
         """
         if self.index >= len(self.content):
-            return u'' # already at bottom
+            return u''  # already at bottom
         if self.vitem_idx + 1 < self.visible_bottom:
             # move down 1 row
             self.vitem_idx += 1
@@ -314,13 +315,13 @@ class Lightbar (AnsiWindow):
         Move selection up one row.
         """
         if 0 == self.index:
-            return u'' # already at top
+            return u''  # already at top
         elif self.vitem_idx >= 1:
             # move up 1 row
             self.vitem_idx -= 1
         elif self.vitem_shift > 0:
             self.vitem_shift -= 1
-        return self.refresh_quick ()
+        return self.refresh_quick()
 
     def move_pagedown(self):
         """
@@ -329,7 +330,7 @@ class Lightbar (AnsiWindow):
         if len(self.content) < self.visible_height:
             # move to last entry
             if self.vitem_idx == len(self.content) - 1:
-                return u'' # already at end
+                return u''  # already at end
             self.vitem_idx = len(self.content) - 1
         elif (self.vitem_shift + self.visible_height
                 < (len(self.content) - self.visible_height)):
@@ -340,8 +341,8 @@ class Lightbar (AnsiWindow):
             self.vitem_shift = len(self.content) - self.visible_height
         else:
             # already at last page, goto end
-            return self.move_end ()
-        return self.refresh_quick ()
+            return self.move_end()
+        return self.refresh_quick()
 
     def move_pageup(self):
         """
@@ -357,18 +358,18 @@ class Lightbar (AnsiWindow):
             self.vitem_shift = 0
         else:
             # already at first page, goto home
-            return self.move_home ()
-        return self.refresh_quick ()
+            return self.move_home()
+        return self.refresh_quick()
 
     def move_home(self):
         """
         Move selection to the very top and first entry of the list.
         """
         if (0, 0) == (self.vitem_idx, self.vitem_shift):
-            return u'' # already at home
+            return u''  # already at home
         self.vitem_idx = 0
         self.vitem_shift = 0
-        return self.refresh_quick ()
+        return self.refresh_quick()
 
     def move_end(self):
         """
@@ -376,9 +377,9 @@ class Lightbar (AnsiWindow):
         """
         if len(self.content) < self.visible_height:
             if self.vitem_idx == len(self.content) - 1:
-                return u'' # already at end
+                return u''  # already at end
             self.vitem_idx = len(self.content) - 1
         else:
             self.vitem_shift = len(self.content) - self.visible_height
             self.vitem_idx = self.visible_height - 1
-        return self.refresh_quick ()
+        return self.refresh_quick()
