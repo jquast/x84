@@ -474,7 +474,7 @@ class Session(object):
                 "%s: main not callable." % (script_name,))
         value = script.main(*args)
         toss = self._script_stack.pop()
-        logger.debug('%s popped: %s', toss, value)
+        logger.info('%s <== %s', value, toss)
         return value
 
     def close(self):
