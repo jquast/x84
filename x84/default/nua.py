@@ -86,7 +86,7 @@ def set_password(user):
     while True:
         echo (u'\r\n\r\n' + term.clear_eol + term.normal + prompt_password)
         le = LineEditor (width)
-        le.hidden = 'x'
+        le.hidden = u'x'
         password = le.read()
         if password == u'' or password is None:
             warning(msg_empty)
