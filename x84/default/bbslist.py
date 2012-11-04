@@ -25,6 +25,7 @@ XML_KEYS = ('bbsname', 'sysop', 'software',
 LWIDE = 25
 PWIDE = 80
 
+import sauce
 from x84.bbs import echo, ini, getch, getsession, DBProxy, LineEditor
 from x84.bbs import Lightbar, Pager, getterminal, gosub, Ansi, from_cp437
 
@@ -138,7 +139,7 @@ def view_ansi(key):
     echo(term.move(term.height, 0) + '\r\n\r\n')
     ansiurl = DBProxy('bbslist')[key]['ansi']
     logger = logging.getLogger()
-    if ansiurl is not None and 0 != len(ansiurl):
+    if ansiurl is not None and 0 != len(ansiurl) and ansiurl != 'NONE':
         usernm = ini.CFG.get('bbs-scene', 'user')
         passwd = ini.CFG.get('bbs-scene', 'pass')
         req = requests.get(ansiurl, auth=(usernm, passwd))
@@ -150,13 +151,16 @@ def view_ansi(key):
             logger.warn('ansiurl request failed: %s' % (ansiurl,))
             getch()
             return
-        echo(from_cp437(req.content))
+        echo(from_cp437(sauce.SAUCE(data=req.content).__str__()))
+    else:
+        echo('no ansi available (%r)' % (ansiurl,))
+    echo(term.move(term.height, 0) + term.normal + '\r\npress any key ..')
+    getch()
 
 
 def get_bbsinfo(key):
     term = getterminal()
     bbs = DBProxy('bbslist')[key]
-    rstr = u''
 
     def calc_rating(ratings, outof=4):
         if 0 == len(ratings):
@@ -165,6 +169,7 @@ def get_bbsinfo(key):
         stars = int(math.floor((total / len(ratings))))
         return u'%*s' % (outof, u'*' * stars)
 
+    rstr = u''
     rstr += (term.green('bbSNAME')
              + term.bold_green(u': ')
              + bbs['bbsname']
@@ -175,7 +180,7 @@ def get_bbsinfo(key):
              + bbs['address']
              + term.bold_green(':')
              + bbs['port'] + u'\n')
-    rstr += (u', ' + term.green('lOCAtiON')
+    rstr += (term.green('lOCAtiON')
              + term.bold_green(': ')
              + bbs['location'] + '\n')
     rstr += (term.green('SOftWARE')
@@ -213,6 +218,7 @@ def get_ui(position=None):
     pager = Pager(height, width, yloc, xloc)
     if position is not None:
         lightbar.position = position
+    pager.ypadding = 2
     return (pager, lightbar)
 
 
@@ -229,28 +235,69 @@ def banner():
     return output + term.normal
 
 
-def redraw_pager(pager, key, active=True):
+def redraw_pager(pager, selection, active=True):
     term = getterminal()
-    unselected = u' -- ' + term.bold_green('no selection') + u' -- '
+    unselected = u'- no selection -'
     output = u''
     pager.colors['border'] = term.blue if active else u''
     output += pager.border()
     output += pager.clear()
-    print repr(pager.clear())
-    pager.glyphs['erase'] = u'-'
+    key, entry = selection
     if key is None:
-        pager.update(u'')
-        output += pager.title(unselected)
+        if entry and entry.strip().lower().split()[0] == 'enthral':
+            output += pager.update(
+                "Enthral is a fresh look at the old school art of bbsing. "
+                "It's a fresh face to an old favorite. Although Enthral is "
+                "still in it's alpha stages, the system is quite stable and "
+                "is already very feature rich. Currently available for "
+                "Linux, BSD, and Apple's OS X.\n\n"
+                "   " + term.bold_blue('http://enthralbbs.com/') + "\n\n"
+                "Author: Mercyful Fate\n"
+                "IRC: #enthral on irc.bbs-scene.org\n")
+            output += pager.title('- about Enthral -')
+        elif entry and entry.strip().lower().split()[0] == 'mystic':
+            output += pager.update(
+                "Mystic BBS is a bulletin board system (BBS) software in "
+                "the vein of other \"forum hack\" style software such as "
+                "Renegade, Oblivion/2, and Iniquity. Like many of its "
+                "counterparts it features a high degree of relatively "
+                "easy customization thanks to its ACS based menu system "
+                "along with fully editable strings and ANSI themes. "
+                "Mystic also includes its own Pascal like MPL scripting "
+                "language for even further flexibility.\n\n"
+                "  " + term.bold_blue('http://mysticbbs.com/') + "\n\n"
+                "Author: g00r00\n"
+                "IRC: #MysticBBS on irc.efnet.org\n")
+            output += pager.title('- about Mystic -')
+        elif entry and entry.strip().lower().split()[0] == 'synchronet':
+            output += pager.update(
+                "Synchronet Bulletin Board System Software is a free "
+                "software package that can turn your personal computer "
+                "into your own custom online service supporting multiple "
+                "simultaneous users with hierarchical message and file "
+                "areas, multi-user chat, and the ever-popular BBS door "
+                "games.\n\n"
+                "Synchronet has since been substantially redesigned as "
+                "an Internet-only BBS package for Win32 and Unix-x86 "
+                "platforms and is an Open Source project under "
+                "continuous development.\n\n"
+                "  " + term.bold_blue('http://www.synchro.net/\n') + "\n\n"
+                "IRC: ??\n")
+            output += pager.title('- about Synchronet -')
+        else:
+            output += pager.update(u'')
+            output += pager.title(unselected)
     else:
         bbsname = DBProxy('bbslist')[key]['bbsname']
-        output += pager.title(u' -- %3s. %s -- ' % (
-            term.bold_green(key), term.bold_green(bbsname)))
+        ansiurl = DBProxy('bbslist')[key]['ansi']
+        output += pager.title(u'- %s -' % (term.bold_blue(bbsname)))
         output += pager.update(get_bbsinfo(key))
         output += pager.footer(
             u'- ' + term.bold_green('t') + '/' + term.green('elnet') +
             u'  ' + term.bold_green('c') + '/' + term.green('omment') +
             u'  ' + term.bold_green('r') + '/' + term.green('rate') +
-            u'  ' + term.bold_green('v') + '/' + term.green('iew ansi') +
+            (u'  ' + (term.bold_green('v') + '/' + term.green('iew ansi'))
+             if ansiurl != 'NONE' and 0 != len(ansiurl) else u'') +
             u'- ')
     return output
 
@@ -268,7 +315,7 @@ def redraw_lightbar(lightbar, active=True):
 
 def redraw(pager, lightbar, leftright):
     return (redraw_pager(pager,
-                         key=lightbar.selection[0],
+                         selection=lightbar.selection,
                          active=(leftright == 1))
             + redraw_lightbar(lightbar, active=(leftright == 0)))
 
@@ -528,14 +575,14 @@ def main():
             # full refresh for border chang ;/
             leftright = 0
             echo(redraw_pager(
-                pager, lightbar.selection[0], active=(leftright == 1)))
+                pager, lightbar.selection, active=(leftright == 1)))
             echo(redraw_lightbar(
                 lightbar, active=(leftright == 0)))
         elif inp == term.KEY_RIGHT:
             # full refresh for border chang ;/
             leftright = 1
             echo(redraw_pager(
-                pager, lightbar.selection[0], active=(leftright == 1)))
+                pager, lightbar.selection, active=(leftright == 1)))
             echo(redraw_lightbar(
                 lightbar, active=(leftright == 0)))
         elif inp is not None:
@@ -544,11 +591,8 @@ def main():
                  if leftright == 0 else
                  pager.process_keystroke(inp))
 
-            # get current entry
-            key, output = lightbar.selection
-
             # full refresh after rate/comment/elnet/view etc.
-            if process_keystroke(inp, key):
+            if process_keystroke(inp, lightbar.selection[0]):
                 session.buffer_event('refresh', ('redraw',))
                 continue
 
@@ -557,7 +601,7 @@ def main():
                 return
 
             # pressed return, telnet!
-            if lightbar.selected:
+            if lightbar.selected and lightbar.selection[0] is not None:
                 bbs = DBProxy('bbslist')[lightbar.selection[0]]
                 gosub('telnet', bbs['address'], bbs['port'])
                 # buffer full refresh after telnet
@@ -566,4 +610,5 @@ def main():
             # selected new entry, refresh entire pager, a little bit
             # bandwidth excessive as bbs name is part of border title.
             if lightbar.moved:
-                echo(redraw_pager(pager, key, active=(leftright == 1)))
+                echo(redraw_pager(pager, lightbar.selection,
+                                  active=(leftright == 1)))
