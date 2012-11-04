@@ -21,6 +21,7 @@ def dummy_pager(news_txt):
                 return
             if inp in ('n', u'N'):
                 nonstop = True
+            echo (u'\r\n')
     echo ('\r\npress any key .. ')
     getch ()
     return
@@ -30,7 +31,7 @@ def get_pager(news_txt):
     width = term.width-6
     yloc = min(10, max(0,term.height - 10))
     height = term.height - yloc - 1
-    xloc = max(5, int((float(term.width) / 2) - (float(width) / 2)))
+    xloc = max(3, int((float(term.width) / 2) - (float(width) / 2)))
     pager = Pager(height, width, yloc, xloc)
     pager.xpadding = 1
     pager.ypadding = 1
@@ -49,6 +50,7 @@ def redraw(pager):
     if pager is not None:
         rstr += pager.refresh()
         rstr += pager.border()
+        rstr += pager.footer(u'- demo - - resize window - - demo -')
     return rstr
 
 def main():
@@ -64,12 +66,10 @@ def main():
 
     if (session.env.get('TERM') == 'unknown'
             or session.user.get('expert', False) or term.width < 64):
-        dummy_pager (news_txt)
-        return
-
-    echo (term.home + term.normal + term.clear)
+        return dummy_pager (news_txt)
+    echo(term.home + term.normal + term.clear)
     pager = get_pager(news_txt)
-    echo (redraw(pager))
+    echo(redraw(pager))
     while True:
         inp = getch(1)
         if inp is not None:
@@ -78,5 +78,7 @@ def main():
                 return
         if session.poll_event('refresh'):
             echo (term.home + term.normal + term.clear)
+            if term.width < 64:
+                return dummy_pager (news_txt)
             pager = get_pager(news_txt)
-            echo (redraw(pager))
+            echo(redraw(pager))
