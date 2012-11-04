@@ -110,7 +110,7 @@ def get_bbslist():
     Returns tuple, (bbs_key, display_string), grouped by bbs software !
     """
     max_bbs = 23
-    session = getsession()
+    session, term = getsession(), getterminal()
     session.flush_event('bbslist_update')
 
     def get_bysoftware():
@@ -125,8 +125,9 @@ def get_bbslist():
 
     output = list()
     for idx, (bbs_sw, bbs_keys) in enumerate(sorted(get_bysoftware())):
-        output.append((None, (u' %s (%2d)' % (
-            bbs_sw, len(bbs_keys)))[:max_bbs].rjust(max_bbs, ' ')))
+        soft_line = bbs_sw[:max_bbs - 5] + (
+                ' $' if len(bbs_sw) >= (max_bbs - 5) else u'')
+        output.append((None, term.blue_bold(soft_line)))
         for key, bbs in sorted(bbs_keys):
             output.append((key, bbs['bbsname'][:max_bbs - 2]
                            + (' $' if len(bbs['bbsname']) >= (max_bbs - 2)
@@ -206,9 +207,10 @@ def get_ui(position=None):
     lbdata = get_bbslist()
     # after banner art, if our terminal was wide enuf for it ..
     yloc = 8 if term.width >= 69 else 1  # after banner art ..
+    xpos = max(2, term.height - ((PWIDE - LWIDE - 3) / 2))
     # at least 10 tall, as tall as the screen, not as tall as content
-    height = min(term.height - yloc - 2, max(10, lbdata))
-    lightbar = Lightbar(height, LWIDE, yloc, 2)
+    height = min(term.height - yloc - 2, max(10, len(lbdata)))
+    lightbar = Lightbar(height, LWIDE, yloc, xpos)
     lightbar.update(lbdata)
     lightbar.keyset['enter'].extend((u't', u'T'))
     lightbar.colors['selected'] = term.blue_reverse
@@ -219,6 +221,7 @@ def get_ui(position=None):
     if position is not None:
         lightbar.position = position
     pager.ypadding = 2
+    pager.xpadding = 2
     return (pager, lightbar)
 
 
@@ -307,8 +310,16 @@ def redraw_lightbar(lightbar, active=True):
     output = u''
     lightbar.colors['border'] = term.bold_green if active else u''
     output += lightbar.border()
-    output += lightbar.footer(
-        u'- ' + term.bold_blue('a') + '/' + term.blue('dd') + u' -')
+    s_add = (term.bold_blue('(') + term.blue_reverse('a')
+            + term.bold_blue(')') + term.blue('dd')
+            if active else
+            ( term.bold_green('(') + term.green_reverse('a')
+                + term.bold_green(')') + term.green('dd')))
+    up = term.bold_blue('up') if active else term.bold_green('up')
+    down = term.bold_blue('down') if active else term.bold_green('down')
+    leftright = term.bold_blue('right') if active else term.bold_green('left')
+    s_dir = u' '.join((up, down, leftright))
+    output += lightbar.footer(u'- ' + s_add + u' ' + s_dir + ' -')
     output += lightbar.refresh()
     return output
 
