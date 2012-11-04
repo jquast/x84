@@ -34,7 +34,12 @@ def main(handle):
 
     width = ini.CFG.getint('nua', 'max_email')
     email = None
+    tries = 0
     while True:
+        tries += 1
+        if tries > 5:
+            logger.warn ('%r email retries exceeded', handle)
+            return
         echo (term.normal + u'\r\n\r\n')
         echo (prompt_email % (handle,))
         try_email = LineEditor(width).read()
@@ -74,7 +79,13 @@ def main(handle):
 
     width = len(passkey)
     email = None
+    tries = 0
     while True:
+        tries += 1
+        if tries > 5:
+            logger.warn ('%r passkey retries exceeded', handle)
+            return
+
         echo (term.normal + u'\r\n\r\n')
         echo (prompt_passkey)
         try_passkey = LineEditor(width).read()
