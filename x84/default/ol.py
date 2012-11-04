@@ -25,7 +25,7 @@ BUF_HISTORY = 500
 XML_HISTORY = 84
 # in dumb terminal mode or expert mode, wait up to
 # this long for bbs-scene.org updates ('x' cancels)
-WAIT_FETCH = 3
+WAIT_FETCH = 5
 
 
 class FetchUpdates(threading.Thread):
@@ -67,7 +67,7 @@ def wait_for(thread):
             echo(u'%2d%s' % (WAIT_FETCH - num - 1, '\b' * 2,))
             if not thread.is_alive():
                 return
-            thread.join(.1)
+            thread.join(1)
             if getch(0) == u'q':
                 return
 
@@ -186,20 +186,16 @@ def redraw(pager, selector):
 
 def dummy_pager():
     term = getterminal()
-    tail = term.height - 5
-    indent = 4
-    prompt_ole = u'SAY somethiNG ?!'
+    tail = term.height - 4
+    indent = 3
+    prompt_ole = u'\r\n\r\nSAY somethiNG ?! [yn]'
     nlines = 0
-    for record in get_oltxt()[(tail * -1):]:
-        # convert from record to a width-wrapped, indented
-        # text-wrapped record, for real small terminals ^_*
-        wrapped = Ansi(record.rstrip()).wrap(term.width - indent)
-        echo((u'\r\n' + u' ' * indent).join(wrapped.split(u'\r\n')) + u'\r\n')
-        nlines += len(wrapped.split(u'\r\n'))
-        if nlines >= (term.height - 5):
-            break
-    echo(term.normal + u'\r\n\r\n')
-    echo(prompt_ole + u' [yn]')
+    buf = list()
+    for record in get_oltxt():
+        buf.extend(Ansi(record.rstrip()).wrap(
+            term.width - indent).split('\r\n'))
+    echo ((u'\r\n' + term.normal).join(buf[tail * -1:]))
+    echo (prompt_ole)
     while True:
         ch = getch()
         if ch in (u'n', u'N', u'q', term.KEY_EXIT):
