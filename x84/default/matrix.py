@@ -29,7 +29,7 @@ def get_username(handle=u''):
     login handle matches a userbase record.
     """
     term = getterminal()
-    prompt_user = u'\r\n  user: '
+    prompt_user = u'\r\n\r\n  user: '
     apply_msg = u'\r\n\r\n  --> Create new account? [ynq]   <--' + '\b' * 5
     allow_apply = ini.CFG.getboolean('nua', 'allow_apply')
     enable_anonymous = ini.CFG.getboolean('matrix', 'enable_anonymous')
