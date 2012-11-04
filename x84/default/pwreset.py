@@ -69,7 +69,7 @@ def main(handle):
     smtp.sendmail (msg_mailfrom, [email], msg.as_string())
     smtp.quit ()
 
-    echo ('\r\n\r\n' + msg_sent + '\r\n')
+    echo ('\r\n\r\n' + msg_sent % (email,) + '\r\n')
     echo ('\r\n\r\n')
 
     width = len(passkey)
