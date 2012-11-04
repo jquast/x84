@@ -16,6 +16,7 @@ import threading
 import requests
 import logging
 import time
+import math
 import os
 
 XML_KEYS = ('bbsname', 'sysop', 'software',
@@ -158,9 +159,11 @@ def get_bbsinfo(key):
     rstr = u''
 
     def calc_rating(ratings, outof=4):
-        total = sum([float(rating) for (usr, rating) in ratings] or [0.0])
-        stars = max(outof, total / (len(ratings) or 1))
-        return u'%*s' % (outof, u'*' * (stars - (outof - stars)))
+        if 0 == len(ratings):
+            return u'-'
+        total = sum([rtg for (hdl, rtg) in ratings])
+        stars = int(math.floor((total / len(ratings))))
+        return u'%*s' % (outof, u'*' * stars)
 
     rstr += (term.green('bbSNAME')
              + term.bold_green(u': ')
@@ -179,8 +182,11 @@ def get_bbsinfo(key):
              + term.bold_green(': ')
              + bbs['software'] + '\n')
     ratings = DBProxy('bbslist', 'ratings')[key]
-    rstr += u'RAtiNG: %s (%d)\n' % (
-        term.bold_green(calc_rating(ratings)), len(ratings))
+    rstr += u'RAtiNG: %s (%2.2f of %d)\n' % (
+        term.bold_green(calc_rating(ratings)),
+        0 if 0 == len(ratings) else
+        sum([rtg for (hndl, rtg) in ratings]) / len(ratings),
+        len(ratings))
     rstr += u'\n' + bbs['notes']
     comments = DBProxy('bbslist', 'comments')[key]
     for handle, comment in comments:
@@ -229,10 +235,12 @@ def redraw_pager(pager, key, active=True):
     output = u''
     pager.colors['border'] = term.blue if active else u''
     output += pager.border()
+    output += pager.clear()
+    print repr(pager.clear())
+    pager.glyphs['erase'] = u'-'
     if key is None:
         pager.update(u'')
         output += pager.title(unselected)
-        output += pager.clear()
     else:
         bbsname = DBProxy('bbslist')[key]['bbsname']
         output += pager.title(u' -- %3s. %s -- ' % (
@@ -412,7 +420,7 @@ def process_keystroke(inp, key=None):
 
 def add_comment(key):
     session, term = getsession(), getterminal()
-    prompt_comment = '\r\nWhAt YOU GOt tO SAY? '
+    prompt_comment = u'\r\nWhAt YOU GOt tO SAY? '
     prompt_chg = u'\r\nChANGE EXiStiNG ? [yn] '
     echo(term.move(term.height, 0))
     echo(prompt_comment)
@@ -426,6 +434,7 @@ def add_comment(key):
     if session.handle in (handle for (handle, cmt) in comments[key]):
         echo(prompt_chg)
         if getch() not in (u'y', u'Y'):
+            comments.release()
             return
         # re-define list without existing entry, + new entry
         comments[key] = [(handle, cmt) for (handle, cmd) in existing
@@ -450,23 +459,22 @@ def rate_bbs(key):
         f_rating = float(rating)
     except ValueError:
         return
-
     entry = (session.handle, f_rating)
     ratings = DBProxy('bbslist', 'ratings')
+    ratings.acquire()
     if session.handle in (handle for (handle, rtg) in ratings[key]):
         echo(prompt_chg)
         if getch() not in (u'y', u'Y'):
+            ratings.release()
             return
-        ratings.acquire()
         # re-define list without existing entry, + new entry
         ratings[key] = [(handle, rtg)
                         for (handle, rtg) in ratings[key]
-                        if session.handle != handle] + entry
+                        if session.handle != handle] + [entry]
         ratings.release()
         return
-    ratings.acquire()
     # re-define as existing list + new entry
-    ratings[key] = ratings[key] + entry
+    ratings[key] = ratings[key] + [entry]
     ratings.release()
 
 
@@ -518,12 +526,18 @@ def main():
         inp = getch(1)
         if inp == term.KEY_LEFT:
             # full refresh for border chang ;/
-            session.buffer_event('refresh', ('redraw',))
             leftright = 0
+            echo(redraw_pager(
+                pager, lightbar.selection[0], active=(leftright == 1)))
+            echo(redraw_lightbar(
+                lightbar, active=(leftright == 0)))
         elif inp == term.KEY_RIGHT:
             # full refresh for border chang ;/
-            session.buffer_event('refresh', ('redraw',))
             leftright = 1
+            echo(redraw_pager(
+                pager, lightbar.selection[0], active=(leftright == 1)))
+            echo(redraw_lightbar(
+                lightbar, active=(leftright == 0)))
         elif inp is not None:
             # process as pager or lightbar keystroke,
             echo(lightbar.process_keystroke(inp)
@@ -552,4 +566,4 @@ def main():
             # selected new entry, refresh entire pager, a little bit
             # bandwidth excessive as bbs name is part of border title.
             if lightbar.moved:
-                echo(redraw_pager(pager, key, active=False))
+                echo(redraw_pager(pager, key, active=(leftright == 1)))
