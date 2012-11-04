@@ -8,28 +8,30 @@ of 'cp437' for encoding translation.
 """
 
 import os
-#pylint: disable=W0614
-#        Unused import from wildcard import
-from x84.bbs import *
+from x84.bbs import getsession, getterminal, getch, Selector
+from x84.bbs import echo, showcp437, Ansi
+
 
 def main():
     session, term = getsession(), getterminal()
     if term.number_of_colors == 256:
-        artfile = os.path.join(os.path.dirname(__file__),
-                'art', 'plant-256.ans')
+        artfile = os.path.join(
+            os.path.dirname(__file__), 'art', 'plant-256.ans')
     else:
-        artfile = os.path.join(os.path.dirname(__file__),
-                'art', 'plant.ans')
+        artfile = os.path.join(
+            os.path.dirname(__file__), 'art', 'plant.ans')
 
-    enc_prompt = (u'Press left/right until artwork looks best. Clients should'
-            ' select utf8 encoding and Andale Mono font. Older clients or'
-            ' clients with appropriate 8-bit fontsets can select cp437, though'
-            ' some characters may appear as "?".')
+    enc_prompt = (
+        u'Press left/right until artwork looks best. Clients should'
+        ' select utf8 encoding and Andale Mono font. Older clients or'
+        ' clients with appropriate 8-bit fontsets can select cp437, though'
+        ' some characters may appear as "?".')
 
     save_msg = u"\r\n\r\n'%s' is now your preferred encoding ..\r\n"
 
-    if session.env.get('TERM') == 'unknown' or session.user.get('expert', False):
-        echo ('\r\n (U) UTF-8 encoding or (C) CP437 encoding [uc] ?\b\b')
+    if (session.env.get('TERM') == 'unknown') or (
+            session.user.get('expert', False)):
+        echo('\r\n (U) UTF-8 encoding or (C) CP437 encoding [uc] ?\b\b')
         while True:
             inp = getch()
             if inp in (u'u', u'U'):
@@ -39,64 +41,64 @@ def main():
                 session.encoding = 'cp437'
                 break
         session.user['charset'] = session.encoding
-        echo (save_msg % (session.encoding,))
-        getch (1.0)
+        echo(save_msg % (session.encoding,))
+        getch(1.0)
         return
-
 
     def get_selector(selection):
         """
         Instantiate a new selector, dynamicly for the window size.
         """
-        width = max(30, (term.width/2) - 10)
-        xloc = max(0, (term.width/2)-(width/2))
-        selector = Selector (yloc=term.height-1, xloc=xloc, width=width,
-                left='utf8', right='cp437')
-        selector.selection = selection
-        return selector
+        width = max(30, (term.width / 2) - 10)
+        xloc = max(0, (term.width / 2) - (width / 2))
+        sel = Selector(yloc=term.height - 1,
+                       xloc=xloc, width=width,
+                       left='utf8', right='cp437')
+        sel.selection = selection
+        return sel
 
     def refresh(sel):
-        session.flush_event ('refresh')
+        session.flush_event('refresh')
         session.encoding = selector.selection
         if sel.selection == 'utf8':
             # ESC %G activates UTF-8 with an unspecified implementation
             # level from ISO 2022 in a way that allows to go back to
             # ISO 2022 again.
-            echo (unichr(27) + u'%G')
+            echo(unichr(27) + u'%G')
         elif sel.selection == 'cp437':
             # ESC %@ returns to ISO 2022 in case UTF-8 had been entered.
             # ESC ) U Sets character set G1 to codepage 437 .. usually.
-            echo (unichr(27) + u'%@')
-            echo (unichr(27) + u')U')
+            echo(unichr(27) + u'%@')
+            echo(unichr(27) + u')U')
         else:
             assert False, "Only encodings 'utf8' and 'cp437' supported."
         # clear & display art
-        echo (term.move (0, 0) + term.normal + term.clear)
-        echo (showcp437 (artfile))
-        echo (term.normal + u'\r\n\r\n')
-        echo (Ansi(enc_prompt).wrap((term.width / 2) + (term.width / 3))) # 1/2+1/3
-        echo (u'\r\n\r\n') # leave at least 2 empty lines at bottom
-        echo (sel.refresh ())
+        echo(term.move(0, 0) + term.normal + term.clear)
+        echo(showcp437(artfile))
+        echo(term.normal + u'\r\n\r\n')
+        echo(Ansi(enc_prompt).wrap((term.width / 2) + (term.width / 3)))
+        echo(u'\r\n\r\n')
+        echo(sel.refresh())
 
-    selector = get_selector ('utf8')
-    refresh (selector)
+    selector = get_selector('utf8')
+    refresh(selector)
     while True:
-        inp = getch (1)
+        inp = getch(1)
         if inp == term.KEY_ENTER:
             session.user['charset'] = session.encoding
-            echo (save_msg % (session.encoding,))
-            getch (1.0)
+            echo(save_msg % (session.encoding,))
+            getch(1.0)
             return
         elif inp is not None:
-            selector.process_keystroke (inp)
+            selector.process_keystroke(inp)
             if selector.quit:
                 # 'escape' quits without save, though the encoding
                 # has been temporarily set for this session.
                 return
             if selector.moved:
                 # set and refresh art in new encoding
-                refresh (selector)
+                refresh(selector)
         if session.poll_event('refresh') is not None:
             # instantiate a new selector in case the window size has changed.
-            selector = get_selector (session.encoding)
-            refresh (selector)
+            selector = get_selector(session.encoding)
+            refresh(selector)
