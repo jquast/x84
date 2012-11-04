@@ -118,10 +118,13 @@ class Ansi(unicode):
 
     def wrap(self, width):
         """
+        A.wrap(width) --> unicode
+
         Like textwrap.wrap, but honor existing linebreaks and understand
         printable length of a unicode string that contains ANSI sequences.
 
-        Always returns NVT \\r\\n newlines
+        Always returns single unicode string,
+        rows are seperated by NVT \\r\\n newlines
         """
         lines = []
         for paragraph in self.splitlines():
