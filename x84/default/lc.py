@@ -9,19 +9,20 @@ from x84.bbs import timeago, getsession
 
 def dummy_pager(last_callers):
     term = getterminal()
-    prompt_msg = u'\r\n[c]ONtiNUE, [s]tOP, [n]ON-StOP  ?\b\b'
+    prompt_msg = u'\r\n\r\n[c]ONtiNUE, [s]tOP, [n]ON-StOP  ?\b\b'
     nonstop = False
-    echo(term.normal + '\r\n\r\n')
     if term.width > 71:
+        echo(term.normal + '\r\n')
         echo('\r\n'.join((line.rstrip().center(term.width).rstrip()
                           for line in open(os.path.join(os.path.dirname(__file__),
                                                         'art', 'lc.asc')))))
     else:
-        echo ('LASt CAllERS'.center(term.width))
-    echo(term.normal + '\r\n\r\n')
+        echo(term.normal + '\r\n')
+        echo ('// ' + term.red('LASt CAllERS').center(term.width))
+    echo('\r\n\r\n')
     for row in range(len(last_callers)):
-        echo(last_callers[row].rstrip() + '\r\n')
-        if not nonstop and row > 0 and 0 == (row % (term.height - 1)):
+        echo(Ansi(last_callers[row]).ljust(term.width/2).center(term.width))
+        if not nonstop and row > 0 and 0 == (row % (term.height - 2)):
             echo(prompt_msg)
             inp = getch()
             if inp in (u's', u'S', u'q', u'Q', term.KEY_EXIT):
