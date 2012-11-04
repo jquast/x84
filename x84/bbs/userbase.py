@@ -9,17 +9,20 @@ import x84.bbs.dbproxy
 #        Invalid name "logger" for type constant (should match
 logger = logging.getLogger()
 
+
 def list_users():
     """
     Returns all user handles.
     """
     return x84.bbs.dbproxy.DBProxy('userbase').keys()
 
+
 def get_user(handle):
     """
     Returns User record, keyed by handle.
     """
     return x84.bbs.dbproxy.DBProxy('userbase')[handle]
+
 
 def find_user(handle):
     """
@@ -30,7 +33,8 @@ def find_user(handle):
         if handle.lower() == key.lower():
             return key
 
-def digestpw_bcrypt(password, salt = None):
+
+def digestpw_bcrypt(password, salt=None):
     """
     Password digest using bcrypt (optional)
     """
@@ -39,7 +43,8 @@ def digestpw_bcrypt(password, salt = None):
         salt = bcrypt.gensalt()
     return salt, bcrypt.hashpw(password, salt)
 
-def digestpw_internal(password, salt = None):
+
+def digestpw_internal(password, salt=None):
     """
     Password digest using regular python libs
     """
@@ -54,8 +59,10 @@ def digestpw_internal(password, salt = None):
     for loop_cnt in range(0, 100000):
         digest = hashlib.sha256(digest).hexdigest()
     return salt, digest
+digestpw = digestpw_internal
 
-def digestpw_plaintext(password, salt = None):
+
+def digestpw_plaintext(password, salt=None):
     """
     No password digest, just store the passwords in plain text
     """
@@ -63,7 +70,7 @@ def digestpw_plaintext(password, salt = None):
         salt = 'none'
     return salt, password
 
-digestpw = digestpw_internal
+
 def digestpw_init(password_digest):
     """
     Set which password digest routine to use
@@ -77,6 +84,7 @@ def digestpw_init(password_digest):
         digestpw = digestpw_plaintext
     else:
         assert False, ('Invalid value for "system.password_digest"')
+
 
 class Group(object):
     """
@@ -116,15 +124,15 @@ class Group(object):
         """
         Add user to group.
         """
-        logger.info ('Group(%r).add(%r)', self.name, handle)
-        self._members.add (handle)
+        logger.info('Group(%r).add(%r)', self.name, handle)
+        self._members.add(handle)
 
     def remove(self, handle):
         """
         Remove user from group.
         """
-        logger.info ('Group(%r).remove(%r)', self.name, handle)
-        self._members.remove (handle)
+        logger.info('Group(%r).remove(%r)', self.name, handle)
+        self._members.remove(handle)
 
     def save(self):
         """
@@ -140,8 +148,8 @@ class Group(object):
         for chk_user in self.members:
             user = udb[chk_user]
             if self.name in user.groups:
-                user.group_del (self.name)
-                user.save ()
+                user.group_del(self.name)
+                user.save()
         del x84.bbs.dbproxy.DBProxy('groupbase')[self.name]
 
 
@@ -197,7 +205,7 @@ class User(object):
         #pylint: disable=C0111
         #         Missing docstring
         self._password = digestpw(value)
-        logger.info ('%s set new password', self.handle)
+        logger.info('%s set new password', self.handle)
 
     def auth(self, try_pass):
         """
@@ -214,48 +222,48 @@ class User(object):
     def __setitem__(self, key, value):
         #pylint: disable=C0111,
         #        Missing docstring
-        uadb = x84.bbs.dbproxy.DBProxy('userattr')
-        uadb.acquire ()
-        attrs = uadb[self.handle]
-        attrs[key] = value
-        uadb[self.handle] = attrs
-        uadb.release ()
-        logger.info ('%s[%s] = %r', self.handle, key, value)
+        adb = x84.bbs.dbproxy.DBProxy('userbase', 'attrs')
+        adb.acquire()
+        attrs = adb[self.handle]
+        attrs.__setitem__(key, value)
+        adb[self.handle] = attrs
+        adb.release()
+        logger.info('%r setting %r = %r', self.handle, key, value)
     __setitem__.__doc__ = dict.__setitem__.__doc__
-
-    def __delitem__(self, key):
-        #pylint: disable=C0111,
-        #        Missing docstring
-        uadb = x84.bbs.dbproxy.DBProxy('userattr')
-        uadb.acquire ()
-        attrs = uadb[self.handle]
-        attrs.__detitem__(key)
-        uadb[self.handle] = attrs
-        uadb.release ()
-        logger.info ('del %s[%s]', self.handle, key)
-    __delitem__.__doc__ = dict.__delitem__.__doc__
-
-
-    def __getitem__(self, key):
-        #pylint: disable=C0111,
-        #        Missing docstring
-        return x84.bbs.dbproxy.DBProxy('userattr')[self.handle][key]
-    __getitem__.__doc__ = dict.__getitem__.__doc__
-
-    def __len__(self):
-        #pylint: disable=C0111,
-        #        Missing docstring
-        return x84.bbs.dbproxy.DBProxy('userattr')[self.handle].__len__
-    __len__.__doc__ = dict.__len__.__doc__
 
     def get(self, key, default=None):
         #pylint: disable=C0111,
         #        Missing docstring
-        if self.handle in x84.bbs.dbproxy.DBProxy('userattr'):
-            uattrs = x84.bbs.dbproxy.DBProxy('userattr')[self.handle]
-            return uattrs.get(key, default)
-        return default
+        adb = x84.bbs.dbproxy.DBProxy('userbase', 'attrs')
+        if not self.handle in adb:
+            logger.info('%r GET %r: default; missing attrs.', self.handle, key)
+            return default
+        attrs = adb[self.handle]
+        if not key in attrs:
+            logger.info('%r GET %r: default; attr unset.', self.handle, key)
+            return default
+        logger.info('get %r GET %r: %d' % (self.handle, key, len(attrs[key])))
+        return attrs[key]
     get.__doc__ = dict.get.__doc__
+
+    def __getitem__(self, key):
+        #pylint: disable=C0111,
+        #        Missing docstring
+        return x84.bbs.dbproxy.DBProxy('userbase', 'attrs')[self.handle][key]
+    __getitem__.__doc__ = dict.__getitem__.__doc__
+
+    def __delitem__(self, key):
+        #pylint: disable=C0111,
+        #        Missing docstring
+        uadb = x84.bbs.dbproxy.DBProxy('userbase', 'attrs')
+        uadb.acquire()
+        attrs = uadb[self.handle]
+        if key in attrs:
+            attrs.__detitem__(key)
+            uadb[self.handle] = attrs
+        uadb.release()
+        logger.info('del %s[%s]', self.handle, key)
+    __delitem__.__doc__ = dict.__delitem__.__doc__
 
     @property
     def groups(self):
@@ -270,13 +278,13 @@ class User(object):
         """
         Add user to group.
         """
-        return self._groups.add (group)
+        return self._groups.add(group)
 
     def group_del(self, group):
         """
         Remove user from group.
         """
-        return self._groups.remove (group)
+        return self._groups.remove(group)
 
     def save(self):
         """
@@ -287,20 +295,20 @@ class User(object):
         assert (None, None) != self._password, ('password must be set')
         assert self._handle != 'anonymous', ('anonymous user my not be saved.')
         udb = x84.bbs.dbproxy.DBProxy('userbase')
-        adb = x84.bbs.dbproxy.DBProxy('userattr')
+        adb = x84.bbs.dbproxy.DBProxy('userbase', 'attrs')
         gdb = x84.bbs.dbproxy.DBProxy('groupbase')
-        udb.acquire ()
-        adb.acquire ()
-        gdb.acquire ()
+        udb.acquire()
+        adb.acquire()
+        gdb.acquire()
         if 0 == len(udb) and self.is_sysop is False:
-            logger.warn ('%s: First new user becomes sysop.', self.handle)
-            self.group_add (u'sysop')
+            logger.warn('%s: First new user becomes sysop.', self.handle)
+            self.group_add(u'sysop')
         udb[self.handle] = self
         adb[self.handle] = dict()
-        self._apply_groups (gdb)
-        udb.release ()
-        adb.release ()
-        gdb.release ()
+        self._apply_groups(gdb)
+        udb.release()
+        adb.release()
+        gdb.release()
 
     def delete(self):
         """
@@ -310,10 +318,10 @@ class User(object):
         for gname in self._groups:
             group = gdb[gname]
             if self.handle in group.members:
-                group.remove (self.handle)
-                group.save ()
+                group.remove(self.handle)
+                group.save()
         del x84.bbs.dbproxy.DBProxy('userbase')[self.handle]
-        logger.info ('%s deleted from userbase', self.handle)
+        logger.info('%s deleted from userbase', self.handle)
 
     @property
     def is_sysop(self):
@@ -395,14 +403,14 @@ class User(object):
         """
         for chk_grp in self._groups:
             if not chk_grp in gdb:
-                gdb[chk_grp] = Group(chk_grp, set([self.handle,]))
-                logger.info ('%s: Created new group, %r', self.handle, chk_grp)
+                gdb[chk_grp] = Group(chk_grp, set([self.handle]))
+                logger.info('%s: Created new group, %r', self.handle, chk_grp)
             # ensure membership in existing groups
             group = gdb[chk_grp]
             if not self.handle in group.members:
-                group.add (self.handle)
-                group.save ()
+                group.add(self.handle)
+                group.save()
         for gname, group in gdb.iteritems():
             if gname not in self._groups and self.handle in group.members:
-                group.remove (self.handle)
-                group.save ()
+                group.remove(self.handle)
+                group.save()
