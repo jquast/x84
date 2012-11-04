@@ -24,21 +24,39 @@ BADGE256 = (
 
 
 def display_intro():
+    # try to display something impressive, yet compatible
     session, term = getsession(), getterminal()
     rstr = u''
-    if not session.user.get('expert', False):
+    if not session.user.get('expert', False) and (
+            session.env.get('TERM') != 'unknown'):
         rstr += term.move(0, 0) + term.clear
-        if session.env.get('TERM') != 'unknown':
-            if term.width >= 79:
-                rstr += showcp437(os.path.join(
-                    os.path.dirname(__file__), 'art', 'top', '*.ans'))
-        else:
-            if term.width >= 76:
-                rstr += showcp437(os.path.join(
-                    os.path.dirname(__file__), 'art', 'top', '*.asc'))
 
-        if term.number_of_colors == 256:
-            rstr += '\r\n\r\n' + BADGE256
+    # color terminal gets art
+    if (session.env.get('TERM') != 'unknown'
+            and term.number_of_colors != 0):
+        if term.width >= 79:
+            rstr += showcp437(os.path.join(
+                os.path.dirname(__file__), 'art', 'top', '*.ans'))
+        elif term.width >= 76:
+            rstr += showcp437(os.path.join(
+                os.path.dirname(__file__), 'art', 'top', '*.asc'))
+        elif term.width >= 40:
+            if term.number_of_colors >= 256:
+                rstr += showcp437(os.path.join(
+                    os.path.dirname(__file__), 'art', 'plant-256.ans'))
+            else:
+                rstr += showcp437(os.path.join(
+                    os.path.dirname(__file__), 'art', 'plant.ans'))
+        else:
+            rstr += u'[top]\r\n'
+
+    # non-color terminal gets ascii
+    else:
+        if term.width >= 76:
+            rstr += showcp437(os.path.join(
+                os.path.dirname(__file__), 'art', 'top', '*.asc'))
+    if term.number_of_colors == 256:
+        rstr += '\r\n\r\n' + BADGE256
     return rstr
 
 
@@ -55,10 +73,11 @@ def get_ynbar():
 
 
 def redraw_quicklogin(ynbar):
+    prompt_ql = u' QUiCk lOGiN ?! '
     term = getterminal()
     rstr = u''
     rstr += term.move(ynbar.yloc - 1, ynbar.xloc) + term.normal
-    rstr += term.blue_reverse(u' QUiCk lOGiN ?! '.center(ynbar.width))
+    rstr += term.bold_blue(prompt_ql)
     rstr += ynbar.refresh()
     return rstr
 
@@ -91,12 +110,15 @@ def main(handle=None):
     else:
         # load default charset
         session.encoding = session.user.get('charset')
-        echo('\r\nUsing user-preferred charset %s%s.', session.encoding,
-             '(EXCEllENt!)' if session.encoding == 'utf8' else 'bUMMER!')
+        fun = (term.bold_green('(EXCEllENt!)')
+                if session.encoding == 'utf8'
+                else term.bold_red(u'bUMMER!'))
+        echo(u'\r\nUsing preferred charset %s%s.' % (session.encoding, fun))
 
     # 5. impress with art, prompt for quick login (goto 'main'),
     echo(display_intro())
-    if session.env.get('TERM') == 'unknown':
+    if (session.env.get('TERM') == 'unknown'
+            or session.user.get('exepert', False)):
         echo(u'\r\n QUiCk lOGiN? [yn]')
         while True:
             yn = getch(1)
