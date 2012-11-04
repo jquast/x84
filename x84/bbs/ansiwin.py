@@ -287,7 +287,7 @@ class AnsiWindow(object):
         """
         Erase only window contents, border remains.
         """
-        return u''.join([self.pos(self.ypadding, self.xpadding) +
+        return u''.join([self.pos(self.ypadding + yloc, self.xpadding) +
                          (self.glyphs.get('erase', u'')
                           * self.visible_width)
                          for yloc in range(self.visible_height)])
