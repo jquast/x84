@@ -5,6 +5,7 @@ Password reset script for x/84, http://github.com/jquast/x84
 from x84.bbs import getsession, getterminal, list_users, echo, getch, ini
 from x84.bbs import LineEditor, get_user
 
+from x84.default.nua import set_password
 import logging
 import smtplib
 import base64
@@ -16,17 +17,19 @@ def main(handle):
     session, term = getsession(), getterminal()
     user = get_user(handle)
     logger = logging.getLogger()
-    prompt_email = u'ENtER E-MAil fOR %r: '
-    msg_nfound = u'\r\n%r NOt fOUNd iN USERbASE.\r\n'
-    msg_cancelled = u'\r\n CANCEllEd.\r\n'
-    msg_wrong = u'\r\nWRONG\r\n'
+
+    prompt_email = u'\r\n\r\nENtER E-MAil fOR %r: '
+    msg_nfound = u'\r\n\r\n%r NOt fOUNd iN USERbASE.'
+    msg_cancelled = u'\r\n CANCEllEd.'
+    msg_wrong = u'\r\n\r\nWRONG'
     msg_mailsubj = u'passkey for %s' % (ini.CFG.get('system', 'bbsname'))
     msg_mailbody = u'Your passkey is %r'
     msg_mailfrom = ini.CFG.get('system', 'mail_addr')
-    msg_sent = u'PASSkEY hAS bEEN SENt tO %s.'
-    prompt_passkey = u'ENtER PASSkEY: '
-    msg_verified = u'YOU hAVE bEEN VERifiEd.'
+    msg_sent = u'\r\n\r\nPASSkEY hAS bEEN SENt tO %s.'
+    prompt_passkey = u'\r\n\r\nENtER PASSkEY: '
+    msg_verified = u'\r\n\r\nYOU hAVE bEEN VERifiEd.'
 
+    echo (term.normal)
     if not handle in list_users():
         echo (term.bold_red(msg_nfound))
         getch ()
@@ -40,7 +43,6 @@ def main(handle):
         if tries > 5:
             logger.warn ('%r email retries exceeded', handle)
             return
-        echo (term.normal + u'\r\n\r\n')
         echo (prompt_email % (handle,))
         try_email = LineEditor(width).read()
         if try_email is None or 0 == len(try_email):
@@ -70,12 +72,14 @@ def main(handle):
     msg['From'] = msg_mailfrom
     msg['To'] = email
     msg['Subject'] = msg_mailsubj
-    smtp = smtplib.SMTP(ini.CFG.get('system', 'mail_smtphost'))
-    smtp.sendmail (msg_mailfrom, [email], msg.as_string())
-    smtp.quit ()
-
-    echo ('\r\n\r\n' + msg_sent % (email,) + '\r\n')
-    echo ('\r\n\r\n')
+    try:
+        smtp = smtplib.SMTP(ini.CFG.get('system', 'mail_smtphost'))
+        smtp.sendmail (msg_mailfrom, [email], msg.as_string())
+        smtp.quit ()
+    except Exception as exception:
+        logger.exception (exception)
+        echo ('\r\n\r\n' + term.bold_red(str(exception)))
+    echo (msg_sent % (email,))
 
     width = len(passkey)
     email = None
@@ -101,6 +105,6 @@ def main(handle):
                 passkey, try_passkey)
         echo (term.bold_red(msg_wrong))
 
-    import nua
-    nua.set_password (user)
+    set_password (user)
+    user.save()
     return True
