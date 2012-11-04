@@ -29,6 +29,11 @@ import sauce
 from x84.bbs import echo, ini, getch, getsession, DBProxy, LineEditor
 from x84.bbs import Lightbar, Pager, getterminal, gosub, Ansi, from_cp437
 
+def disp_entry(char, blurb):
+    term = getterminal()
+    return (term.bold_blue('(') + term.blue_reverse(char)
+            + term.bold_blue + ')' + term.bold_white(blurb))
+
 
 class FetchUpdates(threading.Thread):
     url = 'http://bbs-scene.org/api/bbslist.php'
@@ -71,7 +76,7 @@ def wait_for(thread):
             echo('%2d%s' % (wait_fetch - num - 1, u'\b' * 2,))
             if not thread.is_alive():
                 return
-            thread.join(0.1)
+            thread.join(1)
             if getch(0) == u'q':
                 # undocumented: q cancels -- in case it ever goes down D:
                 return
@@ -333,38 +338,57 @@ def redraw(pager, lightbar, leftright):
 
 def dummy_pager():
     term = getterminal()
-    indent = 6
-
-    def disp_entry(char, blurb):
-        return (term.bold_blue('(') + term.blue_reverse(char)
-                + term.bold_blue + ')' + term.bold_white(' ' + blurb))
-
+    indent = 2
     prompt = u', '.join(disp_entry(char, blurb) for char, blurb in (
-        ('a', 'add',), ('c', 'comment',), ('r', 'rate',),
-        ('t', 'telnet',), ('v', 'view ansi'), ('q', 'quit',)))
-    prompt_bye = u'press any key ..'
-    echo(u'\r\n\r\n')
-    for num, (key, line) in enumerate(get_bbslist()):
-        # <3 for dummy terms--convert from record to a width-wrapped,
-        # indented text-wrapped record, for real small terminals ^_*
-        wrapped = ((u'%s. ' % (key, )) if key is not None else ''
-                   + Ansi(line.rstrip()).wrap(term.width - indent))
-        echo((u'\r\n' + u' ' * indent).join(wrapped.split(u'\r\n')) + u'\r\n')
-        if num and (num % (term.height - 4) == 0):
-            # moar prompt,
+        ('a', 'dd',),
+        ('c', 'OMMENt',),
+        ('r', 'AtE',),
+        ('t', 'ElNEt',),
+        ('v', 'iEW ANSi'),
+        ('q', 'Uit',),
+        ('+', 'MOAR!',))) + u' --> '
+    prompt_key = u'\r\n\r\nENtER BBS iD: '
+    prompt_pak = u'\r\n\r\nPRESS ANY kEY ..'
+    msg_badkey = u'\r\n\r\nbbS id iNVAliD!'
+    nlines = 0
+    bbslist = get_bbslist()
+    if 0 == len(bbslist):
+        echo(u'\r\n\r\nNO BBSS. a%sdd ONE, q%sUit' % (
+            term.bold_blue(':'), term.bold_blue(':')))
+        inp = getch ()
+        if inp in (u'q', 'Q'):
+            return  # quit
+        process_keystroke(inp)
+        bbslist = get_bbslist()  # meybe you added 1?
+    echo(u'\r\n' + '// bbS liSt'.center(term.width).rstrip() + '\r\n\r\n')
+    for (key, line) in bbslist:
+        if key is None:  # bbs software
+            echo (term.blue_reverse(line.rstrip()) + '\r\n')
+            nlines += 1
+        else:
+            wrapd = Ansi(line).wrap(term.width - 5)
+            echo (term.bold_blue(key) + term.bold_black('. ') + wrapd + '\r\n')
+            nlines += len(wrapd.split('\r\n'))
+        # moar prompt,
+        if nlines and (nlines % (term.height - 5) == 0):
             while True:
-                echo('\r\n' + prompt)
-                echo(u' -- ' + disp_entry('[m]', 'moar'))
+                echo('\r\n\r\n' + Ansi(prompt).wrap(term.width))
                 inp = getch()
                 if inp in (u'q', 'Q'):
                     return  # quit
-                if process_keystroke(inp, key):
-                    # noop, if call performed action (True),
-                    # re-display prompt again,
-                    continue
-                break  # any other key is default ('m'oar)
-    echo(u'\r\n\r\n')
-    echo(prompt_bye)
+                elif inp is not None and type(inp) is not int:
+                    if inp == u'+':
+                        break # moar!
+                    if inp.lower() in u'acrtv':
+                        echo (prompt_key)
+                        key = LineEditor(5).read()
+                        if (key is None or 0 == len(key.strip())
+                                or not key in DBProxy('bbslist')):
+                            echo (msg_badkey)
+                            continue
+                        process_keystroke(inp, key)
+                echo(u'\r\n')
+    echo(prompt_pak)
     getch()
     return
 
@@ -478,8 +502,8 @@ def process_keystroke(inp, key=None):
 
 def add_comment(key):
     session, term = getsession(), getterminal()
-    prompt_comment = u'\r\nWhAt YOU GOt tO SAY? '
-    prompt_chg = u'\r\nChANGE EXiStiNG ? [yn] '
+    prompt_comment = u'\r\n\r\nWhAt YOU GOt tO SAY? '
+    prompt_chg = u'\r\n\r\nChANGE EXiStiNG ? [yn] '
     echo(term.move(term.height, 0))
     echo(prompt_comment)
     comment = LineEditor(max(10, term.width - len(prompt_comment) - 5)).read()
@@ -506,8 +530,8 @@ def add_comment(key):
 
 def rate_bbs(key):
     session, term = getsession(), getterminal()
-    prompt_rating = u'\r\nRAtE 0.0 - 4.0: '
-    prompt_chg = u'\r\nChANGE EXiStiNG ? [yn] '
+    prompt_rating = u'\r\n\r\nRAtE 0.0 - 4.0: '
+    prompt_chg = u'\r\n\r\nChANGE EXiStiNG ? [yn] '
     echo(term.move(term.height, 0) + '\r\n')
     echo(prompt_rating)
     rating = LineEditor(3).read()
@@ -577,7 +601,6 @@ def main():
                 wait_for(thread)
             if chk_thread(thread):
                 thread = None
-            echo(u'\r\n\r\n')
             return dummy_pager()
 
         # detect and process keyboard input for advanced screen
