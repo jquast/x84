@@ -127,6 +127,7 @@ class Lightbar (AnsiWindow):
         Process the keystroke received by run method and take action.
         """
         self._moved = False
+        self._selected = False
         rstr = u''
         if key in self.keyset['home']:
             rstr += self.move_home()
