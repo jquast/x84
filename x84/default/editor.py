@@ -1,4 +1,5 @@
 import logging
+import codecs
 import os
 from x84.bbs import getterminal, ScrollingEditor, Pager, getsession
 from x84.bbs import getch, echo
@@ -20,16 +21,19 @@ def redraw(pager, le):
     return rstr
 
 
-def get_ui(ucs=u'', ypos=None):
+def get_ui(ucs, ypos=None):
     term = getterminal()
-    pager = Pager(term.height - 2, term.width, 1, 0)
+    width = max(term.width - 6, 80)
+    height = max(term.height - 4, 20)
+    pyloc = min(5, (term.height / 2) - (height / 2))
+    pxloc = (term.width / 2) - (width / 2)
+    pager = Pager(height, width, pyloc, pxloc)
     pager.colors['border'] = term.bold_blue
-    pager.glyphs['left-vert'] = pager.glyphs['right-vert'] = u'|'
+    pager.glyphs['left-vert'] = pager.glyphs['right-vert'] = u' '
     pager.update(ucs)
-    yloc = pager.visible_bottom if ypos is None else ypos
-    # actually, should - 1 for border ?!
-    le = ScrollingEditor(term.width, yloc, 0)
-    le.glyphs['bot-horiz'] = le.glyphs['top-horiz'] = u'-'
+    yloc = (pager.yloc + pager.visible_bottom if ypos is None else ypos)
+    le = ScrollingEditor(width, yloc, 0)
+    le.glyphs['bot-horiz'] = le.glyphs['top-horiz'] = u''
     le.colors['border'] = term.bold_green
     return pager, le
 
@@ -50,12 +54,15 @@ def main(uattr=u'draft'):
     """
     session, term = getsession(), getterminal()
 
-    test = open(os.path.join(os.path.dirname(__file__),
-                             'art', 'news.txt')).read().decode('utf8').strip()
+    fp = codecs.open(os.path.join(
+        os.path.dirname(__file__), 'art', 'news.txt'), 'rb', 'utf8')
+    test = fp.read().strip()
+
     pager, le = get_ui(test)
     dirty = True
     while True:
         if session.poll_event('refresh'):
+            # user requested refresh ..
             pager, le = get_ui(u'\n'.join(pager.content), le.yloc)
             dirty = True
         if dirty:
@@ -81,9 +88,3 @@ def main(uattr=u'draft'):
             if pager.moved:
                 logger.info(repr(res) + 'echo')
                 echo(res)
-
-
-    #pager, le = get_ui(
-    #        DBProxy('userattr')[session.user.handle].get(uattr, u''), 0)
-    #xpos = Ansi(pager.content[-1]).__len__()
-    #xpos
