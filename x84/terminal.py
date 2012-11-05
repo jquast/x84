@@ -14,25 +14,29 @@ logger = logging.getLogger()
 
 # global list of (TelnetClient, multiprocessing.Pipe, threading.Lock)
 # this is a shared global variable across threads.
-TERMINALS = list ()
+TERMINALS = list()
+
 
 def register_terminal(client, pipe, lock):
     """
     Register a (client, pipe, lock,) terminal
     """
-    TERMINALS.append ((client, pipe, lock,))
+    TERMINALS.append((client, pipe, lock,))
+
 
 def unregister_terminal(client, pipe, lock):
     """
     Unregister a (client, pipe, lock,) terminal
     """
-    TERMINALS.remove ((client, pipe, lock,))
+    TERMINALS.remove((client, pipe, lock,))
+
 
 def terminals():
     """
     Returns list of (client, pipe, lock,) of all registered terminal sessions.
     """
     return TERMINALS
+
 
 def start_process(pipe, origin, env):
     """
@@ -46,11 +50,13 @@ def start_process(pipe, origin, env):
     # curses is initialized for the first time. telnet negotiation did its best
     # to determine the TERM. The default, 'unknown', is equivalent to a dumb
     # terminal.
-    term = x84.blessings.Terminal (env.get('TERM', 'unknown'), IPCStream(pipe),
-            int(env.get('LINES', '24')), int(env.get('COLUMNS', '80')))
+    term = x84.blessings.Terminal(env.get('TERM', 'unknown'),
+                                  IPCStream(pipe),
+                                  int(env.get('LINES', '24')),
+                                  int(env.get('COLUMNS', '80')))
 
     # spawn and begin a new session
-    session = x84.bbs.session.Session (term, pipe, origin, env)
+    session = x84.bbs.session.Session(term, pipe, origin, env)
 
     # our root handler has dangerously forked file descriptors.
     # remove any existing handlers in this sub-process, and re-address
@@ -58,12 +64,13 @@ def start_process(pipe, origin, env):
     # events are emitted to the engine as an event named 'logging'.
     root = logging.getLogger()
     for hdlr in root.handlers:
-        root.removeHandler (hdlr)
-    root.addHandler (x84.bbs.session.IPCLogHandler (pipe))
-    session.run ()
+        root.removeHandler(hdlr)
+    root.addHandler(x84.bbs.session.IPCLogHandler(pipe))
+    session.run()
 
-    logger.info ('%s/%s end of sub-process', session.pid, session.handle)
-    pipe.send (('exit', True))
+    logger.info('%s/%s end of sub-process', session.pid, session.handle)
+    pipe.send(('exit', True))
+
 
 class IPCStream(object):
     """
@@ -77,7 +84,7 @@ class IPCStream(object):
         """
         Sends unicode text to Pipe.
         """
-        self.channel.send (('output', (ucs, encoding)))
+        self.channel.send(('output', (ucs, encoding)))
 
     def fileno(self):
         """
@@ -89,7 +96,8 @@ class IPCStream(object):
         """
         Closes pipe.
         """
-        return self.channel.close ()
+        return self.channel.close()
+
 
 def on_disconnect(client):
     """
@@ -99,17 +107,19 @@ def on_disconnect(client):
     #        Unused variable 'o_lock'
     for o_client, o_pipe, o_lock in terminals():
         if client == o_client:
-            logger.debug ('%s Disconnected', client.addrport())
-            o_pipe.send (('exception', (Disconnect('Requested by Client'))))
+            logger.debug('%s Disconnected', client.addrport())
+            o_pipe.send(('exception', (Disconnect('Requested by Client'))))
             return
-    logger.info ('%s Disconnected', client.addrport())
+    logger.info('%s Disconnected', client.addrport())
+
 
 def on_connect(client):
     """
     """
-    logger.info ('%s Connected', client.addrport())
+    logger.info('%s Connected', client.addrport())
     thread = ConnectTelnetTerminal(client)
-    thread.start ()
+    thread.start()
+
 
 def on_naws(client):
     """
@@ -122,8 +132,9 @@ def on_naws(client):
             o_client, o_pipe = cpl[0], cpl[1]
             columns = int(o_client.env['COLUMNS'])
             rows = int(o_client.env['LINES'])
-            o_pipe.send (('refresh', ('resize', (columns, rows),)))
+            o_pipe.send(('refresh', ('resize', (columns, rows),)))
             return True
+
 
 class ConnectTelnetTerminal (threading.Thread):
     """
@@ -135,18 +146,16 @@ class ConnectTelnetTerminal (threading.Thread):
     DEBUG = False
     TIME_WAIT = 1.25
     TIME_PAUSE = 1.75
-    TIME_POLL  = 0.10
+    TIME_POLL = 0.10
     TTYPE_UNDETECTED = 'unknown'
     WINSIZE_TRICK = (
-          ('vt100', ('\x1b[6n'), re.compile(chr(27) + r"\[(\d+);(\d+)R")),
-          ('sun', ('\x1b[18t'), re.compile(chr(27) + r"\[8;(\d+);(\d+)t"))
-    ) # see: xresize.c from X11.org
-
+        ('vt100', ('\x1b[6n'), re.compile(chr(27) + r"\[(\d+);(\d+)R")),
+        ('sun', ('\x1b[18t'), re.compile(chr(27) + r"\[8;(\d+);(\d+)t"))
+    )  # see: xresize.c from X11.org
 
     def __init__(self, client):
         self.client = client
         threading.Thread.__init__(self)
-
 
     def _spawn_session(self):
         """
@@ -162,10 +171,10 @@ class ConnectTelnetTerminal (threading.Thread):
         parent_conn, child_conn = multiprocessing.Pipe()
         lock = threading.Lock()
         child_args = (child_conn, self.client.addrport(), self.client.env,)
-        proc = multiprocessing.Process (target=start_process, args=child_args)
-        proc.start ()
-        register_terminal (self.client, parent_conn, lock)
-
+        proc = multiprocessing.Process(
+            target=start_process, args=child_args)
+        proc.start()
+        register_terminal(self.client, parent_conn, lock)
 
     def banner(self):
         """
@@ -177,29 +186,29 @@ class ConnectTelnetTerminal (threading.Thread):
         #   Which translates to:
         # (IAC WILL ECHO) (IAC WILL SUPPRESS-GO-AHEAD)
         # (IAC DO SUPPRESS-GO-AHEAD).
-        self.client.request_will_echo ()
-        self.client.request_will_sga ()
-        self.client.request_do_sga ()
+        self.client.request_will_echo()
+        self.client.request_will_sga()
+        self.client.request_do_sga()
 
         # wait for some bytes to be received, and if we get any bytes,
         # at least make sure to get some more, and then -- wait a bit!
-        logger.debug ('pausing for negotiation')
+        logger.debug('pausing for negotiation')
         st_time = time.time()
         mrk_bytes = self.client.bytes_received
-        while (0 == mrk_bytes or mrk_bytes == self.client.bytes_received) \
-            and time.time() -st_time < (0.25):
-            time.sleep (self.TIME_POLL)
-        time.sleep (self.TIME_POLL)
-        logger.debug ('negotiating options')
-        self._try_env ()
+        while ((0 == mrk_bytes or mrk_bytes == self.client.bytes_received)
+               and time.time() - st_time < 0.25):
+            time.sleep(self.TIME_POLL)
+        time.sleep(self.TIME_POLL)
+        logger.debug('negotiating options')
+        self._try_env()
         # this will set .terminal_type if -still- undetected,
         # or otherwise overwrite it if it is detected different,
-        self._try_ttype ()
+        self._try_ttype()
         # this will set TERM to vt100 or sun if --still-- undetected,
         # this will set .rows, .columns if not LINES and COLUMNS
-        self._try_naws ()
+        self._try_naws()
         # disable line-wrapping http://www.termsys.demon.co.uk/vtansi.htm
-        self.client.send_str (bytes(chr(27) + '[7l'))
+        self.client.send_str(bytes(chr(27) + '[7l'))
 
     def run(self):
         """
@@ -208,30 +217,30 @@ class ConnectTelnetTerminal (threading.Thread):
         """
         import x84.bbs.exception
         try:
-            self._set_socket_opts ()
-            self.banner ()
-            self._spawn_session ()
+            self._set_socket_opts()
+            self.banner()
+            self._spawn_session()
         except socket.error, err:
-            logger.debug ('Connection closed: %s', err)
-            self.client.deactivate ()
+            logger.debug('Connection closed: %s', err)
+            self.client.deactivate()
         except x84.bbs.exception.ConnectionClosed, err:
-            logger.debug ('Connection closed: %s', err)
-            self.client.deactivate ()
+            logger.debug('Connection closed: %s', err)
+            self.client.deactivate()
 
     def _timeleft(self, st_time):
         """
         Returns True when difference of current time and st_time is below
         TIME_WAIT.
         """
-        return bool(time.time() -st_time < self.TIME_WAIT)
+        return bool(time.time() - st_time < self.TIME_WAIT)
 
     def _set_socket_opts(self):
         """
         Set socket non-blocking and enable TCP KeepAlive.
         """
-        self.client.sock.setblocking (0)
-        self.client.sock.setsockopt (
-                socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        self.client.sock.setblocking(0)
+        self.client.sock.setsockopt(
+            socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
 
     def _try_env(self):
         """
@@ -242,14 +251,14 @@ class ConnectTelnetTerminal (threading.Thread):
             logger.debug('environment enabled (unsolicted)')
             return
         logger.debug('request-do-env')
-        self.client.request_do_env ()
-        self.client.socket_send() # push
+        self.client.request_do_env()
+        self.client.socket_send()  # push
         st_time = time.time()
-        while self.client.check_remote_option(NEW_ENVIRON) is UNKNOWN \
-            and self._timeleft(st_time):
-            time.sleep (self.TIME_POLL)
+        while (self.client.check_remote_option(NEW_ENVIRON) is UNKNOWN
+               and self._timeleft(st_time)):
+            time.sleep(self.TIME_POLL)
         if self.client.check_remote_option(NEW_ENVIRON) is UNKNOWN:
-            logger.debug ('failed: NEW_ENVIRON')
+            logger.debug('failed: NEW_ENVIRON')
             return
 
     def _try_naws(self):
@@ -258,25 +267,25 @@ class ConnectTelnetTerminal (threading.Thread):
         """
         if (self.client.env.get('LINES', None) is not None
                 and self.client.env.get('COLUMNS', None) is not None):
-            logger.debug ('window size: %sx%s (unsolicited)',
-                    self.client.env.get('COLUMNS'),
-                    self.client.env.get('LINES'),)
+            logger.debug('window size: %sx%s (unsolicited)',
+                         self.client.env.get('COLUMNS'),
+                         self.client.env.get('LINES'),)
             return
-        self.client.request_do_naws ()
-        self.client.socket_send() # push
+        self.client.request_do_naws()
+        self.client.socket_send()  # push
         st_time = time.time()
         while (self.client.env.get('LINES', None) is None
                 and self.client.env.get('COLUMNS', None) is None
                 and self._timeleft(st_time)):
-            time.sleep (self.TIME_POLL)
+            time.sleep(self.TIME_POLL)
         if (self.client.env.get('LINES', None) is not None
                 and self.client.env.get('COLUMNS', None) is not None):
-            logger.info ('window size: %sx%s (negotiated)',
-                    self.client.env.get('COLUMNS'),
-                    self.client.env.get('LINES'))
+            logger.info('window size: %sx%s (negotiated)',
+                        self.client.env.get('COLUMNS'),
+                        self.client.env.get('LINES'))
             return
 
-        logger.debug ('failed: negotiate about window size')
+        logger.debug('failed: negotiate about window size')
         self._try_cornerquery()
 
     def _try_cornerquery(self):
@@ -290,40 +299,40 @@ class ConnectTelnetTerminal (threading.Thread):
         # send to client --> report cursor position
         # read from client <-- window size
         # bonus: 'vt100' or 'sun' TERM type set, lol.
-        logger.debug ('store-cu')
-        self.client.send_str ('\x1b[s')
+        logger.debug('store-cu')
+        self.client.send_str('\x1b[s')
         for kind, query_seq, response_pattern in self.WINSIZE_TRICK:
-            logger.debug ('move-to corner & query for %s', kind)
-            self.client.send_str ('\x1b[999;999H')
-            self.client.send_str (query_seq)
-            self.client.socket_send() # push
+            logger.debug('move-to corner & query for %s', kind)
+            self.client.send_str('\x1b[999;999H')
+            self.client.send_str(query_seq)
+            self.client.socket_send()  # push
             st_time = time.time()
-            while self.client.idle() < self.TIME_PAUSE \
-                    and self._timeleft(st_time):
-                time.sleep (self.TIME_POLL)
+            while (self.client.idle() < self.TIME_PAUSE
+                   and self._timeleft(st_time)):
+                time.sleep(self.TIME_POLL)
             inp = self.client.get_input()
-            self.client.send_str ('\x1b[r')
-            logger.debug ('cursor restored')
-            self.client.socket_send() # push
-            match = response_pattern.search (inp)
+            self.client.send_str('\x1b[r')
+            logger.debug('cursor restored')
+            self.client.socket_send()  # push
+            match = response_pattern.search(inp)
             if match:
                 height, width = match.groups()
                 self.client.rows = int(height)
                 self.client.columns = int(width)
-                logger.info ('window size: %dx%d (corner-query hack)',
-                        self.client.columns, self.client.rows)
+                logger.info('window size: %dx%d (corner-query hack)',
+                            self.client.columns, self.client.rows)
                 if self.client.env['TERM'] == 'unknown':
-                    logger.warn ("env['TERM'] = %r by POS", kind)
+                    logger.warn("env['TERM'] = %r by POS", kind)
                     self.client.env['TERM'] = kind
                 self.client.env['LINES'] = height
                 self.client.env['COLUMNS'] = width
                 return
 
-        logger.debug ('failed: negotiate about window size')
+        logger.debug('failed: negotiate about window size')
         # set to 80x24 if not detected
         self.client.columns, self.client.rows = 80, 24
-        logger.debug ('window size: %dx%d (default)',
-                self.client.columns, self.client.rows)
+        logger.debug('window size: %dx%d (default)',
+                     self.client.columns, self.client.rows)
         self.client.env['LINES'] = str(self.client.rows)
         self.client.env['COLUMNS'] = str(self.client.columns)
 
@@ -333,17 +342,17 @@ class ConnectTelnetTerminal (threading.Thread):
         """
         detected = lambda: self.client.env['TERM'] != 'unknown'
         if detected():
-            logger.debug ('terminal type: %s (unsolicited)' %
-                (self.client.env['TERM'],))
+            logger.debug('terminal type: %s (unsolicited)' %
+                         (self.client.env['TERM'],))
             return
-        logger.debug ('request-terminal-type')
-        self.client.request_ttype ()
-        self.client.socket_send() # push
+        logger.debug('request-terminal-type')
+        self.client.request_ttype()
+        self.client.socket_send()  # push
         st_time = time.time()
         while not detected() and self._timeleft(st_time):
-            time.sleep (self.TIME_POLL)
+            time.sleep(self.TIME_POLL)
         if detected():
-            logger.debug ('terminal type: %s (negotiated)' %
-                (self.client.env['TERM'],))
+            logger.debug('terminal type: %s (negotiated)' %
+                         (self.client.env['TERM'],))
             return
-        logger.warn ('failed: terminal type not determined.')
+        logger.warn('failed: terminal type not determined.')
