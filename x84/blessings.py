@@ -361,7 +361,8 @@ class Terminal(object):
             return (None, None)  # no match
 
         while len(data):
-            if ('\r', '\x00') == (data[0], data[1] if 1 != len(data) else None):
+            if ('\r', '\x00') == (data[0],
+                                  data[1] if 1 != len(data) else None):
                 # skip beyond nul (nvt telnet)
                 yield self.KEY_ENTER
                 data = data[2:]
