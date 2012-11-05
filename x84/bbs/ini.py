@@ -7,6 +7,7 @@ import os.path
 
 CFG = None
 
+
 def init(lookup_bbs, lookup_log):
     """
     Initialize global 'CFG' variable, a singleton to contain bbs properties and
@@ -20,15 +21,16 @@ def init(lookup_bbs, lookup_log):
     #        Too many branches (14/12)
     import ConfigParser
     root = logging.getLogger()
+
     def write_cfg(cfg, filepath):
         """
         Write Config to filepath.
         """
         if not os.path.exists(os.path.dirname(filepath)):
-            print ('Creating folder %s\n' % (os.path.dirname(filepath),))
-            os.mkdir (os.path.dirname(filepath))
-        print ('Saving %s\n' % (filepath,))
-        cfg.write (open(filepath, 'wb'))
+            print('Creating folder %s\n' % (os.path.dirname(filepath),))
+            os.mkdir(os.path.dirname(filepath))
+        print('Saving %s\n' % (filepath,))
+        cfg.write(open(filepath, 'wb'))
 
     # we exploit our last argument as, what we presume to be within a folder
     # writable by our process -- engine.py specifys as ~/.x84/somefile.ini
@@ -38,22 +40,22 @@ def init(lookup_bbs, lookup_log):
         # load-only defaults,
         if os.path.exists(cfg_logfile):
             print ('loading %s' % (cfg_logfile,))
-            logging.config.fileConfig (cfg_logfile)
+            logging.config.fileConfig(cfg_logfile)
             loaded = True
             break
     if not loaded:
         cfg_log = init_log_ini()
         if not os.path.isdir(os.path.dirname(cfg_logfile)):
             try:
-                os.mkdir (os.path.dirname(cfg_logfile))
+                os.mkdir(os.path.dirname(cfg_logfile))
             except OSError, err:
-                root.warn ('%s', err)
+                root.warn('%s', err)
         try:
-            write_cfg (cfg_log, cfg_logfile)
-            root.info ('Saved %s' % (cfg_logfile,))
+            write_cfg(cfg_log, cfg_logfile)
+            root.info('Saved %s' % (cfg_logfile,))
         except IOError, err:
-            root.error ('%s', err)
-        logging.config.fileConfig (cfg_logfile)
+            root.error('%s', err)
+        logging.config.fileConfig(cfg_logfile)
 
     loaded = False
     cfg_bbs = ConfigParser.SafeConfigParser()
@@ -61,22 +63,22 @@ def init(lookup_bbs, lookup_log):
     for cfg_bbsfile in lookup_bbs:
         # load defaults,
         if os.path.exists(cfg_bbsfile):
-            cfg_bbs.read (cfg_bbsfile)
-            root.info ('loaded %s', cfg_bbsfile)
+            cfg_bbs.read(cfg_bbsfile)
+            root.info('loaded %s', cfg_bbsfile)
             loaded = True
             break
     if not loaded:
         cfg_bbs = init_bbs_ini()
         if not os.path.isdir(os.path.dirname(cfg_bbsfile)):
             try:
-                os.mkdir (os.path.dirname(cfg_bbsfile))
+                os.mkdir(os.path.dirname(cfg_bbsfile))
             except OSError, err:
-                root.warn ('%s', err)
+                root.warn('%s', err)
         try:
-            write_cfg (cfg_bbs, cfg_bbsfile)
-            root.info ('Saved %s' % (cfg_bbsfile,))
+            write_cfg(cfg_bbs, cfg_bbsfile)
+            root.info('Saved %s' % (cfg_bbsfile,))
         except IOError, err:
-            root.error ('%s', err)
+            root.error('%s', err)
 
     #pylint: disable=W0603
     #        Using the global statement
@@ -84,12 +86,14 @@ def init(lookup_bbs, lookup_log):
     CFG = cfg_bbs
 
 
-def init_bbs_ini ():
+def init_bbs_ini():
     """
     Returns ConfigParser instance of bbs system defaults
     """
     import ConfigParser
-    import getpass, socket # used to construct default e-mail
+    # used to construct default e-mail
+    import getpass
+    import socket
     cfg_bbs = ConfigParser.SafeConfigParser()
 
     cfg_bbs.add_section('system')
@@ -97,17 +101,16 @@ def init_bbs_ini ():
     cfg_bbs.set('system', 'sysop', '')
     cfg_bbs.set('system', 'software', 'x/84')
     # use module-level 'default' folder
-    cfg_bbs.set('system', 'scriptpath',
-            os.path.abspath(os.path.join( os.path.dirname(__file__),
-                os.path.pardir, 'default')))
+    cfg_bbs.set('system', 'scriptpath', os.path.abspath(
+        os.path.join(os.path.dirname(__file__), os.path.pardir, 'default')))
     cfg_bbs.set('system', 'datapath',
-            os.path.join(os.path.expanduser('~/.x84'), 'data'))
+                os.path.join(os.path.expanduser('~/.x84'), 'data'))
     cfg_bbs.set('system', 'ttyrecpath',
-        os.path.join(os.path.expanduser('~/.x84'), 'ttyrecordings'))
+                os.path.join(os.path.expanduser('~/.x84'), 'ttyrecordings'))
     cfg_bbs.set('system', 'timeout', '1984')
     cfg_bbs.set('system', 'password_digest', 'internal')
-    cfg_bbs.set('system', 'mail_addr', '%s@%s'
-            % (getpass.getuser(), socket.gethostname()))
+    cfg_bbs.set('system', 'mail_addr',
+                '%s@%s' % (getpass.getuser(), socket.gethostname()))
     cfg_bbs.set('system', 'mail_smtphost', 'localhost')
 
     cfg_bbs.add_section('telnet')
@@ -117,7 +120,7 @@ def init_bbs_ini ():
     cfg_bbs.add_section('door')
     cfg_bbs.set('door', 'path', '/usr/local/bin:/usr/games')
 
-    cfg_bbs.add_section ('matrix')
+    cfg_bbs.add_section('matrix')
     cfg_bbs.set('matrix', 'newcmds', 'new apply')
     cfg_bbs.set('matrix', 'byecmds', 'exit logoff bye quit')
     cfg_bbs.set('matrix', 'script', 'matrix')
@@ -145,13 +148,14 @@ def init_bbs_ini ():
     cfg_bbs.set('nua', 'max_email', '50')
     cfg_bbs.set('nua', 'max_location', '24')
     cfg_bbs.set('nua', 'allow_apply', 'yes')
-    cfg_bbs.set('nua', 'invalid_handles', ' '.join \
-        ((cfg_bbs.get('matrix','byecmds'),
-          cfg_bbs.get('matrix','newcmds'),
-          'sysop anonymous',)))
+    cfg_bbs.set('nua', 'invalid_handles', ' '.join(
+        (cfg_bbs.get('matrix', 'byecmds'),
+         cfg_bbs.get('matrix', 'newcmds'),
+         'sysop anonymous',)))
     return cfg_bbs
 
-def init_log_ini ():
+
+def init_log_ini():
     """
     Returns ConfigParser instance of logger defaults
     """
@@ -162,8 +166,9 @@ def init_log_ini ():
 
     cfg_log.add_section('formatter_default')
     cfg_log.set('formatter_default', 'format',
-            '%(levelname)s %(filename)s:%(lineno)s '
-            '%(processName)s - %(message)s')
+                '%(asctime)s %(levelname)s '
+                '%(filename)s:%(lineno)s '
+                '%(processName)s - %(message)s')
     cfg_log.set('formatter_default', 'class', 'logging.Formatter')
 
     cfg_log.add_section('handlers')
@@ -171,7 +176,7 @@ def init_log_ini ():
 
     cfg_log.add_section('handler_console')
     cfg_log.set('handler_console', 'class',
-            'x84.bbs.log.ColoredConsoleHandler')
+                'x84.bbs.log.ColoredConsoleHandler')
     cfg_log.set('handler_console', 'formatter', 'default')
     cfg_log.set('handler_console', 'args', 'tuple()')
 
@@ -179,15 +184,15 @@ def init_log_ini ():
     cfg_log.set('handler_info_file', 'class', 'logging.FileHandler')
     cfg_log.set('handler_info_file', 'level', 'INFO')
     cfg_log.set('handler_info_file', 'formatter', 'default')
-    cfg_log.set('handler_info_file', 'args', '("%s", "w")' %
-            (os.path.join(os.path.expanduser('~/.x84'), 'info.log'),))
+    cfg_log.set('handler_info_file', 'args', '("%s", "w")' % (
+        os.path.join(os.path.expanduser('~/.x84'), 'info.log'),))
 
     cfg_log.add_section('handler_debug_file')
     cfg_log.set('handler_debug_file', 'class', 'logging.FileHandler')
     cfg_log.set('handler_debug_file', 'level', 'debug')
     cfg_log.set('handler_debug_file', 'formatter', 'default')
-    cfg_log.set('handler_debug_file', 'args', '("%s", "w")' %
-            (os.path.join(os.path.expanduser('~/.x84'), 'debug.log'),))
+    cfg_log.set('handler_debug_file', 'args', '("%s", "w")' % (
+        os.path.join(os.path.expanduser('~/.x84'), 'debug.log'),))
 
     cfg_log.add_section('loggers')
     cfg_log.set('loggers', 'keys', 'root, sqlitedict')
