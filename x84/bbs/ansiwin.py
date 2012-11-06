@@ -2,6 +2,8 @@
 Ansi Windowing package for x/84, http://github.com/jquast/x84
 """
 from x84.bbs.cp437 import CP437TABLE
+from x84.bbs.session import getterminal, getsession
+from x84.bbs.output import Ansi
 
 GLYPHSETS = {
     'ascii': {
@@ -51,8 +53,7 @@ class AnsiWindow(object):
         self.glyphs = dict()
         self.colors = dict()
         self.init_theme()
-        import x84.bbs.session
-        term = x84.bbs.session.getterminal()
+        term = getterminal()
         assert self.isinview(), (
             'AnsiWindow(height=%s, width=%s, yloc=%s, xloc=%s)'
             ' not in viewport Terminal(height=%s, width=%s)'
@@ -63,9 +64,8 @@ class AnsiWindow(object):
         This initializer sets glyphs and colors appropriate for a "theme",
         override this method to create a common color and graphic set.
         """
-        import x84.bbs.session
-        session = x84.bbs.session.getsession()
-        term = x84.bbs.session.getterminal()
+        session = getsession()
+        term = getterminal()
         self.colors['normal'] = term.normal
         if term.number_of_colors != 0:
             self.colors['border'] = term.cyan
@@ -120,12 +120,11 @@ class AnsiWindow(object):
         justify Ansi text alignment property and width. When None (default),
         the visible width after padding is used.
         """
-        import x84.bbs.output
-        return (x84.bbs.output.Ansi(text).rjust
+        return (Ansi(text).rjust
                 if self.alignment == 'right'
-                else x84.bbs.output.Ansi(text).ljust
+                else Ansi(text).ljust
                 if self.alignment == 'left'
-                else x84.bbs.output.Ansi(text).center
+                else Ansi(text).center
                 )(width if width is not None else self.visible_width)
 
     @property
@@ -133,14 +132,14 @@ class AnsiWindow(object):
         """
         The visible height of the editor window after vertical padding.
         """
-        return self.height - (self._ypadding * 2)
+        return self.height - (self.ypadding * 2)
 
     @property
     def visible_width(self):
         """
         Visible width of lightbar after accounting for horizontal padding.
         """
-        return self.width - (self._xpadding * 2)
+        return self.width - (self.xpadding * 2)
 
     def resize(self, height=None, width=None, yloc=None, xloc=None):
         """
@@ -159,8 +158,7 @@ class AnsiWindow(object):
         """
         Returns True if window is in view of the terminal window.
         """
-        import x84.bbs.session
-        term = x84.bbs.session.getterminal()
+        term = getterminal()
         return (self.xloc >= 0
                 and self.xloc + self.width <= term.width
                 and self.yloc >= 0
@@ -188,33 +186,25 @@ class AnsiWindow(object):
         """
         Returns terminal sequence to move cursor to window-relative position.
         """
-        import x84.bbs.session
-        term = x84.bbs.session.getterminal()
-        if yloc is None:
-            yloc = 0
-        if xloc is None:
-            xloc = 0
-        return term.move(yloc + self.yloc, xloc + self.xloc)
+        term = getterminal()
+        return term.move((yloc if yloc is not None else 0) + self.yloc,
+                         (xloc if xloc is not None else 0) + self.xloc)
 
     def title(self, ansi_text):
         """
         Returns sequence that positions and displays unicode sequence
         'ansi_text' at the title location of the window.
         """
-        import x84.bbs.output
-        xloc = self.width / 2 - (
-            min(len(x84.bbs.output.Ansi(ansi_text)) / 2, self.width / 2))
-        return self.pos(0, xloc) + ansi_text
+        xloc = self.width / 2 - min(len(Ansi(ansi_text)) / 2, self.width / 2)
+        return self.pos(0, max(0, xloc)) + ansi_text
 
     def footer(self, ansi_text):
         """
         Returns sequence that positions and displays unicode sequence
         'ansi_text' at the bottom edge of the window.
         """
-        import x84.bbs.output
-        xloc = self.width / 2 - (
-            min(len(x84.bbs.output.Ansi(ansi_text)) / 2, self.width / 2))
-        return self.pos(self.height - 1, xloc) + ansi_text
+        xloc = self.width / 2 - min(len(Ansi(ansi_text)) / 2, self.width / 2)
+        return self.pos(max(0, self.height - 1), max(0, xloc)) + ansi_text
 
     def border(self):
         """
@@ -226,36 +216,36 @@ class AnsiWindow(object):
         #pylint: disable=R0912
         #        Too many branches (17/12)
         topright = self.glyphs.get('top-right', u'*')
-        thoriz = self.glyphs.get('top-horiz', u'-') * (self.width - 2)
+        thoriz = self.glyphs.get('top-horiz', u'-') * (max(0, self.width - 2))
         topleft = self.glyphs.get('top-left', u'/')
         leftvert = self.glyphs.get('left-vert', u'|')
         rightvert = self.glyphs.get('right-vert', u'|')
         botleft = self.glyphs.get('bot-left', u'V')
-        bhoriz = self.glyphs.get('bot-horiz', u'-') * (self.width - 2)
+        bhoriz = self.glyphs.get('bot-horiz', u'-') * (max(0, self.width - 2))
         botright = self.glyphs.get('bot-right', u'/')
         rstr = u''
         for row in range(0, self.height):
             for col in range(0, self.width):
                 if (col == 0) or (col == self.width - 1):
-                    rstr += self.pos(row, col)
-                    if (row == 0) and (col == 0):
-                        rstr += topleft
-                    elif (row == self.height - 1) and (col == 0):
-                        rstr += botleft
-                    elif (row == 0):
-                        rstr += topright
-                    elif (row == self.height - 1):
-                        rstr += botright
-                    elif col == 0:
-                        rstr += leftvert
-                    elif col == self.width - 1:
-                        rstr += rightvert
+                    rstr += (
+                        self.pos(row, col) + topleft
+                        if (row == 0) and (col == 0) else
+                        self.pos(row, col) + botleft
+                        if (row == self.height - 1) and (col == 0) else
+                        self.pos(row, col) + topright
+                        if (row == 0) else
+                        self.pos(row, col) + botright
+                        if (row == self.height - 1) else
+                        self.pos(row, col) + leftvert
+                        if col == 0 else
+                        self.pos(row, col) + rightvert
+                        if col == self.width - 1 else u'')
                 elif (row == 0):
                     # top row (column 1)
                     if thoriz == u'':
                         if topright != u'':
                             # prepare for top-right, (horiz skipped)
-                            rstr += self.pos(row, self.width - 1)
+                            rstr += self.pos(row, max(0, self.width - 1))
                     else:
                         rstr += thoriz
                     rstr += topright
@@ -265,33 +255,33 @@ class AnsiWindow(object):
                     if bhoriz == u'':
                         if botright != u'':
                             # prepare for bot-right, (horiz skipped)
-                            rstr += self.pos(row, self.width - 1)
+                            rstr += self.pos(row, max(0, self.width - 1))
                     else:
                         # horizontal line
                         rstr += bhoriz
-                    # top-right,
+                    # bot-right
                     rstr += botright
                     break
-        return (self.colors.get('border', u'') +
-                rstr +
+        return (self.colors.get('border', u'') + rstr +
                 self.colors.get('normal', u''))
 
     def erase(self):
         """
         Erase window contents (including border)
         """
-        return u''.join([self.pos(y, 0) +
-                         (self.glyphs.get('erase', u' ') * self.width)
-                         for y in range(self.height)])
+        return u''.join([self.pos(y, 0)
+                         + (self.glyphs.get('erase', u' ') * self.width)
+                         for y in range(self.height)
+                         ])
 
     def clear(self):
         """
         Erase only window contents, border remains.
         """
-        return u''.join([self.pos(self.ypadding + yloc, self.xpadding) +
-                         (self.glyphs.get('erase', u'')
-                          * self.visible_width)
-                         for yloc in range(self.visible_height)])
+        return u''.join([self.pos(self.ypadding + yloc, self.xpadding)
+                         + (self.glyphs.get('erase', u'') * self.visible_width)
+                         for yloc in range(self.visible_height)
+                         ])
 
     @property
     def moved(self):

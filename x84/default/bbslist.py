@@ -22,12 +22,15 @@ import os
 XML_KEYS = ('bbsname', 'sysop', 'software',
             'address', 'port', 'location',
             'notes', 'timestamp', 'ansi')
+XML_REQNOTNULL = ('bbsname', 'sysop', 'software',
+                  'address', 'location', 'notes')
 LWIDE = 25
 PWIDE = 80
 
 import sauce
-from x84.bbs import echo, ini, getch, getsession, DBProxy, LineEditor
+from x84.bbs import echo, ini, getch, getsession, DBProxy, LineEditor, timeago
 from x84.bbs import Lightbar, Pager, getterminal, gosub, Ansi, from_cp437
+
 
 def disp_entry(char, blurb):
     term = getterminal()
@@ -193,12 +196,19 @@ def get_bbsinfo(key):
     rstr += (term.green('SOftWARE')
              + term.bold_green(': ')
              + bbs['software'] + '\n')
+    epoch = time.mktime(time.strptime(bbs['timestamp'], '%Y-%m-%d %H:%M:%S'))
+    rstr += (term.green('tiMEStAMP')
+             + term.bold_green(': ')
+             + bbs['timestamp'] + ' ('
+             + term.green(timeago(time.time() - epoch))
+             + ') ago\n')
     ratings = DBProxy('bbslist', 'ratings')[key]
-    rstr += u'RAtiNG: %s (%2.2f of %d)\n' % (
-        term.bold_green(calc_rating(ratings)),
-        0 if 0 == len(ratings) else
-        sum([rtg for (hndl, rtg) in ratings]) / len(ratings),
-        len(ratings))
+    rstr += (term.green('RAtiNG') + term.bold_green(': ')
+             + '%s (%2.2f of %d)\n' % (
+                 term.bold_green(calc_rating(ratings)),
+                 0 if 0 == len(ratings) else
+                 sum([rtg for (hndl, rtg) in ratings])
+                 / len(ratings), len(ratings)))
     rstr += u'\n' + bbs['notes']
     comments = DBProxy('bbslist', 'comments')[key]
     for handle, comment in comments:
@@ -335,10 +345,9 @@ def redraw_lightbar(lightbar, active=True):
     lightbar.colors['border'] = term.bold_green if active else u''
     output += lightbar.border()
     s_add = (term.bold_blue('(') + term.blue_reverse('a')
-            + term.bold_blue(')') + term.blue('dd')
-            if active else
-            ( term.bold_green('(') + term.green_reverse('a')
-                + term.bold_green(')') + term.green('dd')))
+             + term.bold_blue(')') + term.blue('dd') if active else (
+                 term.bold_green('(') + term.green_reverse('a')
+                 + term.bold_green(')') + term.green('dd')))
     up = term.bold_blue('up') if active else term.bold_green('up')
     down = term.bold_blue('down') if active else term.bold_green('down')
     leftright = term.bold_blue('right') if active else term.bold_green('left')
@@ -357,7 +366,8 @@ def redraw(pager, lightbar, leftright):
 
 def dummy_pager():
     term = getterminal()
-    indent = 2
+    hindent = 2
+    vindent = 5
     prompt = u', '.join(disp_entry(char, blurb) for char, blurb in (
         ('a', 'dd',),
         ('c', 'OMMENt',),
@@ -374,22 +384,22 @@ def dummy_pager():
     if 0 == len(bbslist):
         echo(u'\r\n\r\nNO BBSS. a%sdd ONE, q%sUit' % (
             term.bold_blue(':'), term.bold_blue(':')))
-        inp = getch ()
-        if inp in (u'q', 'Q'):
+        inp = getch()
+        if inp in(u'q', 'Q'):
             return  # quit
         process_keystroke(inp)
         bbslist = get_bbslist()  # meybe you added 1?
     echo(u'\r\n' + '// bbS liSt'.center(term.width).rstrip() + '\r\n\r\n')
     for (key, line) in bbslist:
         if key is None:  # bbs software
-            echo (term.blue_reverse(line.rstrip()) + '\r\n')
+            echo(term.blue_reverse(line.rstrip()) + '\r\n')
             nlines += 1
         else:
-            wrapd = Ansi(line).wrap(term.width - 5)
-            echo (term.bold_blue(key) + term.bold_black('. ') + wrapd + '\r\n')
+            wrapd = Ansi(line).wrap(term.width - hindent)
+            echo(term.bold_blue(key) + term.bold_black('. ') + wrapd + '\r\n')
             nlines += len(wrapd.split('\r\n'))
         # moar prompt,
-        if nlines and (nlines % (term.height - 5) == 0):
+        if nlines and (nlines % (term.height - vindent) == 0):
             while True:
                 echo('\r\n\r\n' + Ansi(prompt).wrap(term.width))
                 inp = getch()
@@ -397,13 +407,13 @@ def dummy_pager():
                     return  # quit
                 elif inp is not None and type(inp) is not int:
                     if inp == u'+':
-                        break # moar!
+                        break  # moar!
                     if inp.lower() in u'acrtv':
-                        echo (prompt_key)
+                        echo(prompt_key)
                         key = LineEditor(5).read()
                         if (key is None or 0 == len(key.strip())
                                 or not key in DBProxy('bbslist')):
-                            echo (msg_badkey)
+                            echo(msg_badkey)
                             continue
                         process_keystroke(inp, key)
                 echo(u'\r\n')
@@ -415,9 +425,10 @@ def dummy_pager():
 def add_bbs():
     session, term = getsession(), getterminal()
     echo(term.move(term.height, 0))
-    empty_msg = u'VAlUE iS NOt OPtiONAl.'
-    cancel_msg = u"ENtER 'quit' tO CANCEl."
-    saved_msg = u'SAVED AS RECORd id %s.'
+    empty_msg = u'\r\n\r\nVAlUE iS NOt OPtiONAl.'
+    cancel_msg = u"\r\n\r\nENtER 'quit' tO CANCEl."
+    saved_msg = u'\r\n\r\nSAVED AS RECORd id %s.'
+    logger = logging.getLogger()
     bbs = dict()
     for key in XML_KEYS:
         if key == 'timestamp':
@@ -430,6 +441,7 @@ def add_bbs():
             continue
         splice = len(key) - (len(key) / 3)
         prefix = (u'\r\n\r\n  '
+                  + (term.bold_red('* ') if key in XML_REQNOTNULL else u'')
                   + term.bold_blue(key[:splice])
                   + term.bold_black(key[splice:])
                   + term.bold_white(': '))
@@ -440,9 +452,9 @@ def add_bbs():
             value = led.read()
             if value is not None and (value.strip().lower() == 'quit'):
                 return
-            if key in ('bbsname', 'software', 'address'):
-                if value is None or 0 == len(value):
-                    echo(u'\r\n' + term.bold_red(empty_msg))
+            if key in XML_REQNOTNULL:
+                if value is None or 0 == len(value.strip()):
+                    echo(term.bold_red(empty_msg))
                     echo(u'\r\n' + cancel_msg)
                     continue
             if key in ('port') and value is None or 0 == len(value):
@@ -457,42 +469,35 @@ def add_bbs():
     echo('\r\n\r\n' + saved_msg % (key) + '\r\n')
     session.send_event('global', ('bbslist_update', None,))
     session.buffer_event('bbslist_update')
-    return
-
-#TODO
-#        # post to bbs-scene.org
-#        url = 'http://bbs-scene.org/api/onelinerz.xml'
-#        usernm = ini.CFG.get('bbs-scene', 'user')
-#        passwd = ini.CFG.get('bbs-scene', 'pass')
-#        data = {u'oneliner': oneliner.strip(),
-#                u'alias': session.user.handle,
-#                u'bbsname': ini.CFG.get('system', 'bbsname')}
-#        # post to bbs-scene.rog
-#        req = requests.post (url, auth=(usernm, passwd), data=data)
-#        if (req.status_code != 200 or
-#                (xml.etree.ElementTree.XML (req.content)
-#                    .find('success').text != 'true')):
-#            echo (u'\r\n\r\n%srequest failed,\r\n', term.clear_eol)
-#            echo (u'%r' % (req.content,))
-#            echo (u'\r\n\r\n%s(code : %s).\r\n', term.clear_eol,
-#                     req.status_code)
-#            echo (u'\r\n%sPress any key ..', term.clear_eol)
-#            logger.warn ('bbs-scene.org api request failed')
-#            getch ()
-#            return
-#        logger.info ('bbs-scene.org api (%d): %r/%r', req.status_code,
-#                session.user.handle, oneliner.strip())
-#        thread = FetchUpdates()
-#        thread.start ()
-#        if not dumb:
-#            # clear line w/input bar,
-#            echo (term.normal + term.move(yloc, 0) + term.clear_eol)
-#            # clear line w/lightbar
-#            echo (term.move (sel.yloc, 0) + term.clear_eol)
-#        else:
-#            echo ('\r\n\r\n' + heard_api)
-#            getch (2)
-#        return thread
+    if ini.CFG.has_section('bbs-scene'):
+        # post to bbs-scene.org
+        posturl = 'http://bbs-scene.org/api/bbslist.xml'
+        usernm = ini.CFG.get('bbs-scene', 'user')
+        passwd = ini.CFG.get('bbs-scene', 'pass')
+        data = {'name': bbs['bbsname'],
+                'sysop': bbs['sysop'],
+                'software': bbs['software'],
+                'address': bbs['address'],
+                'port': bbs['port'],
+                'location': bbs['location'],
+                'notes': bbs['notes'],
+                }
+        req = requests.post(posturl, auth=(usernm, passwd), data=data)
+        if req.status_code != 200:
+            echo(u'request failed,\r\n')
+            echo(u'%r' % (req.content,))
+            echo(u'\r\n\r\n(code : %s).\r\n', req.status_code)
+            echo(u'\r\nPress any key ..')
+            logger.warn('bbs post failed: %s' % (posturl,))
+            getch()
+            return
+        logger.info('bbs-scene.org api (%d): %r/%r',
+                    req.status_code, session.user.handle, bbs)
+        # spawn a thread to re-fetch bbs entries,
+        thread = FetchUpdates()
+        thread.start()
+        wait_for(thread)
+        return chk_thread(thread)
 
 
 def process_keystroke(inp, key=None):

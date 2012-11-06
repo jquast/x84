@@ -265,9 +265,9 @@ def saysomething(dumb=True):
     url = 'http://bbs-scene.org/api/onelinerz.xml'
     usernm = ini.CFG.get('bbs-scene', 'user')
     passwd = ini.CFG.get('bbs-scene', 'pass')
-    data = {u'oneliner': oneliner.strip(),
-            u'alias': session.user.handle,
-            u'bbsname': ini.CFG.get('system', 'bbsname')}
+    data = {'oneliner': oneliner.strip(),
+            'alias': session.user.handle,
+            'bbsname': ini.CFG.get('system', 'bbsname')}
     # post to bbs-scene.rog
     req = requests.post(url, auth=(usernm, passwd), data=data)
     if (req.status_code != 200 or
