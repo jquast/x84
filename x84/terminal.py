@@ -346,4 +346,4 @@ class ConnectTelnetTerminal (threading.Thread):
             logger.debug ('terminal type: %s (negotiated)' %
                 (self.client.env['TERM'],))
             return
-        logger.warn ('failed: terminal type not determined.')
+        logger.warn ('%r TERM undetermined.', self.client.addrport())
