@@ -114,8 +114,7 @@ def _loop(telnet_server):
 
             # kick off idle users
             if client.idle() > timeout:
-                pipe.send(('disconnect', ('timeout',)))
-                continue
+                pipe.send(('exception', x84.bbs.exception.ConnectionTimeout))
 
             if lock.acquire(False):
                 # process bbs session i/o
@@ -127,9 +126,10 @@ def _loop(telnet_server):
             try:
                 event, data = pipe.recv()
 
-            except (EOFError, IOError):
-            #    IOError: [Errno 104] Connection reset by peer
-                logger.exception('deactivating client: ')
+            except (EOFError, IOError) as exception:
+                logger.exception(exception)
+                x84.terminal.unregister_terminal(client, pipe, lock)
+                pipe.close()
                 client.deactivate()
                 continue
 
