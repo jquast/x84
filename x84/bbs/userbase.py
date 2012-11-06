@@ -239,13 +239,13 @@ class User(object):
         #        Missing docstring
         adb = x84.bbs.dbproxy.DBProxy('userbase', 'attrs')
         if not self.handle in adb:
-            logger.info('%r GET %r: default; missing attrs.', self.handle, key)
+            logger.debug('%r GET %r: default; missing attrs.', self.handle, key)
             return default
         attrs = adb[self.handle]
         if not key in attrs:
-            logger.info('%r GET %r: default; attr unset.', self.handle, key)
+            logger.debug('%r GET %r: default; attr unset.', self.handle, key)
             return default
-        logger.info('get %r GET %r: %d' % (self.handle, key, len(attrs[key])))
+        logger.debug('get %r GET %r: %d' % (self.handle, key, len(attrs[key])))
         return attrs[key]
     get.__doc__ = dict.get.__doc__
 
