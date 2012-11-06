@@ -65,7 +65,7 @@ class DBProxy(object):
         otherwise, set the lock to locked and return True.
         """
         import x84.bbs.session
-        event = 'lock-%s' % (self.schema,)
+        event = 'lock-%s/%s' % (self.schema, self.table)
         session = x84.bbs.session.getsession()
         while True:
             session.lock.acquire ()
@@ -85,7 +85,7 @@ class DBProxy(object):
         Release bbs-global lock on database.
         """
         import x84.bbs.session
-        event = 'lock-%s' % (self.schema,)
+        event = 'lock-%s/%s' % (self.schema, self.table)
         session = x84.bbs.session.getsession()
         return session.send_event (event, ('release', None))
 
