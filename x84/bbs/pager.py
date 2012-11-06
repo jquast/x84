@@ -4,19 +4,20 @@ Pager class for x/84, http://github.com/jquast/x84/
 from x84.bbs.ansiwin import AnsiWindow
 
 NETHACK_KEYSET = {
-        'refresh': [unichr(12), ],
-        'home': [u'y', ],
-        'end': [u'n', ],
-        'up': [u'k', ],
-        'pgup': [u'K', ],
-        'down': [u'j', ],
-        'pgdown': [u'J', ],
-        'exit': [u'q', u'Q', ],
-        }
+    'refresh': [unichr(12), ],
+    'home': [u'y'],
+    'end': [u'n'],
+    'up': [u'k'],
+    'pgup': [u'K'],
+    'down': [u'j'],
+    'pgdown': [u'J'],
+    'exit': [u'q', u'Q'],
+}
+
 
 class Pager(AnsiWindow):
     """
-    Scrolling ansi viewer
+    Scrolling ansi viewert d
     """
     #pylint: disable=R0904,R0902
     #        Too many public methods (24/20)
@@ -26,7 +27,7 @@ class Pager(AnsiWindow):
         """
         Initialize a pager of height, width, y, and x position.
         """
-        AnsiWindow.__init__ (self, height, width, yloc, xloc)
+        AnsiWindow.__init__(self, height, width, yloc, xloc)
         self._xpadding = 1
         self._ypadding = 1
         self._col = 0
@@ -35,17 +36,9 @@ class Pager(AnsiWindow):
         self._position_last = 0
         self._moved = False
         self._quit = False
-        self.content = list ()
+        self.content = list()
         self.keyset = NETHACK_KEYSET
-        self.init_keystrokes ()
-
-    @property
-    def moved(self):
-        """
-        Returnes: True if last call to process_keystroke() resulted in
-        movement.
-        """
-        return self._position != self._position_last
+        self.init_keystrokes()
 
     @property
     def quit(self):
@@ -111,13 +104,13 @@ class Pager(AnsiWindow):
         """
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
-        self.keyset['home'].append (term.KEY_HOME)
-        self.keyset['end'].append (term.KEY_END)
-        self.keyset['pgup'].append (term.KEY_PPAGE)
-        self.keyset['pgdown'].append (term.KEY_NPAGE)
-        self.keyset['up'].append (term.KEY_UP)
-        self.keyset['down'].append (term.KEY_DOWN)
-        self.keyset['exit'].append (term.KEY_EXIT)
+        self.keyset['home'].append(term.KEY_HOME)
+        self.keyset['end'].append(term.KEY_END)
+        self.keyset['pgup'].append(term.KEY_PPAGE)
+        self.keyset['pgdown'].append(term.KEY_NPAGE)
+        self.keyset['up'].append(term.KEY_UP)
+        self.keyset['down'].append(term.KEY_DOWN)
+        self.keyset['exit'].append(term.KEY_EXIT)
 
     def process_keystroke(self, keystroke):
         """
@@ -128,26 +121,26 @@ class Pager(AnsiWindow):
         self._position_last = self._position
         rstr = u''
         if keystroke in self.keyset['refresh']:
-            rstr += self.refresh ()
+            rstr += self.refresh()
         elif keystroke in self.keyset['up']:
-            rstr += self.move_up ()
+            rstr += self.move_up()
         elif keystroke in self.keyset['down']:
-            rstr += self.move_down ()
+            rstr += self.move_down()
         elif keystroke in self.keyset['home']:
-            rstr += self.move_home ()
+            rstr += self.move_home()
         elif keystroke in self.keyset['end']:
-            rstr += self.move_end ()
+            rstr += self.move_end()
         elif keystroke in self.keyset['pgup']:
-            rstr += self.move_pgup ()
+            rstr += self.move_pgup()
         elif keystroke in self.keyset['pgdown']:
-            rstr += self.move_pgdown ()
+            rstr += self.move_pgdown()
         elif keystroke in self.keyset['exit']:
             self._quit = True
         else:
             import x84.bbs.session
-            x84.bbs.session.logger.info ('unhandled, %r', keystroke
-                    if type(keystroke) is not int
-                    else x84.bbs.session.getterminal().keyname(keystroke))
+            x84.bbs.session.logger.info(
+                'unhandled, %r', keystroke if type(keystroke) is not int
+                else x84.bbs.session.getterminal().keyname(keystroke))
         return rstr
 
     def move_home(self):
@@ -156,7 +149,7 @@ class Pager(AnsiWindow):
         """
         self.position = 0
         if self.moved:
-            return self.refresh ()
+            return self.refresh()
         return u''
 
     def move_end(self):
@@ -165,7 +158,7 @@ class Pager(AnsiWindow):
         """
         self.position = len(self.content) - self.visible_height
         if self.moved:
-            return self.refresh ()
+            return self.refresh()
         return u''
 
     def move_pgup(self, num=1):
@@ -188,7 +181,7 @@ class Pager(AnsiWindow):
         """
         self.position += num
         if self.moved:
-            return self.refresh ()
+            return self.refresh()
         return u''
 
     def move_up(self, num=1):
@@ -197,7 +190,7 @@ class Pager(AnsiWindow):
         """
         self.position -= num
         if self.moved:
-            return self.refresh ()
+            return self.refresh()
         return u''
 
     def refresh_row(self, row):
@@ -206,7 +199,8 @@ class Pager(AnsiWindow):
         visible row.
         """
         ucs = (self.visible_content[row]
-                if row < len(self.visible_content) else u'')
+               if row < len(self.visible_content)
+               else u'')
         return self.pos(row + self.ypadding, self.xpadding) + self.align(ucs)
 
     def refresh(self, start_row=0):
@@ -218,9 +212,9 @@ class Pager(AnsiWindow):
         """
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
-        return u''.join([self.refresh_row(row)
-                for row in range(start_row, len(self.visible_content))]
-                + [term.normal])
+        return u''.join([self.refresh_row(row) for
+                         row in range(start_row, len(self.visible_content))]
+                        + [term.normal])
 
     def update(self, ucs):
         """
@@ -228,14 +222,14 @@ class Pager(AnsiWindow):
         """
         import x84.bbs.output
         self.content = x84.bbs.output.Ansi(ucs).wrap(
-                self.visible_width).split('\r\n')
-        return self.refresh ()
+            self.visible_width).split('\r\n')
+        return self.refresh()
 
     def append(self, ucs):
         """
         Update content buffer with additional lines of ansi unicodes.
         """
         import x84.bbs.output
-        self.content.extend (x84.bbs.output.Ansi(ucs
-            ).wrap(self.visible_width - 1).split('\r\n'))
+        self.content.extend(x84.bbs.output.Ansi(ucs)
+                            .wrap(self.visible_width - 1).split('\r\n'))
         return self.move_end() or self.refresh(self.bottom)

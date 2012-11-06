@@ -37,7 +37,6 @@ class Lightbar (AnsiWindow):
         self._vitem_lastidx = 0
         self._vitem_shift = 0
         self._vitem_lastshift = 0
-        self._moved = False
         self._selected = False
         self._quit = False
         self.keyset = NETHACK_KEYSET
@@ -148,15 +147,6 @@ class Lightbar (AnsiWindow):
         return rstr
 
     @property
-    def moved(self):
-        """
-        Returns: True if last call to process_keystroke() caused a new entry
-        to be selected. The caller can send keystrokes and check this flag
-        to indicate wether the current selection should be re-examined.
-        """
-        return self._moved
-
-    @property
     def quit(self):
         """
         Returns: True if a terminating or quit character was handled by
@@ -205,8 +195,8 @@ class Lightbar (AnsiWindow):
     @property
     def position(self):
         """
-        Returns tuple pair (item, shift). 'item' being the listed index from
-        top of window, and 'shift' being the number of items scrolled.
+        Returns tuple pair (row, page). 'row' being the listed index from
+        top of window, and 'page' being the number of items scrolled.
         """
         return (self.vitem_idx, self.vitem_shift)
 
