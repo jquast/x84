@@ -70,9 +70,9 @@ class AnsiWindow(object):
             self.colors['border'] = term.cyan
 
         self.glyphs['erase'] = u' '
-        self.glyphs = GLYPHSETS['ascii']
+        self.glyphs = GLYPHSETS['ascii'].copy()
         if session.env.get('TERM') != 'unknown':
-            self.glyphs = GLYPHSETS['thin']
+            self.glyphs = GLYPHSETS['thin'].copy()
 
     @property
     def xpadding(self):
@@ -291,3 +291,17 @@ class AnsiWindow(object):
                          (self.glyphs.get('erase', u'')
                           * self.visible_width)
                          for yloc in range(self.visible_height)])
+
+    @property
+    def moved(self):
+        """
+        Returns True if movement has occured, can be reset to False by caller.
+        """
+        return self._moved
+
+    @moved.setter
+    def moved(self, value):
+        #pylint: disable=C0111
+        #         Missing docstring
+        assert type(value) is bool
+        self._moved = value
