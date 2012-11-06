@@ -47,6 +47,7 @@ class AnsiWindow(object):
         self._xpadding = 1
         self._ypadding = 1
         self._alignment = 'left'
+        self._moved = False
         self.glyphs = dict()
         self.colors = dict()
         self.init_theme()
