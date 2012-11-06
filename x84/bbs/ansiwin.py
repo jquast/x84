@@ -1,5 +1,5 @@
 """
-ansiwin package for x/84, http://github.com/jquast/x84
+Ansi Windowing package for x/84, http://github.com/jquast/x84
 """
 from x84.bbs.cp437 import CP437TABLE
 
