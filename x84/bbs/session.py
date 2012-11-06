@@ -234,8 +234,10 @@ class Session(object):
             except (Disconnect, ConnectionClosed,
                     ConnectionTimeout, ScriptError), err:
                 e_type, e_value, e_tb = sys.exc_info()
+                self.write(self.terminal.normal + u'\r\n')
                 for line in traceback.format_exception_only(e_type, e_value):
                     logger.info(line.rstrip())
+                    self.write('\r\n' + line.rstrip() + u'\r\n')
                 break
             except Exception, err:
                 # Pokemon exception.
@@ -315,15 +317,15 @@ class Session(object):
         Push data into buffer keyed by event. Allow only the most recent
         refresh event to be buffered.
         """
-        if event == 'ConnectionClosed':
-            raise x84.bbs.exception.ConnectionClosed(data)
-        elif event == 'exception':
+        # exceptions aren't buffered; they are thrown!
+        if event == 'exception':
             #pylint: disable=E0702
             #        Raising NoneType while only classes, (..) allowed
+            logger.warn (data)
             raise data
 
+        # init new unmanaged & unlimited-sized buffer ;p
         if not event in self._buffer:
-            # create new buffer;
             self._buffer[event] = list()
 
         if event == 'input':
@@ -420,7 +422,8 @@ class Session(object):
             else timeout - (time.time() - cmp_time)
         waitfor = timeleft(stime)
         while waitfor > 0:
-            if self.pipe.poll(None if waitfor == float('inf') else waitfor):
+            poll = None if waitfor == float('inf') else waitfor
+            if self.pipe.poll(poll):
                 event, data = self.pipe.recv()
                 self.buffer_event(event, data)
                 if event in events:
