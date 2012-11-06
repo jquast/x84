@@ -49,10 +49,10 @@ class FetchUpdates(threading.Thread):
         req = requests.get(self.url, auth=(usernm, passwd))
         if 200 != req.status_code:
             logger.error(req.content)
-            logger.error('bbs-scene.org returned %s', req.status_code)
+            logger.error('bbs-scene.org: %s', req.status_code)
             return
         else:
-            logger.info('bbs-scene.org returned %d in %2.2fs',
+            logger.info('bbs-scene.org: %d in %2.2fs',
                         req.status_code, time.time() - stime)
         for node in xml.etree.ElementTree.XML(req.content).findall('node'):
             bbs_id = node.find('id').text.strip()
@@ -122,6 +122,8 @@ def get_bbslist():
         by_group = dict()
         for (key, bbs) in DBProxy('bbslist').iteritems():
             grp = bbs['software'].split()[0].title()
+            if grp.startswith('The'):
+                grp += u' ' + bbs['software'].split()[1].title()
             if not grp in by_group:
                 by_group[grp] = [(key, bbs)]
                 continue
@@ -130,9 +132,8 @@ def get_bbslist():
 
     output = list()
     for idx, (bbs_sw, bbs_keys) in enumerate(sorted(get_bysoftware())):
-        soft_line = bbs_sw[:max_bbs - 5] + (
-                ' $' if len(bbs_sw) >= (max_bbs - 5) else u'')
-        output.append((None, term.blue_bold(soft_line)))
+        soft_line = bbs_sw.rjust(max_bbs)[:max_bbs]
+        output.append((None, soft_line))
         for key, bbs in sorted(bbs_keys):
             output.append((key, bbs['bbsname'][:max_bbs - 2]
                            + (' $' if len(bbs['bbsname']) >= (max_bbs - 2)
@@ -184,7 +185,7 @@ def get_bbsinfo(key):
     rstr += (term.green('AddRESS')
              + term.bold_green(': ')
              + bbs['address']
-             + term.bold_green(':')
+             + term.bold_green(': ')
              + bbs['port'] + u'\n')
     rstr += (term.green('lOCAtiON')
              + term.bold_green(': ')
@@ -202,7 +203,7 @@ def get_bbsinfo(key):
     comments = DBProxy('bbslist', 'comments')[key]
     for handle, comment in comments:
         rstr += '\n\n' + term.green(handle)
-        rstr += term.bold_green(':')
+        rstr += term.bold_green(': ')
         rstr += comment
     return rstr
 
@@ -250,9 +251,10 @@ def redraw_pager(pager, selection, active=True):
     pager.colors['border'] = term.blue if active else u''
     output += pager.border()
     output += pager.clear()
+    pager.move_home()
     key, entry = selection
     if key is None:
-        if entry and entry.strip().lower().split()[0] == 'enthral':
+        if entry and entry.strip().lower() == 'enthral':
             output += pager.update(
                 "Enthral is a fresh look at the old school art of bbsing. "
                 "It's a fresh face to an old favorite. Although Enthral is "
@@ -263,7 +265,7 @@ def redraw_pager(pager, selection, active=True):
                 "Author: Mercyful Fate\n"
                 "IRC: #enthral on irc.bbs-scene.org\n")
             output += pager.title('- about Enthral -')
-        elif entry and entry.strip().lower().split()[0] == 'mystic':
+        elif entry and entry.strip().lower() == 'mystic':
             output += pager.update(
                 "Mystic BBS is a bulletin board system (BBS) software in "
                 "the vein of other \"forum hack\" style software such as "
@@ -277,7 +279,7 @@ def redraw_pager(pager, selection, active=True):
                 "Author: g00r00\n"
                 "IRC: #MysticBBS on irc.efnet.org\n")
             output += pager.title('- about Mystic -')
-        elif entry and entry.strip().lower().split()[0] == 'synchronet':
+        elif entry and entry.strip().lower() == 'synchronet':
             output += pager.update(
                 "Synchronet Bulletin Board System Software is a free "
                 "software package that can turn your personal computer "
@@ -292,6 +294,23 @@ def redraw_pager(pager, selection, active=True):
                 "  " + term.bold_blue('http://www.synchro.net/\n') + "\n\n"
                 "IRC: ??\n")
             output += pager.title('- about Synchronet -')
+        elif entry and entry.strip().lower() == 'the progressive':
+            output += pager.update(
+                "This bbs features threading, intra-process communication, "
+                "and easy scripting in python. X/84 is a continuation of  "
+                " this codebase.\n\n"
+                "IRC: #prsv on efnet\n")
+            output += pager.title('- about The Progressive -')
+        elif entry and entry.strip().lower() == 'x/84':
+            output += pager.update(
+                "X/84 is an open source python utf8 bsd-licensed telnet "
+                "server specificly designed for BBS's, MUD's, and high "
+                "scriptability. It is a Continuation of 'The Progressive' "
+                "and is the only BBS software to support both CP437 and "
+                "UTF8 encoding.\n\n"
+                "  " + term.bold_blue('http://github.com/jquast/x84/\n')
+                + "\n\nIRC: #prsv on efnet\n")
+            output += pager.title('- about X/84 -')
         else:
             output += pager.update(u'')
             output += pager.title(unselected)
@@ -646,3 +665,4 @@ def main():
             if lightbar.moved:
                 echo(redraw_pager(pager, lightbar.selection,
                                   active=(leftright == 1)))
+                lightbar.moved = False
