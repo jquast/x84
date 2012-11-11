@@ -395,16 +395,14 @@ class ScrollingEditor(AnsiWindow):
         self._horiz_pos -= 1
         return rstr
 
-    @property
-    def update(self, unicodestring=u''):
+    def update(self, ucs=u''):
         """
-        Replace text content with new unicode string. When unicodestring is
-        none, the content buffer is reset.
+        Replace or reset content.
         """
         self._horiz_shift = 0
         self._horiz_pos = 0
         self.content = u''
-        for u_chr in unicodestring:
+        for u_chr in ucs:
             self.add(u_chr)
 
     def add(self, u_chr):
