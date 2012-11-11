@@ -33,9 +33,9 @@ def unregister_terminal(client, pipe, lock):
 
 def terminals():
     """
-    Returns list of (client, pipe, lock,) of all registered terminal sessions.
+    Returns copy of all terminal sessions (client, pipe, lock,).
     """
-    return TERMINALS
+    return TERMINALS[:]
 
 
 def start_process(pipe, origin, env):
