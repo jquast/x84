@@ -124,9 +124,11 @@ def get_bbslist():
     def get_bysoftware():
         by_group = dict()
         for (key, bbs) in DBProxy('bbslist').iteritems():
-            grp = bbs['software'].split()[0].title()
-            if grp.startswith('The'):
-                grp += u' ' + bbs['software'].split()[1].title()
+            grp = bbs['software']
+            if not grp.lower().startswith('the'):
+                grp = grp.split()[0].title()
+            else:
+                grp = grp.title()
             if not grp in by_group:
                 by_group[grp] = [(key, bbs)]
                 continue
@@ -613,20 +615,17 @@ def main():
             dirty = True
 
         # refresh advanced screen with lightbar and pager
-        if dirty and (session.env.get('TERM') != 'unknown' and
-                      not session.user.get('expert', False)
-                      and term.width >= 72 and term.height >= 20):
+        if dirty:
+            if(session.env.get('TERM') == 'unknown' or
+               session.user.get('expert', False)
+               or term.width < 72 or term.height < 20):
+                if thread is not None:
+                    wait_for(thread)
+                if chk_thread(thread):
+                    thread = None
+                return dummy_pager()
             echo(redraw(pager, lightbar, leftright))
             dirty = False
-
-        # or .. provide dumb terminal with hotkey prompt
-        elif dirty:
-            if thread is not None:
-                wait_for(thread)
-            if chk_thread(thread):
-                thread = None
-            return dummy_pager()
-
         # detect and process keyboard input for advanced screen
         inp = getch(1)
         if inp == term.KEY_LEFT:
