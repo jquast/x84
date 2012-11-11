@@ -321,7 +321,6 @@ class Session(object):
         if event == 'exception':
             #pylint: disable=E0702
             #        Raising NoneType while only classes, (..) allowed
-            logger.warn(data)
             raise data
 
         # init new unmanaged & unlimited-sized buffer ;p
