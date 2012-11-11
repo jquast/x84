@@ -60,17 +60,17 @@ class Lightbar (AnsiWindow):
         """
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
-        unibytes = u''
-        unibytes += self.pos(self.ypadding + row, self.xpadding)
+        ucs = u''
+        ucs += self.pos(self.ypadding + row, self.xpadding)
         entry = self.vitem_shift + row
         if entry >= len(self.content):
             # out-of-bounds;
-            return self.glyphs['erase'] * self.visible_width
-        unibytes += (self.colors['selected']
-                     if entry == self.index
-                     else self.colors['unselected'])
-        unibytes += self.align(self.content[entry][1])
-        return unibytes + term.normal
+            return self.glyphs.get('erase', u' ') * self.visible_width
+        ucs += (self.colors.get('selected', u'')
+                if entry == self.index
+                else self.colors.get('unselected', u''))
+        ucs += self.align(self.content[entry][1])
+        return ucs + term.normal
 
     def refresh(self):
         """
@@ -167,7 +167,7 @@ class Lightbar (AnsiWindow):
         Selected content of self.content by index
         """
         return (self.content[self.index]
-                if self.index > 0 and self.index < len(self.content)
+                if self.index >= 0 and self.index < len(self.content)
                 else (None, None))
 
     @property
