@@ -30,10 +30,16 @@ from x84.bbs import echo, ini, getch, getsession, DBProxy, LineEditor, timeago
 from x84.bbs import Lightbar, Pager, getterminal, gosub, Ansi, from_cp437
 
 
-def disp_entry(char, blurb):
+def fancy_blue(char, blurb=u''):
     term = getterminal()
     return (term.bold_blue('(') + term.blue_reverse(char)
             + term.bold_blue + ')' + term.bold_white(blurb))
+
+
+def fancy_green(char, blurb=u''):
+    term = getterminal()
+    return (term.bold_green('(') + term.green_reverse(char)
+            + term.bold_green + ')' + term.bold_white(blurb))
 
 
 class FetchUpdates(threading.Thread):
@@ -161,14 +167,15 @@ def view_ansi(key):
             logger.warn('ansiurl request failed: %s' % (ansiurl,))
             getch()
             return
-        echo(from_cp437(sauce.SAUCE(data=req.content).__str__()))
+        ansi_txt = from_cp437(sauce.SAUCE(data=req.content).__str__())
+        echo(Ansi(ansi_txt).wrap(80))
     else:
         echo('no ansi available (%r)' % (ansiurl,))
     echo(term.move(term.height, 0) + term.normal + '\r\npress any key ..')
     getch()
 
 
-def get_bbsinfo(key):
+def get_bbsinfo(key, active=True):
     term = getterminal()
     bbs = DBProxy('bbslist')[key]
 
@@ -180,42 +187,110 @@ def get_bbsinfo(key):
         return u'%*s' % (outof, u'*' * stars)
 
     rstr = u''
-    rstr += (term.green('bbSNAME')
-             + term.bold_green(u': ')
+    highlight = term.bold_blue if active else term.blue
+    lowlight = term.bold_black
+    rstr += (lowlight('bbSNAME')
+             + highlight(u': ')
              + bbs['bbsname']
-             + term.bold_green('  +o ')
+             + highlight('  +o ')
              + bbs['sysop'] + u'\n')
-    rstr += (term.green('AddRESS')
-             + term.bold_green(': ')
+    rstr += (lowlight('AddRESS')
+             + highlight(': ')
              + bbs['address']
-             + term.bold_green(': ')
+             + highlight(': ')
              + bbs['port'] + u'\n')
-    rstr += (term.green('lOCAtiON')
-             + term.bold_green(': ')
+    rstr += (lowlight('lOCAtiON')
+             + highlight(': ')
              + bbs['location'] + '\n')
-    rstr += (term.green('SOftWARE')
-             + term.bold_green(': ')
+    rstr += (lowlight('SOftWARE')
+             + highlight(': ')
              + bbs['software'] + '\n')
     epoch = time.mktime(time.strptime(bbs['timestamp'], '%Y-%m-%d %H:%M:%S'))
-    rstr += (term.green('tiMEStAMP')
-             + term.bold_green(': ')
-             + bbs['timestamp'] + ' ('
-             + term.green(timeago(time.time() - epoch))
-             + ') ago\n')
+    rstr += (lowlight('tiMEStAMP')
+             + highlight(':')
+             + lowlight(timeago(time.time() - epoch))
+             + ' ago\n')
     ratings = DBProxy('bbslist', 'ratings')[key]
-    rstr += (term.green('RAtiNG') + term.bold_green(': ')
+    rstr += (lowlight('RAtiNG') + highlight(': ')
              + '%s (%2.2f of %d)\n' % (
-                 term.bold_green(calc_rating(ratings)),
+                 highlight(calc_rating(ratings)),
                  0 if 0 == len(ratings) else
                  sum([rtg for (hndl, rtg) in ratings])
                  / len(ratings), len(ratings)))
     rstr += u'\n' + bbs['notes']
     comments = DBProxy('bbslist', 'comments')[key]
     for handle, comment in comments:
-        rstr += '\n\n' + term.green(handle)
-        rstr += term.bold_green(': ')
+        rstr += '\n\n' + lowlight(handle)
+        rstr += highlight(': ')
         rstr += comment
     return rstr
+
+
+def get_swinfo(entry, pager, active=True):
+    term = getterminal()
+    output = pager.clear()
+    if entry and entry.strip().lower() == 'enthral':
+        output += pager.update(
+            "Enthral is a fresh look at the old school art of bbsing. "
+            "It's a fresh face to an old favorite. Although Enthral is "
+            "still in it's alpha stages, the system is quite stable and "
+            "is already very feature rich. Currently available for "
+            "Linux, BSD, and Apple's OS X.\n\n"
+            "   " + term.bold_blue('http://enthralbbs.com/') + "\n\n"
+            "Author: Mercyful Fate\n"
+            "IRC: #enthral on irc.bbs-scene.org\n")
+        output += pager.title(u'- about ' + term.blue('Enthral') + u' -')
+    elif entry and entry.strip().lower() == 'mystic':
+        output += pager.update(
+            "Mystic BBS is a bulletin board system (BBS) software in "
+            "the vein of other \"forum hack\" style software such as "
+            "Renegade, Oblivion/2, and Iniquity. Like many of its "
+            "counterparts it features a high degree of relatively "
+            "easy customization thanks to its ACS based menu system "
+            "along with fully editable strings and ANSI themes. "
+            "Mystic also includes its own Pascal like MPL scripting "
+            "language for even further flexibility.\n\n"
+            "  " + term.bold_blue('http://mysticbbs.com/') + "\n\n"
+            "Author: g00r00\n"
+            "IRC: #MysticBBS on irc.efnet.org\n")
+        output += pager.title(u'- about ' + term.blue('Mystic') + u' -')
+    elif entry and entry.strip().lower() == 'synchronet':
+        output += pager.update(
+            "Synchronet Bulletin Board System Software is a free "
+            "software package that can turn your personal computer "
+            "into your own custom online service supporting multiple "
+            "simultaneous users with hierarchical message and file "
+            "areas, multi-user chat, and the ever-popular BBS door "
+            "games.\n\n"
+            "Synchronet has since been substantially redesigned as "
+            "an Internet-only BBS package for Win32 and Unix-x86 "
+            "platforms and is an Open Source project under "
+            "continuous development.\n\n"
+            "  " + term.bold_blue('http://www.synchro.net/\n') + "\n\n"
+            "IRC: ??\n")
+        output += pager.title(u'- about ' + term.blue('Synchronet') + u' -')
+    elif entry and entry.strip().lower() == 'the progressive':
+        output += pager.update(
+            "This bbs features threading, intra-process communication, "
+            "and easy scripting in python. X/84 is a continuation of "
+            "this codebase.\n\n"
+            "IRC: #prsv on efnet\n")
+        output += pager.title(u'- about ' + term.blue('The Progressive -'))
+    elif entry and entry.strip().lower() == 'x/84':
+        output += pager.update(
+            "X/84 is an open source python utf8 bsd-licensed telnet "
+            "server specificly designed for BBS's, MUD's, and high "
+            "scriptability. It is a Continuation of 'The Progressive' "
+            "and is the only BBS software to support both CP437 and "
+            "UTF8 encoding.\n\n"
+            "  " + term.bold_blue('http://github.com/jquast/x84/\n')
+            + "\n\nIRC: #prsv on efnet\n")
+        output += pager.title(u'- about ' + term.blue('X/84') + u' -')
+    else:
+        output += pager.update(u' no information about %s.'
+                               % (entry or u'').title(),)
+        output += pager.title(u'- about ' + term.blue(entry or u'') + u' -')
+    return output
 
 
 def get_ui(position=None):
@@ -228,8 +303,8 @@ def get_ui(position=None):
     height = min(term.height - yloc - 2, max(10, len(lbdata)))
     lightbar = Lightbar(height, LWIDE, yloc, xpos)
     lightbar.update(lbdata)
+    # pressing return in the lightbar is the same thing as 't'elnet
     lightbar.keyset['enter'].extend((u't', u'T'))
-    lightbar.colors['selected'] = term.blue_reverse
     # pager is relative xpos and height to lightbar
     xloc = lightbar.xloc + lightbar.width + 3
     width = min(term.width - xloc, PWIDE)
@@ -258,104 +333,56 @@ def banner(dumb=False):
 
 def redraw_pager(pager, selection, active=True):
     term = getterminal()
-    unselected = u'- no selection -'
     output = u''
-    pager.colors['border'] = term.blue if active else u''
+    pager.colors['border'] = term.blue if active else term.bold_black
     output += pager.border()
     output += pager.clear()
     pager.move_home()
     key, entry = selection
     if key is None:
-        if entry and entry.strip().lower() == 'enthral':
-            output += pager.update(
-                "Enthral is a fresh look at the old school art of bbsing. "
-                "It's a fresh face to an old favorite. Although Enthral is "
-                "still in it's alpha stages, the system is quite stable and "
-                "is already very feature rich. Currently available for "
-                "Linux, BSD, and Apple's OS X.\n\n"
-                "   " + term.bold_blue('http://enthralbbs.com/') + "\n\n"
-                "Author: Mercyful Fate\n"
-                "IRC: #enthral on irc.bbs-scene.org\n")
-            output += pager.title('- about Enthral -')
-        elif entry and entry.strip().lower() == 'mystic':
-            output += pager.update(
-                "Mystic BBS is a bulletin board system (BBS) software in "
-                "the vein of other \"forum hack\" style software such as "
-                "Renegade, Oblivion/2, and Iniquity. Like many of its "
-                "counterparts it features a high degree of relatively "
-                "easy customization thanks to its ACS based menu system "
-                "along with fully editable strings and ANSI themes. "
-                "Mystic also includes its own Pascal like MPL scripting "
-                "language for even further flexibility.\n\n"
-                "  " + term.bold_blue('http://mysticbbs.com/') + "\n\n"
-                "Author: g00r00\n"
-                "IRC: #MysticBBS on irc.efnet.org\n")
-            output += pager.title('- about Mystic -')
-        elif entry and entry.strip().lower() == 'synchronet':
-            output += pager.update(
-                "Synchronet Bulletin Board System Software is a free "
-                "software package that can turn your personal computer "
-                "into your own custom online service supporting multiple "
-                "simultaneous users with hierarchical message and file "
-                "areas, multi-user chat, and the ever-popular BBS door "
-                "games.\n\n"
-                "Synchronet has since been substantially redesigned as "
-                "an Internet-only BBS package for Win32 and Unix-x86 "
-                "platforms and is an Open Source project under "
-                "continuous development.\n\n"
-                "  " + term.bold_blue('http://www.synchro.net/\n') + "\n\n"
-                "IRC: ??\n")
-            output += pager.title('- about Synchronet -')
-        elif entry and entry.strip().lower() == 'the progressive':
-            output += pager.update(
-                "This bbs features threading, intra-process communication, "
-                "and easy scripting in python. X/84 is a continuation of  "
-                " this codebase.\n\n"
-                "IRC: #prsv on efnet\n")
-            output += pager.title('- about The Progressive -')
-        elif entry and entry.strip().lower() == 'x/84':
-            output += pager.update(
-                "X/84 is an open source python utf8 bsd-licensed telnet "
-                "server specificly designed for BBS's, MUD's, and high "
-                "scriptability. It is a Continuation of 'The Progressive' "
-                "and is the only BBS software to support both CP437 and "
-                "UTF8 encoding.\n\n"
-                "  " + term.bold_blue('http://github.com/jquast/x84/\n')
-                + "\n\nIRC: #prsv on efnet\n")
-            output += pager.title('- about X/84 -')
-        else:
-            pager.update(u'')
-            output += pager.clear()
-            output += pager.title(unselected)
+        output += get_swinfo((entry or u'?').strip(), pager, active)
     else:
+        # describe bbs in pager
         bbsname = DBProxy('bbslist')[key]['bbsname']
         ansiurl = DBProxy('bbslist')[key]['ansi']
-        output += pager.title(u'- %s -' % (term.bold_blue(bbsname)))
-        output += pager.update(get_bbsinfo(key))
+        output += pager.title(u'- %s -' % (
+            term.bold_blue(bbsname) if active else term.blue(bbsname)))
+        output += pager.update(get_bbsinfo(key, active))
+        ans = u''
+        if ansiurl != 'NONE' and 0 != len(ansiurl):
+            ans = u'.' + fancy_green('v', 'ansi')
         output += pager.footer(
-            u'- ' + term.bold_green('t') + '/' + term.green('elnet') +
-            u'  ' + term.bold_green('c') + '/' + term.green('omment') +
-            u'  ' + term.bold_green('r') + '/' + term.green('rate') +
-            (u'  ' + (term.bold_green('v') + '/' + term.green('iew ansi'))
-             if ansiurl != 'NONE' and 0 != len(ansiurl) else u'') +
-            u'- ')
+            u'-' + fancy_green('t', 'elnet') + u'.'
+            + fancy_green('c', 'omment') + u'.'
+            + fancy_green('r', 'ate') + ans + u'-')
+        output += pager.pos(pager.height - 2, pager.width - 4)
+    # pager scroll indicator ..
+    output += pager.pos(pager.height - 2, pager.width - 4)
+    if pager.bottom != pager.position:
+        output += fancy_green('+') if active else fancy_blue('+')
+    else:
+        output += '   '
     return output
 
 
 def redraw_lightbar(lightbar, active=True):
     term = getterminal()
-    output = u''
-    lightbar.colors['border'] = term.bold_green if active else u''
-    output += lightbar.border()
-    s_add = (term.bold_blue('(') + term.blue_reverse('a')
-             + term.bold_blue(')') + term.blue('dd') if active else (
-                 term.bold_green('(') + term.green_reverse('a')
-                 + term.bold_green(')') + term.green('dd')))
-    up = term.bold_blue('up') if active else term.bold_green('up')
-    down = term.bold_blue('down') if active else term.bold_green('down')
-    leftright = term.bold_blue('right') if active else term.bold_green('left')
-    s_dir = u' '.join((up, down, leftright))
-    output += lightbar.footer(u'- ' + s_add + u' ' + s_dir + ' -')
+    lightbar.colors['border'] = term.bold_green if active else term.bold_black
+    output = lightbar.border()
+    if active:
+        lightbar.colors['selected'] = term.green_reverse
+        output += lightbar.footer(u'- '
+                                  + fancy_green('up', '.')
+                                  + fancy_green('down', '.')
+                                  + fancy_green('right', u'')
+                                  + u' -')
+    else:
+        lightbar.colors['selected'] = term.blue_reverse
+        output += lightbar.footer(u'- '
+                                  + fancy_blue('up', '.')
+                                  + fancy_blue('down', '.')
+                                  + fancy_green('left', u'') + u' -')
+    output += lightbar.title(u'- ' + fancy_green('a', 'add') + ' -')
     output += lightbar.refresh()
     return output
 
@@ -372,7 +399,7 @@ def dummy_pager():
     hindent = 2
     vindent = 5
     prompt_key = u'\r\n\r\nENtER BBS iD: '
-    prompt_pak = u'\r\n\r\nPRESS ANY kEY ..'
+    #prompt_pak = u'\r\n\r\nPRESS ANY kEY ..'
     msg_badkey = u'\r\n\r\nbbS id iNVAliD!'
     msg_header = u'// bbS liSt'
     nlines = 0
@@ -394,20 +421,26 @@ def dummy_pager():
         Returns True if user 'q'uit; otherwise False
         when prompting is complete (moar/next/whatever)
         """
-        prompt = u', '.join(disp_entry(char, blurb)
-                            for char, blurb in (
-                                ('i', 'NfO',), ('a', 'dd',),
-                                ('c', 'OMMENt',), ('r', 'AtE',),
-                                ('t', 'ElNEt',), ('v', 'iEW ANSi'),
-                                ('q', 'Uit',),
-                                ('+', 'MOAR!',))) + u' --> '
+        prompt = u', '.join(fancy_blue(char, blurb)
+                            for char, blurb in
+                            (('i', 'NfO',),
+                             ('a', 'dd',),
+                             ('c', 'OMMENt',),
+                             ('r', 'AtE',),
+                             ('t', 'ElNEt',),
+                             ('v', 'ANSi'),
+                             ('q', 'Uit',)))
+        if cont:
+            prompt += u', ' + fancy_blue(' ', 'more')
+        prompt += u': '
         while True:
-            echo('\r\n\r\n' + Ansi(prompt).wrap(term.width / 2))
+            echo('\r\n' + Ansi(prompt).wrap(term.width - (term.width / 3)))
             inp = getch()
             if inp in (u'q', 'Q'):
                 return True
             elif inp is not None and type(inp) is not int:
-                if cont and inp == u'+':
+                if cont and inp == u' ':
+                    echo('\r\n\r\n')
                     return False
                 if inp.lower() in u'acrtviACRTVI':
                     # these keystrokes require a bbs key argument,
@@ -419,7 +452,6 @@ def dummy_pager():
                         echo(msg_badkey)
                         continue
                     process_keystroke(inp, key)
-            echo(u'\r\n')
 
     while True:
         for (key, line) in bbslist:
@@ -429,13 +461,17 @@ def dummy_pager():
             else:
                 wrapd = Ansi(line).wrap(term.width - hindent)
                 echo(term.bold_blue(key) + term.bold_black('. '))
-                echo (wrapd + '\r\n')
-                nlines += len(wrapd.split('\r\n'))
+                for num, line in enumerate(wrapd.split('\r\n')):
+                    if num != 0:
+                        echo(' ' * hindent)
+                    echo(line + '\r\n')
+                    nlines += 1
             if nlines and (nlines % (term.height - vindent) == 0):
                 if more(True):
-                    break
+                    return
         # one final prompt before exit
-        more (False)
+        if more(False):
+            return
     return
 
 
@@ -616,9 +652,9 @@ def main():
         session.activity = u'bbs lister'
 
     def is_dumb():
-        return (session.env.get('TERM') != 'unknown' and
-                not session.user.get('expert', False)
-                and term.width >= 72 and term.height >= 20)
+        return (session.env.get('TERM') == 'unknown'
+                or session.user.get('expert', False)
+                or term.width < 72 or term.height < 20)
 
     dirty = True
     session.buffer_event('refresh', ('init',))
