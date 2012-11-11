@@ -7,30 +7,33 @@ import os
 #        Unused import from wildcard import
 from x84.bbs import *
 
+
 def refresh():
     " refresh main menu screen "
-    term = getterminal ()
-    echo (u''.join((term.normal, term.normal_cursor, term.clear, '\r\n')))
+    term = getterminal()
+    echo(u''.join((term.normal, term.normal_cursor, term.clear, '\r\n')))
     art = ([Ansi(from_cp437(line)) for line in open(os.path.join(
         os.path.dirname(__file__), 'art', 'main.asc'))])
     max_len = max([line.rstrip().__len__() for line in art])
     if max_len <= term.width:
         for line in art:
-            echo (line.rstrip().center(term.width).rstrip() + '\r\n')
+            echo(line.rstrip().center(term.width).rstrip() + '\r\n')
+
     def disp_entry(char, blurb):
         return Ansi(term.bold_blue('(') + term.blue_reverse(char)
-                + term.bold_blue + ')' + term.bright_white (blurb) + u' ')
-    echo (term.move(len(art) - 10, term.width / 4) or '\r\n')
-    echo (disp_entry ('b', 'bs lister').ljust(term.width/5))
-    echo (disp_entry ('l', 'ast calls').ljust(term.width/5))
-    echo (disp_entry ('o', 'ne liners').ljust(term.width/5))
-    echo (term.move(len(art) - 8, term.width / 4) or '\r\n')
-    echo (disp_entry ('z', 'news').ljust(term.width/5))
-    echo (disp_entry ('g', 'oodbye').ljust(term.width/5))
-    echo (disp_entry ('c', 'harset').ljust(term.width/5))
-    echo (term.move(len(art) - 6, term.width / 4) or '\r\n')
-    echo (disp_entry ('p', '.plan').ljust(term.width/5))
-    echo (u'\r\n\r\n')
+                    + term.bold_blue + ')' + term.bright_white(blurb) + u' ')
+    echo(term.move(len(art) - 10, term.width / 4) or '\r\n')
+    echo(disp_entry('b', 'bs lister').ljust(term.width / 5))
+    echo(disp_entry('l', 'ast calls').ljust(term.width / 5))
+    echo(disp_entry('o', 'ne liners').ljust(term.width / 5))
+    echo(term.move(len(art) - 8, term.width / 4) or '\r\n')
+    echo(disp_entry('z', 'news').ljust(term.width / 5))
+    echo(disp_entry('g', 'oodbye').ljust(term.width / 5))
+    echo(disp_entry('c', 'harset').ljust(term.width / 5))
+    echo(term.move(len(art) - 6, term.width / 4) or '\r\n')
+    echo(disp_entry('p', '.plan').ljust(term.width / 5))
+    echo(u'\r\n\r\n')
+
 
 def main():
     session, term = getsession(), getterminal()
@@ -44,15 +47,15 @@ def main():
             refresh()
         choice = getch(1)
         if choice == u'*':
-            goto ('main')
+            goto('main')
         elif choice == u'b':
-            gosub ('bbslist')
+            gosub('bbslist')
             dirty = True
         elif choice == u'l':
-            gosub ('lc')
+            gosub('lc')
             dirty = True
         elif choice == u'o':
-            gosub ('ol')
+            gosub('ol')
             dirty = True
         elif choice == u'z':
             gosub('news')
@@ -67,6 +70,6 @@ def main():
             dirty = True
         elif choice == u'H':
             from guppy import hpy
-            h=hpy()
-            print (h.heap()&str).bysize
+            h = hpy()
+            print (h.heap() & str).bysize
             dirty = True

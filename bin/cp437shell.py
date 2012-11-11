@@ -10,6 +10,7 @@ import os
 import pexpect
 from x84.bbs.cp437 import from_cp437
 
+
 def main():
     assert os.getenv('LANG') == 'en_US.UTF-8', (
         'This program requires locale of en_US.UTF-8.')

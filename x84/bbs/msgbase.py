@@ -8,11 +8,13 @@ import x84.bbs.session
 MSGDB = x84.bbs.dbproxy.DBProxy('msgbase.msgs')
 TAGDB = x84.bbs.dbproxy.DBProxy('msgbase.tags')
 
+
 def get_msg(idx):
     """
     Return Msg record by index
     """
     return MSGDB[idx]
+
 
 def list_msgs(tags=('public',)):
     """
@@ -20,14 +22,16 @@ def list_msgs(tags=('public',)):
     """
     msgs = set()
     for tag in (k_tg for k_tg in tags if k_tg in TAGDB):
-        msgs.update (TAGDB[tag])
+        msgs.update(TAGDB[tag])
     return msgs
+
 
 def list_tags():
     """
     Return set of available tags.
     """
     return TAGDB.keys()
+
 
 class Msg(object):
     """
@@ -83,12 +87,12 @@ class Msg(object):
         """
         Save message to database
         """
-        MSGDB.acquire ()
+        MSGDB.acquire()
         nxt = max(MSGDB.keys()) + 1
         self.idx = nxt
         self._stime = datetime.datetime.now()
         MSGDB[nxt] = self
-        MSGDB.release ()
+        MSGDB.release()
 
 #    def set(self, key, value):
 #        " set key, value of msg record "
@@ -144,6 +148,3 @@ class Msg(object):
 #                # append our index to thread in parent message
 #                replyto.set ('threads', replyto.threads + [self.number])
 #        self.save ()
-
-
-

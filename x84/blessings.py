@@ -92,7 +92,7 @@ class Terminal(object):
             (chr(27) + "OC", self.KEY_RIGHT), (chr(27) + "OD", self.KEY_LEFT),
             (chr(27) + "[A", self.KEY_UP), (chr(27) + "[B", self.KEY_DOWN),
             (chr(27) + "[C", self.KEY_RIGHT), (chr(27) + "[D", self.KEY_LEFT),
-            (chr(27) + "A", self.KEY_UP), (chr(27) + "B",  self.KEY_DOWN),
+            (chr(27) + "A", self.KEY_UP), (chr(27) + "B", self.KEY_DOWN),
             (chr(27) + "C", self.KEY_RIGHT), (chr(27) + "D", self.KEY_LEFT),
             (chr(27) + "?x", self.KEY_UP), (chr(27) + "?r", self.KEY_DOWN),
             (chr(27) + "?v", self.KEY_RIGHT), (chr(27) + "?t", self.KEY_LEFT),

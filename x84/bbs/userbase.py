@@ -225,7 +225,7 @@ class User(object):
         adb = x84.bbs.dbproxy.DBProxy('userbase', 'attrs')
         adb.acquire()
         if not self.handle in adb:
-            adb[self.handle] = dict([(key, value),])
+            adb[self.handle] = dict([(key, value), ])
         else:
             attrs = adb[self.handle]
             attrs.__setitem__(key, value)
@@ -239,7 +239,8 @@ class User(object):
         #        Missing docstring
         adb = x84.bbs.dbproxy.DBProxy('userbase', 'attrs')
         if not self.handle in adb:
-            logger.debug('%r GET %r: default; missing attrs.', self.handle, key)
+            logger.debug(
+                '%r GET %r: default; missing attrs.', self.handle, key)
             return default
         attrs = adb[self.handle]
         if not key in attrs:

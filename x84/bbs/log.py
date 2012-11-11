@@ -17,12 +17,14 @@ def line_cmp(record):
 def line_blank(record):
     """ Blank out various redundant fields of a record. """
     record.colon = record.space = record.sep = record.levelname \
-      = record.filename = record.lineno = record.threadName \
-      = record.processName = ''
+        = record.filename = record.lineno = record.threadName \
+        = record.processName = ''
     return record
 
 
 LAST_LINE = ('', '', '', '', '', '')
+
+
 def skip_repeat_line1(record):
     """
     If this record is very similar to the last record, blank out the
@@ -48,15 +50,15 @@ class ColoredConsoleHandler(logging.StreamHandler):
 
     def __init__(self):
         self.term = x84.blessings.Terminal(stream=sys.stderr)
-        logging.StreamHandler.__init__ (self)
+        logging.StreamHandler.__init__(self)
 
-    def color_levelname (self, record):
+    def color_levelname(self, record):
         """ Modify levelname field to include terminal color sequences.  """
         record.levelname = '%s%s%s' % \
-            (self.term.bold_red if record.levelno >= 50 else \
-             self.term.bold_red if record.levelno >= 40 else \
-             self.term.bold_yellow if record.levelno >= 30 else \
-             self.term.bold_white if record.levelno >= 20 else \
+            (self.term.bold_red if record.levelno >= 50 else
+             self.term.bold_red if record.levelno >= 40 else
+             self.term.bold_yellow if record.levelno >= 30 else
+             self.term.bold_white if record.levelno >= 20 else
              self.term.yellow, record.levelname.title(), self.term.normal)
         return record
 
@@ -67,16 +69,14 @@ class ColoredConsoleHandler(logging.StreamHandler):
         src_record.sep = ' - '
         src_record.prefix = ''
         return \
-          (self.color_levelname \
-            (skip_repeat_line1 \
-                  (src_record)))
+            (self.color_levelname
+            (skip_repeat_line1
+            (src_record)))
 
     def emit(self, src_record):
         """ Emit record to console """
         # transform
-        dst_record = self.transform \
-            (copy.copy(src_record))
+        dst_record = self.transform(copy.copy(src_record))
 
         # emit to console
-        logging.StreamHandler.emit \
-          (self, dst_record)
+        logging.StreamHandler.emit(self, dst_record)

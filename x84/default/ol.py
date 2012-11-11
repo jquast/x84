@@ -194,8 +194,8 @@ def dummy_pager():
     for record in get_oltxt():
         buf.extend(Ansi(record.rstrip()).wrap(
             term.width - indent).split('\r\n'))
-    echo ((u'\r\n' + term.normal).join(buf[tail * -1:]))
-    echo (prompt_ole)
+    echo((u'\r\n' + term.normal).join(buf[tail * -1:]))
+    echo(prompt_ole)
     while True:
         ch = getch()
         if ch in (u'n', u'N', u'q', term.KEY_EXIT):

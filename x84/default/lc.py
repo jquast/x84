@@ -14,14 +14,15 @@ def dummy_pager(last_callers):
     if term.width > 71:
         echo(term.normal + '\r\n')
         echo('\r\n'.join((line.rstrip().center(term.width).rstrip()
-                          for line in open(os.path.join(os.path.dirname(__file__),
-                                                        'art', 'lc.asc')))))
+                          for line in open(
+                              os.path.join(os.path.dirname(__file__),
+                                           'art', 'lc.asc')))))
     else:
         echo(term.normal + '\r\n')
-        echo ('// ' + term.red('LASt CAllERS').center(term.width))
+        echo('// ' + term.red('LASt CAllERS').center(term.width))
     echo('\r\n\r\n')
     for row in range(len(last_callers)):
-        echo(Ansi(last_callers[row]).ljust(term.width/2).center(term.width))
+        echo(Ansi(last_callers[row]).ljust(term.width / 2).center(term.width))
         if not nonstop and row > 0 and 0 == (row % (term.height - 2)):
             echo(prompt_msg)
             inp = getch()

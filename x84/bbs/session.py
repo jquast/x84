@@ -321,7 +321,7 @@ class Session(object):
         if event == 'exception':
             #pylint: disable=E0702
             #        Raising NoneType while only classes, (..) allowed
-            logger.warn (data)
+            logger.warn(data)
             raise data
 
         # init new unmanaged & unlimited-sized buffer ;p
@@ -662,7 +662,7 @@ class IPCLogHandler(logging.Handler):
                 # side-effect: sets record.exc_text
                 dummy = self.format(record)
                 record.exc_info = None
-                dummy # pflakes ;/
+                dummy  # pflakes ;/
             self.pipe.send(('logger', record))
         except (KeyboardInterrupt, SystemExit):
             raise

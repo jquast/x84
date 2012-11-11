@@ -71,11 +71,13 @@ CP437 = (
 # In python 3, str.maketrans() uses a dictionary of exactly this form.
 CP437TABLE = dict([(unichr(i), CP437[i]) for i in range(255)])
 
+
 def from_cp437(text):
     """ Given a bytestring in IBM codepage 437, return a translated
         unicode string suitable for decoding to UTF-8.
     """
     return u''.join([CP437[ord(byte)] for byte in text])
+
 
 def run():
     """
@@ -84,9 +86,9 @@ def run():
     import sys
     if len(sys.argv) < 2:
         sys.stderr.write('%s <file>\n' % (sys.argv[0],))
-        sys.exit (1)
+        sys.exit(1)
     cptext = file(sys.argv[1]).read()
-    sys.stdout.write (from_cp437(cptext).encode('utf8'))
+    sys.stdout.write(from_cp437(cptext).encode('utf8'))
     return 0
 
 if __name__ == '__main__':

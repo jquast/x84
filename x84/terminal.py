@@ -355,4 +355,4 @@ class ConnectTelnetTerminal (threading.Thread):
             logger.debug('terminal type: %s (negotiated)' %
                          (self.client.env['TERM'],))
             return
-        logger.warn ('%r TERM undetermined.', self.client.addrport())
+        logger.warn('%r TERM undetermined.', self.client.addrport())
