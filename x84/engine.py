@@ -60,7 +60,7 @@ def main():
         x84.bbs.ini.CFG.get('system', 'password_digest'))
 
     # start telnet server
-    telnet_server = x84.telnet.TelnetServer((
+    telnetd = x84.telnet.TelnetServer((
         x84.bbs.ini.CFG.get('telnet', 'addr'),
         x84.bbs.ini.CFG.getint('telnet', 'port'),),
         x84.terminal.on_connect,
@@ -69,16 +69,18 @@ def main():
 
     try:
         # begin main event loop
-        _loop(telnet_server)
+        _loop(telnetd)
     except KeyboardInterrupt:
         # catch ^C, close all sockets,
-        for client in telnet_server.clients.values():
-            client.deactivate()
-        telnet_server.poll()
+        for fileno, client in telnetd.clients.items()[:]:
+            client.sock.close()
+            del telnetd.clients[fileno]
+            telnetd.on_disconnect(client)
+    finally:
         raise SystemExit
 
 
-def _loop(telnet_server):
+def _loop(telnetd):
     """
     Main event loop. Never returns.
     """
@@ -87,101 +89,157 @@ def _loop(telnet_server):
     #         Too many local variables (24/15)
     #         Too many statements (73/50)
     import logging
+    import select
+    import socket
     import time
 
     import x84.terminal
     import x84.bbs.ini
+    import x84.telnet
     import x84.db
 
     logger = logging.getLogger()
-    logger.info('listening %s/tcp', telnet_server.port)
+    logger.info('listening %s/tcp', telnetd.port)
     timeout = x84.bbs.ini.CFG.getint('system', 'timeout')
+    fileno_telnetd = telnetd.server_socket.fileno()
     locks = dict()
     # main event loop
     while True:
-        # process telnet i/o
-        telnet_server.poll()
+        # send any buffered output, delete inactive clients,
+        # process keyboard input of active clients, create
+        # list of filenos to poll (telnet clients, pipes)
+        recv_list = set([fileno_telnetd] + telnetd.clients.keys())
         for client, pipe, lock in x84.terminal.terminals():
             if not lock.acquire(False):
+                logger.debug('%s: locked', client.addrport())
                 continue
+            fileno_client = client.sock.fileno()
+            fileno_pipe = pipe.fileno()
+            if client.active and client.send_ready():
+                try:
+                    client.socket_send()
+                except x84.bbs.excpetion.ConnectionClosed, err:
+                    logger.debug('%s ConnectionClosed(%s).',
+                                 client.addrport(), err)
+                    client.deactivate()
+            if not client.active:
+                # close and delete client
+                client.sock.close()
+                del telnetd.clients[fileno_client]
+                telnetd.on_disconnect(client)
+                recv_list.remove(fileno_client)
+                logger.debug('%s: deleted', client.addrport())
+                continue
+            recv_list.add(fileno_pipe)
             lock.release()
 
-            # process telnet input (keypress sequences)
-            if client.input_ready() and lock.acquire(False):
-                lock.release()
-                inp = client.get_input()
-                pipe.send(('input', inp))
+        # poll new connections, telnet client input, session pipe input,
+        rlist, slist, elist = select.select(recv_list, [], [], 1)
 
-            # kick off idle users
-            if client.idle() > timeout:
-                pipe.send(('exception', x84.bbs.exception.ConnectionTimeout))
-
-            if lock.acquire(False):
-                # process bbs session i/o
-                lock.release()
-                if not pipe.poll():
-                    continue
-
-            # session i/o sent from child process
+        # accept new connections,
+        if fileno_telnetd in rlist:
+            rlist.remove(fileno_telnetd)
             try:
-                event, data = pipe.recv()
+                sock, address_pair = telnetd.server_socket.accept()
+                if telnetd.client_count() > telnetd.MAX_CONNECTIONS:
+                    sock.close()
+                    logger.error('refused new connect; maximum reached.')
+                else:
+                    # accept & instantiate new client
+                    client = x84.telnet.TelnetClient(
+                        sock, address_pair, telnetd.on_naws)
+                    telnetd.clients[client.sock.fileno()] = client
+                    telnetd.on_connect(client)
+            except socket.error, err:
+                logger.error('accept error %d:%s', err[0], err[1],)
 
-            except (EOFError, IOError) as exception:
-                logger.exception(exception)
-                x84.terminal.unregister_terminal(client, pipe, lock)
-                pipe.close()
+        # read in any telnet input
+        for fileno in (fno for fno in telnetd.clients if fno in rlist):
+            client = telnetd.clients[fileno]
+            try:
+                client.socket_recv()
+            except x84.bbs.exception.ConnectionClosed, err:
+                logger.debug('%s: connection closed(%s).',
+                             client.addrport(), err)
+                # mark for deactivation, removed next poll
                 client.deactivate()
                 continue
 
-            if event == 'exit':
-                x84.terminal.unregister_terminal(client, pipe, lock)
-                pipe.close()
-                client.deactivate()
+        # accept session event i/o, such as output
+        for client, pipe, lock in x84.terminal.terminals():
+            # poll about and kick off idle users
+            if client.idle() > timeout and lock.acquire(False):
+                pipe.send(('exception', x84.bbs.exception.ConnectionTimeout))
+                lock.release()
+            # send input to subprocess,
+            if client.input_ready() and lock.acquire(False):
+                inp = client.get_input()
+                pipe.send(('input', inp))
+                lock.release()
+            # aggressively process all session pipe i/o
+            has_data = pipe.fileno() in rlist
+            while has_data:
+                try:
+                    event, data = pipe.recv()
+                except (EOFError, IOError) as exception:
+                    # issue with pipe; sub-process unexpectedly closed
+                    logger.exception(exception)
+                    x84.terminal.unregister_terminal(client, pipe, lock)
+                    pipe.close()
+                    client.deactivate()
+                    continue
 
-            elif event == 'logger':
-                logger.handle(data)
+                if event == 'exit':
+                    x84.terminal.unregister_terminal(client, pipe, lock)
+                    pipe.close()
+                    client.deactivate()
 
-            elif event == 'output':
-                client.send_unicode(ucs=data[0], encoding=data[1])
+                elif event == 'logger':
+                    logger.handle(data)
 
-            elif event == 'global':
-                #pylint: disable=W0612
-                #         Unused variable 'o_lock'
-                for o_client, o_pipe, o_lock in x84.terminal.terminals():
-                    if o_client != client:
-                        o_pipe.send((event, data,))
+                elif event == 'output':
+                    client.send_unicode(ucs=data[0], encoding=data[1])
 
-            elif event.startswith('db'):
-                # db query-> database dictionary method, callback
-                # with a matching ('db-*',) event. sqlite is used
-                # for now and is quick, but this prevents slow
-                # database queries from locking the i/o event loop.
-                thread = x84.db.DBHandler(pipe, event, data)
-                thread.start()
+                elif event == 'global':
+                    #pylint: disable=W0612
+                    #         Unused variable 'o_lock'
+                    for o_client, o_pipe, o_lock in x84.terminal.terminals():
+                        if o_client != client:
+                            o_pipe.send((event, data,))
 
-            elif event.startswith('lock'):
-                # fine-grained lock acquire and release, non-blocking
-                method, stale = data
-                if method == 'acquire':
-                    if not event in locks:
-                        locks[event] = time.time()
-                        logger.debug('lock %r granted.', (event, data))
-                        pipe.send((event, True,))
-                    elif (stale is not None
-                            and time.time() - locks[event] > stale):
-                        logger.error('lock %r stale.', (event, data))
-                        pipe.send((event, True,))
-                    else:
-                        logger.warn('lock %r failed.', (event, data))
-                        pipe.send((event, False,))
-                elif method == 'release':
-                    if not event in locks:
-                        logger.error('lock %r not acquired.', (event, data))
-                    else:
-                        del locks[event]
-                        logger.debug('lock %r removed.', (event, data))
-            else:
-                logger.error('unhandled %r', (event, data))
+                elif event.startswith('db'):
+                    # db query-> database dictionary method, callback
+                    # with a matching ('db-*',) event. sqlite is used
+                    # for now and is quick, but this prevents slow
+                    # database queries from locking the i/o event loop.
+                    thread = x84.db.DBHandler(pipe, event, data)
+                    thread.start()
+
+                elif event.startswith('lock'):
+                    # fine-grained lock acquire and release, non-blocking
+                    method, stale = data
+                    if method == 'acquire':
+                        if not event in locks:
+                            locks[event] = time.time()
+                            logger.debug('%r granted.', (event, data))
+                            pipe.send((event, True,))
+                        elif (stale is not None
+                                and time.time() - locks[event] > stale):
+                            logger.error('%r stale.', (event, data))
+                            pipe.send((event, True,))
+                        else:
+                            logger.warn('%r failed.', (event, data))
+                            pipe.send((event, False,))
+                    elif method == 'release':
+                        if not event in locks:
+                            logger.error('%r failed.', (event, data))
+                        else:
+                            del locks[event]
+                            logger.debug('%r removed.', (event, data))
+                else:
+                    assert False, 'unhandled %r' % (event, data)
+                has_data = (1 == len(select.select
+                                     ([pipe.fileno()], [], [], 0)[0]))
 
 if __name__ == '__main__':
     exit(main())

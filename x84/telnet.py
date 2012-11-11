@@ -58,7 +58,7 @@ class TelnetServer(object):
     Poll sockets for new connections and sending/receiving data from clients.
     """
     MAX_CONNECTIONS = 1000
-    TIME_POLL = 0.01
+    TIME_POLL = 0.05
     LISTEN_BACKLOG = 5
     ## Dictionary of active clients, (file descriptor, TelnetClient,)
     clients = {}
@@ -105,71 +105,6 @@ class TelnetServer(object):
         Returns a list of connected clients.
         """
         return self.clients.values()
-
-    def poll(self):
-        """
-        Perform a non-blocking scan of recv and send states on the server
-        and client connection sockets.  Process new connection requests,
-        read incomming data, and send outgoing data.  Sends and receives may
-        be partial.
-        """
-
-        ## Delete inactive connections
-        for client in (c for c in self.clients.values() if c.active is False):
-            fileno = client.sock.fileno()
-            client.sock.close()
-            logger.debug('%s: deleted', client.addrport())
-            del self.clients[fileno]
-            if self.on_disconnect is not None:
-                self.on_disconnect(client)
-
-        ## Build a list of connections to test for receive data
-        recv_list = [self.server_socket.fileno()] + [
-            c.sock.fileno() for c in self.clients.values() if c.active]
-
-        ## Build a list of connections that have data to receieve
-        #pylint: disable=W0612
-        #        Unused variable 'elist'
-        rlist, slist, elist = select.select(recv_list, [], [], self.TIME_POLL)
-
-        if self.server_socket.fileno() in rlist:
-            try:
-                sock, address_pair = self.server_socket.accept()
-            except socket.error, err:
-                logger.error('accept error %d:%s', err[0], err[1],)
-                return
-
-            ## Check for maximum connections
-            if self.client_count() < self.MAX_CONNECTIONS:
-                client = TelnetClient(sock, address_pair, self.on_naws)
-                ## Add the connection to our dictionary and call handler
-                self.clients[client.sock.fileno()] = client
-                self.on_connect(client)
-            else:
-                logger.error('refused new connect; maximum reached.')
-                sock.close()
-
-        ## Process sockets with data to receive
-        recv_ready = (self.clients[f] for f in rlist
-                      if f != self.server_socket.fileno())
-        for client in recv_ready:
-            try:
-                client.socket_recv()
-            except ConnectionClosed, err:
-                logger.debug('%s connection closed: %s.',
-                             client.addrport(), err)
-                client.deactivate()
-
-        ## Process sockets with data to send
-        slist = (c for c in self.clients.values()
-                 if c.active and c.send_ready())
-        for client in slist:
-            try:
-                client.socket_send()
-            except ConnectionClosed, err:
-                logger.debug('%s connection closed: %s.',
-                             client.addrport(), err)
-                client.deactivate()
 
 #---[ Telnet Notes ]-----------------------------------------------------------
 # (See RFC 854 for more information)
