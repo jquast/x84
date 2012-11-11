@@ -859,7 +859,8 @@ class TelnetClient(object):
                 elif pair[1] == self.env[pair[0]]:
                     logger.debug('env[%r] = %r (repeated)', pair[0], pair[1])
                 else:
-                    logger.warn('%s conflict: %s (ignored)', pair[0], pair[1])
+                    logger.warn('%s=%s; conflicting value %s ignored.',
+                                pair[0], self.env[pair[0]], pair[1])
             else:
                 logger.error('client NEW_ENVIRON; invalid %r', pair)
 
@@ -880,7 +881,7 @@ class TelnetClient(object):
         else:
             self.env['LINES'] = str(rows)
             self.env['COLUMNS'] = str(columns)
-            logger.debug('%s: window size is %sx%s',
+            logger.debug('%s: NAWS is %sx%s',
                          self.addrport(), columns, rows)
             if self.on_naws is not None:
                 self.on_naws(self)
