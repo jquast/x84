@@ -85,14 +85,17 @@ class Ansi(unicode):
             if idx == nxt:
                 nxt = idx + Ansi(self[idx:]).seqlen()
             if nxt <= idx:
-                # 'East Asian Fullwidth' and 'East Asian Wide' characters
-                # can take 2 cells, see http://www.unicode.org/reports/tr11/
-                # and http://www.gossamer-threads.com/lists/python/bugs/972834
-                #
-                # we just use wcswidth, since that is what terminal client
-                # implementors seem to be using, and on linux, and posix?
                 ucs = self[idx]
-                wide = wcswidth(ucs)
+                if getsession().encoding == 'cp437':
+                    wide = 1
+                else:
+                    # 'East Asian Fullwidth' and 'East Asian Wide' characters
+                    # can take 2 cells, see
+                    # http://www.unicode.org/reports/tr11/
+                    # http://www.gossamer-threads.com/lists/python/bugs/972834
+                    # we just use wcswidth, since that is what terminal
+                    # client implementors seem to be using ..
+                    wide = wcswidth(ucs)
 
                 # my own NVT addition: allow -1 to be added to width when
                 # 127 and 8 are used (BACKSPACE, DEL)
