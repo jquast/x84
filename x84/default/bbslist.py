@@ -8,8 +8,6 @@ bbs lister for x/84, http://github.com/jquast/x84
     [bbs-scene]
     user = my@email-addr.ess
     pass = my-plaintext-password
-
-  Highly recommended.
 """
 import xml.etree.ElementTree
 import threading
@@ -243,17 +241,19 @@ def get_ui(position=None):
     return (pager, lightbar)
 
 
-def banner():
+def banner(dumb=False):
     term = getterminal()
     output = u''
-    output += '\r\n\r\n'
-    if term.width >= 69:
+    if not dumb:
         output += term.home + term.normal + term.clear
+    else:
+        output += '\r\n\r\n' + term.normal
+    if term.width >= 72:
         # spidy's ascii is 72-wide (and, like spidy, total nonsense ..,)
         for line in open(os.path.join
-                         (os.path.dirname(__file__), 'art', 'bbslist.asc')):
+                        (os.path.dirname(__file__), 'art', 'bbslist.asc')):
             output += line.center(72).center(term.width).rstrip() + '\r\n'
-    return output + term.normal
+    return output
 
 
 def redraw_pager(pager, selection, active=True):
@@ -324,7 +324,8 @@ def redraw_pager(pager, selection, active=True):
                 + "\n\nIRC: #prsv on efnet\n")
             output += pager.title('- about X/84 -')
         else:
-            output += pager.update(u'')
+            pager.update(u'')
+            output += pager.clear()
             output += pager.title(unselected)
     else:
         bbsname = DBProxy('bbslist')[key]['bbsname']
@@ -370,57 +371,71 @@ def dummy_pager():
     term = getterminal()
     hindent = 2
     vindent = 5
-    prompt = u', '.join(disp_entry(char, blurb) for char, blurb in (
-        ('a', 'dd',),
-        ('c', 'OMMENt',),
-        ('r', 'AtE',),
-        ('t', 'ElNEt',),
-        ('v', 'iEW ANSi'),
-        ('q', 'Uit',),
-        ('+', 'MOAR!',))) + u' --> '
     prompt_key = u'\r\n\r\nENtER BBS iD: '
     prompt_pak = u'\r\n\r\nPRESS ANY kEY ..'
     msg_badkey = u'\r\n\r\nbbS id iNVAliD!'
+    msg_header = u'// bbS liSt'
     nlines = 0
     bbslist = get_bbslist()
+    echo(u'\r\n' + msg_header.center(term.width).rstrip() + '\r\n\r\n')
     if 0 == len(bbslist):
         echo(u'\r\n\r\nNO BBSS. a%sdd ONE, q%sUit' % (
             term.bold_blue(':'), term.bold_blue(':')))
-        inp = getch()
-        if inp in(u'q', 'Q'):
-            return  # quit
-        process_keystroke(inp)
-        bbslist = get_bbslist()  # meybe you added 1?
-    echo(u'\r\n' + '// bbS liSt'.center(term.width).rstrip() + '\r\n\r\n')
-    for (key, line) in bbslist:
-        if key is None:  # bbs software
-            echo(term.blue_reverse(line.rstrip()) + '\r\n')
-            nlines += 1
-        else:
-            wrapd = Ansi(line).wrap(term.width - hindent)
-            echo(term.bold_blue(key) + term.bold_black('. ') + wrapd + '\r\n')
-            nlines += len(wrapd.split('\r\n'))
-        # moar prompt,
-        if nlines and (nlines % (term.height - vindent) == 0):
-            while True:
-                echo('\r\n\r\n' + Ansi(prompt).wrap(term.width))
-                inp = getch()
-                if inp in (u'q', 'Q'):
-                    return  # quit
-                elif inp is not None and type(inp) is not int:
-                    if inp == u'+':
-                        break  # moar!
-                    if inp.lower() in u'acrtv':
-                        echo(prompt_key)
-                        key = LineEditor(5).read()
-                        if (key is None or 0 == len(key.strip())
-                                or not key in DBProxy('bbslist')):
-                            echo(msg_badkey)
-                            continue
-                        process_keystroke(inp, key)
-                echo(u'\r\n')
-    echo(prompt_pak)
-    getch()
+        while True:
+            inp = getch()
+            if inp in (u'q', 'Q'):
+                return  # quit
+            elif inp in (u'a', 'A'):
+                process_keystroke(inp)
+                break
+
+    def more(cont=False):
+        """
+        Returns True if user 'q'uit; otherwise False
+        when prompting is complete (moar/next/whatever)
+        """
+        prompt = u', '.join(disp_entry(char, blurb)
+                            for char, blurb in (
+                                ('i', 'NfO',), ('a', 'dd',),
+                                ('c', 'OMMENt',), ('r', 'AtE',),
+                                ('t', 'ElNEt',), ('v', 'iEW ANSi'),
+                                ('q', 'Uit',),
+                                ('+', 'MOAR!',))) + u' --> '
+        while True:
+            echo('\r\n\r\n' + Ansi(prompt).wrap(term.width / 2))
+            inp = getch()
+            if inp in (u'q', 'Q'):
+                return True
+            elif inp is not None and type(inp) is not int:
+                if cont and inp == u'+':
+                    return False
+                if inp.lower() in u'acrtviACRTVI':
+                    # these keystrokes require a bbs key argument,
+                    # prompt the user for one
+                    echo(prompt_key)
+                    key = LineEditor(5).read()
+                    if (key is None or 0 == len(key.strip())
+                            or not key in DBProxy('bbslist')):
+                        echo(msg_badkey)
+                        continue
+                    process_keystroke(inp, key)
+            echo(u'\r\n')
+
+    while True:
+        for (key, line) in bbslist:
+            if key is None:  # bbs software
+                echo(term.blue_reverse(line.rstrip()) + '\r\n')
+                nlines += 1
+            else:
+                wrapd = Ansi(line).wrap(term.width - hindent)
+                echo(term.bold_blue(key) + term.bold_black('. '))
+                echo (wrapd + '\r\n')
+                nlines += len(wrapd.split('\r\n'))
+            if nlines and (nlines % (term.height - vindent) == 0):
+                if more(True):
+                    break
+        # one final prompt before exit
+        more (False)
     return
 
 
@@ -517,6 +532,8 @@ def process_keystroke(inp, key=None):
         add_comment(key)
     elif inp.lower() == u'r' and key is not None:
         rate_bbs(key)
+    elif inp.lower() == u'i' and key is not None:
+        echo(get_bbsinfo(key) + '\r\n')
     elif inp.lower() == u'v' and key is not None:
         view_ansi(key)
     elif inp.lower() == u'd' and session.user.is_sysop and key is not None:
@@ -598,6 +615,11 @@ def main():
     else:
         session.activity = u'bbs lister'
 
+    def is_dumb():
+        return (session.env.get('TERM') != 'unknown' and
+                not session.user.get('expert', False)
+                and term.width >= 72 and term.height >= 20)
+
     dirty = True
     session.buffer_event('refresh', ('init',))
     leftright = 0  # 'left'
@@ -606,7 +628,7 @@ def main():
         # check if screen requires refresh of any kind,
         if session.poll_event('refresh'):
             pager, lightbar = get_ui(lightbar.position)
-            echo(banner())
+            echo(banner(is_dumb()))
             dirty = True
         if chk_thread(thread):
             thread = None
@@ -616,9 +638,11 @@ def main():
 
         # refresh advanced screen with lightbar and pager
         if dirty:
-            if(session.env.get('TERM') == 'unknown' or
-               session.user.get('expert', False)
-               or term.width < 72 or term.height < 20):
+            if not is_dumb():
+                echo(redraw(pager, lightbar, leftright))
+                dirty = False
+            else:
+                # or .. provide dumb terminal with hotkey prompt
                 if thread is not None:
                     wait_for(thread)
                 if chk_thread(thread):
@@ -626,6 +650,7 @@ def main():
                 return dummy_pager()
             echo(redraw(pager, lightbar, leftright))
             dirty = False
+
         # detect and process keyboard input for advanced screen
         inp = getch(1)
         if inp == term.KEY_LEFT:
@@ -638,10 +663,10 @@ def main():
         elif inp == term.KEY_RIGHT:
             # full refresh for border chang ;/
             leftright = 1
-            echo(redraw_pager(
-                pager, lightbar.selection, active=(leftright == 1)))
-            echo(redraw_lightbar(
-                lightbar, active=(leftright == 0)))
+            echo(redraw_pager(pager,
+                              lightbar.selection, active=(leftright == 1)))
+            echo(redraw_lightbar(lightbar,
+                                 active=(leftright == 0)))
         elif inp is not None:
             # process as pager or lightbar keystroke,
             echo(lightbar.process_keystroke(inp)
