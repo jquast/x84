@@ -15,11 +15,6 @@ VI_KEYSET = {
     'exit': [u'q', u'Q', unichr(3)],
 }
 
-#pylint: disable=C0103
-#        Invalid name "logger" for type constant
-import logging
-logger = logging.getLogger()
-
 
 class Selector(AnsiWindow):
     """
@@ -90,9 +85,10 @@ class Selector(AnsiWindow):
             self._selected = True
         else:
             import x84.bbs.session
-            logger.info('unhandled, %r', keystroke
-                        if type(keystroke) is not int
-                        else x84.bbs.session.getterminal().keyname(keystroke))
+            x84.bbs.session.logger.debug(
+                'unhandled, %r', keystroke
+                if type(keystroke) is not int
+                else x84.bbs.session.getterminal().keyname(keystroke))
         return rstr
 
     @property
