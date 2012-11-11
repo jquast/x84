@@ -29,7 +29,8 @@ def get_ui(ucs, ypos=None):
     lightbar.glyphs['right-vert'] = u'X'
     lightbar.colors['border'] = term.bold_blue
     lightbar.update(((row, line) for (row, line) in
-                    enumerate(Ansi(ucs).wrap(lightbar.width).split('\r\n'))))
+                    enumerate(Ansi(ucs).wrap(lightbar.visible_width)
+                              .split('\r\n'))))
     yloc = (lightbar.yloc + lightbar.visible_bottom if ypos is None else ypos)
     lneditor = ScrollingEditor(width, yloc, xloc)
     lneditor.glyphs['bot-horiz'] = u'Z'
