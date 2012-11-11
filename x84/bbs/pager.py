@@ -3,14 +3,14 @@ Pager class for x/84, http://github.com/jquast/x84/
 """
 from x84.bbs.ansiwin import AnsiWindow
 
-NETHACK_KEYSET = {
+VI_KEYSET = {
     'refresh': [unichr(12), ],
-    'home': [u'y'],
-    'end': [u'n'],
-    'up': [u'k'],
-    'pgup': [u'K'],
-    'down': [u'j'],
-    'pgdown': [u'J'],
+    'home': [],
+    'end': [],
+    'up': [u'k', u'K'],
+    'down': [u'j', u'J'],
+    'pgup': [u'b', u'B'],
+    'pgdown': [u'f', u'F'],
     'exit': [u'q', u'Q'],
 }
 
@@ -28,16 +28,10 @@ class Pager(AnsiWindow):
         Initialize a pager of height, width, y, and x position.
         """
         AnsiWindow.__init__(self, height, width, yloc, xloc)
-        self._xpadding = 1
-        self._ypadding = 1
-        self._col = 0
-        self._row = 0
-        self._position = 0
-        self._position_last = 0
-        self._moved = False
+        self._position = self._position_last = 0
         self._quit = False
         self.content = list()
-        self.keyset = NETHACK_KEYSET
+        self.keyset = VI_KEYSET.copy()
         self.init_keystrokes()
 
     @property
@@ -58,7 +52,7 @@ class Pager(AnsiWindow):
     @property
     def position(self):
         """
-        Returns the row in the content buffer displayed at top of window.
+        Index of content buffer displayed at top of window.
         """
         return self._position
 
@@ -73,6 +67,7 @@ class Pager(AnsiWindow):
             self._position = 0
         if self._position > self.bottom:
             self._position = self.bottom
+        self.moved = (self._position_last != self._position)
 
     @property
     def visible_content(self):
@@ -118,29 +113,38 @@ class Pager(AnsiWindow):
         sequence suitable for refreshing when that keystroke modifies the
         window.
         """
-        self._position_last = self._position
+        import x84.bbs.session
+        self.moved = False
         rstr = u''
+        x84.bbs.session.logger.error(repr(keystroke))
         if keystroke in self.keyset['refresh']:
             rstr += self.refresh()
         elif keystroke in self.keyset['up']:
+            x84.bbs.session.logger.info('up')
             rstr += self.move_up()
         elif keystroke in self.keyset['down']:
+            x84.bbs.session.logger.info('down')
             rstr += self.move_down()
         elif keystroke in self.keyset['home']:
+            x84.bbs.session.logger.info('home')
             rstr += self.move_home()
         elif keystroke in self.keyset['end']:
+            x84.bbs.session.logger.info('end')
             rstr += self.move_end()
         elif keystroke in self.keyset['pgup']:
+            x84.bbs.session.logger.info('pgup')
             rstr += self.move_pgup()
         elif keystroke in self.keyset['pgdown']:
+            x84.bbs.session.logger.info('pgdown')
             rstr += self.move_pgdown()
         elif keystroke in self.keyset['exit']:
+            x84.bbs.session.logger.info('exit')
             self._quit = True
         else:
-            import x84.bbs.session
-            x84.bbs.session.logger.info(
+            x84.bbs.session.logger.debug(
                 'unhandled, %r', keystroke if type(keystroke) is not int
                 else x84.bbs.session.getterminal().keyname(keystroke))
+        x84.bbs.session.logger.info(repr(rstr))
         return rstr
 
     def move_home(self):
