@@ -116,35 +116,26 @@ class Pager(AnsiWindow):
         import x84.bbs.session
         self.moved = False
         rstr = u''
-        x84.bbs.session.logger.error(repr(keystroke))
         if keystroke in self.keyset['refresh']:
             rstr += self.refresh()
         elif keystroke in self.keyset['up']:
-            x84.bbs.session.logger.info('up')
             rstr += self.move_up()
         elif keystroke in self.keyset['down']:
-            x84.bbs.session.logger.info('down')
             rstr += self.move_down()
         elif keystroke in self.keyset['home']:
-            x84.bbs.session.logger.info('home')
             rstr += self.move_home()
         elif keystroke in self.keyset['end']:
-            x84.bbs.session.logger.info('end')
             rstr += self.move_end()
         elif keystroke in self.keyset['pgup']:
-            x84.bbs.session.logger.info('pgup')
             rstr += self.move_pgup()
         elif keystroke in self.keyset['pgdown']:
-            x84.bbs.session.logger.info('pgdown')
             rstr += self.move_pgdown()
         elif keystroke in self.keyset['exit']:
-            x84.bbs.session.logger.info('exit')
             self._quit = True
         else:
             x84.bbs.session.logger.debug(
                 'unhandled, %r', keystroke if type(keystroke) is not int
                 else x84.bbs.session.getterminal().keyname(keystroke))
-        x84.bbs.session.logger.info(repr(rstr))
         return rstr
 
     def move_home(self):
