@@ -5,7 +5,7 @@
 import os
 #pylint: disable=W0614
 #        Unused import from wildcard import
-from x84.bbs import *
+from x84.bbs import getterminal, echo, getch, Pager, getsession
 
 
 def dummy_pager(news_txt):
@@ -28,7 +28,7 @@ def dummy_pager(news_txt):
     return
 
 
-def get_pager(news_txt):
+def get_pager(news_txt, position=None):
     term = getterminal()
     width = term.width - 6
     yloc = min(10, max(0, term.height - 10))
@@ -39,6 +39,8 @@ def get_pager(news_txt):
     pager.ypadding = 1
     pager.colors['border'] = term.red
     pager.update('\n'.join(news_txt))
+    if position is not None:
+        pager.position = position
     return pager
 
 
@@ -53,7 +55,7 @@ def redraw(pager):
     if pager is not None:
         rstr += pager.refresh()
         rstr += pager.border()
-        rstr += pager.footer(u'- demo - - resize window - - demo -')
+        rstr += pager.footer(u'- demo   -   demo -')
     return rstr
 
 
@@ -84,5 +86,5 @@ def main():
             echo(term.home + term.normal + term.clear)
             if term.width < 64:
                 return dummy_pager(news_txt)
-            pager = get_pager(news_txt)
+            pager = get_pager(news_txt, pager.position)
             echo(redraw(pager))
