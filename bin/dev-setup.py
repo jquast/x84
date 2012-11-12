@@ -1,4 +1,4 @@
-#!/usr/bin/bin python
+#!/usr/bin/env python
 """
 setup virtualenv for x/84,
 for source developers only !
