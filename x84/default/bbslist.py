@@ -344,7 +344,7 @@ def redraw_pager(pager, selection, active=True):
     else:
         # describe bbs in pager
         bbsname = DBProxy('bbslist')[key]['bbsname']
-        ansiurl = DBProxy('bbslist')[key]['ansi']
+        ansiurl = DBProxy('bbslist')[key].get('ansi', 'NONE')
         output += pager.title(u'- %s -' % (
             term.bold_blue(bbsname) if active else term.blue(bbsname)))
         output += pager.update(get_bbsinfo(key, active))
