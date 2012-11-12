@@ -122,7 +122,7 @@ def _loop(telnetd):
                 if client.send_ready():
                     try:
                         client.socket_send()
-                    except x84.bbs.excpetion.ConnectionClosed, err:
+                    except x84.bbs.exception.ConnectionClosed, err:
                         logger.debug('%s ConnectionClosed(%s).',
                                      client.addrport(), err)
                         recv_list.remove(client.sock.fileno())
