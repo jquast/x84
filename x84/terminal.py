@@ -99,20 +99,6 @@ class IPCStream(object):
         return self.channel.close()
 
 
-def on_disconnect(client):
-    """
-    """
-    from x84.bbs.exception import Disconnect
-    #pylint: disable=W0612
-    #        Unused variable 'o_lock'
-    for o_client, o_pipe, o_lock in terminals():
-        if client == o_client:
-            logger.debug('%s Disconnected', client.addrport())
-            o_pipe.send(('exception', (Disconnect('Requested by Client'))))
-            return
-    logger.info('%s Disconnected', client.addrport())
-
-
 def on_connect(client):
     """
     """
@@ -145,8 +131,7 @@ class ConnectTelnetTerminal (threading.Thread):
     """
     DEBUG = False
     TIME_WAIT = 1.25
-    TIME_PAUSE = 1.75
-    TIME_POLL = 0.10
+    TIME_POLL = 0.05
     TTYPE_UNDETECTED = 'unknown'
     WINSIZE_TRICK = (
         ('vt100', ('\x1b[6n'), re.compile(chr(27) + r"\[(\d+);(\d+)R")),
@@ -307,7 +292,7 @@ class ConnectTelnetTerminal (threading.Thread):
             self.client.send_str(query_seq)
             self.client.socket_send()  # push
             st_time = time.time()
-            while (self.client.idle() < self.TIME_PAUSE
+            while (self.client.idle() < self.TIME_WAIT
                    and self._timeleft(st_time)):
                 time.sleep(self.TIME_POLL)
             inp = self.client.get_input()
