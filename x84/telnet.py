@@ -33,7 +33,6 @@ which is meant for MUD's. This server would not be safe for MUD clients.
 
 import warnings
 import socket
-import select
 import array
 import time
 import logging
@@ -65,7 +64,7 @@ class TelnetServer(object):
     ## Dictionary of environment variables received by negotiation
     env = {}
 
-    def __init__(self, address_pair, on_connect, on_disconnect, on_naws):
+    def __init__(self, address_pair, on_connect, on_naws):
         """
         Create a new Telnet Server.
 
@@ -73,14 +72,11 @@ class TelnetServer(object):
            address_pair: tuple of (ip, port) to bind to.
            on_connect: this callback receives TelnetClient after a
                        connection is initiated.
-           on_disconnect: this callback receives TelnetClient after
-                          connect is lost.
            on_naws: this callable receives a TelnetClient when a client
                     negotiates about window size (resize event).
         """
         (self.address, self.port) = address_pair
         self.on_connect = on_connect
-        self.on_disconnect = on_disconnect
         self.on_naws = on_naws
 
         # bind
@@ -336,6 +332,9 @@ class TelnetClient(object):
         """
         self._iac_do(TTYPE)
         self._note_reply_pending(TTYPE, True)
+        # idk .. for netrunner XXX
+        self.send_str(bytes(''.join((
+            IAC, SB, TTYPE, SEND, IAC, SE))))
 
     def send_ready(self):
         """
@@ -524,6 +523,7 @@ class TelnetClient(object):
         """
         Process a DO command option received by DE.
         """
+        # if any pending WILL options were send, they have been received
         self._note_reply_pending(option, False)
         if option == ECHO:
             # DE requests us to echo their input
@@ -596,6 +596,7 @@ class TelnetClient(object):
         Process a DONT command option received by DE.
         """
         self._note_reply_pending(option, False)
+        self._note_reply_pending(option, False)
         if option == BINARY:
             # client demands no binary mode
             if self._check_local_option(BINARY) is not False:
@@ -628,8 +629,7 @@ class TelnetClient(object):
         """
         #pylint: disable=R0912
         #        Too many branches (19/12)
-        if self._check_reply_pending(option):
-            self._note_reply_pending(option, False)
+        self._note_reply_pending(option, False)
         if option == ECHO:
             raise ConnectionClosed(
                 'Refuse WILL ECHO by client, closing connection.')
@@ -660,25 +660,21 @@ class TelnetClient(object):
             if self.check_remote_option(SGA) is not True:
                 self._note_remote_option(SGA, True)
                 self._note_local_option(SGA, True)
-                self._iac_will(SGA)
+                # sender of this command confirms that the sender of data
+                # is expected to suppress transmission of GAs.
+                self._iac_do(SGA)
         elif option == NEW_ENVIRON:
-            if self._check_reply_pending(NEW_ENVIRON):
-                self._note_reply_pending(NEW_ENVIRON, False)
             if self.check_remote_option(NEW_ENVIRON) in (False, UNKNOWN):
                 self._note_remote_option(NEW_ENVIRON, True)
-                self._note_local_option(NEW_ENVIRON, True)
                 self.request_env()
+            self._note_local_option(NEW_ENVIRON, True)
         elif option == XDISPLOC:
-            if self._check_reply_pending(XDISPLOC):
-                self._note_reply_pending(XDISPLOC, False)
             if self.check_remote_option(XDISPLOC):
                 self._note_remote_option(XDISPLOC, True)
                 self._iac_do(XDISPLOC)
                 self.send_str(bytes(''.join((
                     IAC, SB, XDISPLOC, SEND, IAC, SE))))
         elif option == TTYPE:
-            if self._check_reply_pending(TTYPE):
-                self._note_reply_pending(TTYPE, False)
             if self.check_remote_option(TTYPE) in (False, UNKNOWN):
                 self._note_remote_option(TTYPE, True)
                 self.send_str(bytes(''.join((
@@ -691,6 +687,7 @@ class TelnetClient(object):
         """
         Process a WONT command option received by DE.
         """
+        self._note_reply_pending(option, False)
         if option == ECHO:
             if self.check_remote_option(ECHO) in (True, UNKNOWN):
                 self._note_remote_option(ECHO, False)
@@ -709,9 +706,16 @@ class TelnetClient(object):
             elif self.check_remote_option(TTYPE) in (True, UNKNOWN):
                 self._note_remote_option(TTYPE, False)
                 self._iac_dont(TTYPE)
+        elif option in (NEW_ENVIRON, NAWS):
+            if self._check_reply_pending(option):
+                self._note_reply_pending(option, False)
+                self._note_remote_option(option, False)
+            elif self.check_remote_option(option) in (True, UNKNOWN):
+                self._note_remote_option(option, False)
         else:
             logger.debug('%s: unhandled wont: %s.',
                          self.addrport(), name_option(option))
+            self._note_remote_option(option, False)
 
     def _sb_decoder(self):
         """
@@ -741,7 +745,7 @@ class TelnetClient(object):
 
     def _sb_xdisploc(self, bytestring):
         """
-        Process incoming subnegotiation XDISPLAY
+        Process incoming subnegotiation XDISPLOC
         """
         prev_display = self.env.get('DISPLAY', None)
         if prev_display is None:
@@ -757,7 +761,9 @@ class TelnetClient(object):
         """
         Processes incoming subnegotiation TTYPE
         """
-        term_str = bytestring.lower()
+        term_str = bytestring.lower().strip()
+        while term_str.endswith('\x00'):
+            term_str = term_str[:-1]  # netrunner did this ..
         prev_term = self.env.get('TERM', None)
         if prev_term is None:
             logger.info("env['TERM'] = %r.", term_str)
