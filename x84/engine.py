@@ -66,16 +66,8 @@ def main():
         x84.terminal.on_connect,
         x84.terminal.on_naws)
 
-    try:
-        # begin main event loop
-        _loop(telnetd)
-    except KeyboardInterrupt:
-        # catch ^C, close all sockets,
-        for fileno, client in telnetd.clients.items()[:]:
-            client.sock.close()
-            del telnetd.clients[fileno]
-    finally:
-        raise SystemExit
+    # begin main event loop
+    _loop(telnetd)
 
 
 def _loop(telnetd):
