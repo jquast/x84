@@ -112,7 +112,7 @@ def _loop(telnetd):
                     pipe.send(('exception', (x84.bbs.exception.Disconnect())))
                     break
             client.sock.close()
-            logger.debug('%s: deleted', client.addrport())
+            logger.info('%s: Disconnected', client.addrport())
 
         # poll all telnet clients for send
         recv_list = set([fileno_telnetd] + telnetd.clients.keys())
