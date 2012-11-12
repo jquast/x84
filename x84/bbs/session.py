@@ -671,6 +671,8 @@ class IPCLogHandler(logging.Handler):
                 # side-effect: sets record.exc_text
                 dummy = self.format(record)
                 record.exc_info = None
+                # pylint: disable=W0104
+                #         Statement seems to have no effect
                 dummy  # pflakes ;/
             self.pipe.send(('logger', record))
         except (KeyboardInterrupt, SystemExit):
