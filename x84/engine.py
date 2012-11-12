@@ -64,7 +64,6 @@ def main():
         x84.bbs.ini.CFG.get('telnet', 'addr'),
         x84.bbs.ini.CFG.getint('telnet', 'port'),),
         x84.terminal.on_connect,
-        x84.terminal.on_disconnect,
         x84.terminal.on_naws)
 
     try:
@@ -75,7 +74,6 @@ def main():
         for fileno, client in telnetd.clients.items()[:]:
             client.sock.close()
             del telnetd.clients[fileno]
-            telnetd.on_disconnect(client)
     finally:
         raise SystemExit
 
@@ -105,32 +103,38 @@ def _loop(telnetd):
     locks = dict()
     # main event loop
     while True:
-        # send any buffered output, delete inactive clients,
-        # process keyboard input of active clients, create
-        # list of filenos to poll (telnet clients, pipes)
+        # close deactivated clients
+        for fileno, client in [(fno, clt) for (fno, clt) in
+                               telnetd.clients.items() if not clt.active][:]:
+            del telnetd.clients[fileno]
+            for (clt, pipe, lck) in x84.terminal.terminals():
+                if client == clt:
+                    pipe.send(('exception', (x84.bbs.exception.Disconnect())))
+                    break
+            client.sock.close()
+            logger.debug('%s: deleted', client.addrport())
+
+        # poll all telnet clients for send
         recv_list = set([fileno_telnetd] + telnetd.clients.keys())
+
+        # try to send all waiting data, marking clients for
+        # deactivation that have eof/ otherwise adding their
+        # ipc pipes to recv_list.
         for client, pipe, lock in x84.terminal.terminals():
             if not lock.acquire(False):
                 logger.debug('%s: locked', client.addrport())
                 continue
-            fileno_client = client.sock.fileno()
-            fileno_pipe = pipe.fileno()
-            if client.active and client.send_ready():
-                try:
-                    client.socket_send()
-                except x84.bbs.excpetion.ConnectionClosed, err:
-                    logger.debug('%s ConnectionClosed(%s).',
-                                 client.addrport(), err)
-                    client.deactivate()
-            if not client.active:
-                # close and delete client
-                client.sock.close()
-                del telnetd.clients[fileno_client]
-                telnetd.on_disconnect(client)
-                recv_list.remove(fileno_client)
-                logger.debug('%s: deleted', client.addrport())
-                continue
-            recv_list.add(fileno_pipe)
+            if client.active:
+                # poll subprocess event pipe
+                recv_list.add(pipe.fileno())
+                if client.send_ready():
+                    try:
+                        client.socket_send()
+                    except x84.bbs.excpetion.ConnectionClosed, err:
+                        logger.debug('%s ConnectionClosed(%s).',
+                                     client.addrport(), err)
+                        recv_list.remove(client.sock.fileno())
+                        client.deactivate()
             lock.release()
 
         # poll new connections, telnet client input, session pipe input,
@@ -238,8 +242,11 @@ def _loop(telnetd):
                             logger.debug('%r removed.', (event, data))
                 else:
                     assert False, 'unhandled %r' % (event, data)
-                has_data = (1 == len(select.select
-                                     ([pipe.fileno()], [], [], 0)[0]))
+                try:
+                    has_data = (1 == len(select.select
+                                        ([pipe.fileno()], [], [], 0)[0]))
+                except IOError:
+                    has_data = False
 
 if __name__ == '__main__':
     exit(main())
