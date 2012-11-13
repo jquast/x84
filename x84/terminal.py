@@ -122,6 +122,7 @@ class ConnectTelnetTerminal (threading.Thread):
       3. start a new session (as a sub-process)
     """
     DEBUG = False
+    TIME_NEGOTIATE = 0.50
     TIME_WAIT = 1.25
     TIME_POLL = 0.05
     TTYPE_UNDETECTED = 'unknown'
@@ -156,6 +157,8 @@ class ConnectTelnetTerminal (threading.Thread):
     def banner(self):
         """
         This method is called after the connection is initiated.
+        self.client.active is checked periodically to return early.
+        This prevents attempting to negotiate with network scanners, etc.
         """
         # According to Roger Espel Llima (espel@drakkar.ens.fr), you can
         #   have your server send a sequence of control characters:
@@ -167,23 +170,34 @@ class ConnectTelnetTerminal (threading.Thread):
         self.client.request_will_sga()
         self.client.request_do_sga()
 
+        if not self.client.active:
+            return
         # wait for some bytes to be received, and if we get any bytes,
         # at least make sure to get some more, and then -- wait a bit!
         logger.debug('pausing for negotiation')
         st_time = time.time()
         mrk_bytes = self.client.bytes_received
         while ((0 == mrk_bytes or mrk_bytes == self.client.bytes_received)
-               and time.time() - st_time < 0.25):
+               and time.time() - st_time < self.TIME_NEGOTIATE
+               and self.client.active):
             time.sleep(self.TIME_POLL)
+        if not self.client.active:
+            return
         time.sleep(self.TIME_POLL)
         logger.debug('negotiating options')
         self._try_env()
+        if not self.client.active:
+            return
         # this will set .terminal_type if -still- undetected,
         # or otherwise overwrite it if it is detected different,
         self._try_ttype()
+        if not self.client.active:
+            return
         # this will set TERM to vt100 or sun if --still-- undetected,
         # this will set .rows, .columns if not LINES and COLUMNS
         self._try_naws()
+        if not self.client.active:
+            return
         # disable line-wrapping http://www.termsys.demon.co.uk/vtansi.htm
         self.client.send_str(bytes(chr(27) + '[7l'))
 
@@ -232,8 +246,11 @@ class ConnectTelnetTerminal (threading.Thread):
         self.client.socket_send()  # push
         st_time = time.time()
         while (self.client.check_remote_option(NEW_ENVIRON) is UNKNOWN
-               and self._timeleft(st_time)):
+               and self._timeleft(st_time)
+               and self.client.active):
             time.sleep(self.TIME_POLL)
+        if not self.client.active:
+            return
         if self.client.check_remote_option(NEW_ENVIRON) is UNKNOWN:
             logger.debug('failed: NEW_ENVIRON')
 
@@ -252,7 +269,8 @@ class ConnectTelnetTerminal (threading.Thread):
         st_time = time.time()
         while (self.client.env.get('LINES', None) is None
                 and self.client.env.get('COLUMNS', None) is None
-                and self._timeleft(st_time)):
+                and self._timeleft(st_time)
+                and self.client.active):
             time.sleep(self.TIME_POLL)
         if (self.client.env.get('LINES', None) is not None
                 and self.client.env.get('COLUMNS', None) is not None):
@@ -260,7 +278,8 @@ class ConnectTelnetTerminal (threading.Thread):
                         self.client.env.get('COLUMNS'),
                         self.client.env.get('LINES'))
             return
-
+        if not self.client.active:
+            return
         logger.debug('failed: negotiate about window size')
         self._try_cornerquery()
 
@@ -284,8 +303,11 @@ class ConnectTelnetTerminal (threading.Thread):
             self.client.socket_send()  # push
             st_time = time.time()
             while (self.client.idle() < self.TIME_WAIT
-                   and self._timeleft(st_time)):
+                   and self._timeleft(st_time)
+                   and self.client.active):
                 time.sleep(self.TIME_POLL)
+            if not self.client.active:
+                return
             inp = self.client.get_input()
             self.client.send_str('\x1b[r')
             logger.debug('cursor restored')
@@ -325,10 +347,13 @@ class ConnectTelnetTerminal (threading.Thread):
         self.client.request_ttype()
         self.client.socket_send()  # push
         st_time = time.time()
-        while not detected() and self._timeleft(st_time):
+        while (not detected() and self._timeleft(st_time)
+               and self.client.active):
             time.sleep(self.TIME_POLL)
         if detected():
             logger.debug('terminal type: %s (negotiated)' %
                          (self.client.env['TERM'],))
+            return
+        if not self.client.active:
             return
         logger.warn('%r TERM undetermined.', self.client.addrport())
