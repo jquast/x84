@@ -50,6 +50,7 @@ from telnetlib import XDISPLOC, IAC, DONT, DO, WONT, WILL, SE, NOP, DM, BRK
 from telnetlib import IP, AO, AYT, EC, EL, GA, SB
 IS = chr(0)  # Sub-process negotiation IS command
 SEND = chr(1)  # Sub-process negotiation SEND command
+UNSUPPORTED_WILL = (LINEMODE, LFLOW, TSPEED, ENCRYPT, AUTHENTICATION)
 
 
 class TelnetServer(object):
@@ -64,19 +65,16 @@ class TelnetServer(object):
     ## Dictionary of environment variables received by negotiation
     env = {}
 
-    def __init__(self, address_pair, on_connect, on_naws):
+    def __init__(self, address_pair, on_naws):
         """
         Create a new Telnet Server.
 
         Arguments:
            address_pair: tuple of (ip, port) to bind to.
-           on_connect: this callback receives TelnetClient after a
-                       connection is initiated.
            on_naws: this callable receives a TelnetClient when a client
                     negotiates about window size (resize event).
         """
         (self.address, self.port) = address_pair
-        self.on_connect = on_connect
         self.on_naws = on_naws
 
         # bind
@@ -312,7 +310,7 @@ class TelnetClient(object):
         """
         self._iac_do(NEW_ENVIRON)
         self._note_reply_pending(NEW_ENVIRON, True)
-        self.request_env()
+        #self.request_env()
 
     def request_env(self):
         """
@@ -534,11 +532,11 @@ class TelnetClient(object):
             # DE wants us to supress go-ahead
             if self._check_local_option(SGA) is not True:
                 self._note_local_option(SGA, True)
-                self._iac_will(SGA)
-                self._iac_do(SGA)
                 # always send DO SGA after WILL SGA, requesting the DE
                 # also supress their go-ahead. this order seems to be the
                 # 'magic sequence' to disable linemode on certain clients
+                self._iac_will(SGA)
+                self._iac_do(SGA)
         elif option == LINEMODE:
             # DE wants to do linemode editing
             # denied
@@ -637,16 +635,15 @@ class TelnetClient(object):
             if self.check_remote_option(NAWS) is not True:
                 self._note_remote_option(NAWS, True)
                 self._note_local_option(NAWS, True)
-                # agree to use NAWS,
+                # agree to use NAWS, / go ahead ?
                 self._iac_do(NAWS)
         elif option == STATUS:
             if self.check_remote_option(STATUS) is not True:
                 self._note_remote_option(STATUS, True)
                 self.send_str(bytes(''.join((
                     IAC, SB, STATUS, SEND, IAC, SE))))  # go ahead
-        elif option in (LINEMODE, LFLOW, TSPEED, ENCRYPT, AUTHENTICATION):
-            if self._check_local_option(option) is not False:
-                self._note_local_option(option, False)
+        elif option in UNSUPPORTED_WILL:
+            if self._check_remote_option(option) is not False:
                 # let DE know we refuse to do linemode, encryption, etc.
                 self._iac_dont(option)
         elif option == SGA:
@@ -658,11 +655,10 @@ class TelnetClient(object):
             # sender of this command confirms it will now begin suppressing
             # transmission of GAs with transmitted data characters.
             if self.check_remote_option(SGA) is not True:
-                self._note_remote_option(SGA, True)
-                self._note_local_option(SGA, True)
                 # sender of this command confirms that the sender of data
                 # is expected to suppress transmission of GAs.
                 self._iac_do(SGA)
+                self._note_remote_option(SGA, True)
         elif option == NEW_ENVIRON:
             if self.check_remote_option(NEW_ENVIRON) in (False, UNKNOWN):
                 self._note_remote_option(NEW_ENVIRON, True)
@@ -721,10 +717,12 @@ class TelnetClient(object):
         """
         Figures out what to do with a received sub-negotiation block.
         """
+
         buf = self.telnet_sb_buffer
         if 0 == len(buf):
             logger.error('nil SB')
             return
+        logger.debug('recv SB: %s, %r', buf[0], buf[1:])
         if 1 == len(buf) and buf[0] == chr(0):
             logger.error('0nil SB')
             return
@@ -782,7 +780,6 @@ class TelnetClient(object):
         breaks = list([idx for (idx, byte) in enumerate(bytestring)
                        if byte in (chr(0), chr(3))])
         for start, end in zip(breaks, breaks[1:]):
-            #logger.debug ('%r', bytestring[start+1:end])
             pair = bytestring[start + 1:end].split(chr(1))
             if len(pair) == 1:
                 if (pair[0] in self.env
@@ -798,7 +795,7 @@ class TelnetClient(object):
                     logger.info('env[%r] = %r', pair[0], pair[1])
                     self.env[pair[0]] = pair[1]
                 elif pair[1] == self.env[pair[0]]:
-                    logger.debug('env[%r] = %r (repeated)', pair[0], pair[1])
+                    logger.debug('env[%r] repeated', pair[0])
                 else:
                     logger.warn('%s=%s; conflicting value %s ignored.',
                                 pair[0], self.env[pair[0]], pair[1])
@@ -818,7 +815,7 @@ class TelnetClient(object):
         rows = str((256 * ord(charbuf[3])) + ord(charbuf[4]))
         if (self.env.get('LINES', None) == rows
                 and self.env.get('COLUMNS', None) == columns):
-            logger.debug('.. naws repeated and ignored')
+            logger.debug('%s: NAWS repeated', self.addrport())
         else:
             self.env['LINES'] = str(rows)
             self.env['COLUMNS'] = str(columns)

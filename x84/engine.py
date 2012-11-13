@@ -63,7 +63,6 @@ def main():
     telnetd = x84.telnet.TelnetServer((
         x84.bbs.ini.CFG.get('telnet', 'addr'),
         x84.bbs.ini.CFG.getint('telnet', 'port'),),
-        x84.terminal.on_connect,
         x84.terminal.on_naws)
 
     # begin main event loop
@@ -95,16 +94,27 @@ def _loop(telnetd):
     locks = dict()
     # main event loop
     while True:
-        # close deactivated clients
+        # for client sockets marked for deactivation,
+        # delete the file descriptor from telnetd class,
+        # and signal subprocess to raise a Disconnect exception.
         for fileno, client in [(fno, clt) for (fno, clt) in
-                               telnetd.clients.items() if not clt.active][:]:
+                               telnetd.clients.items()
+                               if not clt.active][:]:
             del telnetd.clients[fileno]
+            matched = False
+            #pylint: disable=W0612
+            #        Unused variable 'lck'
             for (clt, pipe, lck) in x84.terminal.terminals():
                 if client == clt:
                     pipe.send(('exception', (x84.bbs.exception.Disconnect())))
+                    logger.info('%s: Disconnected; deactivating pipe',
+                                client.addrport())
+                    matched = True
                     break
+            if not matched:
+                # connection closed before session began.
+                logger.info('%s: Disconnected', client.addrport())
             client.sock.close()
-            logger.info('%s: Disconnected', client.addrport())
 
         # poll all telnet clients for send
         recv_list = set([fileno_telnetd] + telnetd.clients.keys())
@@ -129,6 +139,8 @@ def _loop(telnetd):
                         client.deactivate()
             lock.release()
 
+        #pylint: disable=W0612
+        #        Unused variable 'slist', 'elist'
         # poll new connections, telnet client input, session pipe input,
         rlist, slist, elist = select.select(recv_list, [], [], 1)
 
@@ -145,7 +157,9 @@ def _loop(telnetd):
                     client = x84.telnet.TelnetClient(
                         sock, address_pair, telnetd.on_naws)
                     telnetd.clients[client.sock.fileno()] = client
-                    telnetd.on_connect(client)
+                    # begin unmanaged thread.
+                    x84.terminal.ConnectTelnetTerminal(client).start()
+                    logger.info('%s: Connected.', client.addrport())
             except socket.error, err:
                 logger.error('accept error %d:%s', err[0], err[1],)
 
@@ -233,7 +247,7 @@ def _loop(telnetd):
                             del locks[event]
                             logger.debug('%r removed.', (event, data))
                 else:
-                    assert False, 'unhandled %r' % (event, data)
+                    assert False, 'unhandled %r' % ((event, data),)
                 try:
                     has_data = (1 == len(select.select
                                         ([pipe.fileno()], [], [], 0)[0]))
