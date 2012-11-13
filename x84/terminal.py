@@ -99,14 +99,6 @@ class IPCStream(object):
         return self.channel.close()
 
 
-def on_connect(client):
-    """
-    """
-    logger.info('%s Connected', client.addrport())
-    thread = ConnectTelnetTerminal(client)
-    thread.start()
-
-
 def on_naws(client):
     """
     On a NAWS event, check if client is yet registered in registry and send the
@@ -244,7 +236,6 @@ class ConnectTelnetTerminal (threading.Thread):
             time.sleep(self.TIME_POLL)
         if self.client.check_remote_option(NEW_ENVIRON) is UNKNOWN:
             logger.debug('failed: NEW_ENVIRON')
-            return
 
     def _try_naws(self):
         """
