@@ -163,7 +163,8 @@ class Door(object):
                     logger.debug('send TIOCSWINSZ: %dx%d',
                                  term.width, term.height)
                     fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ,
-                                struct.pack('HHHH', term.height, term.width, 0, 0))
+                                struct.pack('HHHH', term.height, term.width,
+                                            0, 0))
             elif event == 'input':
                 # needs testing (replay vim special keys input ?)
                 n_written = os.write(self.master_fd, data)

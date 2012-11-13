@@ -330,7 +330,7 @@ class TelnetClient(object):
         """
         self._iac_do(TTYPE)
         self._note_reply_pending(TTYPE, True)
-        # idk .. for netrunner XXX test !
+        # idk .. for netrunner XXX
         #self.send_str(bytes(''.join((
         #    IAC, SB, TTYPE, SEND, IAC, SE))))
 
