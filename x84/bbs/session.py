@@ -317,7 +317,8 @@ class Session(object):
         while True:
             data = self.read_event(event, timeout=-1)
             if data is None:
-                logger.debug('flushed from %s: %r', event, flushed)
+                if 0 != len(flushed):
+                    logger.debug('flushed from %s: %r', event, flushed)
                 return flushed
             flushed.append(data)
         return flushed
