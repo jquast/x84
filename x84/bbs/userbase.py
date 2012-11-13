@@ -158,8 +158,11 @@ class User(object):
     A simple user record object with setter and getter properties, 'handle',
     'location', 'email', 'password', 'groups', 'calls', 'lastcall', and 'plan'.
     """
-    #pylint: disable=R0902
+    #pylint: disable=R0902,R0924
     #        Too many instance attributes (8/7)
+    #        Badly implemented Container, implements
+    #          __delitem__, __getitem__, __setitem__
+    #          but not __len__
 
     def __init__(self, handle=u'anonymous'):
         """
