@@ -61,7 +61,10 @@ class FetchUpdates(threading.Thread):
         else:
             logger.info('bbs-scene.org: %d in %2.2fs',
                         req.status_code, time.time() - stime)
-        for node in xml.etree.ElementTree.XML(req.content).findall('node'):
+        buf = ''.join((byte for byte in req.content
+                       if ord(byte) >= 0x20
+                       or ord(byte) in (0x09, 0x0a, 0x0d)))
+        for node in xml.etree.ElementTree.XML(buf).findall('node'):
             bbs_id = node.find('id').text.strip()
             record = dict()
             for key in XML_KEYS:

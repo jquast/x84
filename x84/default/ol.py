@@ -49,7 +49,10 @@ class FetchUpdates(threading.Thread):
 
         # can throw exceptions when xml is invalid, as a thread, nobody needs
         # to catch it. theres some things that should be CDATA wrapped ..
-        xml_nodes = xml.etree.ElementTree.XML(req.content).findall('node')
+        buf = ''.join((byte for byte in req.content
+                       if ord(byte) >= 0x20
+                       or ord(byte) in (0x09, 0x0a, 0x0d)))
+        xml_nodes = xml.etree.ElementTree.XML(buf).findall('node')
         for node in xml_nodes:
             self.content.append(
                 (node.find('id').text, dict(
@@ -189,7 +192,6 @@ def dummy_pager():
     tail = term.height - 4
     indent = 3
     prompt_ole = u'\r\n\r\nSAY somethiNG ?! [yn]'
-    nlines = 0
     buf = list()
     for record in get_oltxt():
         buf.extend(Ansi(record.rstrip()).wrap(
