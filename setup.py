@@ -22,7 +22,7 @@ setup(name='x84',
           'x84.default': ['art/*.asc', 'art/*.ans', 'art/*.txt'
                           'art/top/*.ans', 'art/top/*.asc'],
       },
-      requires=['py_bcrypt', 'requests', 'sauce', 'sqlitedict', 'xmodem'],
+      requires=['requests', 'sauce', 'sqlitedict', 'xmodem'],
       scripts=['bin/x84'],
       classifiers=[
           'Development Status :: 4 - Beta',
