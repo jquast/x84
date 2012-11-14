@@ -722,7 +722,7 @@ class TelnetClient(object):
         if 0 == len(buf):
             logger.error('nil SB')
             return
-        logger.debug('recv SB: %s, %r', buf[0], buf[1:])
+        logger.debug('recv SB: %s, %r', name_option(buf[0]), buf[1:])
         if 1 == len(buf) and buf[0] == chr(0):
             logger.error('0nil SB')
             return
