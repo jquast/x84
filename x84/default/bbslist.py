@@ -270,14 +270,16 @@ def get_swinfo(entry, pager, active=True):
             "platforms and is an Open Source project under "
             "continuous development.\n\n"
             "  " + term.bold_blue('http://www.synchro.net/\n') + "\n\n"
-            "IRC: ??\n")
+            "Author: Deuce\n"
+            "IRC: #synchronet on irc.bbs-scene.org")
         output += pager.title(u'- about ' + term.blue('Synchronet') + u' -')
     elif entry and entry.strip().lower() == 'the progressive':
         output += pager.update(
             "This bbs features threading, intra-process communication, "
             "and easy scripting in python. X/84 is a continuation of "
             "this codebase.\n\n"
-            "IRC: #prsv on efnet\n")
+            + "\n\nAuthor: jojo\n"
+            "IRC: #prsv on irc.efnet.org")
         output += pager.title(u'- about ' + term.blue('The Progressive -'))
     elif entry and entry.strip().lower() == 'x/84':
         output += pager.update(
@@ -286,8 +288,9 @@ def get_swinfo(entry, pager, active=True):
             "scriptability. It is a Continuation of 'The Progressive' "
             "and is the only BBS software to support both CP437 and "
             "UTF8 encoding.\n\n"
-            "  " + term.bold_blue('http://github.com/jquast/x84/\n')
-            + "\n\nIRC: #prsv on efnet\n")
+            "  " + term.bold_blue('https://github.com/jquast/x84/\n')
+            + "\n\nAuthor: dingo, jojo\n"
+            "IRC: #prsv on irc.efnet.org")
         output += pager.title(u'- about ' + term.blue('X/84') + u' -')
     else:
         output += pager.update(u' no information about %s.'
