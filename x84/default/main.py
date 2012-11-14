@@ -11,7 +11,7 @@ from x84.bbs import *
 def refresh():
     " refresh main menu screen "
     term = getterminal()
-    echo(u''.join((term.normal, term.normal_cursor, term.clear, '\r\n')))
+    echo(u''.join((term.normal, term.clear, term.normal_cursor)))
     art = ([Ansi(from_cp437(line)) for line in open(os.path.join(
         os.path.dirname(__file__), 'art', 'main.asc'))])
     max_len = max([line.rstrip().__len__() for line in art])
@@ -32,6 +32,7 @@ def refresh():
     echo(disp_entry('c', 'harset').ljust(term.width / 5))
     echo(term.move(len(art) - 6, term.width / 4) or '\r\n')
     echo(disp_entry('p', '.plan').ljust(term.width / 5))
+    echo(disp_entry('x', 'ception').ljust(term.width /5))
     echo(u'\r\n\r\n')
 
 
@@ -68,6 +69,8 @@ def main():
         elif choice == u'p':
             gosub('editor', '.plan')
             dirty = True
+        elif choice == u'x':
+            assert False, ('exception thrown')
         elif choice == u'H':
             from guppy import hpy
             h = hpy()
