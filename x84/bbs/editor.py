@@ -402,8 +402,8 @@ class ScrollingEditor(AnsiWindow):
         self._horiz_shift = 0
         self._horiz_pos = 0
         self.content = u''
-        for u_chr in ucs:
-            self.add(u_chr)
+        return (self.pos(self.ypadding, self.xpadding)
+                + ''.join(self.add(u_chr) for u_chr in ucs))
 
     def add(self, u_chr):
         """
@@ -413,7 +413,6 @@ class ScrollingEditor(AnsiWindow):
         character addition caused the window to scroll horizontally.
         Otherwise, the input is simply returned to be displayed ('local echo').
         """
-        print 'add', repr(u_chr)
         if self.eol:
             print 'EOL'
             return u''
@@ -427,5 +426,4 @@ class ScrollingEditor(AnsiWindow):
             return self.refresh()
         # return character appended
         self._horiz_pos += 1
-        print 'retSELF'
         return u_chr
