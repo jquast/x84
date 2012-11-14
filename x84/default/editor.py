@@ -4,8 +4,19 @@ from x84.bbs import getterminal, ScrollingEditor, getsession
 from x84.bbs import getch, echo, Lightbar, Ansi
 
 
+CMDS_BASIC = (('esc', 'toggle editmode'),
+              ('e', 'dit'),
+              ('s', 'ave'),
+              ('a', 'bort'),
+              ('/', 'advanced'), )
+CMDS_ADVANCED = (('c', 'opy'),
+                 ('p', 'aste'),
+                 ('k', 'kill'),
+                 ('q', 'uote'),
+                 ('x', 'modem'), )
+
+
 def banner():
-    # could use some art .. !
     session, term = getsession(), getterminal()
     return term.home + term.normal + term.clear
 
@@ -22,58 +33,67 @@ def fancy_green(char, blurb=u''):
             + term.bold_green + ')' + term.bold_white(blurb))
 
 
-def redraw(lightbar, lneditor, edit):
+def statusline(lightbar, edit=True, msg=None, cmds=None):
     term = getterminal()
-    output = u''
-    output += lightbar.border() + lightbar.refresh()
-    if edit:
-        output += lneditor.border() + lneditor.refresh()
-        output += lightbar.footer(u'- ' + term.bold_blue('EDIT') + u' '
-                                  + fancy_blue('esc', 'cmd mode') +
-                                  (term.blue('.')
-                                   + fancy_blue('/', 'cmd_mode')
-                                   if 0 == len(lneditor.content)
-                                   else u'')
-                                  + u' -')
-    else:
-        output += lightbar.footer(u'- ' + term.bold_blue('CMD') + u' '
-                                  + fancy_blue('e', 'dit') + term.blue('.')
-                                  + fancy_blue('s', 'end') + term.blue('.')
-                                  + fancy_blue('a', 'bort') + term.blue('.')
-                                  + fancy_blue('u', '/l') + term.blue('.')
-                                  + fancy_blue('d', '/l')
-                                  + u' -')
+    if msg is None:
+        if edit:
+            msg = term.bold_green(u'-- Edit --')
+        else:
+            msg = term.bold_blue(u'-- line %d/%d %d%% --' % (
+                lightbar.index, len(lightbar.content),
+                int(float(lightbar.index)
+                    / ((max(1, len(lightbar.content))) * 100)), ))
+    output = lightbar.border()
+    output += lightbar.pos(lightbar.height, lightbar.xpadding)
+    output += msg
+    if cmds is None:
+        if edit:
+            cmds = fancy_green('esc', 'toggle editmode')
+        else:
+            cmds = term.blue('.').join(
+                (fancy_blue(key, msg) for (key, msg) in CMDS_BASIC))
+    xloc = max(0, lightbar.width - Ansi(cmds).__len__() - 1)
+    output += lightbar.pos(lightbar.height, xloc)
+    output += cmds
     return output
 
 
-def get_lightbar(ucs):
+def redraw_lightbar(lightbar, edit=False, cmds=None):
+    return lightbar.refresh() + statusline(lightbar, edit, cmds)
+
+
+def get_lightbar(ucs, pos=None):
+    # width 40 <=> 80 wide only
     term = getterminal()
-    # height 40 <=> 80 wide only
     width = min(80, max(term.width, 40))
     yloc = 0
     height = term.height - yloc
-    xloc = min(0, (term.width / 2) - (width / 2))
+    xloc = max(0, (term.width / 2) - (width / 2))
     lightbar = Lightbar(height, width, yloc, xloc)
     lightbar.glyphs['left-vert'] = lightbar.glyphs['right-vert'] = u''
     lightbar.colors['border'] = term.bold_blue
     lightbar.update(((row, line) for (row, line) in
                     enumerate(Ansi(ucs).wrap(lightbar.visible_width)
                               .split('\r\n'))))
+    if pos is not None:
+        lightbar.position = pos
     return lightbar
 
 
 def get_lneditor(lightbar):
+    # width 40 <=> 80 wide only
+    # side effect: draws on get() !!
     term = getterminal()
-    width = min(80, term.width - 6)
+    width = min(80, max(term.width, 40))
     yloc = (lightbar.yloc + lightbar.ypadding + lightbar.position[0])
-    xloc = max(3, (term.width / 2) - (width / 2))
+    xloc = max(0, (term.width / 2) - (width / 2))
     lneditor = ScrollingEditor(width, yloc, xloc)
     lneditor.enable_scrolling = True
     lneditor.glyphs['bot-horiz'] = u''
     lneditor.glyphs['top-horiz'] = u''
     lneditor.colors['border'] = term.bold_green
     (key, ucs) = lightbar.selection
-    lneditor.update(ucs)
+    echo(lneditor.update(ucs))
     return lneditor
 
 
@@ -81,6 +101,23 @@ def get_ui(ucs):
     lightbar = get_lightbar(ucs)
     lneditor = get_lneditor(lightbar)
     return lightbar, lneditor
+
+
+def redraw_lneditor(lightbar, lneditor):
+    return ''.join((lneditor.border(),
+                    statusline(lightbar, edit=True),
+                    lneditor.refresh()))
+
+
+def redraw(lightbar, lneditor, edit=False):
+    output = redraw_lightbar(lightbar)
+    if edit:
+        output += redraw_lneditor(lightbar, lneditor)
+    return output
+
+
+def process_keystroke(inp):
+    pass
 
 
 def main(uattr=u'draft'):
@@ -93,35 +130,61 @@ def main(uattr=u'draft'):
     test = fp.read().strip()
 
     lightbar, lneditor = get_ui(test)
-    dirty = True
+
+    def merge():
+        swp = lightbar.selection
+        lightbar.content[lightbar.index] = (swp[0], lneditor.content)
+        lightbar.update((key, ucs) for (key, ucs) in Ansi(
+            '\n'.join((ucs for (key, ucs) in lightbar.content))).wrap(
+                lightbar.visible_width).split('\r\n'))
+
     edit = False
+    dirty = True
     while not lightbar.quit:
         if session.poll_event('refresh'):
-            # user requested refresh ..
-            lightbar, lneditor = get_ui(u'\n'.join(
-                (line for (key, line) in lightbar.content)), lneditor.yloc)
             dirty = True
         if dirty:
             echo(banner())
             echo(redraw(lightbar, lneditor, edit))
             dirty = False
         inp = getch(1)
-        if not edit:
-            # command mode,
-            echo(lightbar.process_keystroke(inp))
-            if not lightbar.moved:
-                if inp in (u'e', 'E'):
-                    edit = True
-                    lneditor = get_lneditor(lightbar)
-                elif inp in (u's', 'S'):
-                    pass  # save
-                elif inp in (u'a', 'A'):
-                    return  # abort (ays?!)
-                elif inp in (u'u', 'U'):
-                    pass  # upload
-                elif inp in (u'd', 'D'):
-                    pass  # download
+        if inp in (unichr(27), term.KEY_ESCAPE) or (not edit and inp == u'e'):
+            edit = not edit
+            if not edit:
+                merge()
+            else:
+                lneditor = get_lneditor(lightbar)
+            dirty = True
+        elif not edit:
+            if inp == u'/':
+                # advanced cmds, (secondary key)
+                echo(redraw_lightbar(lightbar, False, CMDS_ADVANCED))
+                inp2 = getch()
+                if type(inp2) is not int:
+                    # pressing anything but unicode cancels
+                    dirty = process_keystroke(inp + inp2)
+            elif inp is not None:
+                # basic cmds,
+                echo(lightbar.process_keystroke(inp))
+                if not lightbar.moved:
+                    if inp in (u'a', u'A'):
+                        return
+                    if inp in (u's', u'S'):
+                        # save
+                        return
                 else:
-                    echo(u'\a')
-            continue
-        echo(lneditor.process_keystroke(inp))
+                    # update status bar
+                    echo(statusline(lightbar, edit))
+        else:
+            # edit mode
+            if inp in (term.KEY_UP, term.KEY_DOWN, term.KEY_NPAGE,
+                       term.KEY_PPAGE, term.KEY_HOME, term.KEY_END,
+                       u'\r', term.KEY_ENTER):
+                # mixed-movement command mode, emacs-like
+                echo(lightbar.process_keystroke(inp))
+                if lightbar.moved:
+                    merge()
+            if inp is not None:
+                echo(lneditor.process_keystroke(inp))
+                if lneditor.moved:
+                    echo(statusline(lightbar, edit))
