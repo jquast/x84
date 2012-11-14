@@ -643,7 +643,7 @@ class TelnetClient(object):
                 self.send_str(bytes(''.join((
                     IAC, SB, STATUS, SEND, IAC, SE))))  # go ahead
         elif option in UNSUPPORTED_WILL:
-            if self._check_remote_option(option) is not False:
+            if self.check_remote_option(option) is not False:
                 # let DE know we refuse to do linemode, encryption, etc.
                 self._iac_dont(option)
         elif option == SGA:
