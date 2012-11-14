@@ -45,7 +45,9 @@ class Lightbar (AnsiWindow):
 
     def update(self, keyed_uchars=None):
         """
-        Replace content of lightbar with a unicode list.
+        Replace content of lightbar with iterable of aribitrary (key, unicode).
+        unicode is displayed to the user, key can be used in the backend for any
+        sorting or identifying purposes
         """
         if keyed_uchars is None:
             keyed_uchars = (None, u'',)
