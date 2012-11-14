@@ -256,24 +256,21 @@ class Session(object):
             if 0 != len(self._script_stack):
                 # recover from exception
                 fault = self._script_stack.pop()
-                oper = 'RESUME'
-                if 0 == len(self._script_stack):
-                    oper = 'STOP'
+                oper = 'RESUME' if len(self._script_stack) else 'STOP'
                 msg = (u'%s %safter general exception in %s.' % (
                     oper, (self._script_stack[-1][0] + u' ')
                     if len(self._script_stack) else u' ', fault[0],))
                 logger.info(msg)
-                self.write(u'\r\n\r\n'
-                           + (self.terminal.bold_green(oper)
-                              if oper == 'RESUME' else
-                              self.terminal.bold_red(oper))
-                           + u' '
-                           + (self.terminal.bold_cyan(
-                               self._script_stack[-1][0])
-                               if len(self._script_stack) else u'')
-                           + ' after general exception in '
-                           + self.terminal.bold_cyan(fault[0])
-                           + u'\r\n')
+                self.write(u'\r\n\r\n' + (
+                    self.terminal.bold_green('continue')
+                    if len(self._script_stack) else
+                    self.terminal.bold_red('stop'))
+                    + (self.terminal.bold_cyan(
+                        u' ' + self._script_stack[-1][0])
+                        if len(self._script_stack) else u'')
+                    + u' after general exception in '
+                    + self.terminal.bold_cyan(fault[0])
+                    + u'\r\n')
         self.close()
 
     def write(self, ucs):
