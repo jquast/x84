@@ -97,7 +97,7 @@ class Terminal(object):
             (curses.tigetstr('kent'), self.KEY_ENTER),
             (curses.tigetstr('kbs'), self.KEY_BACKSPACE),
             (curses.tigetstr('kdch1'), self.KEY_BACKSPACE))
-            if 0 != len(sequence)])
+            if sequence is not None and 0 != len(sequence)])
 
         # add to this various NVT sequences
         self._keymap.update([
