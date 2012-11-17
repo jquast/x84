@@ -178,8 +178,8 @@ class ScrollingEditor(AnsiWindow):
     @property
     def trim_char(self):
         """
-        When scrolling, this unicode string is prefixed to the line to indicate
-        it has been shifted (and you are missing out on some text!)
+        When scrolling, this unicode string is prefixed to the line to
+        indicate it has been shifted.
         """
         return self._trim_char
 
@@ -341,40 +341,38 @@ class ScrollingEditor(AnsiWindow):
     def fixate(self, x_adjust=0):
         """
         Return terminal sequence suitable for placing cursor at current
-        position in window. Set x_adjust to -1 to position cursor 'on' the last
-        character, or 0 for 'after' (default).
+        position in window. Set x_adjust to -1 to position cursor 'on'
+        the last character, or 0 for 'after' (default).
         """
         xpos = self._xpadding + self._horiz_pos + x_adjust
         return self.pos(1, xpos)
 
-    # XXX refactor
     def refresh(self):
         """
-        Return unicode sequence suitable for refreshing the entire line and
-        placing the cursor.
+        Return unicode sequence suitable for refreshing the entire line
+        and placing the cursor.
         """
-        import x84.bbs.session
-        term = x84.bbs.session.getterminal()
+        # reset position and detect new position
         self._horiz_lastshift = self._horiz_shift
         self._horiz_shift = 0
-        # re-detect how far we should scroll horizontally,
-        # not ansi safe, mind you!
-        col_pos = 0
+        self._horiz_pos = 0
+
         #pylint: disable=W0612
         #        Unused variable 'loop_cnt'
         for loop_cnt in range(len(self.content)):
-            if col_pos > (self.visible_width - self.scroll_amt):
-                # shift window horizontally
+            if self._horiz_pos > (self.visible_width - self.scroll_amt):
                 self._horiz_shift += self.scroll_amt
-                col_pos -= self.scroll_amt
-        if self._horiz_shift:
-            scroll = self._horiz_shift - len(self.trim_char)
-            data = self.trim_char + self.content[scroll:]
+                self._horiz_pos -= self.scroll_amt
+            self._horiz_pos += 1
+        if self._horiz_shift > 0:
+            scrl = self._horiz_shift - len(self.trim_char)
+            prnt = self.trim_char + self.content[scrl:]
         else:
-            data = self.content
-        eeol = (self.glyphs.get('erase', u' ')
-                * (self.visible_width - len(data)))
-        return (term.normal + data + eeol + self.fixate())
+            prnt = self.content
+        fill = (self.glyphs.get('erase', u'~')
+                * (self.visible_width - len(prnt)))
+        return (self.pos(self.ypadding, self.xpadding)
+                + prnt + fill + self.fixate())
 
     def backspace(self):
         """
@@ -401,9 +399,8 @@ class ScrollingEditor(AnsiWindow):
         """
         self._horiz_shift = 0
         self._horiz_pos = 0
-        self.content = u''
-        return (self.pos(self.ypadding, self.xpadding)
-                + ''.join(self.add(u_chr) for u_chr in ucs))
+        self.content = ucs
+        assert unichr(27) not in ucs, ('Editor is not sequence-safe')
 
     def add(self, u_chr):
         """
