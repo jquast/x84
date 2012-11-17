@@ -72,8 +72,8 @@ class Terminal(object):
         self.columns = columns
         curses.setupterm(kind, stream.fileno())
 
-        # curses capability names are inherited for comparison
-        for attr in (a for a in dir(curses) if a.startswith('KEY')):
+        # curses capability names are inherited (for comparison)
+        for attr in (a for a in dir(curses) if a.startswith('KEY_')):
             setattr(self, attr, getattr(curses, attr))
 
         #pylint: disable=W0212,E1101
@@ -84,19 +84,45 @@ class Terminal(object):
                              curses.has_key._capability_names.iteritems()
                              if curses.tigetstr(cap) is not None])
 
-        # various terminal default sequences mappings
+        # not complete, but pretty close ..
+        self._keymap.update([(sequence, key) for (sequence, key) in (
+            (curses.tigetstr('khome'), self.KEY_HOME),
+            (curses.tigetstr('kend'), self.KEY_END),
+            (curses.tigetstr('kcuu1'), self.KEY_UP),
+            (curses.tigetstr('kcud1'), self.KEY_DOWN),
+            (curses.tigetstr('cuf1'), self.KEY_RIGHT),
+            (curses.tigetstr('kcub1'), self.KEY_LEFT),
+            (curses.tigetstr('knp'), self.KEY_NPAGE),
+            (curses.tigetstr('kpp'), self.KEY_PPAGE),
+            (curses.tigetstr('kent'), self.KEY_ENTER),
+            (curses.tigetstr('kbs'), self.KEY_BACKSPACE),
+            (curses.tigetstr('kdch1'), self.KEY_BACKSPACE))
+            if 0 != len(sequence)])
+
+        # add to this various NVT sequences
         self._keymap.update([
-            (chr(10), self.KEY_ENTER), (chr(13), self.KEY_ENTER),
-            (chr(8), self.KEY_BACKSPACE), (chr(127), self.KEY_BACKSPACE),
-            (chr(27) + "OA", self.KEY_UP), (chr(27) + "OB", self.KEY_DOWN),
-            (chr(27) + "OC", self.KEY_RIGHT), (chr(27) + "OD", self.KEY_LEFT),
-            (chr(27) + "[A", self.KEY_UP), (chr(27) + "[B", self.KEY_DOWN),
-            (chr(27) + "[C", self.KEY_RIGHT), (chr(27) + "[D", self.KEY_LEFT),
-            (chr(27) + "A", self.KEY_UP), (chr(27) + "B", self.KEY_DOWN),
-            (chr(27) + "C", self.KEY_RIGHT), (chr(27) + "D", self.KEY_LEFT),
-            (chr(27) + "?x", self.KEY_UP), (chr(27) + "?r", self.KEY_DOWN),
-            (chr(27) + "?v", self.KEY_RIGHT), (chr(27) + "?t", self.KEY_LEFT),
-            (chr(27) + "[H", self.KEY_HOME), (chr(27) + "[F", self.KEY_END), ])
+            (unichr(10), self.KEY_ENTER),
+            (unichr(13), self.KEY_ENTER),
+            (unichr(8), self.KEY_BACKSPACE),
+            (unichr(127), self.KEY_BACKSPACE),
+            (unichr(27) + u"OA", self.KEY_UP),
+            (unichr(27) + u"OB", self.KEY_DOWN),
+            (unichr(27) + u"OC", self.KEY_RIGHT),
+            (unichr(27) + u"OD", self.KEY_LEFT),
+            (unichr(27) + u"[A", self.KEY_UP),
+            (unichr(27) + u"[B", self.KEY_DOWN),
+            (unichr(27) + u"[C", self.KEY_RIGHT),
+            (unichr(27) + u"[D", self.KEY_LEFT),
+            (unichr(27) + u"A", self.KEY_UP),
+            (unichr(27) + u"B", self.KEY_DOWN),
+            (unichr(27) + u"C", self.KEY_RIGHT),
+            (unichr(27) + u"D", self.KEY_LEFT),
+            (unichr(27) + u"?x", self.KEY_UP),
+            (unichr(27) + u"?r", self.KEY_DOWN),
+            (unichr(27) + u"?v", self.KEY_RIGHT),
+            (unichr(27) + u"?t", self.KEY_LEFT),
+            (unichr(27) + u"[H", self.KEY_HOME),
+            (unichr(27) + u"[F", self.KEY_END)])
 
     # Sugary names for commonly-used capabilities, intended to help avoid trips
     # to the terminfo man page and comments in your code:
