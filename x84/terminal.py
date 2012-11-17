@@ -7,33 +7,28 @@ import socket
 import time
 import re
 
-
-#pylint: disable=C0103
-#        Invalid name "logger" for type constant
-logger = logging.getLogger()
-
-# global list of (TelnetClient, multiprocessing.Pipe, threading.Lock)
-# this is a shared global variable across threads.
 TERMINALS = list()
 
 
-def register_terminal(client, pipe, lock):
+def register(client, pipe, lock):
     """
-    Register a (client, pipe, lock,) terminal
+    Register a Terminal, given instances of telnet.TelnetClient,
+    Pipe, and Lock.
     """
     TERMINALS.append((client, pipe, lock,))
 
 
-def unregister_terminal(client, pipe, lock):
+def unregister(client, pipe, lock):
     """
-    Unregister a (client, pipe, lock,) terminal
+    Unregister a Terminal, described by its telnet.TelnetClient,
+    Pipe, and Lock.
     """
     TERMINALS.remove((client, pipe, lock,))
 
 
 def terminals():
     """
-    Returns copy of all terminal sessions (client, pipe, lock,).
+    Returns a list of tuple (telnet.TelnetClient, Pipe, Lock).
     """
     return TERMINALS[:]
 
@@ -45,58 +40,29 @@ def start_process(pipe, origin, env):
         termtype: TERM string (used to initialize curses)
         env: dictionary of client environment variables
     """
-    import x84.blessings
-    import x84.bbs.session
-    # curses is initialized for the first time. telnet negotiation did its best
-    # to determine the TERM. The default, 'unknown', is equivalent to a dumb
-    # terminal.
-    term = x84.blessings.Terminal(env.get('TERM', 'unknown'),
-                                  IPCStream(pipe),
-                                  int(env.get('LINES', '24')),
-                                  int(env.get('COLUMNS', '80')))
+    from x84.blessings import Terminal
+    from x84.bbs.session import Session
+    from x84.bbs.ipc import IPCLogHandler, IPCStream
+    logger = logging.getLogger()
+    # curses is initialized for the first time.
+    term = Terminal(env.get('TERM', 'unknown'), IPCStream(pipe),
+                    int(env.get('LINES', '24')),
+                    int(env.get('COLUMNS', '80')))
 
     # spawn and begin a new session
-    session = x84.bbs.session.Session(term, pipe, origin, env)
+    session = Session(term, pipe, origin, env)
 
     # our root handler has dangerously forked file descriptors.
-    # remove any existing handlers in this sub-process, and re-address
-    # our root logging handler to an IPC event pipe. Henceforth,
-    # events are emitted to the engine as an event named 'logging'.
+    # remove any existing handlers in this sub-process, and
+    # re-address the root logging handler to an IPC event pipe,
+    # so that only the main process is responsible for logging.
     root = logging.getLogger()
     for hdlr in root.handlers:
         root.removeHandler(hdlr)
-    root.addHandler(x84.bbs.session.IPCLogHandler(pipe))
+    root.addHandler(IPCLogHandler(pipe))
     session.run()
-
-    logger.info('%s/%s end of sub-process', session.pid, session.handle)
+    logger.info('End of process: %d.', session.pid)
     pipe.send(('exit', True))
-
-
-class IPCStream(object):
-    """
-    Connect blessings 'stream' to 'child' multiprocessing.Pipe
-    only write(), fileno(), and close() are called by blessings.
-    """
-    def __init__(self, channel):
-        self.channel = channel
-
-    def write(self, ucs, encoding):
-        """
-        Sends unicode text to Pipe.
-        """
-        self.channel.send(('output', (ucs, encoding)))
-
-    def fileno(self):
-        """
-        Returns pipe fileno.
-        """
-        return self.channel.fileno()
-
-    def close(self):
-        """
-        Closes pipe.
-        """
-        return self.channel.close()
 
 
 def on_naws(client):
@@ -114,12 +80,9 @@ def on_naws(client):
             return True
 
 
-class ConnectTelnetTerminal (threading.Thread):
+class ConnectTelnet (threading.Thread):
     """
-    This thread spawns long enough to
-      1. set socket and telnet options
-      2. ask about terminal type and size
-      3. start a new session (as a sub-process)
+    Accept new Telnet Connection and negotiate options.
     """
     DEBUG = False
     TIME_NEGOTIATE = 0.50
@@ -132,6 +95,9 @@ class ConnectTelnetTerminal (threading.Thread):
     )  # see: xresize.c from X11.org
 
     def __init__(self, client):
+        """
+        client is a telnet.TelnetClient instance.
+        """
         self.client = client
         threading.Thread.__init__(self)
 
@@ -146,13 +112,15 @@ class ConnectTelnetTerminal (threading.Thread):
         (session.py) polls the child.
         """
         import multiprocessing
+        logger = logging.getLogger()
         parent_conn, child_conn = multiprocessing.Pipe()
         lock = threading.Lock()
         child_args = (child_conn, self.client.addrport(), self.client.env,)
+        logger.debug('starting session')
         proc = multiprocessing.Process(
             target=start_process, args=child_args)
         proc.start()
-        register_terminal(self.client, parent_conn, lock)
+        register(self.client, parent_conn, lock)
 
     def banner(self):
         """
@@ -160,6 +128,7 @@ class ConnectTelnetTerminal (threading.Thread):
         self.client.active is checked periodically to return early.
         This prevents attempting to negotiate with network scanners, etc.
         """
+        logger = logging.getLogger()
         # According to Roger Espel Llima (espel@drakkar.ens.fr), you can
         #   have your server send a sequence of control characters:
         # (0xff 0xfb 0x01) (0xff 0xfb 0x03) (0xff 0xfd 0x0f3).
@@ -183,7 +152,6 @@ class ConnectTelnetTerminal (threading.Thread):
             time.sleep(self.TIME_POLL)
         if not self.client.active:
             return
-        time.sleep(self.TIME_POLL)
         logger.debug('negotiating options')
         self._try_env()
         if not self.client.active:
@@ -206,6 +174,7 @@ class ConnectTelnetTerminal (threading.Thread):
         Negotiate and inquire about terminal type, telnet options, window size,
         and tcp socket options before spawning a new session.
         """
+        logger = logging.getLogger()
         import x84.bbs.exception
         try:
             self._set_socket_opts()
@@ -237,8 +206,11 @@ class ConnectTelnetTerminal (threading.Thread):
         """
         Try to snarf out some environment variables from unix machines.
         """
+        logger = logging.getLogger()
         from x84.telnet import NEW_ENVIRON, UNKNOWN
-        if self.client.check_remote_option(NEW_ENVIRON) is True:
+        # hard to tell if we already sent this once .. we mimmijammed
+        # our own test ..
+        if(self.client.ENV_REQUESTED and self.client.ENV_REPLIED):
             logger.debug('environment enabled (unsolicted)')
             return
         logger.debug('request-do-env')
@@ -246,7 +218,8 @@ class ConnectTelnetTerminal (threading.Thread):
         self.client.socket_send()  # push
         st_time = time.time()
         while (self.client.check_remote_option(NEW_ENVIRON) is UNKNOWN
-               and self._timeleft(st_time)
+                and not self.client.ENV_REPLIED
+                and self._timeleft(st_time)
                and self.client.active):
             time.sleep(self.TIME_POLL)
         if not self.client.active:
@@ -258,6 +231,7 @@ class ConnectTelnetTerminal (threading.Thread):
         """
         Negotiate about window size (NAWS) telnet option (on).
         """
+        logger = logging.getLogger()
         if (self.client.env.get('LINES', None) is not None
                 and self.client.env.get('COLUMNS', None) is not None):
             logger.debug('window size: %sx%s (unsolicited)',
@@ -289,6 +263,7 @@ class ConnectTelnetTerminal (threading.Thread):
         terminal (999,999) and request the terminal to report their cursor
         position.
         """
+        logger = logging.getLogger()
         # Try #2 ... this works for most any screen
         # send to client --> pos(999,999)
         # send to client --> report cursor position
@@ -338,6 +313,7 @@ class ConnectTelnetTerminal (threading.Thread):
         """
         Negotiate terminal type (TTYPE) telnet option (on).
         """
+        logger = logging.getLogger()
         detected = lambda: self.client.env['TERM'] != 'unknown'
         if detected():
             logger.debug('terminal type: %s (unsolicited)' %
