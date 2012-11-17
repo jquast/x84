@@ -4,8 +4,7 @@ from x84.bbs import getterminal, ScrollingEditor, getsession
 from x84.bbs import getch, echo, Lightbar, Ansi
 
 
-CMDS_BASIC = (('esc', 'toggle editmode'),
-              ('e', 'dit'),
+CMDS_BASIC = (('e', 'dit'),
               ('s', 'ave'),
               ('a', 'bort'),
               ('/', 'advanced'), )
@@ -33,33 +32,42 @@ def fancy_green(char, blurb=u''):
             + term.bold_green + ')' + term.bold_white(blurb))
 
 
-def statusline(lightbar, edit=True, msg=None, cmds=None):
+def cmdshow(cmds):
     term = getterminal()
-    if msg is None:
-        if edit:
-            msg = term.bold_green(u'-- Edit --')
-        else:
-            msg = term.bold_blue(u'-- line %d/%d %d%% --' % (
-                lightbar.index, len(lightbar.content),
-                int(float(lightbar.index)
-                    / ((max(1, len(lightbar.content))) * 100)), ))
+    return u'- ' + term.blue('.').join(
+        (fancy_blue(key, msg) for (key, msg) in cmds)) + u' -'
+
+
+def statusline(lightbar, edit=True, msg=None, cmds=None):
     output = lightbar.border()
     output += lightbar.pos(lightbar.height, lightbar.xpadding)
-    output += msg
-    if cmds is None:
+    if msg is None:
         if edit:
-            cmds = fancy_green('esc', 'toggle editmode')
+            output += u'- editing line %d -' % (lightbar.index, )
         else:
-            cmds = term.blue('.').join(
-                (fancy_blue(key, msg) for (key, msg) in CMDS_BASIC))
+            pct = int((float(lightbar.index + 1)
+                      / max(1, len(lightbar.content))) * 100)
+            output += u'- line %d/%d %d%% -' % (
+                lightbar.index + 1,
+                len(lightbar.content),
+                pct)
+    else:
+        output += msg
     xloc = max(0, lightbar.width - Ansi(cmds).__len__() - 1)
     output += lightbar.pos(lightbar.height, xloc)
+    if cmds is None:
+        if edit:
+            cmds = cmdshow((('escape', 'cmd mode'), ))
+        else:
+            cmds = cmdshow(CMDS_BASIC)
+    output += lightbar.pos(lightbar.height,
+                           lightbar.width - len(Ansi(cmds)) - 1)
     output += cmds
     return output
 
 
-def redraw_lightbar(lightbar, edit=False, cmds=None):
-    return lightbar.refresh() + statusline(lightbar, edit, cmds)
+def redraw_lightbar(lightbar, edit=False, msg=None, cmds=None):
+    return statusline(lightbar, edit, msg, cmds) + lightbar.refresh()
 
 
 def get_lightbar(ucs, pos=None):
@@ -82,10 +90,9 @@ def get_lightbar(ucs, pos=None):
 
 def get_lneditor(lightbar):
     # width 40 <=> 80 wide only
-    # side effect: draws on get() !!
     term = getterminal()
     width = min(80, max(term.width, 40))
-    yloc = (lightbar.yloc + lightbar.ypadding + lightbar.position[0])
+    yloc = (lightbar.yloc + lightbar.ypadding + lightbar.position[0] - 1)
     xloc = max(0, (term.width / 2) - (width / 2))
     lneditor = ScrollingEditor(width, yloc, xloc)
     lneditor.enable_scrolling = True
@@ -93,7 +100,7 @@ def get_lneditor(lightbar):
     lneditor.glyphs['top-horiz'] = u''
     lneditor.colors['border'] = term.bold_green
     (key, ucs) = lightbar.selection
-    echo(lneditor.update(ucs))
+    lneditor.update(ucs)
     return lneditor
 
 
@@ -117,6 +124,7 @@ def redraw(lightbar, lneditor, edit=False):
 
 
 def process_keystroke(inp):
+    return True
     pass
 
 
@@ -134,9 +142,9 @@ def main(uattr=u'draft'):
     def merge():
         swp = lightbar.selection
         lightbar.content[lightbar.index] = (swp[0], lneditor.content)
-        lightbar.update((key, ucs) for (key, ucs) in Ansi(
-            '\n'.join((ucs for (key, ucs) in lightbar.content))).wrap(
-                lightbar.visible_width).split('\r\n'))
+        nc = Ansi('\n'.join([ucs for (key, ucs) in lightbar.content]))
+        wrapped = nc.wrap(lightbar.visible_width).split('\r\n')
+        lightbar.update([(key, ucs) for (key, ucs) in enumerate(wrapped)])
 
     edit = False
     dirty = True
@@ -158,14 +166,17 @@ def main(uattr=u'draft'):
         elif not edit:
             if inp == u'/':
                 # advanced cmds, (secondary key)
-                echo(redraw_lightbar(lightbar, False, CMDS_ADVANCED))
+                echo(redraw_lightbar(lightbar, False,
+                                     cmds=cmdshow(CMDS_ADVANCED)))
                 inp2 = getch()
                 if type(inp2) is not int:
                     # pressing anything but unicode cancels
                     dirty = process_keystroke(inp + inp2)
+                else:
+                    echo(redraw_lightbar(lightbar, False))
             elif inp is not None:
                 # basic cmds,
-                echo(lightbar.process_keystroke(inp))
+                pout = lightbar.process_keystroke(inp)
                 if not lightbar.moved:
                     if inp in (u'a', u'A'):
                         return
@@ -175,6 +186,8 @@ def main(uattr=u'draft'):
                 else:
                     # update status bar
                     echo(statusline(lightbar, edit))
+                    # now update lightbar
+                    echo(pout)
         else:
             # edit mode
             if inp in (term.KEY_UP, term.KEY_DOWN, term.KEY_NPAGE,
