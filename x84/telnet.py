@@ -228,6 +228,9 @@ class TelnetClient(object):
         self.telnet_got_sb = False
         self.telnet_opt_dict = {}
 
+        self.ENV_REQUESTED = False
+        self.ENV_REPLIED = False
+
     def get_input(self):
         """
         Get any input bytes received from the DE. The input_ready method
@@ -255,7 +258,10 @@ class TelnetClient(object):
         """
         Flag client for disconnection.
         """
-        logger.debug('%s: marked for deactivation', self.addrport())
+        if not self.active:
+            logger.error('%s: already deactivated', self.addrport())
+            return
+        logger.debug('%s: deactivated', self.addrport())
         self.active = False
 
     def addrport(self):
@@ -310,18 +316,21 @@ class TelnetClient(object):
         """
         self._iac_do(NEW_ENVIRON)
         self._note_reply_pending(NEW_ENVIRON, True)
-        #self.request_env()
+        self.request_env()
 
     def request_env(self):
         """
         Request sub-negotiation NEW_ENVIRON. See RFC 1572.
         """
+        if self.ENV_REQUESTED:
+            return  # avoid asking twice ..
         rstr = bytes(''.join((IAC, SB, NEW_ENVIRON, SEND, chr(0))))
         rstr += bytes(chr(0).join(
             ("USER TERM SHELL COLUMNS LINES C_CTYPE XTERM_LOCALE DISPLAY "
              "SSH_CLIENT SSH_CONNECTION SSH_TTY HOME HOSTNAME PWD MAIL LANG "
              "PWD UID USER_ID EDITOR LOGNAME".split())))
         rstr += bytes(''.join((chr(3), IAC, SE)))
+        self.ENV_REQUESTED = True
         self.send_str(rstr)
 
     def request_ttype(self):
@@ -722,7 +731,10 @@ class TelnetClient(object):
         if 0 == len(buf):
             logger.error('nil SB')
             return
-        logger.debug('recv SB: %s, %r', name_option(buf[0]), buf[1:])
+        logger.debug('recv SB: %s %s',
+                     name_option(buf[0]),
+                     'IS %r' % (buf[2:],) if len(buf) > 1 and buf[1] is IS
+                     else repr(buf[1:]))
         if 1 == len(buf) and buf[0] == chr(0):
             logger.error('0nil SB')
             return
@@ -801,6 +813,7 @@ class TelnetClient(object):
                                 pair[0], self.env[pair[0]], pair[1])
             else:
                 logger.error('client NEW_ENVIRON; invalid %r', pair)
+        self.ENV_REPLIED = True
 
     def _sb_naws(self, charbuf):
         """
