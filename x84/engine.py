@@ -30,10 +30,9 @@ def main():
     import sys
     import os
 
-    import x84.terminal
+    from x84.terminal import on_naws
     import x84.bbs.ini
-    import x84.bbs.userbase
-    import x84.telnet
+    from x84.telnet import TelnetServer
 
     lookup_bbs = ('/etc/x84/default.ini',
                   os.path.expanduser('~/.x84/default.ini'))
@@ -55,15 +54,16 @@ def main():
     # load/create .ini files
     x84.bbs.ini.init(lookup_bbs, lookup_log)
 
-    # initilization
+    # init userbase pw encryption
+    import x84.bbs.userbase
     x84.bbs.userbase.digestpw_init(
         x84.bbs.ini.CFG.get('system', 'password_digest'))
 
     # start telnet server
-    telnetd = x84.telnet.TelnetServer((
+    telnetd = TelnetServer((
         x84.bbs.ini.CFG.get('telnet', 'addr'),
         x84.bbs.ini.CFG.getint('telnet', 'port'),),
-        x84.terminal.on_naws)
+        on_naws)
 
     # begin main event loop
     _loop(telnetd)
@@ -82,14 +82,16 @@ def _loop(telnetd):
     import socket
     import time
 
-    import x84.terminal
-    import x84.bbs.ini
-    import x84.telnet
-    import x84.db
+    from x84.bbs.exception import (
+        ConnectionClosed, Disconnect, ConnectionTimeout)
+    from x84.terminal import terminals, ConnectTelnet, unregister
+    from x84.bbs.ini import CFG
+    from x84.telnet import TelnetClient
+    from x84.db import DBHandler
 
     logger = logging.getLogger()
     logger.info('listening %s/tcp', telnetd.port)
-    timeout = x84.bbs.ini.CFG.getint('system', 'timeout')
+    timeout = CFG.getint('system', 'timeout')
     fileno_telnetd = telnetd.server_socket.fileno()
     locks = dict()
     # main event loop
@@ -104,9 +106,9 @@ def _loop(telnetd):
             matched = False
             #pylint: disable=W0612
             #        Unused variable 'lck'
-            for (clt, pipe, lck) in x84.terminal.terminals():
+            for (clt, pipe, lck) in terminals():
                 if client == clt:
-                    pipe.send(('exception', (x84.bbs.exception.Disconnect())))
+                    pipe.send(('exception', (Disconnect())))
                     logger.info('%s: Disconnected; deactivating pipe',
                                 client.addrport())
                     matched = True
@@ -122,7 +124,7 @@ def _loop(telnetd):
         # try to send all waiting data, marking clients for
         # deactivation that have eof/ otherwise adding their
         # ipc pipes to recv_list.
-        for client, pipe, lock in x84.terminal.terminals():
+        for client, pipe, lock in terminals():
             if not lock.acquire(False):
                 logger.debug('%s: locked', client.addrport())
                 continue
@@ -132,7 +134,7 @@ def _loop(telnetd):
                 if client.send_ready():
                     try:
                         client.socket_send()
-                    except x84.bbs.exception.ConnectionClosed, err:
+                    except ConnectionClosed, err:
                         logger.debug('%s ConnectionClosed(%s).',
                                      client.addrport(), err)
                         recv_list.remove(client.sock.fileno())
@@ -154,11 +156,11 @@ def _loop(telnetd):
                     logger.error('refused new connect; maximum reached.')
                 else:
                     # accept & instantiate new client
-                    client = x84.telnet.TelnetClient(
+                    client = TelnetClient(
                         sock, address_pair, telnetd.on_naws)
                     telnetd.clients[client.sock.fileno()] = client
                     # begin unmanaged thread.
-                    x84.terminal.ConnectTelnetTerminal(client).start()
+                    ConnectTelnet(client).start()
                     logger.info('%s: Connected.', client.addrport())
             except socket.error, err:
                 logger.error('accept error %d:%s', err[0], err[1],)
@@ -168,7 +170,7 @@ def _loop(telnetd):
             client = telnetd.clients[fileno]
             try:
                 client.socket_recv()
-            except x84.bbs.exception.ConnectionClosed, err:
+            except ConnectionClosed, err:
                 logger.debug('%s: connection closed(%s).',
                              client.addrport(), err)
                 # mark for deactivation, removed next poll
@@ -176,10 +178,10 @@ def _loop(telnetd):
                 continue
 
         # accept session event i/o, such as output
-        for client, pipe, lock in x84.terminal.terminals():
+        for client, pipe, lock in terminals():
             # poll about and kick off idle users
             if client.idle() > timeout and lock.acquire(False):
-                pipe.send(('exception', x84.bbs.exception.ConnectionTimeout))
+                pipe.send(('exception', ConnectionTimeout))
                 lock.release()
             # send input to subprocess,
             if client.input_ready() and lock.acquire(False):
@@ -194,13 +196,13 @@ def _loop(telnetd):
                 except (EOFError, IOError) as exception:
                     # issue with pipe; sub-process unexpectedly closed
                     logger.exception(exception)
-                    x84.terminal.unregister_terminal(client, pipe, lock)
+                    unregister(client, pipe, lock)
                     pipe.close()
                     client.deactivate()
                     continue
 
                 if event == 'exit':
-                    x84.terminal.unregister_terminal(client, pipe, lock)
+                    unregister(client, pipe, lock)
                     pipe.close()
                     client.deactivate()
 
@@ -213,7 +215,7 @@ def _loop(telnetd):
                 elif event == 'global':
                     #pylint: disable=W0612
                     #         Unused variable 'o_lock'
-                    for o_client, o_pipe, o_lock in x84.terminal.terminals():
+                    for o_client, o_pipe, o_lock in terminals():
                         if o_client != client:
                             o_pipe.send((event, data,))
 
@@ -222,7 +224,7 @@ def _loop(telnetd):
                     # with a matching ('db-*',) event. sqlite is used
                     # for now and is quick, but this prevents slow
                     # database queries from locking the i/o event loop.
-                    thread = x84.db.DBHandler(pipe, event, data)
+                    thread = DBHandler(pipe, event, data)
                     thread.start()
 
                 elif event.startswith('lock'):

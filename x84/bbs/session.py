@@ -649,31 +649,3 @@ class Session(object):
         self._ttyrec_len_text = self._ttyrec_len_text + len_text
         self._fp_ttyrec.flush()
 
-
-class IPCLogHandler(logging.Handler):
-    """
-    Log handler that sends the log up the 'event pipe'. This is a rather novel
-    solution that seems overlooked in documentation or exisiting code, try it!
-    """
-    def __init__(self, pipe):
-        logging.Handler.__init__(self)
-        self.pipe = pipe
-
-    def emit(self, record):
-        """
-        emit log record via IPC pipe
-        """
-        try:
-            e_inf = record.exc_info
-            if e_inf:
-                # side-effect: sets record.exc_text
-                dummy = self.format(record)
-                record.exc_info = None
-                # pylint: disable=W0104
-                #         Statement seems to have no effect
-                dummy  # pflakes ;/
-            self.pipe.send(('logger', record))
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except:
-            self.handleError(record)
