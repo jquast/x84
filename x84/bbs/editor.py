@@ -368,12 +368,12 @@ class ScrollingEditor(AnsiWindow):
         if self._horiz_shift > 0:
             scrl = self._horiz_shift + len(self.trim_char)
             prnt = self.trim_char + self.content[scrl:]
+            prnt += (self.glyphs.get('erase', u'~')
+                     * (self.visible_width - len(prnt)))
         else:
             prnt = self.content
-        fill = (self.glyphs.get('erase', u'~')
-                * (self.visible_width - len(prnt)))
         return (self.pos(self.ypadding, self.xpadding)
-                + prnt + fill + self.fixate())
+                + prnt + self.fixate())
 
     def backspace(self):
         """
