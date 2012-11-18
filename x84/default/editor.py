@@ -1,16 +1,17 @@
-import codecs
-import os
+# the ugliest parts of this script should be used
+# to identify places where the API should be improved.
+
 from x84.bbs import getterminal, ScrollingEditor, getsession
-from x84.bbs import getch, echo, Lightbar, Ansi
+from x84.bbs import getch, echo, Lightbar, Ansi, Selector
 
 
 CMDS_BASIC = (('e', 'dit'),
               ('s', 'ave'),
               ('a', 'bort'),
-              ('/', 'advanced'), )
+              ('/', 'cmds'), )
 CMDS_ADVANCED = (('c', 'opy'),
                  ('p', 'aste'),
-                 ('k', 'kill'),
+                 ('k', 'ill'),
                  ('q', 'uote'),
                  ('x', 'modem'), )
 
@@ -79,10 +80,10 @@ def get_lightbar(ucs, pos=None):
     xloc = max(0, (term.width / 2) - (width / 2))
     lightbar = Lightbar(height, width, yloc, xloc)
     lightbar.glyphs['left-vert'] = lightbar.glyphs['right-vert'] = u''
-    lightbar.colors['border'] = term.bold_blue
-    lightbar.update(((row, line) for (row, line) in
+    lightbar.colors['border'] = term.blue
+    lightbar.update([(row, line) for (row, line) in
                     enumerate(Ansi(ucs).wrap(lightbar.visible_width)
-                              .split('\r\n'))))
+                              .split('\r\n'))])
     if pos is not None:
         lightbar.position = pos
     return lightbar
@@ -111,9 +112,10 @@ def get_ui(ucs):
 
 
 def redraw_lneditor(lightbar, lneditor):
-    return ''.join((lneditor.border(),
-                    statusline(lightbar, edit=True),
-                    lneditor.refresh()))
+    return ''.join((
+        statusline(lightbar, edit=True),
+        lneditor.border(),
+        lneditor.refresh()))
 
 
 def redraw(lightbar, lneditor, edit=False):
@@ -130,47 +132,59 @@ def process_keystroke(inp):
 
 def main(uattr=u'draft'):
     session, term = getsession(), getterminal()
+    SAVEKEY = '%s.%s' % ('editor', uattr)
     assert term.width >= 40, ('editor requires width >= 40')
-    assert term.height >= 4, ('editor requires width >= 4')
+    assert term.height >= 4, ('editor requires height >= 4')
 
-    fp = codecs.open(os.path.join(
-        os.path.dirname(__file__), 'art', 'news.txt'), 'rb', 'utf8')
-    test = fp.read().strip()
-
-    lightbar, lneditor = get_ui(test)
+    lightbar, lneditor = get_ui(session.user.get(SAVEKEY, u''))
 
     def merge():
+        """
+        Merges line editor content as a replacement for the currently
+        selected lightbar row. Returns True if text inserted caused
+        additional rows to be appended, which is meaningful in refresh
+        context.
+        """
+        # merge line editor with pager window content
         swp = lightbar.selection
         lightbar.content[lightbar.index] = (swp[0], lneditor.content)
-        nc = Ansi('\n'.join([ucs for (key, ucs) in lightbar.content]))
+        nc = Ansi('\n'.join([ucs for (key, ucs) in lightbar.content]) + '\n')
         wrapped = nc.wrap(lightbar.visible_width).split('\r\n')
+        prior_length = len(lightbar.content)
         lightbar.update([(key, ucs) for (key, ucs) in enumerate(wrapped)])
+        if len(lightbar.content) - prior_length == 0:
+            return False
+        while len(lightbar.content) - prior_length > 0:
+            lightbar.move_down()
+            prior_length += 1
+        return True
 
     edit = False
     dirty = True
-    while not lightbar.quit:
+    echo(banner())
+    while True:
         if session.poll_event('refresh'):
             dirty = True
         if dirty:
-            echo(banner())
             echo(redraw(lightbar, lneditor, edit))
             dirty = False
         inp = getch(1)
-        if inp in (unichr(27), term.KEY_ESCAPE) or (not edit and inp == u'e'):
+        if(inp in (unichr(27), term.KEY_ESCAPE) or (
+           not edit and inp in (u'e', u'E', term.KEY_ENTER, ))):
             edit = not edit
             if not edit:
+                # switched to command mode, merge our lines
                 merge()
             else:
                 lneditor = get_lneditor(lightbar)
             dirty = True
         elif not edit:
+            # command mode,
             if inp == u'/':
-                # advanced cmds, (secondary key)
                 echo(redraw_lightbar(lightbar, False,
                                      cmds=cmdshow(CMDS_ADVANCED)))
                 inp2 = getch()
                 if type(inp2) is not int:
-                    # pressing anything but unicode cancels
                     dirty = process_keystroke(inp + inp2)
                 else:
                     echo(redraw_lightbar(lightbar, False))
@@ -178,11 +192,39 @@ def main(uattr=u'draft'):
                 # basic cmds,
                 pout = lightbar.process_keystroke(inp)
                 if not lightbar.moved:
-                    if inp in (u'a', u'A'):
-                        return
-                    if inp in (u's', u'S'):
-                        # save
-                        return
+                    # abort / save: confirm
+                    if inp in (u'a', u'A', u's', u'S'):
+                        if inp in (u'a', 'A'):
+                            echo(statusline(
+                                lightbar, edit=False, msg='- abort -',
+                                cmds=term.yellow('  Are you sure?')))
+                        else:
+                            echo(statusline(
+                                lightbar, edit=False, msg='- save -',
+                                cmds=term.yellow('  Are you sure?')))
+                        yn = Selector(yloc=lightbar.yloc + lightbar.height - 1,
+                                      xloc=term.width - 28, width=12,
+                                      left='Yes', right='No')
+                        yn.colors['selected'] = term.reverse_red
+                        yn.keyset['left'].extend((u'y', u'Y',))
+                        yn.keyset['right'].extend((u'n', u'N',))
+                        echo(yn.refresh())
+                        while True:
+                            inp = getch()
+                            echo(yn.process_keystroke(inp))
+                            if((yn.selected and yn.selection == yn.left)
+                               or inp in (u'y', u'Y')):
+                                # selected 'yes', save/abort
+                                if inp in (u's', 'S'):
+                                    session.user[SAVEKEY] = '\n'.join(
+                                        (ucs for (key, ucs)
+                                         in lightbar.content))
+                                return
+                            elif((yn.selected or yn.quit)
+                                 or inp in (u'n', u'N')):
+                                break
+                        # no selected
+                        dirty = True
                 else:
                     # update status bar
                     echo(statusline(lightbar, edit))
@@ -193,10 +235,30 @@ def main(uattr=u'draft'):
             if inp in (term.KEY_UP, term.KEY_DOWN, term.KEY_NPAGE,
                        term.KEY_PPAGE, term.KEY_HOME, term.KEY_END,
                        u'\r', term.KEY_ENTER):
-                # mixed-movement command mode, emacs-like
-                echo(lightbar.process_keystroke(inp))
+                if inp in (u'\r', term.KEY_ENTER):
+                    # return key simulates downward stroke
+                    inp = term.KEY_DOWN
+                merge()
+                if(inp == term.KEY_DOWN and
+                   (lightbar.index == len(lightbar.content) - 1)):
+                    nxt = max([key for (key, ucs) in lightbar.content])
+                    lightbar.content.append((nxt + 1, u''))
+                lightbar.process_keystroke(inp)
                 if lightbar.moved:
-                    merge()
+                    # refresh last selected lightbar row (our newly
+                    # realized input, correctly aligned), and erase
+                    # line editor border. Then, instantiate and
+                    # refresh a new line editor
+                    if (lightbar._vitem_lastshift != lightbar.vitem_shift):
+                        # redraw full pager first, because we shifted pages,
+                        echo(lightbar.refresh())
+                    else:
+                        # just redraw last selection
+                        echo(lightbar.refresh_row(lightbar._vitem_lastidx))
+                    # erase old line editor border and instatiate another
+                    echo(lneditor.erase_border())
+                    lneditor = get_lneditor(lightbar)
+                    echo(redraw_lneditor(lightbar, lneditor))
             if inp is not None:
                 echo(lneditor.process_keystroke(inp))
                 if lneditor.moved:
