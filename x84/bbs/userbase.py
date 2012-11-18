@@ -249,7 +249,8 @@ class User(object):
         if not key in attrs:
             logger.debug('%r GET %r: default; attr unset.', self.handle, key)
             return default
-        logger.debug('get %r GET %r: %d' % (self.handle, key, len(attrs[key])))
+        logger.debug('get %r GET %r (size: %d)' % (
+            self.handle, key, len(attrs[key])))
         return attrs[key]
     get.__doc__ = dict.get.__doc__
 
