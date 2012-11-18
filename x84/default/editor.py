@@ -218,8 +218,8 @@ def main(uattr=u'draft'):
                                 # selected 'yes', save/abort
                                 if inp in (u's', 'S'):
                                     session.user[SAVEKEY] = '\n'.join(
-                                        (ucs for (key, ucs)
-                                         in lightbar.content))
+                                        [ucs for (key, ucs)
+                                         in lightbar.content])
                                 return
                             elif((yn.selected or yn.quit)
                                  or inp in (u'n', u'N')):
