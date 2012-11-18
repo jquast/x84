@@ -211,18 +211,18 @@ def main(uattr=u'draft'):
                         yn.keyset['right'].extend((u'n', u'N',))
                         echo(yn.refresh())
                         while True:
-                            inp = getch()
-                            echo(yn.process_keystroke(inp))
+                            inp2 = getch()
+                            echo(yn.process_keystroke(inp2))
                             if((yn.selected and yn.selection == yn.left)
-                               or inp in (u'y', u'Y')):
+                               or inp2 in (u'y', u'Y')):
                                 # selected 'yes', save/abort
                                 if inp in (u's', 'S'):
-                                    session.user[SAVEKEY] = '\n'.join(
+                                    session[SAVEKEY] = '\n'.join(
                                         [ucs for (key, ucs)
                                          in lightbar.content])
                                 return
                             elif((yn.selected or yn.quit)
-                                 or inp in (u'n', u'N')):
+                                 or inp2 in (u'n', u'N')):
                                 break
                         # no selected
                         dirty = True
