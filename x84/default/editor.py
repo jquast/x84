@@ -217,7 +217,7 @@ def main(uattr=u'draft'):
                                or inp2 in (u'y', u'Y')):
                                 # selected 'yes', save/abort
                                 if inp in (u's', 'S'):
-                                    session[SAVEKEY] = '\n'.join(
+                                    session.user[SAVEKEY] = '\n'.join(
                                         [ucs for (key, ucs)
                                          in lightbar.content])
                                 return
