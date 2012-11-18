@@ -173,6 +173,7 @@ def main(uattr=u'draft'):
            not edit and inp in (u'e', u'E', term.KEY_ENTER, ))):
             edit = not edit
             if not edit:
+                echo(lneditor.erase_border())
                 # switched to command mode, merge our lines
                 merge()
             else:
@@ -238,7 +239,8 @@ def main(uattr=u'draft'):
                 if inp in (u'\r', term.KEY_ENTER):
                     # return key simulates downward stroke
                     inp = term.KEY_DOWN
-                merge()
+                if merge():
+                    echo(lightbar.refresh())
                 if(inp == term.KEY_DOWN and
                    (lightbar.index == len(lightbar.content) - 1)):
                     nxt = max([key for (key, ucs) in lightbar.content])
