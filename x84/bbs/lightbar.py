@@ -34,8 +34,8 @@ class Lightbar (AnsiWindow):
         """
         AnsiWindow.__init__(self, height, width, yloc, xloc)
         self._vitem_idx = 0
-        self._vitem_lastidx = 0
         self._vitem_shift = 0
+        self._vitem_lastidx = 0
         self._vitem_lastshift = 0
         self._selected = False
         self._quit = False
@@ -90,9 +90,13 @@ class Lightbar (AnsiWindow):
             if (self._vitem_lastshift != self.vitem_shift):
                 # page shift, refresh entire page
                 return self.refresh()
-            # unhighlight last selection, highlight new
-            return (self.refresh_row(self._vitem_lastidx)
-                    + self.refresh_row(self.vitem_idx))
+            if self._vitem_lastidx != self.vitem_idx:
+                # unhighlight last selection, highlight new
+                return (self.refresh_row(self._vitem_lastidx)
+                        + self.refresh_row(self.vitem_idx))
+            else:
+                # just highlight new .. ?
+                return (self.refresh_row(self.vitem_idx))
         return u''
 
     def init_theme(self):
@@ -129,6 +133,8 @@ class Lightbar (AnsiWindow):
         """
         self._moved = False
         self._selected = False
+        self._vitem_lastidx = self.vitem_idx
+        self._vitem_lastshift = self.vitem_shift
         rstr = u''
         if key in self.keyset['home']:
             rstr += self.move_home()
