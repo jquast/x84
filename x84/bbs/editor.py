@@ -356,16 +356,17 @@ class ScrollingEditor(AnsiWindow):
         self._horiz_lastshift = self._horiz_shift
         self._horiz_shift = 0
         self._horiz_pos = 0
-
         #pylint: disable=W0612
         #        Unused variable 'loop_cnt'
         for loop_cnt in range(len(self.content)):
             if self._horiz_pos > (self.visible_width - self.scroll_amt):
                 self._horiz_shift += self.scroll_amt
                 self._horiz_pos -= self.scroll_amt
+                # if scrolling was not previously enabled, it is now!
+                self.enable_scrolling = True
             self._horiz_pos += 1
         if self._horiz_shift > 0:
-            scrl = self._horiz_shift - len(self.trim_char)
+            scrl = self._horiz_shift + len(self.trim_char)
             prnt = self.trim_char + self.content[scrl:]
         else:
             prnt = self.content
@@ -410,17 +411,14 @@ class ScrollingEditor(AnsiWindow):
         character addition caused the window to scroll horizontally.
         Otherwise, the input is simply returned to be displayed ('local echo').
         """
-        if self.eol:
-            print 'EOL'
+        if self.eol and not self.enable_scrolling:
+            # cannot input, at end of line!
             return u''
         # append to input
         self.content += u_chr
         if self._horiz_pos >= (self.visible_width):
-            print 'SCROLLZ'
-            # we have to scroll to display this output,
-            self._horiz_shift += self.scroll_amt
-            self._horiz_pos -= self.scroll_amt - 1
+            # scrolling is required,
             return self.refresh()
-        # return character appended
+        # return character appended as output, ensure .fixate() is used first!
         self._horiz_pos += 1
         return u_chr
