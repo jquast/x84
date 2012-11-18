@@ -8,7 +8,7 @@ VI_KEYSET = {
     'home': [],
     'end': [],
     'up': [u'k', u'K'],
-    'down': [u'j', u'J'],
+    'down': [u'j', u'J', u'\r'],
     'pgup': [u'b', u'B'],
     'pgdown': [u'f', u'F'],
     'exit': [u'q', u'Q'],
@@ -65,7 +65,7 @@ class Pager(AnsiWindow):
         # bounds check
         if self._position < 0:
             self._position = 0
-        if self._position > self.bottom:
+        if self._position > len(bottom):
             self._position = self.bottom
         self.moved = (self._position_last != self._position)
 
@@ -105,6 +105,7 @@ class Pager(AnsiWindow):
         self.keyset['pgdown'].append(term.KEY_NPAGE)
         self.keyset['up'].append(term.KEY_UP)
         self.keyset['down'].append(term.KEY_DOWN)
+        self.keyset['down'].append(term.KEY_ENTER)
         self.keyset['exit'].append(term.KEY_EXIT)
 
     def process_keystroke(self, keystroke):
