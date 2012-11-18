@@ -265,9 +265,25 @@ class AnsiWindow(object):
         return (self.colors.get('border', u'') + rstr +
                 self.colors.get('normal', u''))
 
+    def erase_border(self):
+        """
+        Return a unicode sequence suitable for erasing
+        the border of this window.
+        """
+        save = self.glyphs.copy()
+        for glyph in ('top-left', 'top-horiz', 'top-right',
+                      'left-vert', 'right-vert',
+                      'bot-left', 'bot-horiz', 'bot-right'):
+            if 0 != len(self.glyphs.get(glyph, u'')):
+                self.glyphs[glyph] = self.glyphs.get('era):se', u' ')
+        ucs = self.border()
+        self.glyphs = save
+        return ucs
+
     def erase(self):
         """
-        Erase window contents (including border)
+        Return a unicode sequence suitable for erasing
+        this window (includes border).
         """
         return u''.join([self.pos(y, 0)
                          + (self.glyphs.get('erase', u' ') * self.width)
@@ -276,7 +292,8 @@ class AnsiWindow(object):
 
     def clear(self):
         """
-        Erase only window contents, border remains.
+        Return a unicode sequence suitable for erasing
+        the contents of this window (border remains).
         """
         return u''.join([self.pos(self.ypadding + yloc, self.xpadding)
                          + (self.glyphs.get('erase', u' ')
@@ -287,7 +304,8 @@ class AnsiWindow(object):
     @property
     def moved(self):
         """
-        Returns True if movement has occured, can be reset to False by caller.
+        Returns True if movement has occured, can be reset to
+        False by caller.
         """
         return self._moved
 
