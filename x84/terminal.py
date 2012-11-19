@@ -111,6 +111,8 @@ class ConnectTelnet (threading.Thread):
         server end (engine.py) polls the parent end of a pipe, while the client
         (session.py) polls the child.
         """
+        if not self.client.active:
+            return
         import multiprocessing
         logger = logging.getLogger()
         parent_conn, child_conn = multiprocessing.Pipe()
