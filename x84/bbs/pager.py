@@ -65,7 +65,7 @@ class Pager(AnsiWindow):
         # bounds check
         if self._position < 0:
             self._position = 0
-        if self._position > len(bottom):
+        if self._position > self.bottom:
             self._position = self.bottom
         self.moved = (self._position_last != self._position)
 
