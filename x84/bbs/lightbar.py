@@ -170,6 +170,20 @@ class Lightbar (AnsiWindow):
         return self.vitem_shift + self.vitem_idx
 
     @property
+    def at_bottom(self):
+        """
+        Returns True if current selection is last in list
+        """
+        return self.index == len(self.content) - 1
+
+    @property
+    def at_top(self):
+        """
+        Returns True if current selection is first in list
+        """
+        return self.index == 0
+
+    @property
     def selection(self):
         """
         Selected content of self.content by index
@@ -300,12 +314,14 @@ class Lightbar (AnsiWindow):
         """
         Move selection down one row.
         """
-        if self.index >= len(self.content) - 1:
-            return u''  # already at bottom
+        if self.at_bottom:
+            # bounds check
+            return u''
         if self.vitem_idx + 1 < self.visible_bottom:
             # move down 1 row
             self.vitem_idx += 1
         elif self.vitem_idx < len(self.content):
+            # scroll down 1 row
             self.vitem_shift += 1
         return self.refresh_quick()
 
@@ -313,12 +329,14 @@ class Lightbar (AnsiWindow):
         """
         Move selection up one row.
         """
-        if 0 == self.index:
-            return u''  # already at top
+        if self.at_top:
+            # bounds check
+            return u''
         elif self.vitem_idx >= 1:
             # move up 1 row
             self.vitem_idx -= 1
         elif self.vitem_shift > 0:
+            # scroll up 1 row
             self.vitem_shift -= 1
         return self.refresh_quick()
 
