@@ -297,7 +297,7 @@ def main(uattr=u'draft'):
     edit = False
     dirty = True
     echo(banner())
-    while True:
+    while not EXIT:
         if session.poll_event('refresh'):
             dirty = True
         if dirty:
@@ -312,7 +312,8 @@ def main(uattr=u'draft'):
         # toggle edit mode,
         if(inp in (unichr(27), term.KEY_ESCAPE) or (
            not edit and inp in (u'e', u'E', term.KEY_ENTER, ))):
-            edit = not edit
+            print 'X'
+            edit = not edit  # toggle
             if not edit:
                 echo(lneditor.erase_border())
                 # switched to command mode, merge our lines
@@ -378,7 +379,7 @@ def main(uattr=u'draft'):
                     echo(pout)
             continue
 
-        # edit mode
+        # edit mode, movement
         if inp in movement:
             if inp in (u'\r', term.KEY_ENTER):
                 inp = term.KEY_DOWN
@@ -404,6 +405,9 @@ def main(uattr=u'draft'):
                 echo(lneditor.erase_border())
                 lneditor = get_lneditor(lightbar)
                 echo(redraw_lneditor(lightbar, lneditor))
+            continue
+
+        # edit mode, addch
         if inp is not None:
             echo(lneditor.process_keystroke(inp))
             if lneditor.moved:
