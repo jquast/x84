@@ -2,18 +2,13 @@
 """
 Command-line launcher and main event loop for x/84
 """
-# Please place _ALL_ Metadata here. No need to duplicate this
-# in every .py file of the project -- except where individual scripts
-# are authored by someone other than the authors, licensing differs, etc.
+# Please place _ALL_ Metadata in setup.py, except for a few bits
+# which don't belong there right here. Don't include metadata in
+# any other part of x/84, its a pita to maintain.
 __author__ = "Johannes Lundberg, Jeffrey Quast"
 __copyright__ = "Copyright 2012"
-__credits__ = ["Johannes Lundberg", "Jeffrey Quast",
-               "Wijnand Modderman-Lenstra", "zipe", "spidy", "Mercyful Fate"]
+__credits__ = ["Wijnand Modderman-Lenstra", "zipe", "spidy", "Mercyful Fate"]
 __license__ = 'ISC'
-__version__ = '1.0rc1'
-__maintainer__ = 'Jeff Quast'
-__email__ = 'dingo@1984.ws'
-__status__ = 'Development'
 
 
 def main():
@@ -82,8 +77,7 @@ def _loop(telnetd):
     import socket
     import time
 
-    from x84.bbs.exception import (
-        ConnectionClosed, Disconnect, ConnectionTimeout)
+    from x84.bbs.exception import (ConnectionClosed, ConnectionTimeout)
     from x84.terminal import terminals, ConnectTelnet, unregister
     from x84.bbs.ini import CFG
     from x84.telnet import TelnetClient
@@ -94,52 +88,41 @@ def _loop(telnetd):
     timeout = CFG.getint('system', 'timeout')
     fileno_telnetd = telnetd.server_socket.fileno()
     locks = dict()
+
+    def inactive():
+        return [(fno, clt) for (fno, clt) in
+                telnetd.clients.items() if not clt.active]
+
+    def lookup(client):
+        for o_client, pipe, lock in terminals():
+            if o_client == client:
+                return (client, pipe, lock)
+        return (None, None, None)
+
     # main event loop
     while True:
-        # for client sockets marked for deactivation,
-        # delete the file descriptor from telnetd class,
-        # and signal subprocess to raise a Disconnect exception.
-        for fileno, client in [(fno, clt) for (fno, clt) in
-                               telnetd.clients.items()
-                               if not clt.active][:]:
-            del telnetd.clients[fileno]
-            matched = False
-            #pylint: disable=W0612
-            #        Unused variable 'lck'
-            for (clt, pipe, lck) in terminals():
-                if client == clt:
-                    pipe.send(('exception', (Disconnect())))
-                    logger.info('%s: Disconnected; deactivating pipe',
-                                client.addrport())
-                    matched = True
-                    break
-            if not matched:
-                # connection closed before session began.
-                logger.info('%s: Disconnected', client.addrport())
+        # close & delete inactive sockets,
+        for fileno, client in inactive()[:]:
             client.sock.close()
+            del telnetd.clients[fileno]
 
-        # poll all telnet clients for send
+        # queue all telnet clients for recv test
         recv_list = set([fileno_telnetd] + telnetd.clients.keys())
 
-        # try to send all waiting data, marking clients for
-        # deactivation that have eof/ otherwise adding their
-        # ipc pipes to recv_list.
+        # queue all multiprocessing pipes for recv test,
         for client, pipe, lock in terminals():
-            if not lock.acquire(False):
-                logger.debug('%s: locked', client.addrport())
-                continue
-            if client.active:
-                # poll subprocess event pipe
-                recv_list.add(pipe.fileno())
-                if client.send_ready():
-                    try:
-                        client.socket_send()
-                    except ConnectionClosed, err:
-                        logger.debug('%s ConnectionClosed(%s).',
-                                     client.addrport(), err)
-                        recv_list.remove(client.sock.fileno())
-                        client.deactivate()
-            lock.release()
+            recv_list.add(pipe.fileno())
+
+        # test all clients for send()
+        for client, pipe, lock in terminals():
+            if client.send_ready():
+                try:
+                    client.socket_send()
+                except ConnectionClosed, err:
+                    logger.debug('%s ConnectionClosed(%s).',
+                                 client.addrport(), err)
+                    recv_list.remove(client.sock.fileno())
+                    unregister(client, pipe, lock)
 
         #pylint: disable=W0612
         #        Unused variable 'slist', 'elist'
@@ -171,22 +154,25 @@ def _loop(telnetd):
             try:
                 client.socket_recv()
             except ConnectionClosed, err:
-                logger.debug('%s: connection closed(%s).',
-                             client.addrport(), err)
-                # mark for deactivation, removed next poll
-                client.deactivate()
-                continue
+                logger.info('%s: %s', client.addrport(), err)
+                o_client, pipe, lock = lookup(client)
+                if o_client is not None:
+                    unregister(client, pipe, lock)
+                else:
+                    client.deactivate()
 
         # accept session event i/o, such as output
         for client, pipe, lock in terminals():
             # poll about and kick off idle users
             if client.idle() > timeout and lock.acquire(False):
-                pipe.send(('exception', (ConnectionTimeout())))
+                pipe.send(('exception', ConnectionTimeout(),))
                 lock.release()
+                continue
+
             # send input to subprocess,
             if client.input_ready() and lock.acquire(False):
                 inp = client.get_input()
-                pipe.send(('input', inp))
+                pipe.send(('input', inp,))
                 lock.release()
             # aggressively process all session pipe i/o
             has_data = pipe.fileno() in rlist
@@ -197,20 +183,24 @@ def _loop(telnetd):
                     # issue with pipe; sub-process unexpectedly closed
                     logger.exception(exception)
                     unregister(client, pipe, lock)
-                    pipe.close()
-                    client.deactivate()
                     continue
 
                 if event == 'exit':
                     unregister(client, pipe, lock)
-                    pipe.close()
-                    client.deactivate()
 
                 elif event == 'logger':
                     logger.handle(data)
 
                 elif event == 'output':
                     client.send_unicode(ucs=data[0], encoding=data[1])
+
+                elif event == 'route':
+                    #pylint: disable=W0612
+                    #         Unused variable 'o_lock'
+                    for o_client, o_pipe, o_lock in terminals():
+                        if o_client.origin == data[0]:
+                            o_pipe.send((event, (client.origin, data[1])))
+                            break
 
                 elif event == 'global':
                     #pylint: disable=W0612
