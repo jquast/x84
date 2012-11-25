@@ -221,10 +221,13 @@ class Session(object):
         """
         Begin main execution flow.
 
-        Client scripts manipulate control flow of scripts using goto and gosub.
+        Returns non-None if Disconnected() event is raised.
+
+        Scripts manipulate control flow of scripts using goto and gosub.
         """
-        from x84.bbs.exception import Goto, Disconnect, ConnectionClosed
+        from x84.bbs.exception import Goto, Disconnect, Disconnected
         from x84.bbs.exception import ConnectionTimeout, ScriptError
+        from x84.bbs.exception import ConnectionClosed
         while len(self._script_stack) > 0:
             logger.debug('script_stack: %r', self._script_stack)
             try:
@@ -233,13 +236,16 @@ class Session(object):
                 logger.debug('Goto: %s', err)
                 self._script_stack = [err[0] + tuple(err[1:])]
                 continue
+            except Disconnected:
+                self.close()
+                return False
             except (Disconnect, ConnectionClosed,
                     ConnectionTimeout, ScriptError), err:
                 e_type, e_value, e_tb = sys.exc_info()
-                #self.write(self.terminal.normal + u'\r\n')
+                self.write(self.terminal.normal + u'\r\n')
                 for line in traceback.format_exception_only(e_type, e_value):
                     logger.info(line.rstrip())
-                #    self.write('\r\n' + line.rstrip() + u'\r\n')
+                    self.write('\r\n' + line.rstrip() + u'\r\n')
                 break
             except Exception, err:
                 # Pokemon exception.

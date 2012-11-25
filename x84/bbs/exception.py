@@ -3,6 +3,11 @@ Custom exception classes for x/84, https://github.com/jquast/x84
 """
 
 
+class Disconnected(Exception):
+    """Thrown when socket was disconnected"""
+    pass
+
+
 class Disconnect(Exception):
     """Throw to cause the socket to be disconnected."""
     pass

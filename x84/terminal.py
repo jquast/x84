@@ -23,11 +23,14 @@ def unregister(client, pipe, lock):
     Unregister a Terminal, described by its telnet.TelnetClient,
     Pipe, and Lock.
     """
+    from x84.bbs.exception import Disconnected
     logger = logging.getLogger()
     try:
+        pipe.send(('exception', Disconnected(),))
         while pipe.poll():
             logger.warn('pipe assertion, remaining event:')
             logger.warn(pipe.get())
+            pipe.send('')
         pipe.close()
     except (EOFError, IOError) as exception:
         logger.exception(exception)
@@ -70,12 +73,15 @@ def start_process(pipe, origin, env):
     for hdlr in root.handlers:
         root.removeHandler(hdlr)
     root.addHandler(IPCLogHandler(pipe))
-    session.run()
-    logger.info('End of process: %d.', session.pid)
-    # flush client side the client pipe before exit
-    while pipe.poll():
-        pipe.get(False)
-    pipe.send(('exit', True))
+    # session returns non-None for 'silent termination' -- that is
+    # the socket was lost, so there is no need to log or re-raise
+    # an 'exit' event.
+    if session.run() is None:
+        logger.info('End of process: %d.', session.pid)
+        # flush client side the client pipe before exit
+        while pipe.poll():
+            pipe.get(False)
+        pipe.send(('exit', True))
     pipe.close()
 
 
