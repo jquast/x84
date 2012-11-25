@@ -6,6 +6,7 @@ https://github.com/erikrose/blessings
 import curses.has_key
 import contextlib
 import platform
+import logging
 import termios
 import struct
 import fcntl
@@ -374,8 +375,11 @@ class Terminal(object):
         Yield either a unicode byte or a curses key constant as integer.
         If data is a bytestring, it is converted to unicode using encoding.
         """
+        logger = logging.getLogger()
         if isinstance(data, str):
+            logger.debug('decode: %r', data)
             data = data.decode(encoding, 'replace')
+        logger.debug('decoded: %r', data)
 
         def scan_keymap(text):
             """
