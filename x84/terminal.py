@@ -29,8 +29,7 @@ def unregister(client, pipe, lock):
         pipe.send(('exception', Disconnected(),))
         while pipe.poll():
             logger.warn('pipe assertion, remaining event:')
-            logger.warn(pipe.get())
-            pipe.send('')
+            logger.warn(pipe.recv())
         pipe.close()
     except (EOFError, IOError) as exception:
         logger.exception(exception)
@@ -76,12 +75,13 @@ def start_process(pipe, origin, env):
     # session returns non-None for 'silent termination' -- that is
     # the socket was lost, so there is no need to log or re-raise
     # an 'exit' event.
-    if session.run() is None:
-        logger.info('End of process: %d.', session.pid)
-        # flush client side the client pipe before exit
-        while pipe.poll():
-            pipe.get(False)
+    ret = session.run()
+    # flush client side the client pipe before exit
+    while pipe.poll():
+        pipe.get(False)
+    if ret is None:
         pipe.send(('exit', True))
+        logger.info('End of process: %d.', session.pid)
     pipe.close()
 
 

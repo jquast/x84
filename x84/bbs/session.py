@@ -238,7 +238,7 @@ class Session(object):
                 continue
             except Disconnected:
                 self.close()
-                return False
+                return 1
             except (Disconnect, ConnectionClosed,
                     ConnectionTimeout, ScriptError), err:
                 e_type, e_value, e_tb = sys.exc_info()
@@ -509,6 +509,7 @@ class Session(object):
             self.stop_recording()
 
 # TODO: Somehow move these to ttyrec.py to keep session.py terse;
+# TODO: lol, also exceptions . shite ...
     def rename_recording(self, src, dst):
         """
         Rotate ttyrec recording keyed by dst to make way for dst.0 by renaming
