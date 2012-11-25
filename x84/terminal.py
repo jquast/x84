@@ -23,6 +23,16 @@ def unregister(client, pipe, lock):
     Unregister a Terminal, described by its telnet.TelnetClient,
     Pipe, and Lock.
     """
+    logger = logging.getLogger()
+    try:
+        while pipe.poll():
+            logger.warn('pipe assertion, remaining event:')
+            logger.warn(pipe.get())
+        pipe.close()
+    except (EOFError, IOError) as exception:
+        logger.exception(exception)
+    client.deactivate()
+    logger.debug('%s: unregistered', client.addrport())
     TERMINALS.remove((client, pipe, lock,))
 
 
@@ -62,7 +72,11 @@ def start_process(pipe, origin, env):
     root.addHandler(IPCLogHandler(pipe))
     session.run()
     logger.info('End of process: %d.', session.pid)
+    # flush client side the client pipe before exit
+    while pipe.poll():
+        pipe.get(False)
     pipe.send(('exit', True))
+    pipe.close()
 
 
 def on_naws(client):
