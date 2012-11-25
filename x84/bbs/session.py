@@ -21,9 +21,11 @@ import x84.bbs.ini
 #        Invalid name "logger" for type constant (should match
 logger = logging.getLogger()
 SESSION = None
-TTYREC_UCOMPRESS = 15000
+#TTYREC_UCOMPRESS = 15000
+TTYREC_UCOMPRESS = None  # disabled for ttyplay -p(eek)
 TTYREC_HEADER = unichr(27) + u'[8;%d;%dt'
 TTYREC_ROTATE = 4
+TTYREC_PADD = 10
 
 
 def getsession():
@@ -234,10 +236,10 @@ class Session(object):
             except (Disconnect, ConnectionClosed,
                     ConnectionTimeout, ScriptError), err:
                 e_type, e_value, e_tb = sys.exc_info()
-                self.write(self.terminal.normal + u'\r\n')
+                #self.write(self.terminal.normal + u'\r\n')
                 for line in traceback.format_exception_only(e_type, e_value):
                     logger.info(line.rstrip())
-                    self.write('\r\n' + line.rstrip() + u'\r\n')
+                #    self.write('\r\n' + line.rstrip() + u'\r\n')
                 break
             except Exception, err:
                 # Pokemon exception.
@@ -600,9 +602,11 @@ class Session(object):
         Update ttyrec stream with unicode bytes 'ucs'.
         """
         # write bytestring to ttyrec file packed as timed byte.
-        # If the current timed byte is within TTYREC_UCOMPRESS (default: 15,000
-        # μsec), rewind stream and re-write the 'length' portion, and append
-        # data to end of stream.
+        # If the current timed byte is within TTYREC_UCOMPRESS
+        # (default: 15,000 μsec), rewind stream and re-write the
+        # 'length' portion, and append data to end of stream.
+        # .. unfortuantely, this is not compatible with ttyplay -p,
+        # so for the time being, it is disabled ..
         assert self._recording, 'call start_recording() first'
         timeKey = self.duration
 
@@ -629,13 +633,17 @@ class Session(object):
             self._fp_ttyrec.flush()
         text = ucs.encode('utf8', 'replace')
         len_text = len(text)
-        if (sec != self._ttyrec_sec
-                or usec - self._ttyrec_usec > TTYREC_UCOMPRESS):
-            while sec > 10:
-                # when more than 10s have elapsed, padd with intervals anyway.
+        # write full chunk and return, unless compression is used.
+        # Also, when more than TTYREC_PADD has elapsed, first a
+        # 0-lengthed padding is inserted for every TTYREC_PADD seconds.
+        if(TTYREC_UCOMPRESS is None
+           or sec != self._ttyrec_sec
+           or usec - self._ttyrec_usec > TTYREC_UCOMPRESS):
+            while sec > TTYREC_PADD:
                 write_chunk(sec, usec, 0, bytes())
-                sec -= 10
+                sec -= TTYREC_PADD
             return write_chunk(sec, usec, len_text, text)
+
         # a sort of monkey patching (compression);
         #   1. rewind to last length byte
         last_bp2 = struct.pack('<I', self._ttyrec_len_text)
@@ -648,4 +656,3 @@ class Session(object):
         self._fp_ttyrec.write(text)
         self._ttyrec_len_text = self._ttyrec_len_text + len_text
         self._fp_ttyrec.flush()
-
