@@ -356,28 +356,33 @@ class Session(object):
 
     def buffer_input(self, data):
         """
-        Update idle time, buffer input, and when Session.enable_keycodes is
-        True, decode multibyte sequences as possible nvt, vt100, telnet, and
-        curses input keysequences.
+        Update idle time, and encode input using session encoding such as
+        'utf8' or 'cp437'. When enable_keycodes is True, yield single atoms
+        for any detected multibyte sequences.
 
-        The unfortunate side-effect is something might appear as an equivalent
-        KEY_SEQUENCE that is better described as it was to traditional getch()
-        users, '\r' and '\b', for example.
+        The unfortunate side-effect is something might appear as an
+        equivalent KEY_SEQUENCE that is better described as it was
+        to traditional getch() users, '\r'(^J) and '\b'(^H) as
+        term.KEY_ENTER and term.KEY_BACKSPACE, for example.
+
+        When ^L/KEY_REFRESH in getch() stream as detected, a refresh event is
+        buffered.
         """
         self._last_input_time = time.time()
+        ctrl_l = self.terminal.KEY_REFRESH
+
         if self._tap_input and logger.isEnabledFor(logging.DEBUG):
             logger.debug('<-- %r.', data)
-        if not self.enable_keycodes:
-            # send keyboard bytes in as-is, unmanipulated
-            return self._buffer['input'].insert(0, data)
 
-        # translate ^L to KEY_REFRESH in getch() stream, but
-        # also send a ('refresh', ('input',)) event for signaling
-        ctrl_l = self.terminal.KEY_REFRESH
+        if not self.enable_keycodes:
+            # send keyboard bytes in as-is, 1-by-1, unmanipulated
+            [self._buffer['input'].insert(0, ch) for ch in data]
+            return
+
         # perform keycode translation with modified blessings/curses
         for keystroke in self.terminal.trans_input(data, self.encoding):
-            if keystroke in (chr(12), ctrl_l):
-                self._buffer['input'].insert(0, self.terminal.KEY_REFRESH)
+            if keystroke in (unichr(12), ctrl_l):
+                self._buffer['input'].insert(0, ctrl_l)
                 self._buffer['refresh'] = list((('input', ctrl_l),))
                 continue
             self._buffer['input'].insert(0, keystroke)
