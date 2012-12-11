@@ -28,8 +28,12 @@ def unregister(client, pipe, lock):
     try:
         pipe.send(('exception', Disconnected(),))
         while pipe.poll():
-            logger.warn('pipe assertion, remaining event:')
-            logger.warn(pipe.recv())
+            logger.warn('pipe assertion, leftover bit:')
+            event, data = pipe.recv()
+            if event == 'logger':
+                logger.handle(data)
+            else:
+                logger.warn(repr((event, data,)))
         pipe.close()
     except (EOFError, IOError) as exception:
         logger.exception(exception)
