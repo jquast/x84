@@ -121,7 +121,13 @@ def _loop(telnetd):
                 except ConnectionClosed, err:
                     logger.debug('%s ConnectionClosed(%s).',
                                  client.addrport(), err)
-                    recv_list.remove(client.sock.fileno())
+                    # client.sock.fileno() can raised 'bad file descriptor',
+                    # so, to remove it from the recv_list, we must match by
+                    # client object instance !
+                    for fd, clt in telnetd.clients.items():
+                        if client == clt and fd in recv_list:
+                            recv_list.remove(fd)
+                            break
                     unregister(client, pipe, lock)
 
         #pylint: disable=W0612
