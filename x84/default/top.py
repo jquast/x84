@@ -118,7 +118,7 @@ def main(handle=None):
     # 5. impress with art, prompt for quick login (goto 'main'),
     echo(display_intro())
     if (session.env.get('TERM') == 'unknown'
-            or session.user.get('exepert', False)):
+            or session.user.get('expert', False)):
         echo(u'\r\n QUiCk lOGiN? [yn]')
         while True:
             yn = getch(1)
