@@ -18,6 +18,21 @@ def register(client, pipe, lock):
     TERMINALS.append((client, pipe, lock,))
 
 
+def flush_pipe(pipe):
+    """
+    Seeks any remaining events in pipe, used before closing
+    to prevent zombie processes with IPC waiting to be picked up.
+    """
+    logger = logging.getLogger()
+    while pipe.poll():
+        logger.warn('pipe assertion, leftover bit:')
+        event, data = pipe.recv()
+        if event == 'logger':
+            logger.handle(data)
+        else:
+            logger.warn(repr((event, data,)))
+
+
 def unregister(client, pipe, lock):
     """
     Unregister a Terminal, described by its telnet.TelnetClient,
@@ -27,13 +42,8 @@ def unregister(client, pipe, lock):
     logger = logging.getLogger()
     try:
         pipe.send(('exception', Disconnected(),))
-        while pipe.poll():
-            logger.warn('pipe assertion, leftover bit:')
-            event, data = pipe.recv()
-            if event == 'logger':
-                logger.handle(data)
-            else:
-                logger.warn(repr((event, data,)))
+
+        flush_pipe(pipe)
         pipe.close()
     except (EOFError, IOError) as exception:
         logger.exception(exception)
@@ -81,11 +91,12 @@ def start_process(pipe, origin, env):
     # an 'exit' event.
     ret = session.run()
     # flush client side the client pipe before exit
-    while pipe.poll():
-        pipe.get(False)
+    flush_pipe(pipe)
     if ret is None:
         pipe.send(('exit', True))
         logger.info('End of process: %d.', session.pid)
+    else:
+        logger.debug('Silent Termination: %d.', session.pid)
     pipe.close()
 
 
