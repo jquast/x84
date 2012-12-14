@@ -37,9 +37,10 @@ import array
 import time
 import logging
 
-from x84.bbs.exception import ConnectionClosed
+# regretable
+from x84.bbs.exception import Disconnected
 
-#pylint: disable=C0103
+# pylint: disable=C0103
 #        Invalid name "logger" for type constant
 logger = logging.getLogger()
 
@@ -171,8 +172,8 @@ def name_option(option):
                         if option == v and k not in ('SEND', 'IS',)])
     return values if values != '' else str(ord(option))
 
-#import os, inspect
-#def debug_option(func):
+# import os, inspect
+# def debug_option(func):
 #    """
 #    This function is a decorator that debug prints the 'from' address for
 #    callables decorated with this. This helps during telnet negotiation, to
@@ -340,7 +341,7 @@ class TelnetClient(object):
         self._iac_do(TTYPE)
         self._note_reply_pending(TTYPE, True)
         # idk .. for netrunner XXX
-        #self.send_str(bytes(''.join((
+        # self.send_str(bytes(''.join((
         #    IAC, SB, TTYPE, SEND, IAC, SE))))
 
     def send_ready(self):
@@ -359,7 +360,7 @@ class TelnetClient(object):
         """
         Called by TelnetServer.poll() when send data is ready.  Send any
         data buffered, trim self.send_buffer to bytes sent, and return number
-        of bytes sent. throws ConnectionClosed
+        of bytes sent. throws Disconnected
         """
         if not self.send_ready():
             warnings.warn('socket_send() called on empty buffer',
@@ -370,12 +371,12 @@ class TelnetClient(object):
 
         def send(send_bytes):
             """
-            throws ConnectionClosed on sock.send err
+            throws x84.bbs.exception.Disconnected on sock.send err
             """
             try:
                 return self.sock.send(send_bytes)
             except socket.error, err:
-                raise ConnectionClosed(
+                raise Disconnected(
                     'socket send %d: %s' % (err[0], err[1],))
 
         sent = send(ready_bytes)
@@ -398,7 +399,7 @@ class TelnetClient(object):
         Called by TelnetServer.poll() when recv data is ready.  Read any
         data on socket, processing telnet commands, and buffering all
         other bytestrings to self.recv_buffer.  If data is not received,
-        or the connection is closed, x84.bbs.exception.ConnectionClosed is
+        or the connection is closed, x84.bbs.exception.Disconnected is
         raised.
         """
         recv = 0
@@ -406,9 +407,9 @@ class TelnetClient(object):
             data = self.sock.recv(self.BLOCKSIZE_RECV)
             recv = len(data)
             if 0 == recv:
-                raise ConnectionClosed('Closed by client')
+                raise Disconnected('Closed by client')
         except socket.error, err:
-            raise ConnectionClosed('socket errno %d: %s' % (err[0], err[1],))
+            raise Disconnected('socket errno %d: %s' % (err[0], err[1],))
         self.bytes_received += recv
         self.last_input_time = time.time()
 
@@ -439,7 +440,7 @@ class TelnetClient(object):
                 self.telnet_sb_buffer.fromstring(byte)
                 ## Sanity check on length
                 if len(self.telnet_sb_buffer) >= self.SB_MAXLEN:
-                    raise ConnectionClosed('sub-negotiation buffer filled')
+                    raise Disconnected('sub-negotiation buffer filled')
             else:
                 ## Just a normal NVT character
                 self._recv_byte(byte)
@@ -467,7 +468,7 @@ class TelnetClient(object):
         """
         Handle incoming Telnet commands that are two bytes long.
         """
-        #logger.debug ('recv _two_byte_cmd %s', name_option(cmd),)
+        # logger.debug ('recv _two_byte_cmd %s', name_option(cmd),)
         if cmd == SB:
             ## Begin capturing a sub-negotiation string
             self.telnet_got_sb = True
@@ -634,11 +635,11 @@ class TelnetClient(object):
         """
         Process a WILL command option received by DE.
         """
-        #pylint: disable=R0912
+        # pylint: disable=R0912
         #        Too many branches (19/12)
         self._note_reply_pending(option, False)
         if option == ECHO:
-            raise ConnectionClosed(
+            raise Disconnected(
                 'Refuse WILL ECHO by client, closing connection.')
         elif option == NAWS:
             if self.check_remote_option(NAWS) is not True:
