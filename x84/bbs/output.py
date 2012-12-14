@@ -153,7 +153,7 @@ class Ansi(unicode):
         unhealthy for padding, that is, its effects on the terminal window
         position are indeterminate.
         """
-        #pylint: disable=R0911,R0912
+        # pylint: disable=R0911,R0912
         #        Too many return statements (20/6)
         #        Too many branches (23/12)
         slen = unicode.__len__(self)
@@ -296,7 +296,7 @@ class Ansi(unicode):
         value of bytes until sequence is complete. Use as a 'next' pointer to
         skip past sequences.
         """
-        #pylint: disable=R0911,R0912
+        # pylint: disable=R0911,R0912
         #        Too many return statements (19/6)
         #        Too many branches (22/12)
         slen = unicode.__len__(self)
