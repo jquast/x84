@@ -16,7 +16,7 @@ import x84.bbs.output
 import x84.bbs.cp437
 import x84.bbs.ini
 
-#pylint: disable=C0103
+# pylint: disable=C0103
 #        Invalid name "logger" for type constant (should match
 logger = logging.getLogger()
 
@@ -25,7 +25,7 @@ class Door(object):
     """
     Spawns a subprocess and pipes input and output over bbs session.
     """
-    #pylint: disable=R0902,R0903
+    # pylint: disable=R0902,R0903
     #        Too many instance attributes (8/7)
     #        Too few public methods (1/2)
     time_ipoll = 0.05
@@ -45,7 +45,7 @@ class Door(object):
         env_path is None, the .ini 'env_path' value of section [door] is used.
         When env_home is None, $HOME of the main process is used.
         """
-        #pylint: disable=R0913
+        # pylint: disable=R0913
         #        Too many arguments (7/5)
         self.cmd = cmd
         self.args = (self.cmd,) + args
