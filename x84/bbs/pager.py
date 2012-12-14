@@ -19,7 +19,7 @@ class Pager(AnsiWindow):
     """
     Scrolling ansi viewert d
     """
-    #pylint: disable=R0904,R0902
+    # pylint: disable=R0904,R0902
     #        Too many public methods (24/20)
     #        Too many instance attributes (11/7)
 
@@ -58,7 +58,7 @@ class Pager(AnsiWindow):
 
     @position.setter
     def position(self, pos):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._position_last = self.position
         self._position = pos

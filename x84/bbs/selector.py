@@ -20,7 +20,7 @@ class Selector(AnsiWindow):
     """
     A two-state horizontal lightbar interface.
     """
-    #pylint: disable=R0902,R0913,R0904
+    # pylint: disable=R0902,R0913,R0904
     #        Too many instance attributes (8/7)
     #        Too many arguments (6/5)
     #        Too many public methods (25/20)
@@ -100,7 +100,7 @@ class Selector(AnsiWindow):
 
     @selected.setter
     def selected(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         # this setter should only be used to reset to 'False' for recycling
         assert type(value) is bool
@@ -115,7 +115,7 @@ class Selector(AnsiWindow):
 
     @selection.setter
     def selection(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         assert value in (self._left, self._right)
         if self._selection != value:
@@ -131,7 +131,7 @@ class Selector(AnsiWindow):
 
     @left.setter
     def left(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._left = value
 
@@ -144,7 +144,7 @@ class Selector(AnsiWindow):
 
     @right.setter
     def right(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._right = value
 
