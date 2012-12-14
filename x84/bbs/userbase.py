@@ -5,7 +5,7 @@ import logging
 
 import x84.bbs.dbproxy
 
-#pylint: disable=C0103
+# pylint: disable=C0103
 #        Invalid name "logger" for type constant (should match
 logger = logging.getLogger()
 
@@ -54,12 +54,11 @@ def digestpw_internal(password, salt=None):
     if not salt:
         salt = base64.b64encode(os.urandom(32))
     digest = salt + password
-    #pylint: disable=W0612
+    # pylint: disable=W0612
     #        Unused variable 'loop_cnt'
     for loop_cnt in range(0, 100000):
         digest = hashlib.sha256(digest).hexdigest()
     return salt, digest
-digestpw = digestpw_internal
 
 
 def digestpw_plaintext(password, salt=None):
@@ -109,7 +108,7 @@ class Group(object):
 
     @name.setter
     def name(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._name = value
 
@@ -158,7 +157,7 @@ class User(object):
     A simple user record object with setter and getter properties, 'handle',
     'location', 'email', 'password', 'groups', 'calls', 'lastcall', and 'plan'.
     """
-    #pylint: disable=R0902,R0924
+    # pylint: disable=R0902,R0924
     #        Too many instance attributes (8/7)
     #        Badly implemented Container, implements
     #          __delitem__, __getitem__, __setitem__
@@ -189,7 +188,7 @@ class User(object):
 
     @handle.setter
     def handle(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._handle = value
 
@@ -205,7 +204,7 @@ class User(object):
 
     @password.setter
     def password(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._password = digestpw(value)
         logger.info('%s set new password', self.handle)
@@ -223,7 +222,7 @@ class User(object):
         return self.password == digestpw(try_pass, salt)
 
     def __setitem__(self, key, value):
-        #pylint: disable=C0111,
+        # pylint: disable=C0111,
         #        Missing docstring
         adb = x84.bbs.dbproxy.DBProxy('userbase', 'attrs')
         adb.acquire()
@@ -238,7 +237,7 @@ class User(object):
     __setitem__.__doc__ = dict.__setitem__.__doc__
 
     def get(self, key, default=None):
-        #pylint: disable=C0111,
+        # pylint: disable=C0111,
         #        Missing docstring
         adb = x84.bbs.dbproxy.DBProxy('userbase', 'attrs')
         if not self.handle in adb:
@@ -255,13 +254,13 @@ class User(object):
     get.__doc__ = dict.get.__doc__
 
     def __getitem__(self, key):
-        #pylint: disable=C0111,
+        # pylint: disable=C0111,
         #        Missing docstring
         return x84.bbs.dbproxy.DBProxy('userbase', 'attrs')[self.handle][key]
     __getitem__.__doc__ = dict.__getitem__.__doc__
 
     def __delitem__(self, key):
-        #pylint: disable=C0111,
+        # pylint: disable=C0111,
         #        Missing docstring
         uadb = x84.bbs.dbproxy.DBProxy('userbase', 'attrs')
         uadb.acquire()
@@ -350,7 +349,7 @@ class User(object):
 
     @lastcall.setter
     def lastcall(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._lastcall = value
 
@@ -361,7 +360,7 @@ class User(object):
 
     @calls.setter
     def calls(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._calls = value
 
@@ -374,7 +373,7 @@ class User(object):
 
     @location.setter
     def location(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._location = value
 
@@ -387,7 +386,7 @@ class User(object):
 
     @email.setter
     def email(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._email = value
 
@@ -400,7 +399,7 @@ class User(object):
 
     @plan.setter
     def plan(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._plan = value
 
