@@ -139,6 +139,11 @@ def init_bbs_ini():
     cfg_bbs.set('irc', 'port', '6667')
     cfg_bbs.set('irc', 'channel', '#prsv')
 
+    cfg_bbs.add_section('nethack')
+    cfg_bbs.set('nethack', 'enabled', 'yes')
+    cfg_bbs.set('nethack', 'path', '/nh343/nethack.343-nao')
+    cfg_bbs.set('nethack', 'logfile', '/nh343/var/xlogfile')
+
     cfg_bbs.add_section('nua')
     cfg_bbs.set('nua', 'script', 'nua')
     cfg_bbs.set('nua', 'min_user', '3')
