@@ -1,18 +1,9 @@
 """
- time-competitive version of nethack, 'speedhack'
- is offered as a door game. This is really just nao's nethack
- setup (telnet alt.nethack.org), but replacing dgamelaunch with
- x/84.
+ nethack is offered as a door game. This is really just nao's nethack
+ setup (telnet alt.nethack.org), but replacing dgamelaunch with x/84.
 
  Similarly, we offer ttyrec record & playback functionality...
-
- This can be used as a door, or even as a 'topscript' for a nethack-only "bbs".
-
-('speedhack' is a varient that only allows the game to be played for a limited
- time before auto-ascending a character. The goal being to plunder as quickly
- as possible. and a lot of wild luck.)
 """
-
 import os
 import re
 import time
@@ -23,18 +14,19 @@ import requests
 import logging
 
 msg_anon_noedit = "'anonymous' not allowed to edit .nethackrc."
-editor = '/usr/local/bin/virus'
-hackexe = '/nh343/nethack.343-nao'
-xlogfile = '/nh343/var/xlogfile'
 pattern_resize = r'\033\[8;(\d+);(\d+)t'
 
 
 def main():
-    from x84.bbs import getsession, getterminal, gosub, echo
-    from x84.bbs import showcp437, getch, Door, readline, Ansi
+    from x84.bbs import getsession, getterminal, gosub, echo, ini
+    from x84.bbs import showcp437, getch, Door, LineEditor, Ansi
 
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
+    assert ini.CFG.getboolean('nethack', 'enabled'), (
+        'nethack.py called but nethack not enabled in ini.CFG')
+    hackexe = ini.CFG.get('nethack', 'path')
+    logfile = ini.CFG.get('nethack', 'logfile')
 
     def clear():
         echo(u''.join((term.normal, term.normal_cursor, term.clear, u'\r\n')))
@@ -76,24 +68,7 @@ def main():
                     getch(2)
                     prompt()
                     continue  # denied
-                fp, tmppath = tempfile.mkstemp()
-                nethackrc = session.user.get('.nethackrc', '')
-                length = len(nethackrc)
-                if 0 != length:
-                    written = 0
-                    while written < length:
-                        written += os.write(fp, nethackrc[written:])
-                os.close(fp)
-                lastmod = os.stat(tmppath).st_mtime
-                d = Door(editor, args=(tmppath,))
-                d._TAP = True
-                if 0 == d.run() and os.stat(tmppath).st_mtime > lastmod:
-                    # program exited normaly, file has been modified
-                    fp = open(tmppath, 'r')
-                    session.user.set('.nethackrc', fp.read())
-                    fp.close()
-                    session.user.save()
-                os.unlink(tmppath)
+                gosub('default/editor', '.nethackrc')
                 refresh()
 
             # download rc file from alt.org
@@ -101,7 +76,7 @@ def main():
                 # download .nethackrc from NAO,
                 echo(u'\r\nNAO account name: ')
                 echo(term.black_on_red + u' ' * 15 + u'\b' * 15)
-                nao = readline(15, session.user.handle)
+                nao = LineEditor(15, session.user.handle)
                 echo(term.normal)
                 url = 'http://alt.org/nethack/userdata/%s/%s/%s.nh343rc'  \
                     % (nao[0], nao, nao,)
@@ -159,9 +134,9 @@ def main():
             # view high scores ... (and recordings!)
             elif str(choice).lower() == 'v':
                 playerBest = dict()
-                fp = open(xlogfile, 'r')
+                fp = open(logfile, 'r')
                 for record in fp.readlines():
-                    # xlogfile format key=value:key=value:(...)
+                    # logfile format key=value:key=value:(...)
                     attrs = dict([keyval.split('=', 1)
                                   for keyval in record.split(':')])
                     name = attrs['name']
@@ -239,7 +214,7 @@ def main():
                     pak()
                     continue  # no recordings; refresh
                 echo(u'\r\nEnter No. to playback recording: ')
-                idx = readline(3, )
+                idx = LineEditor(3)
                 if 0 == len(idx):
                     refresh()
                     continue  # no input; refresh
@@ -254,48 +229,6 @@ def main():
                 Door('/usr/bin/ttyplay', args=(recordings[idx],)).run()
                 pak()
                 refresh()
-
-#            # play dopewars!
-#            elif str(choice) == '#':
-#                # check if server is already running ...
-#                pidfile = ini.CFG.get('dopewars', 'pidfile')
-#                running = False
-#                if os.path.exists(pidfile):
-#                    # str->int->str, sanitize input
-#                    pid = str(int(open(pidfile).read().strip()))
-#                    d = Door('/bin/ps', args=('-p', pid,))
-#                    running = bool(0 == d.run())
-#                if running == False:
-#                    scorefile = ini.CFG.get('dopewars', 'scorefile')
-#                    logfile = ini.CFG.get('dopewars', 'logfile')
-#                    echo (u'\r\n\r\nLaunching dopewars server,\r\n')
-#                    os.spawnl(os.P_NOWAIT, '/usr/local/bin/dopewars',
-#                            'dopewars',
-#                            '--private-server',
-#                            '--hostname=127.0.0.1',
-#                            '--port=60387',
-#                            '--scorefile=%s' % (scorefile,),
-#                            '--pidfile=%s' % (pidfile,),
-#                            '--logfile=%s' % (logfile,),)
-#                else:
-#                    echo (u'\r\n\r\ndopewars server already running,\r\n')
-#                if session.user.is_sysop:
-#                    pak ()
-#                echo (u'\r\n\r\nLaunching dopewars client,\r\n')
-#                # HACK -- send input to program game; avoids requiring .cfg file :P
-#                # anykey;connect;accept localhost;accept port
-#                session.enable_keycodes = False
-#                session._buffer_event('input', 'Xc\015\015')
-#                d = Door('/usr/local/bin/dopewars', args=( \
-#                    '--scorefile=%s' % (ini.CFG.get('dopewars', 'scorefile'),),
-#                    '--hostname=127.0.0.1', '--port=60387',
-#                    '--text-client', '--player=%s' % (session.user.handle,),))
-#                res = d.run ()
-#                session.enable_keycodes = True
-#                if (0 != res):
-#                    echo (u'\r\nExit: %s' % (res,))
-#                    pak ()
-#                refresh ()
             # change TERM type ...
             elif str(choice).lower() == 'u':
                 gosub('charset')
@@ -305,7 +238,7 @@ def main():
             # change TERM type ...
             elif str(choice).lower() == 'c':
                 echo(u'\r\n TERM: ')
-                TERM = readline(30).strip()
+                TERM = LineEditor(30).strip()
                 echo(u"\r\n set TERM to '%s'? [yn]" % (TERM,))
                 while True:
                     ch = getch()
@@ -315,3 +248,44 @@ def main():
                     elif str(ch).lower() == 'n':
                         break
                 prompt()
+#  # play dopewars!
+#  elif str(choice) == '#':
+#      # check if server is already running ...
+#      pidfile = ini.CFG.get('dopewars', 'pidfile')
+#      running = False
+#      if os.path.exists(pidfile):
+#          # str->int->str, sanitize input
+#          pid = str(int(open(pidfile).read().strip()))
+#                    d = Door('/bin/ps', args=('-p', pid,))
+#          running = bool(0 == d.run())
+#      if running == False:
+#          scorefile = ini.CFG.get('dopewars', 'scorefile')
+#          logfile = ini.CFG.get('dopewars', 'logfile')
+#          echo (u'\r\n\r\nLaunching dopewars server,\r\n')
+#          os.spawnl(os.P_NOWAIT, '/usr/local/bin/dopewars',
+#                  'dopewars',
+#                  '--private-server',
+#                  '--hostname=127.0.0.1',
+#                  '--port=60387',
+#                  '--scorefile=%s' % (scorefile,),
+#                  '--pidfile=%s' % (pidfile,),
+#                  '--logfile=%s' % (logfile,),)
+#      else:
+#          echo (u'\r\n\r\ndopewars server already running,\r\n')
+#      if session.user.is_sysop:
+#          pak ()
+#      echo (u'\r\n\r\nLaunching dopewars client,\r\n')
+#      # HACK -- send input to program game; avoids requiring .cfg file :P
+#      # anykey;connect;accept localhost;accept port
+#      session.enable_keycodes = False
+#      session._buffer_event('input', 'Xc\015\015')
+#      d = Door('/usr/local/bin/dopewars', args=( \
+#          '--scorefile=%s' % (ini.CFG.get('dopewars', 'scorefile'),),
+#          '--hostname=127.0.0.1', '--port=60387',
+#          '--text-client', '--player=%s' % (session.user.handle,),))
+#      res = d.run ()
+#      session.enable_keycodes = True
+#      if (0 != res):
+#          echo (u'\r\nExit: %s' % (res,))
+#          pak ()
+#      refresh ()
