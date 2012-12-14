@@ -5,7 +5,7 @@ TIME_POLL = 0.05
 
 import telnetlib
 import sys
-#pylint: disable=W0614
+# pylint: disable=W0614
 #        Unused import from wildcard import
 from x84.bbs import *
 

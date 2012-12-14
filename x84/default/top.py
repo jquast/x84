@@ -148,7 +148,7 @@ def main(handle=None):
             goto('main')
 
     # 5. check for new msgs,
-    #gosub('chkmsgs')
+    # gosub('chkmsgs')
 
     # 6. last callers
     gosub('lc')
