@@ -69,9 +69,7 @@ def _loop(telnetd):
     Main event loop. Never returns.
     """
     # pylint: disable=R0912,R0914,R0915
-    #         Too many branches (15/12)
     #         Too many local variables (24/15)
-    #         Too many statements (73/50)
     import logging
     import select
     import socket
@@ -90,10 +88,19 @@ def _loop(telnetd):
     locks = dict()
 
     def inactive():
+        """
+        Returns list of tuples (fileno, client) of telnet
+        clients that have been deactivated
+        """
         return [(fno, clt) for (fno, clt) in
                 telnetd.clients.items() if not clt.active]
 
     def lookup(client):
+        """
+        Given a telnet client, return a matching session
+        of tuple (client, pipe, lock).  If no session matches
+        a telnet client, (None, None, None) is returned.
+        """
         for o_client, pipe, lock in terminals():
             if o_client == client:
                 return (client, pipe, lock)
@@ -106,9 +113,8 @@ def _loop(telnetd):
         unregister the session (if any).
         """
         # read in any telnet input
-        for fileno, client in ((fno, clt)
-                               for fno, clt in telnetd.clients.iteritems()
-                               if fno in fds):
+        for client in (clt for (fno, clt) in telnetd.clients.iteritems()
+                       if fno in fds):
             try:
                 client.socket_recv()
             except Disconnected, err:
@@ -137,9 +143,9 @@ def _loop(telnetd):
                     # client.sock.fileno() can raised 'bad file descriptor',
                     # so, to remove it from the recv_list, reverse match by
                     # instance saved with its FD as a key for telnetd.clients!
-                    for fd, clt in telnetd.clients.items():
-                        if client == clt and fd in recv_list:
-                            recv_list.remove(fd)
+                    for o_fd, clt in telnetd.clients.items():
+                        if client == clt and o_fd in recv_list:
+                            recv_list.remove(o_fd)
                             break
                     pipe.send(('exception', Disconnected(err),))
                     unregister(client, pipe, lock)
@@ -246,7 +252,7 @@ def _loop(telnetd):
                     for o_client, o_pipe, o_lock in terminals():
                         if o_client.origin == data[0]:
                             if not o_lock.acquire(False):
-                                logger.warn('ZZZ')  # buffer ..
+                                logger.warn('zZz')  # TODO: buffer ..
                             else:
                                 o_pipe.send((event, (client.origin, data[1])))
                                 o_lock.release()
@@ -256,7 +262,7 @@ def _loop(telnetd):
                     for o_client, o_pipe, o_lock in terminals():
                         if o_client != client:
                             if not o_lock.acquire(False):
-                                logger.warn('XXX')  # buffer ..
+                                logger.warn('zZz')  # TODO: buffer ..
                             else:
                                 o_pipe.send((event, data,))
                                 o_lock.release()
@@ -292,6 +298,8 @@ def _loop(telnetd):
             del telnetd.clients[fileno]
 
         # poll for: new connections, telnet client input, session pipe input,
+        # pylint: disable=W0612
+        #        Unused variable 'lock'
         recv_list = set([fileno_telnetd] + telnetd.clients.keys() +
                         [pipe.fileno() for client, pipe, lock in terminals()])
 

@@ -375,7 +375,8 @@ class Session(object):
 
         if not self.enable_keycodes:
             # send keyboard bytes in as-is, 1-by-1, unmanipulated
-            [self._buffer['input'].insert(0, ch) for ch in data]
+            for ch in data:
+                self._buffer['input'].insert(0, ch)
             return
 
         # perform keycode translation with modified blessings/curses

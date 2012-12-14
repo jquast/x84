@@ -130,8 +130,7 @@ class Door(object):
 
     def _loop(self):
         """
-        Poll input and outpout of ptys, raising exception.ConnectionTimeout
-        when session idle time exceeds self.timeout.
+        Poll input and outpout of ptys,
         """
         term = x84.bbs.session.getterminal()
         session = x84.bbs.session.getsession()
@@ -155,10 +154,7 @@ class Door(object):
             # block up to self.time_ipoll for keyboard input
             event, data = session.read_events(
                 ('refresh', 'input',), self.time_ipoll)
-            if ((None, None) == (event, data) and session.idle > self.timeout):
-                raise x84.bbs.exception.ConnectionTimeout(
-                    'timeout in door %r', self.args,)
-            elif event == 'refresh':
+            if event == 'refresh':
                 if data[0] == 'resize':
                     logger.debug('send TIOCSWINSZ: %dx%d',
                                  term.width, term.height)
@@ -166,7 +162,7 @@ class Door(object):
                                 struct.pack('HHHH', term.height, term.width,
                                             0, 0))
             elif event == 'input':
-                # needs testing (replay vim special keys input ?)
+                # hmm.. what to send, depending on TERM? interesting ..
                 n_written = os.write(self.master_fd, data)
                 if n_written == 0:
                     logger.warn('fight 0-byte write; exit, right?')
