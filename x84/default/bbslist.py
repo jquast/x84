@@ -52,7 +52,7 @@ class FetchUpdates(threading.Thread):
         passwd = ini.CFG.get('bbs-scene', 'pass')
         logger.info('fetching %r ..', self.url)
         stime = time.time()
-        #pylint: disable=E1103
+        # pylint: disable=E1103
         req = requests.get(self.url, auth=(usernm, passwd))
         if 200 != req.status_code:
             logger.error(req.content)
@@ -405,7 +405,7 @@ def dummy_pager():
     hindent = 2
     vindent = 5
     prompt_key = u'\r\n\r\nENtER BBS iD: '
-    #prompt_pak = u'\r\n\r\nPRESS ANY kEY ..'
+    # prompt_pak = u'\r\n\r\nPRESS ANY kEY ..'
     msg_badkey = u'\r\n\r\nbbS id iNVAliD!'
     msg_header = u'// bbS liSt'
     nlines = 0

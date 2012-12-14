@@ -7,7 +7,7 @@ import threading
 import logging
 import os
 import sqlitedict
-#pylint: disable=C0103
+# pylint: disable=C0103
 #        Invalid name "logger" for type constant
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class DBHandler(threading.Thread):
     pipe with the same 'event' name.
     """
 
-    #pylint: disable=R0902
+    # pylint: disable=R0902
     #        Too many instance attributes (8/7)
     def __init__(self, pipe, event, data):
         """ Arguments:
@@ -70,7 +70,7 @@ class DBHandler(threading.Thread):
                     result = func()
                 else:
                     result = func(*self.args)
-            #pylint: disable=W0703
+            # pylint: disable=W0703
             #         Catching too general exception
             except Exception as exception:
                 # Pokemon exception; package & raise from session process,
@@ -90,7 +90,7 @@ class DBHandler(threading.Thread):
             else:
                 for item in func(*self.args):
                     self.pipe.send((self.event, item,))
-        #pylint: disable=W0703
+        # pylint: disable=W0703
         #         Catching too general exception
         except Exception as exception:
             # Pokemon exception; package & raise from session process,
