@@ -34,7 +34,7 @@ class AnsiWindow(object):
     routines to terminal interfaces, such as pager windows, editors, and
     lightbar lists.
     """
-    #pylint: disable=R0902
+    # pylint: disable=R0902
     #        Too many instance attributes (8/7)
 
     def __init__(self, height, width, yloc, xloc):
@@ -84,7 +84,7 @@ class AnsiWindow(object):
 
     @xpadding.setter
     def xpadding(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._xpadding = value
 
@@ -97,7 +97,7 @@ class AnsiWindow(object):
 
     @ypadding.setter
     def ypadding(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._ypadding = value
 
@@ -213,7 +213,7 @@ class AnsiWindow(object):
         'top-left', 'top-horiz', 'top-right', 'left-vert', 'right-vert',
         'bot-left', 'bot-horiz', and 'bot-right'.
         """
-        #pylint: disable=R0912
+        # pylint: disable=R0912
         #        Too many branches (17/12)
         topright = self.glyphs.get('top-right', u'*')
         thoriz = self.glyphs.get('top-horiz', u'-') * (max(0, self.width - 2))
@@ -311,7 +311,7 @@ class AnsiWindow(object):
 
     @moved.setter
     def moved(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         assert type(value) is bool
         self._moved = value
