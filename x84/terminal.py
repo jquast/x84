@@ -10,6 +10,32 @@ import re
 TERMINALS = list()
 
 
+def init_term(pipe, env):
+    """
+    curses is initialized using the value of 'TERM' of dictionary env,
+    as well as a starting window size of 'LINES' and 'COLUMNS'.
+
+    A blessings-abstracted curses terminal is returned.
+    """
+    from x84.bbs.ipc import IPCStream
+    from x84.blessings import Terminal
+    return Terminal(env.get('TERM', 'unknown'), IPCStream(pipe),
+                    int(env.get('LINES', '24')),
+                    int(env.get('COLUMNS', '80')))
+
+
+def mkipc_rlog(pipe):
+    """
+    Remove any existing handlers of the current process, and
+    re-address the root logging handler to an IPC event pipe
+    """
+    from x84.bbs.ipc import IPCLogHandler
+    root = logging.getLogger()
+    for hdlr in root.handlers:
+        root.removeHandler(hdlr)
+    root.addHandler(IPCLogHandler(pipe))
+
+
 def register(client, pipe, lock):
     """
     Register a Terminal, given instances of telnet.TelnetClient,
@@ -24,13 +50,18 @@ def flush_pipe(pipe):
     to prevent zombie processes with IPC waiting to be picked up.
     """
     logger = logging.getLogger()
+    warned = False
     while pipe.poll():
-        logger.warn('pipe assertion, leftover bit:')
+        if not warned:
+            logger.warn('pipe assertion, leftover bit(s):')
+            warned = True
         event, data = pipe.recv()
         if event == 'logger':
             logger.handle(data)
         else:
             logger.warn(repr((event, data,)))
+    if warned:
+        logger.warn('END pipe assertion')
 
 
 def unregister(client, pipe, lock):
@@ -38,11 +69,8 @@ def unregister(client, pipe, lock):
     Unregister a Terminal, described by its telnet.TelnetClient,
     Pipe, and Lock.
     """
-    from x84.bbs.exception import Disconnected
     logger = logging.getLogger()
     try:
-        pipe.send(('exception', Disconnected(),))
-
         flush_pipe(pipe)
         pipe.close()
     except (EOFError, IOError) as exception:
@@ -66,37 +94,21 @@ def start_process(pipe, origin, env):
         termtype: TERM string (used to initialize curses)
         env: dictionary of client environment variables
     """
-    from x84.blessings import Terminal
     from x84.bbs.session import Session
-    from x84.bbs.ipc import IPCLogHandler, IPCStream
-    logger = logging.getLogger()
-    # curses is initialized for the first time.
-    term = Terminal(env.get('TERM', 'unknown'), IPCStream(pipe),
-                    int(env.get('LINES', '24')),
-                    int(env.get('COLUMNS', '80')))
+
+    # root handler has dangerously forked file descriptors.
+    # replace with ipc 'logger' events so that only the main
+    # process is responsible for logging.
+    mkipc_rlog(pipe)
+
+    # initialize blessings terminal based on env's TERM.
+    term = init_term(pipe, env)
 
     # spawn and begin a new session
     session = Session(term, pipe, origin, env)
-
-    # our root handler has dangerously forked file descriptors.
-    # remove any existing handlers in this sub-process, and
-    # re-address the root logging handler to an IPC event pipe,
-    # so that only the main process is responsible for logging.
-    root = logging.getLogger()
-    for hdlr in root.handlers:
-        root.removeHandler(hdlr)
-    root.addHandler(IPCLogHandler(pipe))
-    # session returns non-None for 'silent termination' -- that is
-    # the socket was lost, so there is no need to log or re-raise
-    # an 'exit' event.
-    ret = session.run()
-    # flush client side the client pipe before exit
+    session.run()
     flush_pipe(pipe)
-    if ret is None:
-        pipe.send(('exit', True))
-        logger.info('End of process: %d.', session.pid)
-    else:
-        logger.debug('Silent Termination: %d.', session.pid)
+    pipe.send(('exit', None))
     pipe.close()
 
 
@@ -212,7 +224,7 @@ class ConnectTelnet (threading.Thread):
         and tcp socket options before spawning a new session.
         """
         logger = logging.getLogger()
-        import x84.bbs.exception
+        from x84.bbs.exception import Disconnected
         try:
             self._set_socket_opts()
             self.banner()
@@ -220,7 +232,7 @@ class ConnectTelnet (threading.Thread):
         except socket.error, err:
             logger.debug('Connection closed: %s', err)
             self.client.deactivate()
-        except x84.bbs.exception.ConnectionClosed, err:
+        except Disconnected, err:
             logger.debug('Connection closed: %s', err)
             self.client.deactivate()
 

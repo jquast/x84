@@ -19,7 +19,7 @@ def main():
       --config= location of alternate configuration file
       --logger= location of alternate logging.ini file
     """
-    #pylint: disable=R0914
+    # pylint: disable=R0914
     #        Too many local variables (19/15)
     import getopt
     import sys
@@ -35,7 +35,7 @@ def main():
                   os.path.expanduser('~/.x84/logging.ini'))
     try:
         opts, tail = getopt.getopt(sys.argv[1:], ":", ('config', 'logger',))
-    except getopt.GetoptError, err:
+    except getopt.GetoptError as err:
         sys.stderr.write('%s\n' % (err,))
         return 1
     for opt, arg in opts:
@@ -77,7 +77,7 @@ def _loop(telnetd):
     import socket
     import time
 
-    from x84.bbs.exception import (ConnectionClosed, ConnectionTimeout)
+    from x84.bbs.exception import Disconnected
     from x84.terminal import terminals, ConnectTelnet, unregister
     from x84.bbs.ini import CFG
     from x84.telnet import TelnetClient
@@ -99,80 +99,85 @@ def _loop(telnetd):
                 return (client, pipe, lock)
         return (None, None, None)
 
-    # main event loop
-    while True:
-        # close & delete inactive sockets,
-        for fileno, client in inactive()[:]:
-            client.sock.close()
-            del telnetd.clients[fileno]
-
-        # queue all telnet clients for recv test
-        recv_list = set([fileno_telnetd] + telnetd.clients.keys())
-
-        # queue all multiprocessing pipes for recv test,
-        for client, pipe, lock in terminals():
-            recv_list.add(pipe.fileno())
-
-        # test all clients for send()
-        for client, pipe, lock in terminals():
-            if client.send_ready():
-                try:
-                    client.socket_send()
-                except ConnectionClosed, err:
-                    logger.debug('%s ConnectionClosed(%s).',
-                                 client.addrport(), err)
-                    # client.sock.fileno() can raised 'bad file descriptor',
-                    # so, to remove it from the recv_list, we must match by
-                    # client object instance !
-                    for fd, clt in telnetd.clients.items():
-                        if client == clt and fd in recv_list:
-                            recv_list.remove(fd)
-                            break
-                    unregister(client, pipe, lock)
-
-        #pylint: disable=W0612
-        #        Unused variable 'slist', 'elist'
-        # poll new connections, telnet client input, session pipe input,
-        rlist, slist, elist = select.select(recv_list, [], [], 1)
-
-        # accept new connections,
-        if fileno_telnetd in rlist:
-            rlist.remove(fileno_telnetd)
-            try:
-                sock, address_pair = telnetd.server_socket.accept()
-                if telnetd.client_count() > telnetd.MAX_CONNECTIONS:
-                    sock.close()
-                    logger.error('refused new connect; maximum reached.')
-                else:
-                    # accept & instantiate new client
-                    client = TelnetClient(
-                        sock, address_pair, telnetd.on_naws)
-                    telnetd.clients[client.sock.fileno()] = client
-                    # begin unmanaged thread.
-                    ConnectTelnet(client).start()
-                    logger.info('%s: Connected.', client.addrport())
-            except socket.error, err:
-                logger.error('accept error %d:%s', err[0], err[1],)
-
+    def telnet_recv(fds):
+        """
+        test all telnet clients with file descriptors in list fds for
+        recv(). If any are disconnected, signal exit to subprocess,
+        unregister the session (if any).
+        """
         # read in any telnet input
-        for fileno in (fno for fno in telnetd.clients if fno in rlist):
-            client = telnetd.clients[fileno]
+        for fileno, client in ((fno, clt)
+                               for fno, clt in telnetd.clients.iteritems()
+                               if fno in fds):
             try:
                 client.socket_recv()
-            except ConnectionClosed, err:
-                logger.info('%s: %s', client.addrport(), err)
+            except Disconnected, err:
+                logger.info('%s Connection Closed: %s.',
+                            client.addrport(), err)
                 o_client, pipe, lock = lookup(client)
                 if o_client is not None:
+                    pipe.send(('exception', Disconnected(err)))
                     unregister(client, pipe, lock)
                 else:
                     client.deactivate()
 
+    def telnet_send(recv_list):
+        """
+        test all telnet clients for send(). If any are disconnected,
+        signal exit to subprocess, unregister the session, and return
+        recv_list pruned of their file descriptors.
+        """
+        for client, pipe, lock in terminals():
+            if client.send_ready():
+                try:
+                    client.socket_send()
+                except Disconnected as err:
+                    logger.debug('%s Disconnected: %s.',
+                                 client.addrport(), err)
+                    # client.sock.fileno() can raised 'bad file descriptor',
+                    # so, to remove it from the recv_list, reverse match by
+                    # instance saved with its FD as a key for telnetd.clients!
+                    for fd, clt in telnetd.clients.items():
+                        if client == clt and fd in recv_list:
+                            recv_list.remove(fd)
+                            break
+                    pipe.send(('exception', Disconnected(err),))
+                    unregister(client, pipe, lock)
+        return recv_list
+
+    def accept():
+        """
+        accept new connection from telnetd.server_socket, and
+        instantiate a new TelnetClient, registering it with
+        dictionary telnetd.clients, and spawning an unmanaged
+        thread for negotiating TERM.
+        """
+        try:
+            sock, address_pair = telnetd.server_socket.accept()
+            if telnetd.client_count() > telnetd.MAX_CONNECTIONS:
+                sock.close()
+                logger.error('refused new connect; maximum reached.')
+                return
+            client = TelnetClient(sock, address_pair, telnetd.on_naws)
+            telnetd.clients[client.sock.fileno()] = client
+            ConnectTelnet(client).start()
+            logger.info('%s Connected.', client.addrport())
+        except socket.error as err:
+            logger.error('accept error %d:%s', err[0], err[1],)
+
+    def session_send():
+        """
+        Test all sessions for idle timeout, and signal exit to subprocess,
+        unregister the session.  Also test for data received by telnet
+        client, and send to subprocess as 'input' event.
+        """
         # accept session event i/o, such as output
         for client, pipe, lock in terminals():
             # poll about and kick off idle users
-            if client.idle() > timeout and lock.acquire(False):
-                pipe.send(('exception', ConnectionTimeout(),))
-                lock.release()
+            if client.idle() > timeout:
+                err = 'Timeout: %ds' % (client.idle())
+                pipe.send(('exception', Disconnected(err)))
+                unregister(client, pipe, lock)
                 continue
 
             # send input to subprocess,
@@ -180,19 +185,56 @@ def _loop(telnetd):
                 inp = client.get_input()
                 pipe.send(('input', inp,))
                 lock.release()
-            # aggressively process all session pipe i/o
-            has_data = pipe.fileno() in rlist
-            while has_data:
+
+    def session_recv(fds):
+        """
+        receive data waiting for session pipe filenos in fds.
+        all data received from subprocess is in form (event, data),
+        and is handled by ipc_recv.
+        """
+        def handle_lock(pipe, event, data):
+            """
+            handle locking event on pipe of (lock-key, (method, stale))
+            """
+            method, stale = data
+            if method == 'acquire':
+                if not event in locks:
+                    locks[event] = time.time()
+                    logger.debug('%r granted.', (event, data))
+                    pipe.send((event, True,))
+                elif (stale is not None
+                        and time.time() - locks[event] > stale):
+                    logger.error('%r stale.', (event, data))
+                    pipe.send((event, True,))
+                else:
+                    logger.warn('%r failed.', (event, data))
+                    pipe.send((event, False,))
+            elif method == 'release':
+                if not event in locks:
+                    logger.error('%r failed.', (event, data))
+                else:
+                    del locks[event]
+                    logger.debug('%r removed.', (event, data))
+
+        def read_ipc(client, pipe, lock):
+            """
+            handle all events of form (event, data)
+            """
+            has_data = lambda pipe: bool(len(select.select(
+                [pipe.fileno()], [], [], 0)[0]))
+            while True:
                 try:
                     event, data = pipe.recv()
-                except (EOFError, IOError) as exception:
+                except (EOFError, IOError) as err:
                     # issue with pipe; sub-process unexpectedly closed
-                    logger.exception(exception)
+                    logger.exception(err)
+                    pipe.send(('exception', Disconnected('%s' % (err,)),))
                     unregister(client, pipe, lock)
-                    continue
+                    return
 
                 if event == 'exit':
                     unregister(client, pipe, lock)
+                    return
 
                 elif event == 'logger':
                     logger.handle(data)
@@ -201,56 +243,68 @@ def _loop(telnetd):
                     client.send_unicode(ucs=data[0], encoding=data[1])
 
                 elif event == 'route':
-                    #pylint: disable=W0612
-                    #         Unused variable 'o_lock'
                     for o_client, o_pipe, o_lock in terminals():
                         if o_client.origin == data[0]:
-                            o_pipe.send((event, (client.origin, data[1])))
+                            if not o_lock.acquire(False):
+                                logger.warn('ZZZ')  # buffer ..
+                            else:
+                                o_pipe.send((event, (client.origin, data[1])))
+                                o_lock.release()
                             break
 
                 elif event == 'global':
-                    #pylint: disable=W0612
-                    #         Unused variable 'o_lock'
                     for o_client, o_pipe, o_lock in terminals():
                         if o_client != client:
-                            o_pipe.send((event, data,))
+                            if not o_lock.acquire(False):
+                                logger.warn('XXX')  # buffer ..
+                            else:
+                                o_pipe.send((event, data,))
+                                o_lock.release()
+                            break
 
                 elif event.startswith('db'):
-                    # db query-> database dictionary method, callback
-                    # with a matching ('db-*',) event. sqlite is used
-                    # for now and is quick, but this prevents slow
-                    # database queries from locking the i/o event loop.
+                    # db query-> database dictionary method,
+                    # spawn thread; callback by matching ('db-*',) event.
                     thread = DBHandler(pipe, event, data)
                     thread.start()
 
                 elif event.startswith('lock'):
-                    # fine-grained lock acquire and release, non-blocking
-                    method, stale = data
-                    if method == 'acquire':
-                        if not event in locks:
-                            locks[event] = time.time()
-                            logger.debug('%r granted.', (event, data))
-                            pipe.send((event, True,))
-                        elif (stale is not None
-                                and time.time() - locks[event] > stale):
-                            logger.error('%r stale.', (event, data))
-                            pipe.send((event, True,))
-                        else:
-                            logger.warn('%r failed.', (event, data))
-                            pipe.send((event, False,))
-                    elif method == 'release':
-                        if not event in locks:
-                            logger.error('%r failed.', (event, data))
-                        else:
-                            del locks[event]
-                            logger.debug('%r removed.', (event, data))
+                    # fine-grained lock acquire and release
+                    handle_lock(pipe, event, data)
+
                 else:
                     assert False, 'unhandled %r' % ((event, data),)
+
                 try:
-                    has_data = (1 == len(select.select
-                                        ([pipe.fileno()], [], [], 0)[0]))
+                    if not has_data(pipe):
+                        return
                 except IOError:
-                    has_data = False
+                    return
+        for client, pipe, lock in terminals():
+            if pipe.fileno() in fds:
+                read_ipc(client, pipe, lock)
+
+    # main event loop
+    while True:
+        # close & delete inactive sockets,
+        for fileno, client in inactive()[:]:
+            client.sock.close()
+            del telnetd.clients[fileno]
+
+        # poll for: new connections, telnet client input, session pipe input,
+        recv_list = set([fileno_telnetd] + telnetd.clients.keys() +
+                        [pipe.fileno() for client, pipe, lock in terminals()])
+
+        # send data, prune if disconnected
+        recv_list = telnet_send(recv_list)
+
+        fds = select.select(recv_list, [], [], 1)[0]
+        if fileno_telnetd in fds:
+            accept()
+
+        telnet_recv(fds)
+        session_send()
+        session_recv(fds)
 
 if __name__ == '__main__':
     exit(main())

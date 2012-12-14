@@ -4,30 +4,15 @@ Custom exception classes for x/84, https://github.com/jquast/x84
 
 
 class Disconnected(Exception):
-    """Thrown when socket was disconnected"""
-    pass
-
-
-class Disconnect(Exception):
-    """Throw to cause the socket to be disconnected."""
-    pass
-
-
-class ConnectionClosed (Exception):
-    """Thrown when client closes connection."""
-    pass
-
-
-class ConnectionTimeout (Exception):
-    """Thrown to indicate idle time exceeded."""
+    """Thrown when a client is disconnected."""
     pass
 
 
 class Goto (Exception):
-    """Thrown when a script wants exec() another script"""
+    """Thrown to change script without returning."""
     pass
 
 
 class ScriptError (Exception):
-    """Thrown when runscript fails to locate script."""
+    """Thrown for internal scripting errors."""
     pass

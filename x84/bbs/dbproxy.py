@@ -5,7 +5,7 @@ import logging
 import time
 
 
-#pylint: disable=C0103
+# pylint: disable=C0103
 #        Invalid name "logger" for type constant (should match
 logger = logging.getLogger()
 
@@ -90,7 +90,7 @@ class DBProxy(object):
         session = x84.bbs.session.getsession()
         return session.send_event(event, ('release', None))
 
-    #pylint: disable=C0111
+    # pylint: disable=C0111
     #        Missing docstring
     def __cmp__(self, obj):
         return self.proxy_method('__cmp__', obj)

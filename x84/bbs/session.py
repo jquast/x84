@@ -17,11 +17,11 @@ import x84.bbs.userbase
 import x84.bbs.cp437
 import x84.bbs.ini
 
-#pylint: disable=C0103
+# pylint: disable=C0103
 #        Invalid name "logger" for type constant (should match
 logger = logging.getLogger()
 SESSION = None
-#TTYREC_UCOMPRESS = 15000
+# TTYREC_UCOMPRESS = 15000
 TTYREC_UCOMPRESS = None  # disabled for ttyplay -p(eek)
 TTYREC_HEADER = unichr(27) + u'[8;%d;%dt'
 TTYREC_ROTATE = 4
@@ -46,7 +46,7 @@ class Session(object):
     """
     A BBS Session engine, started by .run().
     """
-    #pylint: disable=R0902,R0904
+    # pylint: disable=R0902,R0904
     #        Too many instance attributes (29/7)
     #        Too many public methods (25/20)
 
@@ -59,7 +59,7 @@ class Session(object):
             source: origin of the connect (ip, port),
             env: dict of environment variables, such as 'TERM', 'USER'.
         """
-        #pylint: disable=W0603
+        # pylint: disable=W0603
         #        Using the global statement
         global SESSION
         assert SESSION is None, 'Session may be instantiated only once'
@@ -129,7 +129,7 @@ class Session(object):
 
     @activity.setter
     def activity(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         if self._activity != value:
             logger.debug('activity=%s', value)
@@ -153,7 +153,7 @@ class Session(object):
 
     @user.setter
     def user(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._user = value
         logger.info('user = %r', value.handle)
@@ -170,7 +170,7 @@ class Session(object):
 
     @source.setter
     def source(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._source = value
 
@@ -183,7 +183,7 @@ class Session(object):
 
     @encoding.setter
     def encoding(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         if value != self._encoding:
             logger.info('encoding=%s', value)
@@ -202,7 +202,7 @@ class Session(object):
 
     @enable_keycodes.setter
     def enable_keycodes(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         if value != self._enable_keycodes:
             logger.debug('enable_keycodes=%s', value)
@@ -213,7 +213,7 @@ class Session(object):
         """
         Returns Process ID.
         """
-        #pylint: disable=R0201
+        # pylint: disable=R0201
         #        Method could be a function
         return os.getpid()
 
@@ -221,14 +221,38 @@ class Session(object):
         """
         Begin main execution flow.
 
-        Returns non-None if Disconnected() event is raised.
-
         Scripts manipulate control flow of scripts using goto and gosub.
         """
-        from x84.bbs.exception import Goto, Disconnect, Disconnected
-        from x84.bbs.exception import ConnectionTimeout, ScriptError
-        from x84.bbs.exception import ConnectionClosed
-        while len(self._script_stack) > 0:
+        from x84.bbs.exception import Goto, Disconnected
+
+        def error_recovery():
+            """
+            jojo's invention; recover from a general exception by using
+            a script stack, and resuming last good script.
+            """
+            if 0 != len(self._script_stack):
+                # recover from exception
+                fault = self._script_stack.pop()
+                oper = 'RESUME' if len(self._script_stack) else 'STOP'
+                msg = (u'%s %safter general exception in %s.' % (
+                    oper, (self._script_stack[-1][0] + u' ')
+                    if len(self._script_stack) else u' ', fault[0],))
+                logger.info(msg)
+                willstop = 0 == len(self._script_stack)
+                self.write(u'\r\n\r\n')
+                self.write(self.terminal.red_reverse('stop') if willstop else
+                           self.terminal.bold_green('continue'))
+                if not willstop:
+                    self.write(u' ' + self.terminal.bold_cyan(
+                        self._script_stack[-1][0]))
+                self.write(u' after general exception in %s\r\n' % (
+                    self.terminal.bold_cyan(fault[0]),))
+                # give time for exception to write down pipe before
+                # continuing or exiting, otherwise STOP message is
+                # not fully received
+                time.sleep(2)
+
+        while len(self._script_stack):
             logger.debug('script_stack: %r', self._script_stack)
             try:
                 return self.runscript(*self._script_stack.pop())
@@ -236,19 +260,10 @@ class Session(object):
                 logger.debug('Goto: %s', err)
                 self._script_stack = [err[0] + tuple(err[1:])]
                 continue
-            except Disconnected:
-                self.close()
-                return 1
-            except (Disconnect, ConnectionClosed,
-                    ConnectionTimeout, ScriptError), err:
-                e_type, e_value, e_tb = sys.exc_info()
-                self.write(self.terminal.normal + u'\r\n')
-                for line in traceback.format_exception_only(e_type, e_value):
-                    logger.info(line.rstrip())
-                    self.write('\r\n' + line.rstrip() + u'\r\n')
+            except Disconnected, err:
                 break
             except Exception, err:
-                # Pokemon exception.
+                # Pokemon exception, log and Cc: telnet client, then resume.
                 e_type, e_value, e_tb = sys.exc_info()
                 self.write(self.terminal.normal + u'\r\n')
                 for line in traceback.format_tb(e_tb):
@@ -261,25 +276,9 @@ class Session(object):
                 if not self.lock.acquire(False):
                     logger.error('session.lock forcefully unacquired')
                     self.lock = threading.Lock()
-            if 0 != len(self._script_stack):
-                # recover from exception
-                fault = self._script_stack.pop()
-                oper = 'RESUME' if len(self._script_stack) else 'STOP'
-                msg = (u'%s %safter general exception in %s.' % (
-                    oper, (self._script_stack[-1][0] + u' ')
-                    if len(self._script_stack) else u' ', fault[0],))
-                logger.info(msg)
-                self.write(u'\r\n\r\n' + (
-                    self.terminal.bold_green('continue')
-                    if len(self._script_stack) else
-                    self.terminal.bold_red('stop'))
-                    + (self.terminal.bold_cyan(
-                        u' ' + self._script_stack[-1][0])
-                        if len(self._script_stack) else u'')
-                    + u' after general exception in '
-                    + self.terminal.bold_cyan(fault[0])
-                    + u'\r\n')
+            error_recovery()
         self.close()
+        return None
 
     def write(self, ucs):
         """
@@ -335,7 +334,7 @@ class Session(object):
         """
         # exceptions aren't buffered; they are thrown!
         if event == 'exception':
-            #pylint: disable=E0702
+            # pylint: disable=E0702
             #        Raising NoneType while only classes, (..) allowed
             raise data
 
@@ -447,9 +446,10 @@ class Session(object):
                 event, data = self.pipe.recv()
                 self.buffer_event(event, data)
                 if event in events:
+                    logger.debug('event %s caught.', (event,))
                     return (event, self._event_pop(event))
                 else:
-                    logger.debug('not seeking event %s; pass.', (event,))
+                    logger.debug('event %s buffered.', (event,))
             if timeout == -1:
                 return (None, None)
             waitfor = timeleft(stime)
@@ -485,7 +485,7 @@ class Session(object):
                 self._script_module.__path__ = script_path
             return self._script_module
         script_module = _load_script_module()
-        #pylint: disable=W0142
+        # pylint: disable=W0142
         #        Used * or ** magic
         lookup = imp.find_module(script_name, [script_module.__path__])
         script = imp.load_module(script_name, *lookup)
@@ -504,7 +504,6 @@ class Session(object):
         """
         Close session.
         """
-        logger.debug('session close')
         if self.is_recording:
             self.stop_recording()
 

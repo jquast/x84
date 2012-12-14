@@ -3,7 +3,7 @@ x/84 bbs module, https://github.com/jquast/x84
 """
 
 from x84.bbs.userbase import list_users, get_user, find_user, User, Group
-from x84.bbs.exception import Disconnect, Goto, ConnectionTimeout
+from x84.bbs.exception import Disconnected, Goto
 from x84.bbs.editor import LineEditor, ScrollingEditor
 from x84.bbs.output import echo, timeago, Ansi
 from x84.bbs.ansiwin import AnsiWindow
@@ -23,12 +23,12 @@ def goto(*args):
     raise x84.bbs.exception.Goto(args)
 
 
-def disconnect():
+def disconnect(reason=u''):
     """
     Disconnect session. Does not return.
     """
-    import x84.bbs.exception
-    raise x84.bbs.exception.Disconnect('disconnect')
+    raise Disconnected('disconnect%s',
+                       ': %s' % (reason,) if 0 != len(reason) else u'')
 
 
 def getsession():
@@ -59,7 +59,7 @@ def gosub(*arg):
     """
     Call bbs script with optional arguments, Returns value.
     """
-    #pylint: disable=W0142
+    # pylint: disable=W0142
     #        Used * or ** magic
     return getsession().runscript(*(arg[0],) + arg[1:])
 
