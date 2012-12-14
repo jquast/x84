@@ -3,12 +3,16 @@
 """
 
 import os
-#pylint: disable=W0614
-#        Unused import from wildcard import
-from x84.bbs import *
+
+
+def has_speedhack():
+    return(os.path.exists(os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        'speedhack.py')))
 
 
 def refresh():
+    from x84.bbs import getterminal, echo, Ansi, from_cp437
     " refresh main menu screen "
     term = getterminal()
     echo(u''.join((term.normal, term.clear, term.normal_cursor)))
@@ -32,11 +36,16 @@ def refresh():
     echo(disp_entry('c', 'harset').ljust(term.width / 5))
     echo(term.move(len(art) - 6, term.width / 4) or '\r\n')
     echo(disp_entry('p', '.plan').ljust(term.width / 5))
-    echo(disp_entry('x', 'ception').ljust(term.width /5))
+    echo(disp_entry('x', 'ception').ljust(term.width / 5))
+    if has_speedhack():
+        echo(disp_entry('s', 'peedhack (game)')
+             .ljust(term.width / 5))
     echo(u'\r\n\r\n')
+    # os.path.abspath(__file__)
 
 
 def main():
+    from x84.bbs import getsession, getterminal, getch, goto, gosub
     session, term = getsession(), getterminal()
 
     dirty = True
@@ -71,6 +80,9 @@ def main():
             dirty = True
         elif choice == u'x':
             assert False, ('exception thrown')
+        elif choice == u's' and has_speedhack():
+            gosub('speedhack')
+            dirty = True
         elif choice == u'H':
             from guppy import hpy
             h = hpy()
