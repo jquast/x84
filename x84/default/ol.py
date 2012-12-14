@@ -211,7 +211,7 @@ def saysomething(dumb=True):
     session, term = getsession(), getterminal()
     prompt_api = u'MAkE AN ASS Of YOURSElf ON bbS-SCENE.ORG?!'
     prompt_say = u'SAY WhAt ?! '
-    #heard_msg = u'YOUR MESSAGE hAS bEEN VOiCEd.'
+    # heard_msg = u'YOUR MESSAGE hAS bEEN VOiCEd.'
     heard_api = u'YOUR MESSAGE hAS bEEN brOAdCAStEd.'
     logger = logging.getLogger()
 
@@ -323,7 +323,7 @@ def main():
         if chk_thread(thread):
             thread = None
         if session.poll_event('oneliner_update'):
-            #echo (banner())
+            # echo (banner())
             dirty = True
         if dirty and (session.env.get('TERM') != 'unknown'
                       and not session.user.get('expert', False)
