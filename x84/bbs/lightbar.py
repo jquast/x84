@@ -22,9 +22,9 @@ class Lightbar (AnsiWindow):
     with a list of unicode strings. send keycodes to process_keystroke () to
     interactive with the 'lightbar'.
     """
-    #pylint: disable=R0902
+    # pylint: disable=R0902
     #         Too many instance attributes (15/7)
-    #pylint: disable=R0904
+    # pylint: disable=R0904
     #         Too many public methods (29/20)
     content = list()
 
@@ -201,7 +201,7 @@ class Lightbar (AnsiWindow):
 
     @selected.setter
     def selected(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         # this setter should only be used to reset to 'False' for recycling
         assert type(value) is bool
@@ -227,7 +227,7 @@ class Lightbar (AnsiWindow):
         """
         Returns content that is visible in window
         """
-        #pylint: disable=W0612
+        # pylint: disable=W0612
         #        Unused variable 'item'
         item, shift = self.position
         return self.content[shift:shift + self.visible_height]
@@ -244,7 +244,7 @@ class Lightbar (AnsiWindow):
 
     @position.setter
     def position(self, pos_tuple):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self.vitem_idx, self.vitem_shift = pos_tuple
         self._chk_bounds()
@@ -255,13 +255,13 @@ class Lightbar (AnsiWindow):
         Index of selected item relative by index to only the length of the list
         that is visible, without accounting for scrolled content.
         """
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         return self._vitem_idx
 
     @vitem_idx.setter
     def vitem_idx(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #        Missing docstring
         if self._vitem_idx != value:
             self._vitem_lastidx = self._vitem_idx
@@ -275,13 +275,13 @@ class Lightbar (AnsiWindow):
         This value effectively represents the number of items not in view
         due to paging.
         """
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         return self._vitem_shift
 
     @vitem_shift.setter
     def vitem_shift(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #        Missing docstring
         if self._vitem_shift != value:
             self._vitem_lastshift = self._vitem_shift
