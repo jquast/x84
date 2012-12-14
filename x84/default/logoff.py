@@ -5,12 +5,15 @@ TIMEOUT = 35
 AUTOMSG_LENGTH = 40
 
 import os
-#pylint: disable=W0614
+# pylint: disable=W0614
 #        Unused import from wildcard import
-from x84.bbs import *
+# from x84.bbs import *
 
 
 def main():
+    from x84.bbs import DBProxy, getsession, echo, ini, LineEditor
+    from x84.bbs import timeago, Ansi, showcp437, disconnect, getch
+
     import time
     db = DBProxy('automsg')
     session = getsession()
@@ -24,9 +27,14 @@ def main():
            ''.join((term.white_on_blue, 'p', term.normal, term.bold_black,)),
            ''.join((term.white_on_blue, 'n', term.normal, term.bold_black,)),
            ''.join((term.red_reverse, 'g', term.normal, term.bold_black,)),)
-    prompt_say = u''.join((term.bold_blue, session.handle
-                           if session.user is not None else u'PROlE', term.normal,
-                           u' sAYs ', term.cyan_reverse, u'WhAt: ', term.normal,))
+    prompt_say = u''.join((term.bold_blue,
+                           session.handle if (
+                               session.user is not None) else u'PROlE',
+                           term.normal,
+                           u' sAYs ',
+                           term.cyan_reverse,
+                           u'WhAt: ',
+                           term.normal,))
     goodbye_msg = u''.join((term.black_bold, u'\r\n\r\n',
                             u'back to the mundane world...', u'\r\n',))
     commit_msg = u'-- !  thANk YOU fOR YOUR CONtRibUtiON, bROthER  ! --'
@@ -60,11 +68,16 @@ def main():
             else 0 if idx > len(automsgs) - 1 \
             else idx
         t, nick, msg = automsgs[idx]
-        artnick = ''.join((term.blue_reverse, nick
-                           .rjust(int(ini.CFG.get('nua', 'max_user'))),))
-        artmsg = ''.join((term.cyan_reverse, '/', term.blue_reverse, '%d' % (idx,),
-                          term.normal, ': ', term.cyan_reverse, msg
-                          .ljust(AUTOMSG_LENGTH),))
+        artnick = ''.join((term.blue_reverse,
+                           nick.rjust(ini.CFG.getint('nua', 'max_user')),))
+        artmsg = ''.join((term.cyan_reverse,
+                          '/',
+                          term.blue_reverse,
+                          '%d' % (idx,),
+                          term.normal,
+                          ': ',
+                          term.cyan_reverse,
+                          msg.ljust(AUTOMSG_LENGTH),))
         artago = ''.join((term.blue_reverse,
                         (u'%s ago' % (timeago(time.time() - t),))
             .ljust(AUTOMSG_LENGTH - len(Ansi(artmsg)))))
@@ -89,7 +102,7 @@ def main():
         event, data = session.read_events(chk_events, timeout=TIMEOUT)
         if (event, data) == (None, None):
             # timeout
-            raise ConnectionTimeout('login prompt')
+            disconnect('login prompt timeout (%d).' % (TIMEOUT,))
         if event == 'refresh':
             idx = refresh_all()
         elif event == 'automsg':
@@ -116,7 +129,7 @@ def main():
                 else:
                     echo(u' ' * AUTOMSG_LENGTH)
                     echo(u'\b' * AUTOMSG_LENGTH)
-                msg = readline(AUTOMSG_LENGTH)
+                msg = LineEditor(AUTOMSG_LENGTH)
                 if len(msg.strip()):
                     if (None, None) != (y, x):
                         echo(term.move(y, x))
