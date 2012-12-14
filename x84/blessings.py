@@ -14,7 +14,7 @@ import sys
 
 
 try:
-    #pylint: disable=W0611
+    # pylint: disable=W0611
     #         Unused import IOUnsupportedOperation
     from io import UnsupportedOperation as IOUnsupportedOperation
 except ImportError:
@@ -77,7 +77,7 @@ class Terminal(object):
         for attr in (a for a in dir(curses) if a.startswith('KEY_')):
             setattr(self, attr, getattr(curses, attr))
 
-        #pylint: disable=W0212,E1101
+        # pylint: disable=W0212,E1101
         # Access to a protected member _capability_names of a client class
         # Function 'has_key' has no '_capability_names' member
         self._keymap = dict([(curses.tigetstr(cap).decode('utf-8'), keycode)
@@ -322,7 +322,7 @@ class Terminal(object):
         We also return 0 if the terminal won't tell us how many colors it
         supports, which I think is rare.
         """
-        #pylint: disable=R0201
+        # pylint: disable=R0201
         #        Method could be a function
         # This is actually the only remotely useful numeric capability. We
         # don't name it after the underlying capability, because we deviate
@@ -377,7 +377,7 @@ class Terminal(object):
         """
         logger = logging.getLogger()
         if isinstance(data, str):
-            logger.debug('decode: %r', data)
+            logger.debug('decoding: %r', data)
             data = data.decode(encoding, 'replace')
         logger.debug('decoded: %r', data)
 
@@ -462,7 +462,7 @@ class ParametrizingString(unicode):
     A Unicode string which can be called to parametrize it as a terminal
     capability.
     """
-    #pylint: disable=R0904,R0924
+    # pylint: disable=R0904,R0924
     #        Too many public methods (40/20)
     #        Badly implemented Container, implements __getitem__, __len__
     #          but not __delitem__, __setitem__
@@ -474,7 +474,7 @@ class ParametrizingString(unicode):
             "normal" capability.
 
         """
-        #pylint: disable=W0212
+        # pylint: disable=W0212
         #        Access to a protected member _normal of a client class
         new = unicode.__new__(cls, formatting)
         new._normal = normal
@@ -514,13 +514,13 @@ class FormattingString(unicode):
     A Unicode string which can be called upon a piece of text to wrap it in
     formatting.
     """
-    #pylint: disable=R0904,R0924
+    # pylint: disable=R0904,R0924
     #        Too many public methods (40/20)
     #        Badly implemented Container, implements __getitem__, __len__
     #          but not __delitem__, __setitem__
 
     def __new__(cls, formatting, normal):
-        #pylint: disable=W0212
+        # pylint: disable=W0212
         #        Access to a protected member _normal of a client class
         new = unicode.__new__(cls, formatting)
         new._normal = normal
@@ -547,7 +547,7 @@ class NullCallableString(unicode):
     capabilities are blank.
 
     """
-    #pylint: disable=R0904,R0924
+    # pylint: disable=R0904,R0924
     #        Too many public methods (40/20)
     #        Badly implemented Container, implements __getitem__, __len__
     #          but not __delitem__, __setitem__
