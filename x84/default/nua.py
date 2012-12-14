@@ -3,7 +3,7 @@
 """
 
 import os
-#pylint: disable=W0614
+# pylint: disable=W0614
 #        Unused import from wildcard import
 from x84.bbs import *
 
@@ -15,7 +15,8 @@ def warning(msg, cpsec=10.0, min_sec=3.0, split_loc=3):
     term = getterminal()
     echo(u''.join((term.clear_eol, term.normal, u'\r\n\r\n',
                    term.bold_red, msg[:-
-                                      split_loc], term.normal, msg[-split_loc:],
+                                      split_loc], term.normal, msg[
+                                          -split_loc:],
                    term.bold_black, u'!')))
     inp = getch(max(min_sec, float(len(msg)) / cpsec))
     return inp
