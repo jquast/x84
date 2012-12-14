@@ -17,7 +17,7 @@ def init(lookup_bbs, lookup_log):
     If none our found, defaults are initialized, and the last item of each
     tuple is created.
     """
-    #pylint: disable=R0912
+    # pylint: disable=R0912
     #        Too many branches (14/12)
     import ConfigParser
     root = logging.getLogger()
@@ -80,7 +80,7 @@ def init(lookup_bbs, lookup_log):
         except IOError, err:
             root.error('%s', err)
 
-    #pylint: disable=W0603
+    # pylint: disable=W0603
     #        Using the global statement
     global CFG
     CFG = cfg_bbs
