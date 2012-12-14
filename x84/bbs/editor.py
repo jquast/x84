@@ -37,7 +37,7 @@ class LineEditor(object):
 
     @highlight.setter
     def highlight(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._highlight = value
 
@@ -51,7 +51,7 @@ class LineEditor(object):
 
     @hidden.setter
     def hidden(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         assert value is False or 1 == len(value)
         self._hidden = value
@@ -66,7 +66,7 @@ class LineEditor(object):
 
     @width.setter
     def width(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._width = value
 
@@ -134,7 +134,7 @@ class ScrollingEditor(AnsiWindow):
     Infinite horizontal scrolling is enabled with the enable_scrolling
     property. When True, scrolling amount is limited using max_length.
     """
-    #pylint: disable=R0902,R0904
+    # pylint: disable=R0902,R0904
     #        Too many instance attributes (14/7)
     #        Too many public methods (33/20)
     def __init__(self, width, yloc, xloc):
@@ -185,7 +185,7 @@ class ScrollingEditor(AnsiWindow):
 
     @trim_char.setter
     def trim_char(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._trim_char = value
 
@@ -199,7 +199,7 @@ class ScrollingEditor(AnsiWindow):
 
     @bell.setter
     def bell(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._bell = value
 
@@ -229,7 +229,7 @@ class ScrollingEditor(AnsiWindow):
 
     @enable_scrolling.setter
     def enable_scrolling(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._enable_scrolling = value
 
@@ -268,7 +268,7 @@ class ScrollingEditor(AnsiWindow):
 
     @scroll_pct.setter
     def scroll_pct(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._scroll_pct = float(value)
 
@@ -286,7 +286,7 @@ class ScrollingEditor(AnsiWindow):
 
     @margin_pct.setter
     def margin_pct(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._margin_pct = float(value)
 
@@ -301,7 +301,7 @@ class ScrollingEditor(AnsiWindow):
 
     @max_length.setter
     def max_length(self, value):
-        #pylint: disable=C0111
+        # pylint: disable=C0111
         #         Missing docstring
         self._max_length = value
 
@@ -356,7 +356,7 @@ class ScrollingEditor(AnsiWindow):
         self._horiz_lastshift = self._horiz_shift
         self._horiz_shift = 0
         self._horiz_pos = 0
-        #pylint: disable=W0612
+        # pylint: disable=W0612
         #        Unused variable 'loop_cnt'
         for loop_cnt in range(len(self.content)):
             if self._horiz_pos > (self.visible_width - self.scroll_amt):
