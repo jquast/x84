@@ -80,7 +80,7 @@ class Msg(object):
         self.subject = subject
         self.body = body
 
-    #def tag(self, value):
+    # def tag(self, value):
     #    self.tags.update ((value,))
 
     def save(self):
