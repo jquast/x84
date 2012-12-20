@@ -1,6 +1,6 @@
-# the ugliest parts of this script should be used
-# to identify places where the 'bbs' package could be improved.
-
+"""
+editor script for X/84, https://github.com/jquast/x84
+"""
 from x84.bbs import getterminal, ScrollingEditor, getsession
 from x84.bbs import getch, echo, Lightbar, Ansi, Selector
 
@@ -8,29 +8,8 @@ import StringIO
 import xmodem
 import time
 
-
-def xgetch(size, timeout=1):
-    nrecv = 0
-    buf = list()
-    st_time = time.time()
-    while size > nrecv:
-        timeleft = timeout - (time.time() - st_time)
-        inp = getch(timeleft)
-        if inp is None:
-            break
-        buf.append(inp)
-        size += len(inp)
-        assert 1 == len(inp)
-
-
-def xputch(data, timeout=1):
-    echo(data)
-    return len(data)
-
-
 SAVEKEY = None
 CLIPBOARD = None
-EXIT = False
 CMDS_BASIC = (('e', 'dit'),
               ('s', 'AVE'),
               ('a', 'bORt'),
@@ -40,11 +19,8 @@ CMDS_ADVANCED = (('c', 'OPY'),
                  ('k', 'ill'),
                  ('q', 'UOtE'),
                  ('x', 'MOdEM'), )
-
-
-def banner():
-    session, term = getsession(), getterminal()
-    return term.home + term.normal + term.clear
+# x-modem send/recv untested. seems xmodem over telnet clients are far and few
+# between for non-windows users.
 
 
 def fancy_blue(char, blurb=u''):
@@ -53,20 +29,19 @@ def fancy_blue(char, blurb=u''):
             + term.bold_blue + ')' + term.bold_white(blurb))
 
 
-def fancy_green(char, blurb=u''):
-    term = getterminal()
-    return (term.bold_green('(') + term.green_reverse(char)
-            + term.bold_green + ')' + term.bold_white(blurb))
-
-
 def cmdshow(cmds):
     term = getterminal()
     return u'- ' + term.blue('.').join(
         (fancy_blue(key, msg) for (key, msg) in cmds)) + u' -'
 
 
+def get_lbcontent(lightbar):
+    return '\n'.join([ucs for (key, ucs) in lightbar.content])
+
+
 def statusline(lightbar, edit=True, msg=None, cmds=None):
-    output = lightbar.border()
+    output = u''
+    output += lightbar.border()
     output += lightbar.pos(lightbar.height, lightbar.xpadding)
     if msg is None:
         if edit:
@@ -93,75 +68,37 @@ def statusline(lightbar, edit=True, msg=None, cmds=None):
     return output
 
 
-def redraw_lightbar(lightbar, edit=False, msg=None, cmds=None):
-    return statusline(lightbar, edit, msg, cmds) + lightbar.refresh()
-
-
-def get_lbcontent(lightbar):
-    return '\n'.join([ucs for (key, ucs) in lightbar.content])
-
-
-def get_lightbar(ucs, pos=None):
-    # width 40 <=> 80 wide only
-    term = getterminal()
-    width = min(80, max(term.width, 40))
-    yloc = 0
-    height = term.height - yloc
-    xloc = max(0, (term.width / 2) - (width / 2))
-    lightbar = Lightbar(height, width, yloc, xloc)
-    lightbar.glyphs['left-vert'] = lightbar.glyphs['right-vert'] = u''
-    lightbar.colors['border'] = term.blue
-    lightbar.update([(row, line) for (row, line) in
-                    enumerate(Ansi(ucs).wrap(lightbar.visible_width)
-                              .split('\r\n'))])
-    if pos is not None:
-        lightbar.position = pos
-    return lightbar
-
-
-def get_lneditor(lightbar):
-    # width 40 <=> 80 wide only
-    term = getterminal()
-    width = min(80, max(term.width, 40))
-    yloc = (lightbar.yloc + lightbar.ypadding + lightbar.position[0] - 1)
-    xloc = max(0, (term.width / 2) - (width / 2))
-    lneditor = ScrollingEditor(width, yloc, xloc)
-    lneditor.enable_scrolling = True
-    lneditor.glyphs['bot-horiz'] = u''
-    lneditor.glyphs['top-horiz'] = u''
-    lneditor.colors['border'] = term.bold_green
-    (key, ucs) = lightbar.selection
-    lneditor.update(ucs)
-    return lneditor
-
-
-def get_ui(ucs, old_lightbar=None):
-    lightbar = get_lightbar(ucs)
-    if old_lightbar is not None:
-        lightbar.pos = old_lightbar.pos
-    lneditor = get_lneditor(lightbar)
-    return lightbar, lneditor
-
-
-def redraw_lneditor(lightbar, lneditor):
-    return ''.join((
-        statusline(lightbar, edit=True),
-        lneditor.border(),
-        lneditor.refresh()))
-
-
-def redraw(lightbar, lneditor, edit=False):
-    output = redraw_lightbar(lightbar)
-    if edit:
-        output += redraw_lneditor(lightbar, lneditor)
-    return output
-
-
 def process_keystroke(inp, lightbar):
+    """
+    Process editor command, like 's'ave or '/c'opy ..
+    """
+    def xgetch(size, timeout=1):
+        """
+        Retrieve next character from xmodem
+        """
+        nrecv = 0
+        buf = list()
+        st_time = time.time()
+        while size > nrecv:
+            timeleft = timeout - (time.time() - st_time)
+            inp = getch(timeleft)
+            if inp is None:
+                break
+            buf.append(inp)
+            size += len(inp)
+            assert 1 == len(inp)
+
+    def xputch(data, timeout=1):
+        """
+        Put next character to xmodem
+        """
+        echo(data)
+        return len(data)
+
     # return True if full screen refresh needed
     session, term = getsession(), getterminal()
     keys = {
-        'abort': (u'a', u'A'),
+        'abort': (u'a', u'A', u'q', u'Q'),
         'save': (u's', u'S'),
         'copy': (u'/c', u'/C'),
         'paste': (u'/p', u'/P'),
@@ -177,16 +114,16 @@ def process_keystroke(inp, lightbar):
         return False
     if inp in keys['paste']:
         swp = lightbar.selection
-        lightbar.content[lightbar.index] = (swp[0], CLIPBOARD)
-        nc = Ansi(get_lbcontent(lightbar) + '\n')
-        wrapped = nc.wrap(lightbar.visible_width).split('\r\n')
+        lightbar.content.insert(lightbar.index, (swp[0], CLIPBOARD))
+        nc = Ansi(get_lbcontent(lightbar) + u'\n')
+        wrapped = nc.wrap(lightbar.visible_width).split(u'\r\n')
         prior_length = len(lightbar.content)
         lightbar.update([(key, ucs) for (key, ucs) in enumerate(wrapped)])
         while len(lightbar.content) - prior_length > 0:
-            lightbar.move_down()
+            echo(lightbar.move_down())
             prior_length += 1
         return True
-    if inp in keys['kill']:
+    if inp in keys['kill'] and len(lightbar.content):
         del lightbar.content[lightbar.index]
         # this strange sequence forces a _chk_bounds .. !
         lightbar.position = lightbar.position
@@ -227,6 +164,7 @@ def process_keystroke(inp, lightbar):
                 getch()
                 break
         return True
+
     # abort / save.. confirm !
     if inp in keys['abort'] or inp in keys['save']:
         echo(statusline(
@@ -248,7 +186,7 @@ def process_keystroke(inp, lightbar):
                 # selected 'yes',
                 if inp in keys['save']:
                     # save to session's user attribute
-                    session[SAVEKEY] = get_lbcontent(lightbar)
+                    session.user[SAVEKEY] = get_lbcontent(lightbar)
                 global EXIT
                 EXIT = True
                 break
@@ -262,131 +200,163 @@ def process_keystroke(inp, lightbar):
 
 def main(uattr=u'draft'):
     session, term = getsession(), getterminal()
-    global SAVEKEY
-    SAVEKEY = '%s.%s' % ('editor', uattr)
-    input_buffer = session.user.get(SAVEKEY, u'')
-    assert term.width >= 40, ('editor requires width >= 40')
-    assert term.height >= 4, ('editor requires height >= 4')
-
-    lightbar, lneditor = get_ui(input_buffer, None)
     movement = (term.KEY_UP, term.KEY_DOWN, term.KEY_NPAGE,
                 term.KEY_PPAGE, term.KEY_HOME, term.KEY_END,
                 u'\r', term.KEY_ENTER)
+    edit = False
+    dirty = True
+    global SAVEKEY, EXIT
+    SAVEKEY = '%s.%s' % ('editor', uattr)
+    EXIT = False
+    input_buffer = session.user.get(SAVEKEY, u'')
+
+    def get_lightbar(ucs, pos=None):
+        # width 40 <=> 80 wide only
+        term = getterminal()
+        width = min(80, max(term.width, 40))
+        yloc = 0
+        height = term.height - yloc
+        xloc = max(0, (term.width / 2) - (width / 2))
+        lightbar = Lightbar(height, width, yloc, xloc)
+        lightbar.glyphs['left-vert'] = lightbar.glyphs['right-vert'] = u''
+        lightbar.colors['border'] = term.blue
+        lightbar.update([(row, line) for (row, line) in
+                         enumerate(Ansi(ucs).wrap(
+                             lightbar.visible_width).split('\r\n'))])
+        if pos is not None:
+            lightbar.position = pos
+        return lightbar
+
+    def get_lneditor(lightbar):
+        # width 40 <=> 80 wide only
+        term = getterminal()
+        width = min(80, max(term.width, 40))
+        print 'lightbar position ...', lightbar.position
+        yloc = (lightbar.yloc + lightbar.ypadding + lightbar.position[0] - 1)
+        xloc = max(0, (term.width / 2) - (width / 2))
+        lneditor = ScrollingEditor(width, yloc, xloc)
+        lneditor.enable_scrolling = True
+        lneditor.glyphs['bot-horiz'] = u''
+        lneditor.glyphs['top-horiz'] = u''
+        lneditor.colors['border'] = term.bold_green
+        (key, ucs) = lightbar.selection
+        lneditor.update(ucs)
+        return lneditor
+
+    def redraw_lneditor(lightbar, lneditor):
+        return ''.join((
+            statusline(lightbar, edit=True),
+            lneditor.border(),
+            lneditor.refresh()))
 
     def merge():
         """
         Merges line editor content as a replacement for the currently
         selected lightbar row. Returns True if text inserted caused
-        additional rows to be appended, which is meaningful in refresh
-        context.
+        additional rows to be appended, which is meaningful in a window
+        refresh context.
         """
         # merge line editor with pager window content
         swp = lightbar.selection
         lightbar.content[lightbar.index] = (swp[0], lneditor.content)
-        nc = Ansi(get_lbcontent(lightbar) + '\n')
-        wrapped = nc.wrap(lightbar.visible_width).split('\r\n')
+        nc = Ansi(get_lbcontent(lightbar) + u'\n')
+        wrapped = nc.wrap(lightbar.visible_width).split(u'\r\n')
         prior_length = len(lightbar.content)
         lightbar.update([(key, ucs) for (key, ucs) in enumerate(wrapped)])
         if len(lightbar.content) - prior_length == 0:
             return False
         while len(lightbar.content) - prior_length > 0:
+            # hidden move-down for each appended line
             lightbar.move_down()
             prior_length += 1
         return True
 
-    edit = False
-    dirty = True
-    echo(banner())
+    def get_ui(ucs, old_lightbar=None):
+        lightbar = get_lightbar(ucs)
+        if old_lightbar is not None:
+            lightbar.position = old_lightbar.position
+        lneditor = get_lneditor(lightbar)
+        return lightbar, lneditor
+
+    def banner():
+        session, term = getsession(), getterminal()
+        return term.home + term.normal + term.clear
+
+    def redraw():
+        return redraw_lightbar(lightbar) + (
+            redraw_lneditor(lightbar, lneditor) if edit else u'')
+
+    def redraw_lightbar(lightbar, edit=False, msg=None, cmds=None):
+        return statusline(lightbar, edit, msg, cmds) + lightbar.refresh()
+
+    def resize():
+        assert term.width >= 40, ('editor requires width >= 40')
+        assert term.height >= 5, ('editor requires height >= 5')
+        if edit:
+            # always re-merge current line on resize,
+            merge()
+        input_buffer = get_lbcontent(lightbar)
+        lb, le = get_ui(input_buffer, lightbar)
+        echo(redraw())
+        return lb, le
+
+    lightbar, lneditor = get_ui(input_buffer, None)
+    session.buffer_event(event='refresh', data=__file__)
     while not EXIT:
+        # poll for refresh
         if session.poll_event('refresh'):
+            echo(banner())
+            lightbar, lneditor = resize()
             dirty = True
         if dirty:
-            if edit:
-                merge()
-                edit = False
-            lightbar, lneditor = get_ui(get_lbcontent(lightbar), lightbar)
-            echo(redraw(lightbar, lneditor, edit))
+            echo(redraw())
             dirty = False
+        # poll for input
         inp = getch(1)
-
         # toggle edit mode,
-        if(inp in (unichr(27), term.KEY_ESCAPE) or (
-           not edit and inp in (u'e', u'E', term.KEY_ENTER, ))):
-            print 'X'
+        if(inp in (unichr(27), term.KEY_ESCAPE)
+           or (not edit and inp in (u'e', u'E', term.KEY_ENTER, ))):
             edit = not edit  # toggle
             if not edit:
-                echo(lneditor.erase_border())
                 # switched to command mode, merge our lines
+                echo(lneditor.erase_border())
                 merge()
+                dirty = True
             else:
+                # switched to edit mode, instantiate new line editor
                 lneditor = get_lneditor(lightbar)
-            dirty = True
-            continue
+                dirty = True
 
-        if not edit:
+        elif inp == u'/' and (not edit or lneditor.content == u''):
             # advanced commands,
-            if inp == u'/':
-                echo(redraw_lightbar(lightbar, edit,
-                                     cmds=cmdshow(CMDS_ADVANCED)))
-                inp2 = getch()
-                if type(inp2) is not int:
-                    dirty = process_keystroke(inp + inp2, lightbar)
-                else:
-                    echo(redraw_lightbar(lightbar, edit))
+            echo(redraw_lightbar(lightbar, edit,
+                                 cmds=cmdshow(CMDS_ADVANCED)))
+            inp2 = getch()
+            if inp2 is not None and type(inp2) is not int:
+                dirty = process_keystroke(inp + inp2, lightbar)
+            dirty = True
 
-            # basic cmds / movement
-            elif inp is not None:
-                pout = lightbar.process_keystroke(inp)
-                if not lightbar.moved:
-                    # abort / save: confirm
-                    if inp in (u'a', u'A', u's', u'S'):
-                        if inp in (u'a', 'A'):
-                            echo(statusline(
-                                lightbar, edit=False, msg='- abort -',
-                                cmds=term.yellow('  Are you sure?')))
-                        else:
-                            echo(statusline(
-                                lightbar, edit=False, msg='- save -',
-                                cmds=term.yellow('  Are you sure?')))
-                        yn = Selector(yloc=lightbar.yloc + lightbar.height - 1,
-                                      xloc=term.width - 28, width=12,
-                                      left='Yes', right='No')
-                        yn.colors['selected'] = term.reverse_red
-                        yn.keyset['left'].extend((u'y', u'Y',))
-                        yn.keyset['right'].extend((u'n', u'N',))
-                        echo(yn.refresh())
-                        while True:
-                            inp2 = getch()
-                            echo(yn.process_keystroke(inp2))
-                            if((yn.selected and yn.selection == yn.left)
-                               or inp2 in (u'y', u'Y')):
-                                # selected 'yes', save/abort
-                                if inp in (u's', 'S'):
-                                    session.user[SAVEKEY] = '\n'.join(
-                                        [ucs for (key, ucs)
-                                         in lightbar.content])
-                                return
-                            elif((yn.selected or yn.quit)
-                                 or inp2 in (u'n', u'N')):
-                                break
-                        # no selected
-                        dirty = True
-                    # no movement; process basic keystroke
-                    dirty = process_keystroke(inp, lightbar)
-                else:
-                    # movement; update status & lightbar
-                    echo(statusline(lightbar, edit))
-                    echo(pout)
-            continue
+        # basic cmds / movement
+        elif not edit and inp is not None:
+            # first, try as a movement command
+            pout = lightbar.process_keystroke(inp)
+            if not lightbar.moved:
+                # no movement; try basic keystroke
+                dirty = process_keystroke(inp, lightbar)
+            else:
+                # otherwise update status and movement
+                echo(statusline(lightbar, edit))
+                echo(pout)
 
         # edit mode, movement
-        if inp in movement:
-            if inp in (u'\r', term.KEY_ENTER):
-                inp = term.KEY_DOWN
+        elif edit and inp in movement:
             if merge():
                 # insertion occured, refresh
                 echo(lightbar.refresh())
+            if inp in (u'\r', term.KEY_ENTER):
+                inp = term.KEY_DOWN
             if inp == term.KEY_DOWN and lightbar.at_bottom:
+                # insert new line
                 nxt = max([key for (key, ucs) in lightbar.content])
                 lightbar.content.append((nxt + 1, u''))
             lightbar.process_keystroke(inp)
@@ -405,10 +375,9 @@ def main(uattr=u'draft'):
                 echo(lneditor.erase_border())
                 lneditor = get_lneditor(lightbar)
                 echo(redraw_lneditor(lightbar, lneditor))
-            continue
-
-        # edit mode, addch
-        if inp is not None:
+        # edit mode, append chr/backspace
+        elif edit and inp is not None:
+            # edit mode, addch
             echo(lneditor.process_keystroke(inp))
             if lneditor.moved:
                 echo(statusline(lightbar, edit))
