@@ -23,6 +23,7 @@ TTYREC_UCOMPRESS = None  # disabled for ttyplay -p(eek)
 TTYREC_HEADER = unichr(27) + u'[8;%d;%dt'
 TTYREC_ROTATE = 4
 TTYREC_PADD = 10
+logger = logging.getLogger()  # deprecation warning !
 
 
 def getsession():
@@ -382,8 +383,8 @@ class Session(object):
 
         if not self.enable_keycodes:
             # send keyboard bytes in as-is, 1-by-1, unmanipulated
-            for ch in data:
-                self._buffer['input'].insert(0, ch)
+            for keystroke in data:
+                self._buffer['input'].insert(0, keystroke)
             return
 
         # perform keycode translation with modified blessings/curses
@@ -491,12 +492,14 @@ class Session(object):
                 script_path = x84.bbs.ini.CFG.get('system', 'scriptpath')
                 base_script = os.path.basename(script_path)
                 lookup = imp.find_module(script_name, [script_path])
+                # pylint: disable=W0142
+                #        Used * or ** magic
                 self._script_module = imp.load_module(base_script, *lookup)
                 self._script_module.__path__ = script_path
             return self._script_module
-        script_module = _load_script_module()
         # pylint: disable=W0142
         #        Used * or ** magic
+        script_module = _load_script_module()
         lookup = imp.find_module(script_name, [script_module.__path__])
         script = imp.load_module(script_name, *lookup)
         if not hasattr(script, 'main'):
@@ -533,7 +536,7 @@ class Session(object):
                 break
             logger.warn('failed to acquire ttyrec lock')
             time.sleep(0.6)
-        self.rotate_recordings(dst)
+#        self.rotate_recordings(dst)
         os.rename(os.path.join(self._ttyrec_folder, '%s.0' % (src,)),
                   os.path.join(self._ttyrec_folder, '%s.0' % (dst,)))
         # release tty recording lock
@@ -541,24 +544,24 @@ class Session(object):
         self._ttyrec_fname = dst
         self.lock.release()
 
-    def rotate_recordings(self, key):
-        """
-        Rotate any existing ttyrec files for key.
-        """
-        logger = logging.getLogger()
-        # if .8 exists, move .8 to .9, obliterating .9;
-        # if .7 exists, move .7 to .8, obliterating .8; (..repeat)
-        # aren't there helper functions for this stuff? :p
-        for n in range(TTYREC_ROTATE):
-            src = os.path.join(self._ttyrec_folder,
-                               '%s.%d' % (key, (TTYREC_ROTATE - 1) - (n)))
-            dst = os.path.join(self._ttyrec_folder,
-                               '%s.%d' % (key, (TTYREC_ROTATE - 1) - (n - 1)))
-            if os.path.exists(src):
-                os.rename(src, dst)
-                logger.debug('mv %r -> %r', src, os.path.basename(dst))
-        dst = os.path.join(self._ttyrec_folder, '%s.0' % (key,))
-        assert TTYREC_ROTATE != 0 and not os.path.exists(dst), dst
+#    def rotate_recordings(self, key):
+#        """
+#        Rotate any existing ttyrec files for key.
+#        """
+#        logger = logging.getLogger()
+#        # if .8 exists, move .8 to .9, obliterating .9;
+#        # if .7 exists, move .7 to .8, obliterating .8; (..repeat)
+#        # aren't there helper functions for this stuff? :p
+#        for n in range(TTYREC_ROTATE):
+#            src = os.path.join(self._ttyrec_folder,
+#                               '%s.%d' % (key, (TTYREC_ROTATE - 1) - (n)))
+#            dst = os.path.join(self._ttyrec_folder,
+#                               '%s.%d' % (key, (TTYREC_ROTATE - 1) - (n - 1)))
+#            if os.path.exists(src):
+#                os.rename(src, dst)
+#                logger.debug('mv %r -> %r', src, os.path.basename(dst))
+#        dst = os.path.join(self._ttyrec_folder, '%s.0' % (key,))
+#        assert TTYREC_ROTATE != 0 and not os.path.exists(dst), dst
 
     @property
     def is_recording(self):
@@ -594,7 +597,7 @@ class Session(object):
             logger.warn('failed to acquire ttyrec lock')
             time.sleep(0.6)
         # rotate logfiles,
-        self.rotate_recordings(self._ttyrec_fname)
+#        self.rotate_recordings(self._ttyrec_fname)
         # open ttyrec logfile for writing
         filename = os.path.join(self._ttyrec_folder,
                                 '%s.0' % (self._ttyrec_fname,))
@@ -615,8 +618,8 @@ class Session(object):
         Write ttyrec header that identifies termianl height & width, and escape
         sequence to indicate UTF-8 mode.
         """
-        (h, w) = self.terminal.height, self.terminal.width
-        self._ttyrec_write(TTYREC_HEADER % (h, w,))
+        (height, width) = self.terminal.height, self.terminal.width
+        self._ttyrec_write(TTYREC_HEADER % (height, width,))
         # ESC %G activates UTF-8 with an unspecified implementation level from
         # ISO 2022 in a way that allows to go back to ISO 2022 again.
         self._ttyrec_write(unichr(27) + u'%G')
@@ -632,13 +635,13 @@ class Session(object):
         # .. unfortuantely, this is not compatible with ttyplay -p,
         # so for the time being, it is disabled ..
         assert self._recording, 'call start_recording() first'
-        timeKey = self.duration
+        timekey = self.duration
 
-        # Round down timeKey to nearest whole number,
+        # Round down timekey to nearest whole number,
         # use the remainder for microseconds. Upconvert,
         # constructing a (seconds, microseconds) pair.
-        sec = math.floor(timeKey)
-        usec = (timeKey - sec) * 1e+6
+        sec = math.floor(timekey)
+        usec = (timekey - sec) * 1e+6
         sec, usec = int(sec), int(usec)
 
         def write_chunk(tm_sec, tm_usec, textlen, u_text):
