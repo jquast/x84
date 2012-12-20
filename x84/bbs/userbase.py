@@ -8,6 +8,7 @@ import x84.bbs.dbproxy
 # pylint: disable=C0103
 #        Invalid name "logger" for type constant (should match
 logger = logging.getLogger()
+digestpw = None
 
 
 def list_users():
