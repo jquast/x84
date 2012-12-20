@@ -2,6 +2,7 @@
 Pager class for x/84, http://github.com/jquast/x84/
 """
 from x84.bbs.ansiwin import AnsiWindow
+import logging
 
 VI_KEYSET = {
     'refresh': [unichr(12), ],
@@ -134,7 +135,8 @@ class Pager(AnsiWindow):
         elif keystroke in self.keyset['exit']:
             self._quit = True
         else:
-            x84.bbs.session.logger.debug(
+            logger = logging.getLogger()
+            logger.debug(
                 'unhandled, %r', keystroke if type(keystroke) is not int
                 else x84.bbs.session.getterminal().keyname(keystroke))
         return rstr
