@@ -36,6 +36,7 @@ def cmdshow(cmds):
 
 
 def get_lbcontent(lightbar):
+    # pylint: disable=W0612: Unused variable 'key'
     return '\n'.join([ucs for (key, ucs) in lightbar.content])
 
 
