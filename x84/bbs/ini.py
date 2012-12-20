@@ -92,6 +92,8 @@ def init_bbs_ini():
     """
     import ConfigParser
     # used to construct default e-mail
+    # pylint: disable=R0915
+    #         Too many statements (51/50)
     import getpass
     import socket
     cfg_bbs = ConfigParser.SafeConfigParser()
