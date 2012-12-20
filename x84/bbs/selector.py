@@ -3,6 +3,7 @@ Left/Right lightbar choice selector for x/84, https://github.com/jquast/x84
 """
 from __future__ import division
 import math
+import logging
 
 from x84.bbs.ansiwin import AnsiWindow
 
@@ -85,7 +86,8 @@ class Selector(AnsiWindow):
             self._selected = True
         else:
             import x84.bbs.session
-            x84.bbs.session.logger.debug(
+            logger = logging.getLogger()
+            logger.debug(
                 'unhandled, %r', keystroke
                 if type(keystroke) is not int
                 else x84.bbs.session.getterminal().keyname(keystroke))
