@@ -17,9 +17,6 @@ import x84.bbs.userbase
 import x84.bbs.cp437
 import x84.bbs.ini
 
-# pylint: disable=C0103
-#        Invalid name "logger" for type constant (should match
-logger = logging.getLogger()
 SESSION = None
 # TTYREC_UCOMPRESS = 15000
 TTYREC_UCOMPRESS = None  # disabled for ttyplay -p(eek)
@@ -132,6 +129,7 @@ class Session(object):
         # pylint: disable=C0111
         #         Missing docstring
         if self._activity != value:
+            logger = logging.getLogger()
             logger.debug('activity=%s', value)
             self._activity = value
 
@@ -156,6 +154,7 @@ class Session(object):
         # pylint: disable=C0111
         #         Missing docstring
         self._user = value
+        logger = logging.getLogger()
         logger.info('user = %r', value.handle)
         if self.is_recording and self._ttyrec_fname != value.handle:
             # mv None.0 -> userName.0
@@ -186,6 +185,7 @@ class Session(object):
         # pylint: disable=C0111
         #         Missing docstring
         if value != self._encoding:
+            logger = logging.getLogger()
             logger.info('encoding=%s', value)
             assert value in ('utf8', 'cp437')
             self._encoding = value
@@ -205,6 +205,7 @@ class Session(object):
         # pylint: disable=C0111
         #         Missing docstring
         if value != self._enable_keycodes:
+            logger = logging.getLogger()
             logger.debug('enable_keycodes=%s', value)
             self._enable_keycodes = value
 
@@ -225,6 +226,8 @@ class Session(object):
         """
         from x84.bbs.exception import Goto, Disconnected
 
+        logger = logging.getLogger()
+
         def error_recovery():
             """
             jojo's invention; recover from a general exception by using
@@ -234,23 +237,24 @@ class Session(object):
                 # recover from exception
                 fault = self._script_stack.pop()
                 oper = 'RESUME' if len(self._script_stack) else 'STOP'
+                stop = bool(0 == len(self._script_stack))
                 msg = (u'%s %safter general exception in %s.' % (
                     oper, (self._script_stack[-1][0] + u' ')
                     if len(self._script_stack) else u' ', fault[0],))
                 logger.info(msg)
-                willstop = 0 == len(self._script_stack)
                 self.write(u'\r\n\r\n')
-                self.write(self.terminal.red_reverse('stop') if willstop else
-                           self.terminal.bold_green('continue'))
-                if not willstop:
+                if stop:
+                    self.write(self.terminal.red_reverse('stop'))
+                else:
+                    self.write(self.terminal.bold_green('continue'))
                     self.write(u' ' + self.terminal.bold_cyan(
                         self._script_stack[-1][0]))
                 self.write(u' after general exception in %s\r\n' % (
                     self.terminal.bold_cyan(fault[0]),))
                 # give time for exception to write down pipe before
-                # continuing or exiting, otherwise STOP message is
-                # not fully received
-                time.sleep(2)
+                # continuing or exiting, esp. exiting, otherwise
+                # STOP message is not often fully received
+                time.sleep(5)
 
         while len(self._script_stack):
             logger.debug('script_stack: %r', self._script_stack)
@@ -287,6 +291,7 @@ class Session(object):
 
         Has side effect of updating ttyrec file when recording.
         """
+        logger = logging.getLogger()
         if 0 == len(ucs):
             return
         assert isinstance(ucs, unicode)
@@ -317,6 +322,7 @@ class Session(object):
         """
         Flush all return all data buffered for 'event'.
         """
+        logger = logging.getLogger()
         flushed = list()
         while True:
             data = self.read_event(event, timeout=-1)
@@ -370,6 +376,7 @@ class Session(object):
         self._last_input_time = time.time()
         ctrl_l = self.terminal.KEY_REFRESH
 
+        logger = logging.getLogger()
         if self._tap_input and logger.isEnabledFor(logging.DEBUG):
             logger.debug('<-- %r.', data)
 
@@ -430,6 +437,7 @@ class Session(object):
            Return the first matched IPC data for any event specified in tuple
            events, in the form of (event, data).
         """
+        logger = logging.getLogger()
         (event, data) = (None, None)
         # return immediately any events that are already buffered
         for (event, data) in ((e, self._event_pop(e))
@@ -469,6 +477,7 @@ class Session(object):
         Execute the main() callable of script identified by 'script_name', with
         optional *args.
         """
+        logger = logging.getLogger()
         self._script_stack.append((script_name,) + args)
         logger.info('RUN %s%s', script_name,
                     '%r' % (args,) if 0 != len(args) else '')
@@ -517,6 +526,7 @@ class Session(object):
         """
         # acquire tty recording lock
         self.lock.acquire()
+        logger = logging.getLogger()
         while True:
             self.send_event('lock-ttyrec', ('acquire', 5.0))
             if self.read_event('lock-ttyrec'):
@@ -535,6 +545,7 @@ class Session(object):
         """
         Rotate any existing ttyrec files for key.
         """
+        logger = logging.getLogger()
         # if .8 exists, move .8 to .9, obliterating .9;
         # if .7 exists, move .7 to .8, obliterating .8; (..repeat)
         # aren't there helper functions for this stuff? :p
@@ -569,6 +580,7 @@ class Session(object):
         Begin recording to ttyrec file keyed by 'dst'. When 'dst' is None
         (default), use the handle of the current session.
         """
+        logger = logging.getLogger()
         assert self._fp_ttyrec is None, ('already recording')
         if dst is None:
             dst = self.user.handle or 'None'
