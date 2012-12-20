@@ -227,19 +227,19 @@ class AnsiWindow(object):
         for row in range(0, self.height):
             for col in range(0, self.width):
                 if (col == 0) or (col == self.width - 1):
-                    rstr += (
-                        self.pos(row, col) + topleft
-                        if (row == 0) and (col == 0) else
-                        self.pos(row, col) + botleft
-                        if (row == self.height - 1) and (col == 0) else
-                        self.pos(row, col) + topright
-                        if (row == 0) else
-                        self.pos(row, col) + botright
-                        if (row == self.height - 1) else
-                        self.pos(row, col) + leftvert
-                        if col == 0 else
-                        self.pos(row, col) + rightvert
-                        if col == self.width - 1 else u'')
+                    rstr += (self.pos(row, col) + topleft
+                             if row == 0 and col == 0 else
+                             self.pos(row, col) + botleft
+                             if row == self.height - 1 and col == 0 else
+                             self.pos(row, col) + topright
+                             if row == 0 else
+                             self.pos(row, col) + botright
+                             if row == self.height - 1 else
+                             self.pos(row, col) + leftvert
+                             if col == 0 else
+                             self.pos(row, col) + rightvert
+                             if col == self.width - 1 else
+                             u'')
                 elif (row == 0):
                     # top row (column 1)
                     if thoriz == u'':
