@@ -219,8 +219,13 @@ class Pager(AnsiWindow):
         Update content buffer with '\n'-delimited lines of Ansi.
         """
         import x84.bbs.output
-        self.content = x84.bbs.output.Ansi(ucs).wrap(
-            self.visible_width).split('\r\n')
+        try:
+            self.content = x84.bbs.output.Ansi(ucs).wrap(
+                self.visible_width).split('\r\n')
+        except AssertionError, err:
+            # indeterminate length
+            logger.warn('%s in [%r]', err, ucs)
+            self.content = ucs.split('\r\n')
         return self.refresh()
 
     def append(self, ucs):
