@@ -138,9 +138,7 @@ Other BBS Software
 Support
 =======
 
-An irc channel, '#prsv' on efnet, is available for development discussion.
-
-A development-based bbs board is planned by jojo. Until then, the 1984.ws_ board runs the default and relatively current system.
+An irc channel, '#prsv' on efnet, is available for development discussion. Telnet to address **1984.ws** to preview the default board.
 
 .. _python: https:/www.python.org/
 .. _dgamelaunch: http://nethackwiki.com/wiki/Dgamelaunch
@@ -163,4 +161,3 @@ A development-based bbs board is planned by jojo. Until then, the 1984.ws_ board
 .. _dev-setup.py:
 .. _socat: http://www.dest-unreach.org/socat/
 .. _default_README.rst: https://github.com/jquast/x84/blob/master/default/README.rst
-.. _1984.ws: telnet://1984.ws
