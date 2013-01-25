@@ -57,7 +57,9 @@ class FetchUpdates(threading.Thread):
             self.content.append(
                 (node.find('id').text, dict(
                     ((key, node.find(key).text.strip()
-                      if node.find(key) is not None else u'') for key in
+                      if node.find(key) is not None and
+                         node.find(key).text is not None
+                      else u'') for key in
                      ('oneliner', 'alias', 'bbsname', 'timestamp',))),))
 
 
