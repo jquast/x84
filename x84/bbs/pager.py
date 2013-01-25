@@ -224,6 +224,7 @@ class Pager(AnsiWindow):
                 self.visible_width).split('\r\n')
         except AssertionError, err:
             # indeterminate length
+            logger = logging.getLogger()
             logger.warn('%s in [%r]', err, ucs)
             self.content = ucs.split('\r\n')
         return self.refresh()
