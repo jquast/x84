@@ -56,10 +56,10 @@ class FetchUpdates(threading.Thread):
         for node in xml_nodes:
             self.content.append(
                 (node.find('id').text, dict(
-                    ((key, node.find(key).text.strip()
-                      if node.find(key) is not None and
-                         node.find(key).text is not None
-                      else u'') for key in
+                    ((key, (node.find(key).text
+                            if (node.find(key) is not None and
+                                node.find(key).text is not None)
+                            else u'')).strip() for key in
                      ('oneliner', 'alias', 'bbsname', 'timestamp',))),))
 
 
