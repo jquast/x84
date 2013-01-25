@@ -84,5 +84,8 @@ def showcp437(filepattern):
     fobj = ropen(filepattern, 'rb') \
         if '*' in filepattern or '?' in filepattern \
         else open(filepattern, 'rb')
+    if fobj is None:
+        return (u'\r\n<no files matching %s>\r\n' % (
+            filepattern,))
     term = getterminal()
     return Ansi(from_cp437(sauce.SAUCE(fobj).__str__())).wrap(80) + term.normal
