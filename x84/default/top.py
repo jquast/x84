@@ -36,10 +36,10 @@ def display_intro():
             and term.number_of_colors != 0):
         if term.width >= 79:
             rstr += showcp437(os.path.join(
-                os.path.dirname(__file__), 'art', 'top', '*.ans'))
+                os.path.dirname(__file__), 'art', '*.ans'))
         elif term.width >= 76:
             rstr += showcp437(os.path.join(
-                os.path.dirname(__file__), 'art', 'top', '*.asc'))
+                os.path.dirname(__file__), 'art', '*.asc'))
         elif term.width >= 40:
             if term.number_of_colors >= 256:
                 rstr += showcp437(os.path.join(
@@ -54,7 +54,7 @@ def display_intro():
     else:
         if term.width >= 76:
             rstr += showcp437(os.path.join(
-                os.path.dirname(__file__), 'art', 'top', '*.asc'))
+                os.path.dirname(__file__), 'art', '*.asc'))
     if term.number_of_colors == 256:
         rstr += '\r\n\r\n' + BADGE256
     return rstr

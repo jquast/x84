@@ -20,7 +20,7 @@ setup(name='x84',
       package_data={
           '': ['README.rst'],
           'x84.default': ['art/*.asc', 'art/*.ans', 'art/*.txt'
-                          'art/top/*.ans', 'art/top/*.asc'],
+                          'art/top-*.ans', 'art/top-*.asc'],
       },
       requires=['requests', 'sauce', 'sqlitedict', 'xmodem'],
       scripts=['bin/x84'],

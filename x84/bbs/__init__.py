@@ -70,7 +70,8 @@ def ropen(filename, mode='rb'):
     """
     import glob
     import random
-    return open(random.choice(glob.glob(filename)), mode)
+    files = glob.glob(filename)
+    return open(random.choice(files), mode) if len(files) else None
 
 
 def showcp437(filepattern):
