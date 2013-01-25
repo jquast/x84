@@ -1,62 +1,72 @@
 x/84
 ====
 
-x/84 is a python-languaged telnet daemon for modern utf8 terminals. Based on miniboa_, blessings_, sqlitedict_, and multiprocessing_. recordings of sessions are stored in ttyplay_-compatible format files.
+**x/84 is a python telnet server for modern UTF-8 terminals**. x/84 supplies a scripting engine for developing **MUD**, **BBS**, or dgamelaunch_-style servers with CLI telnet interfaces. Technologies used in x/84 are derived from miniboa_ (Apache 2.0 Licensed) for telnet, `blessings`_ (MIT Licensed) for curses TERM capabilities, and sqlitedict_ (Public Domain) for shared database access. Inter-process communication (such as chat) is possible using the multiprocessing_ module, and recordings of sessions are stored in ttyplay_-compatible format files.
 
-**ANSI Art**, (such as you would find on the ACiD "dark domains" DVD) is translated for reasonably accurate reproductions on utf8 and cp437 terminals. Plenty of example ansi art is provided in the default 'bbs board', as well as scripts for bbs-scene_.org's 'one liners' and 'bbs list' APIs.
+With the exception of the python interpreter itself, x/84 is **pure** python, but **requires a posix** operating system. Therefor **Windows is not a supported platform** at this time. Alternative implementations of python may also work. Blowfish encryption of user account passwords may be optionally enabled, but requires a complete Python C environment to install the dependent module, py-bcrypt. Otherwise, a best-effort sha256 hash is implemented.
 
-Installation
-============
+**ANSI Art**, (such as you would find on the ACiD "dark domains" DVD) is translated for reasonably accurate reproductions for both UTF-8 and IBM CP437 terminals. This allows classic DOS art to be used on modern terminals such as Terminal.app, or classic emulating terminals such as SyncTerm.
 
-1. Install python_
+Install
+=======
+
+**X/84 has not yet been released to pypi**. This process simulates the basic pip installation procedure, ('pip install x84') using the github repository as a source. Pre-requisite modules must be installed manually.
+
+1. Install python_ 2.6 or 2.7
 
 2. Install pip_
 
-3. Install pre-requisites,
+3. Ensure pip is up-to-date,
+
+``pip install --upgrade pip``
+
+4. Install python dependencies (xmodem, requests, sqllite, etc.)
 
 ``pip install `wget -O /dev/stdout 'https://raw.github.com/jquast/x84/master/requirements.txt'|xargs echo```
 
-3b. Optionally, Install bcrypt (requires gcc, python-dev):
+5. **Optionally**, Install bcrypt (requires gcc, python-dev):
 
-``pip install py-bcrypt`
+``pip install py-bcrypt``
 
-2. Install x84 from git using pip
+6. Install x/84
 
-Using git+https,
 ``pip install git+https://github.com/jquast/x84.git``
 
-Using git+http,
-``pip install git+http://github.com/jquast/x84.git``
-
+If 'https' is not a supported scheme, try git+**http**:// instead.
 
 Getting Started
 ===============
 
-1. Execute 'x84',
+1. Launch the x84.engine python module:
 
 ``x84``
 
-Optional command line arguments,
-``--config=`` alternate bbs configuration filepath
-``--logger=`` alternate logging configuration filepath
-
-Developers
-==========
-
-Use ./bin/x84-dev-setup.py [install path] to create a target virtualenv, installing an 'x84' program in that environment that uses the source tree in the current folder.
-
-Connecting
-==========
+2. Telnet to 127.0.0.1 6023:
 
 ``telnet localhost 6023``
 
-``python local.py``
+**TODO**: supply local.py script for a simple pure-python telnet client.
 
+Customizing your board
+======================
+
+See default_README.rst_
+
+x84 Usage
+=========
+'x84' is a wrapper for,
+
+``python -m x84.engine``
+
+Which takes optional command line arguments,
+
+``--config=`` alternate bbs configuration filepath
+``--logger=`` alternate logging configuration filepath
 
 Compatible Clients
 ==================
 
-Any UTF-8 client is compatible, but some fonts do art better than others. For mac systems, 'Andale Mono' works flawlessly. Other than utf8, only cp437 (IBM-US PC-DOS) is supported.
+Any UTF-8 client is compatible, but some fonts do art as multi-language. For Macintosh systems, 'Andale Mono' works flawlessly. Other than UTF-8, only IBM CP437 encoding is supported.
 
 * iTerm: Menu item iTerm -> Preferences, section Profiles, select 'Text' tab, chose 'Andale Mono' font.
 * PuTTy: Under preference item Window -> Translation, option 'Remote character set', change 'iso8859-1' to 'UTF-8'.
@@ -65,86 +75,48 @@ Any UTF-8 client is compatible, but some fonts do art better than others. For ma
 * SyncTerm, mtel: Select cp437 when prompted by the bbs system (charset.py).
 * others: Select cp437 when prompted by the bbs system (charset.py).  Use a font of cp437 encoding, such as *Terminus*.
 
-Customizing your board
-======================
+Binding to port 23
+==================
 
-The ``default.ini`` option, *scriptpath*, of section *system*, defines folder ``'default/'``. This can be changed to a folder of your own chosing.
+X/84 does not require privileged access, and its basic configuration binds to port 6023. Multi-user systems do not typically allow non-root users to bind to port 23. Alternatively, you can always use port forwarding on a NAT firewall.
 
-By default, matrix.py_ is called on-connect, which chains to nua.py_ for new account creation, top.py_ when authenticated, and main.py_ for a main menu.
+**Linux** using privbind_, run the BBS as user 'bbs', group 'adm'::
 
-Copy this to a new folder, change the .ini file to point to the new folder, and you can begin customizing your matrix, topscripts, and art files.
+``sudo privbind -u bbs -g adm x84``
 
-matrix.py
----------
+**Solaris** 10, grant net_privaddr privilege to user 'bbs'::
 
-The ``default.ini`` option, *script*, of section *matrix*, defines the path of a python program that is loaded when a telnet connection is complete. The purpose of this script is to otherwise approve connection for continuation to *topscript*, and is generally used for authentication.
+``usermod -K defaultpriv=basic,net_privaddr bbs``
 
-When the ``default.ini`` option, *enable_anonymous*, of section *matrix* is ``True`` (default is ``False``), users may login with name 'anonymous', and top.py_ is called with a handle value of ``None``, and the user is presumed 'anonymous'
+**BSD**, redirection using pf(4)::
 
-nua.py
-------
+``pass in on egress inet from any to any port telnet rdr-to 192.168.1.11 port 6023``
 
-The ``default.ini`` option, *allow_apply*, of section *nua* is ``True`` by default, and users may create a new account by executing the *nua* script. The default nua.py_ script allows all new accounts without approval, and adds the first new user to the ``u'sysop'`` group.
+**Other**, Usingirect socat_, listen on 192.168.1.11 and for each connection, fork as 'nobody', and pipe the connection to 127.0.0.1 port 6023. This has the disadvantage that x84 is unable to identify the originating IP.
 
-top.py
-------
+``sudo socat -d -d -lmlocal2 TCP4-LISTEN:23,bind=192.168.1.11,su=nobody,fork,reuseaddr TCP4:127.0.0.1:6023``
 
-After passing new account creation in nua.py_, or authentication in matrix.py_, the *topscript*, of section *matrix* is called. This script generally checks for new messages, sets character encoding and preferences.
+Developer Environment
+=====================
 
-charset.py
-----------
+For developing from git, simply clone and execute the ./x84/bin/dev-setup python script with the target interpreter (2.6, 2.7) and specify a 'virtual env' folder. Simply source the 'virtual env'/bin/activate file so that subsequent pip commands affect only that specific environment. Target environment for x/84 is currently python 2.7.
 
-Generally called from top.py_, provides an interface for the user to select a session encoding of ``u'utf8'`` or ``u'cp437'``.
+1. Clone the github repository,
 
-lc.py
------
+``git clone 'https://github.com/jquast/x84.git'``
 
-A simple pager displaying artwork and a scrolling window of the most recent BBS callers.
+2. Use dev-setup.py_ to create a target virtualenv_:
 
-logoff.py
----------
+``python2.7 ./x84/bin/dev-setup.py ./x84-ENV26``
 
-A simple logoff script that allows users to leave a message for the next user.
+3. Launch x/84 using virtualenv:
 
-
-main.py
--------
-
-Displays artwork and provides a hotkey interface to ``gosub()`` various scripts.
-
-news.py
--------
-Displays artwork and a scrolling window of a ``data/news.txt``.
-
-ol.py
------
-A oneliners script. To configure intra-BBS one-liners for use with bbs-scene_.org's API, create a new section, *bbs-scene* in ``defaults.ini``, with two options, *user* and *pass*.
-
-si.py
------
-Displays information about the BBS system ...
-
-speedhack.py
-------------
-An example door games menu interface.
-
-bbslist.py
-----------
-Users post and vote and leave comments for other bbs systems. Also allows this system to be used as a gateway to other systems, using telnet.py_.
-
-weather.py
-----------
-
-An example of using the various user interface elements to display the local weather report.
-
+``./x84/bin/x84-dev``
 
 Monitoring
 ==========
 
-Sessions are recorded to ``ttyrecordings/`` folder, and can be played with
-ttyplay_ or compatible utility. The ``-p`` option can be used to monitor
-live sessions, analogous to ``tail -f``.
-
+Sessions are recorded to a ~/.x84/ttyrecordings/ folder by default, and can be played with ttyplay_ or compatible utility. The ``-p`` option can be used to monitor live sessions, analogous to ``tail -f``.
 
 Other BBS Software
 ==================
@@ -165,7 +137,8 @@ An irc channel, '#prsv' on efnet, is available for development discussion.
 
 A development-based bbs board is planned.
 
-:: _python: https:/www.python.org/
+.. _python: https:/www.python.org/
+.. _dgamelaunch: http://nethackwiki.com/wiki/Dgamelaunch
 .. _miniboa: https://code.google.com/p/miniboa/
 .. _blessings: http://pypi.python.org/pypi/blessings
 .. _sqlitedict: http://pypi.python.org/pypi/sqlitedict
@@ -181,3 +154,7 @@ A development-based bbs board is planned.
 .. _mystic: http://mysticbbs.com/
 .. _Python: http://www.python.org/
 .. _Terminus:
+.. _virtualenv:
+.. _dev-setup.py:
+.. _socat: http://www.dest-unreach.org/socat/
+.. _default_README.rst: https://github.com/jquast/master/x84/default/README.rst
