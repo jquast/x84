@@ -162,4 +162,4 @@ A development-based bbs board is planned.
 .. _virtualenv:
 .. _dev-setup.py:
 .. _socat: http://www.dest-unreach.org/socat/
-.. _default_README.rst: https://github.com/jquast/master/x84/default/README.rst
+.. _default_README.rst: https://github.com/jquast/x84/blob/master/default/README.rst
