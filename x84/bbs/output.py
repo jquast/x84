@@ -98,8 +98,8 @@ class Ansi(unicode):
                     wide = wcswidth(ucs)
 
                 # my own NVT addition: allow -1 to be added to width when
-                # 127 and 8 are used (BACKSPACE, DEL)
-                assert wide != -1 or ucs in (u'\b', unichr(127)), (
+                # 127 and 8 are used (BACKSPACE, DEL); as well as \x0f .!?
+                assert wide != -1 or ucs in (u'\b', unichr(127), unichr(15)), (
                     'indeterminate length %r' % (self[idx],))
                 width += wide
                 nxt = idx + Ansi(self[idx:]).seqlen() + 1
