@@ -59,7 +59,7 @@ class FetchUpdates(threading.Thread):
                     ((key, (node.find(key).text
                             if (node.find(key) is not None and
                                 node.find(key).text is not None)
-                            else u'')).strip() for key in
+                            else u'').strip()) for key in
                      ('oneliner', 'alias', 'bbsname', 'timestamp',))),))
 
 
