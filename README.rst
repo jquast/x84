@@ -34,6 +34,11 @@ Install
 
 If 'https' is not a supported scheme, try git+**http**:// instead.
 
+7. Upgrading
+
+``pip install --upgrade git+https://github.com/jquast/x84.git``
+
+
 Getting Started
 ===============
 
