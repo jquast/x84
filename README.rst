@@ -7,6 +7,8 @@ With the exception of the python interpreter itself, x/84 is **pure** python, bu
 
 **ANSI Art**, (such as you would find on the ACiD "dark domains" DVD) is translated for reasonably accurate reproductions for both UTF-8 and IBM CP437 terminals. This allows classic DOS art to be used on modern terminals such as Terminal.app, or classic emulating terminals such as SyncTerm.
 
+Telnet to address **1984.ws** to preview the default board.
+
 Install
 =======
 
@@ -138,7 +140,7 @@ Other BBS Software
 Support
 =======
 
-An irc channel, '#prsv' on efnet, is available for development discussion. Telnet to address **1984.ws** to preview the default board.
+An irc channel, '#prsv' on efnet, is available for development discussion.
 
 .. _python: https:/www.python.org/
 .. _dgamelaunch: http://nethackwiki.com/wiki/Dgamelaunch
