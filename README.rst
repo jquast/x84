@@ -57,7 +57,7 @@ Getting Started
 Customizing your board
 ======================
 
-See default_README.rst_
+See default_README.rst_ for documentation of the distributed default telnet bbs.
 
 x84 Usage
 =========
@@ -162,4 +162,4 @@ An irc channel, '#prsv' on efnet, is available for development discussion.
 .. _virtualenv:
 .. _dev-setup.py:
 .. _socat: http://www.dest-unreach.org/socat/
-.. _default_README.rst: https://github.com/jquast/x84/blob/master/default/README.rst
+.. _default_README.rst: https://github.com/jquast/x84/blob/master/x84/default/README.rst
