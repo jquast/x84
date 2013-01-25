@@ -8,11 +8,17 @@ x/84 is a python-languaged telnet daemon for modern utf8 terminals. Based on min
 Installation
 ============
 
-1. Install pip_
+1. Install python_
+
+2. Install pip_
 
 3. Install pre-requisites,
 
 ``pip install `wget -O /dev/stdout 'https://raw.github.com/jquast/x84/master/requirements.txt'|xargs echo```
+
+3b. Optionally, Install bcrypt (requires gcc, python-dev):
+
+``pip install py-bcrypt`
 
 2. Install x84 from git using pip
 
@@ -159,6 +165,7 @@ An irc channel, '#prsv' on efnet, is available for development discussion.
 
 A development-based bbs board is planned.
 
+:: _python: https:/www.python.org/
 .. _miniboa: https://code.google.com/p/miniboa/
 .. _blessings: http://pypi.python.org/pypi/blessings
 .. _sqlitedict: http://pypi.python.org/pypi/sqlitedict
