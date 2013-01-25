@@ -34,7 +34,8 @@ def main():
     lookup_log = ('/etc/x84/logging.ini',
                   os.path.expanduser('~/.x84/logging.ini'))
     try:
-        opts, tail = getopt.getopt(sys.argv[1:], ":", ('config', 'logger',))
+        opts, tail = getopt.getopt(sys.argv[1:], ":", (
+            'config', 'logger', 'help'))
     except getopt.GetoptError as err:
         sys.stderr.write('%s\n' % (err,))
         return 1
@@ -43,6 +44,11 @@ def main():
             lookup_bbs = (arg,)
         elif opt in ('--logger',):
             lookup_log = (arg,)
+        elif opt in ('--help',):
+            sys.stderr.write('Usage: \n%s [--config <filepath>] '
+                             '[--logger <filepath>]\n' % (
+                                 os.path.basename(sys.argv[0],)))
+            sys.exit(1)
     if len(tail):
         sys.stderr.write('Unrecognized program arguments: %s\n' % (tail,))
 
