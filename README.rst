@@ -10,10 +10,16 @@ Installation
 
 1. Install pip_
 
+3. Install pre-requisites,
+
+``pip install `wget -O /dev/stdout 'https://raw.github.com/jquast/x84/master/requirements.txt'|xargs echo```
+
 2. Install x84 from git using pip
 
+Using git+https,
 ``pip install git+https://github.com/jquast/x84.git``
-or, without ssl,
+
+Using git+http,
 ``pip install git+http://github.com/jquast/x84.git``
 
 
