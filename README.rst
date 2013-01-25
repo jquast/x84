@@ -13,6 +13,8 @@ Installation
 2. Install x84 from git using pip
 
 ``pip install git+https://github.com/jquast/x84.git``
+or, without ssl,
+``pip install git+http://github.com/jquast/x84.git``
 
 
 Getting Started
