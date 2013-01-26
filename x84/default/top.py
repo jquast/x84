@@ -110,7 +110,7 @@ def main(handle=None):
     else:
         # load default charset
         session.encoding = session.user.get('charset')
-        fun = term.bold_green('(EXCEllENt!)')
+        fun = term.bold_green(' (EXCEllENt!)')
         if session.encoding != 'utf8':
             fun = term.bold_red(u' (bUMMER!)')
         echo(u'\r\n\r\nUsing preferred charset, %s%s.\r\n' % (
