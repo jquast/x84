@@ -4,6 +4,7 @@
 
 def refresh():
     from x84.bbs import getterminal, echo, Ansi, from_cp437
+    import os
     " refresh main menu screen "
     term = getterminal()
     echo(u''.join((term.normal, term.clear, term.normal_cursor)))
