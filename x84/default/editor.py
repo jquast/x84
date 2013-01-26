@@ -238,7 +238,6 @@ def main(uattr=u'draft'):
         # width 40 <=> 80 wide only
         term = getterminal()
         width = min(80, max(term.width, 40))
-        print 'lightbar position ...', lightbar.position
         yloc = (lightbar.yloc + lightbar.ypadding + lightbar.position[0] - 1)
         xloc = max(0, (term.width / 2) - (width / 2))
         lneditor = ScrollingEditor(width, yloc, xloc)
