@@ -3,9 +3,17 @@
 """
 
 
+about_dot_plan = (u'The .plan file is a throwback to early Unix '
+                  + u'"blogosphere", this is a simple file that is '
+                  + u'GLOBALLY shared with all other users. You can '
+                  + u'put anything you want here: something about '
+                  + u'yourself and your interests, your websites, '
+                  + u'greetz, etc.')
+
+
 def process_keystroke(lightbar, inp):
     from x84.bbs import getsession, getterminal, echo, getch, gosub
-    from x84.bbs import LineEditor
+    from x84.bbs import LineEditor, Ansi
     from x84.default.nua import set_email, set_location
     session, term = getsession(), getterminal()
     if lightbar is not None:
@@ -27,13 +35,13 @@ def process_keystroke(lightbar, inp):
              + u'YOUR BBS SESSiON itSElf diSCOVERS '
              + term.bold('TERM') + u'ONlY ONCE dURiNG '
              + u'NEGOtiAtiON ON-CONNECt.\r\n')
-        echo(u'\r\n TERM: ')
-        TERM = LineEditor(30, term.terminal_type).read()
-        echo(u"\r\n set TERM to '%s'? [yn]" % (TERM,))
+        echo(u'\r\ntERMiNAl tYPE: ')
+        TERM = LineEditor(30, session.env.get('TERM')).read()
+        echo(u"\r\n\r\nset TERM to '%s'? [yn]" % (TERM,))
         while True:
             ch = getch()
             if str(ch).lower() == 'y':
-                term.terminal_type = TERM
+                session.env['TERM'] = TERM
                 break
             elif str(ch).lower() == 'n':
                 break
@@ -43,7 +51,7 @@ def process_keystroke(lightbar, inp):
                                  lightbar.selection[0] == u'l'):
         echo(term.move(term.height - 1, 0))
         set_location(session.user)
-        echo(u"\r\n SEt lOCAtiON tO '%s'? [yn]" % (session.user.location,))
+        echo(u"\r\n\r\nSEt lOCAtiON tO '%s'? [yn]" % (session.user.location,))
         while True:
             ch = getch()
             if str(ch).lower() == 'y':
@@ -57,7 +65,7 @@ def process_keystroke(lightbar, inp):
                                  lightbar.selection[0] == u'e'):
         echo(term.move(term.height - 1, 0))
         set_email(session.user)
-        echo(u"\r\n SEt EMAil tO '%s'? [yn]" % (session.user.email,))
+        echo(u"\r\n\r\nSEt EMAil tO '%s'? [yn]" % (session.user.email,))
         while True:
             ch = getch()
             if str(ch).lower() == 'y':
@@ -69,13 +77,19 @@ def process_keystroke(lightbar, inp):
     elif inp in ('.',) or (inp == term.KEY_ENTER and
                            lightbar is not None and
                            lightbar.selection[0] == u'.'):
+        echo(term.move(0, 0) + term.normal + term.clear)
+        echo(term.move((term.height / 3), 0))
+        for line in Ansi(about_dot_plan).wrap(term.width / 2).split('\r\n'):
+            echo(line.center(term.width) + u'\r\n')
+        echo('\r\n\r\nPRESS ANY kEY ...')
+        getch()
         gosub('editor', '.plan')
         return True
     elif inp in (u'x', u'X') or (inp == term.KEY_ENTER and
                                  lightbar is not None and
                                  lightbar.selection[0] == u'x'):
         expert = not session.user.get('expert', False)
-        echo(u"\r\n %s EXPERt MOdE? [yn]" % (
+        echo(u"\r\n\r\n%s EXPERt MOdE? [yn]" % (
             'enable' if expert else 'disable',))
         while True:
             ch = getch()
@@ -90,32 +104,38 @@ def process_keystroke(lightbar, inp):
                            lightbar.selection[0] == u'q'):
         global EXIT
         EXIT = True
+    return False
 
 
 def dummy_pager():
     from x84.bbs import getsession, getterminal, echo, Ansi, getch
     session, term = getsession(), getterminal()
     plan = session.user.get('.plan', False)
-    menu = ['(c)hARACtER ENCOdiNG - %s' % (session.encoding,),
-            '(t)ERMiNAl tYPE - %s' % (term.terminal_type,),
-            '(l)OCAtiON - %s' % (session.user.location,),
-            '(e)MAil - %s' % (session.user.email,),
-            '(.)PlAN filE - %s' % (
-                '%d bytes' % (len(plan),) if plan else '(NO PlAN.)'),
-            '(x)PERt MOdE - %s' % ('ENAblEd'
-                                   if session.user.get(
-                                       'expert', False) else 'diSAblEd'),
+    menu = ['(c)%-20s - %s' % (u'hARACtER ENCOdiNG',
+                               term.bold(session.encoding),),
+            '(t)%-20s - %s' % (u'ERMiNAl tYPE',
+                               term.bold(session.env.get('TERM', 'unknown')),),
+            '(l)%-20s - %s' % (u'OCAtiON',
+                               term.bold(session.user.location),),
+            '(e)%-20s - %s' % (u'MAil AddRESS',
+                               term.bold(session.user.email),),
+            '(.)%-20s - %s' % (u'PlAN filE', '%d bytes' % (
+                len(plan),) if plan else '(NO PlAN.)'),
+            '(x)%-20s - %s' % (u'PERt MOdE',
+                               term.bold(u'ENAblEd'
+                                         if session.user.get('expert', False)
+                                         else 'diSAblEd')),
             '(q)Uit', ]
     echo(term.move(0, 0) + term.normal + term.clear)
     lines = Ansi('\n'.join(menu)).wrap(term.width).split(u'\r\n')
+    xpos = max(1, (term.width / 2) - (40 / 2))
     for row, line in enumerate(lines):
-        if row and (0 == row % (term.height - 1)):
-            echo(term.reverse(u'\r\n-More-'))
-            inp = getch()
-        echo(u'\r\n' + line)
-    echo(u'\r\n [ctle.xq]: ')
-    inp = getch()
-    return process_keystroke(None, inp)
+        if row and (0 == row % (term.height - 2)):
+            echo(term.reverse(u'\r\n-- More --'))
+            getch()
+        echo(u'\r\n' + ' ' * xpos + line)
+    echo(u'\r\n\r\n Enter option [ctle.xq]: ')
+    return process_keystroke(None, getch())
 
 
 def is_dumb(session, term):
@@ -152,13 +172,18 @@ def main():
                         (term.width / 2) - (20 / 2))
     lightbar.alignment = 'center'
     dirty = True
+    inp = None
     while not EXIT:
         if dirty or session.poll_event('refresh'):
             if is_dumb(session, term):
-                dummy_pager()
+                dirty = dummy_pager()
             else:
                 refresh(lightbar)
-            dirty = False
+                dirty = False
+            continue
         inp = getch(1)
+        print 'loop'
         if inp is not None:
-            dirty = process_keystroke(lightbar, inp)
+            dirty = process_keystroke(
+                lightbar if not is_dumb(session, term) else None,
+                inp)
