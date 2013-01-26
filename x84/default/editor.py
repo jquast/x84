@@ -213,7 +213,7 @@ def main(uattr=u'draft'):
     edit = False
     dirty = True
     global SAVEKEY, EXIT
-    SAVEKEY = '%s.%s' % ('editor', uattr)
+    SAVEKEY = uattr
     EXIT = False
     input_buffer = session.user.get(SAVEKEY, u'')
 
