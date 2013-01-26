@@ -31,7 +31,7 @@ def main():
 
     if (session.env.get('TERM') == 'unknown') or (
             session.user.get('expert', False)):
-        echo('\r\n (U) UTF-8 encoding or (C) CP437 encoding [uc] ?\b\b')
+        echo(u'\r\n\r\n(U) UTF-8 encoding or (C) CP437 encoding [uc] ?\b\b')
         while True:
             inp = getch()
             if inp in (u'u', u'U'):
