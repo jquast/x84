@@ -110,10 +110,11 @@ def main(handle=None):
     else:
         # load default charset
         session.encoding = session.user.get('charset')
-        fun = (term.bold_green('(EXCEllENt!)')
-               if session.encoding == 'utf8'
-               else term.bold_red(u'bUMMER!'))
-        echo(u'\r\nUsing preferred charset %s%s.' % (session.encoding, fun))
+        fun = term.bold_green('(EXCEllENt!)')
+        if session.encoding != 'utf8':
+            fun = term.bold_red(u' (bUMMER!)')
+        echo(u'\r\n\r\nUsing preferred charset, %s%s.\r\n' % (
+            session.encoding, fun))
 
     # 5. impress with art, prompt for quick login (goto 'main'),
     echo(display_intro())
