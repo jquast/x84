@@ -241,19 +241,23 @@ class User(object):
         # pylint: disable=C0111,
         #        Missing docstring
         adb = x84.bbs.dbproxy.DBProxy('userbase', 'attrs')
+        adb.acquire()
         if not self.handle in adb:
             logger.debug(
                 '%r GET %r: default; missing attrs.', self.handle, key)
-            return default
+            val = default
         attrs = adb[self.handle]
         if not key in attrs:
             logger.debug('%r GET %r: default; attr unset.', self.handle, key)
-            return default
-        logger.debug('get %r GET %r (size: %s)' % (
-            self.handle, key, len(attrs[key])
-                if hasattr(attrs[key], '__len__')
-                else '?'))
-        return attrs[key]
+            val = default
+        else:
+            logger.debug('get %r GET %r (size: %s)' % (
+                self.handle, key, len(attrs[key])
+                    if hasattr(attrs[key], '__len__')
+                    else '?'))
+            val = attrs[key]
+        adb.release()
+        return val
     get.__doc__ = dict.get.__doc__
 
     def __getitem__(self, key):
