@@ -125,9 +125,15 @@ def process_keystroke(inp, lightbar):
             prior_length += 1
         return True
     if inp in keys['kill'] and len(lightbar.content):
+        # when 'killing' a line, we must make accomidations to refresh
+        # the bottom-most row (clear it), otherwise a ghosting effect
+        # occurs ..
         del lightbar.content[lightbar.index]
-        # this strange sequence forces a _chk_bounds .. !
-        lightbar.position = lightbar.position
+        nc = Ansi(get_lbcontent(lightbar) + u'\n')
+        wrapped = nc.wrap(lightbar.visible_width).split(u'\r\n')
+        lightbar.update([(key, ucs) for (key, ucs) in enumerate(wrapped)])
+        if lightbar.visible_bottom > len(lightbar.content):
+            lightbar.refresh_row(lightbar.visible_bottom + 1)
         return True
     if inp in keys['xmodem']:
         echo(statusline(
