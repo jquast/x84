@@ -79,7 +79,7 @@ class Lightbar (AnsiWindow):
         Refresh full lightbar window contents
         """
         return u''.join(self.refresh_row(ypos) for ypos in
-                        range(self.visible_bottom))
+                        range(max(self.visible_bottom, self.visible_height)))
 
     def refresh_quick(self):
         """
