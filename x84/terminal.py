@@ -19,7 +19,8 @@ def init_term(pipe, env):
     """
     from x84.bbs.ipc import IPCStream
     from x84.blessings import Terminal
-    return Terminal(env.get('TERM', 'unknown'), IPCStream(pipe),
+    return Terminal(env.get('TERM', 'unknown'),
+                    IPCStream(pipe),
                     int(env.get('LINES', '24')),
                     int(env.get('COLUMNS', '80')))
 
@@ -91,8 +92,8 @@ def start_process(pipe, origin, env):
     """
     A multiprocessing.Process target. Arguments:
         pipe: multiprocessing.Pipe
-        termtype: TERM string (used to initialize curses)
-        env: dictionary of client environment variables
+        origin: string describing session source (fe. IP address & Port)
+        env: dictionary of client environment variables (requires 'TERM')
     """
     from x84.bbs.session import Session
 
@@ -205,7 +206,7 @@ class ConnectTelnet (threading.Thread):
         self._try_env()
         if not self.client.active:
             return
-        # this will set .terminal_type if -still- undetected,
+        # this will set Term.kind if -still- undetected,
         # or otherwise overwrite it if it is detected different,
         self._try_ttype()
         if not self.client.active:
