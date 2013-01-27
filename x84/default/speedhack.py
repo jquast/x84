@@ -78,10 +78,10 @@ def main():
                 echo(term.black_on_red + u' ' * 15 + u'\b' * 15)
                 nao = LineEditor(15, session.user.handle)
                 echo(term.normal)
-                url = 'http://alt.org/nethack/userdata/%s/%s/%s.nh343rc'  \
-                    % (nao[0], nao, nao,)
                 if 0 == len(nao.strip()):
                     continue
+                url = 'http://alt.org/nethack/userdata/%s/%s/%s.nh343rc'  \
+                    % (nao[0], nao, nao,)
                 r = requests.get(url)
                 if r.status_code == 200:
                     session.user.set('.nethackrc', r.content)

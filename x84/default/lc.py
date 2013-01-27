@@ -3,8 +3,8 @@ Last Callers script for x/84, http://github.com/jquast/x84
 """
 
 import os
-from x84.bbs import getterminal, echo, getch, Pager, list_users, get_user, ini
-from x84.bbs import timeago, getsession, Ansi
+from x84.bbs import getterminal, echo, getch, list_users, get_user, ini
+from x84.bbs import timeago, getsession, Ansi, Lightbar
 
 
 def dummy_pager(last_callers):
@@ -53,49 +53,57 @@ def redraw(pager):
     return rstr
 
 
-def get_pager(lcalls):
+def get_pager(lcallers, lcalls):
     term = getterminal()
     width = 65
     height = term.height - 15
     yloc = 10
     xloc = max(3, int((float(term.width) / 2) - (float(width) / 2)))
-    pager = Pager(height, width, yloc, xloc)
+    pager = Lightbar(height, width, yloc, xloc)
     pager.xpadding = 2
     pager.ypadding = 1
     pager.alignment = 'center'
     pager.colors['border'] = term.red
-    pager.update(lcalls)
+    pager.update([(lcallers[n], txt,)
+                  for (n, txt) in enumerate(lcalls.split('\n'))])
     return pager
 
 
 def lc_retrieve():
+    """
+    Returns tuple of ([nicknames,] u'text'), where 'text' describes in Ansi
+    color the last callers to the system, and 'nicknames' is simply a list
+    of last callers (for lightbar selection key).
+    """
     import time
-    term = getterminal()
+    #term = getterminal()
     udb = dict()
     for handle in list_users():
         user = get_user(handle)
         udb[(user.lastcall, handle)] = (user.calls, user.location)
-    padd_handle = ini.CFG.getint('nua', 'max_user') + 1
-    padd_location = ini.CFG.getint('nua', 'max_location') + 1
+    padd_handle = (ini.CFG.getint('nua', 'max_user') + 2) * -1
+    padd_origin = (ini.CFG.getint('nua', 'max_location') + 2) * -1
     rstr = u''
+    nicks = []
     for ((tm_lc, handle), (nc, origin)) in (reversed(sorted(udb.items()))):
-        rstr += (term.bright_red(handle[:len(handle) / 3])
-                 + term.bright_black(handle[len(handle) / 3:])
-                 + u' ' * (max(1, padd_handle - len(handle))) + u' ')
-        rstr += (term.bright_yellow(origin[:len(origin) / 2])
-                 + term.bright_yellow(origin[len(origin) / 2:])
-                 + u' ' * (max(1, padd_location - len(origin))) + u' ')
-        rstr += (term.bright_yellow(timeago(time.time() - tm_lc))
-                 + term.red(' ago  n') + term.bright_yellow('C')
-                 + term.red('/') + term.bright_red(str(nc)) + u'\n')
-    return rstr.rstrip()
+        nicks.append(handle)
+        rstr += '%-*s' % (padd_handle, handle)
+        rstr += '%-*s' % (padd_origin, origin)
+        rstr += timeago(time.time() - tm_lc)
+#            (term.bold_yellow(origin[:len(origin) / 2])
+#                 + term.bold_yellow(origin[len(origin) / 2:])
+#                 + u' ' * (max(1, padd_location - len(origin))) + u' ')
+#        rstr += (term.bold_yellow(timeago(time.time() - tm_lc))
+#                 + term.red(' ago  n') + term.bold_yellow('C')
+#                 + term.red('/') + term.bold_red(str(nc)) + u'\n')
+    return (nicks, rstr.rstrip())
 
 
 def main():
     session, term = getsession(), getterminal()
     session.activity = u'Viewing last callers'
     dirty = True
-    lcalls_txt = lc_retrieve()
+    lcallers, lcalls_txt = lc_retrieve()
     if (session.env.get('TERM') == 'unknown'
             or term.number_of_colors == 0
             or term.height <= 20 or term.width <= 71 or
@@ -108,7 +116,7 @@ def main():
             dummy_pager(lcalls_txt.split('\n'))
             return
         if dirty:
-            pager = get_pager(lcalls_txt)
+            pager = get_pager(lcallers, lcalls_txt)
             echo(redraw(pager))
             dirty = False
         inp = getch(1)
