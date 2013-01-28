@@ -48,6 +48,7 @@ def refresh():
     echo(disp_entry('r', 'EAd All MSGS'))
     echo(disp_entry('g', 'OOdbYE/lOGOff'))
     echo(u'\r\n\r\n')
+    echo(term.move(term.height - 1))
 
 
 def main():
