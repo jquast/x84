@@ -159,6 +159,9 @@ def init_bbs_ini():
         (cfg_bbs.get('matrix', 'byecmds'),
          cfg_bbs.get('matrix', 'newcmds'),
          'sysop anonymous',)))
+
+    cfg_bbs.add_section('msg')
+    cfg_bbs.set('msg', 'max_subject', 60)
     return cfg_bbs
 
 
