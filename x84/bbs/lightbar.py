@@ -68,11 +68,9 @@ class Lightbar (AnsiWindow):
         if entry >= len(self.content):
             # out-of-bounds;
             return self.glyphs.get('erase', u' ') * self.visible_width
-        ucs += (self.colors.get(
-            'selected', self.colors.get('highlight', u''))
-            if entry == self.index
-            else self.colors.get(
-                'unselected', self.colors.get('lowlight', u'')))
+        ucs += (self.colors.get('highlight', u'')
+                if entry == self.index
+                else self.colors.get('lowlight', u''))
         ucs += self.align(self.content[entry][1])
         return ucs + term.normal
 
@@ -105,11 +103,9 @@ class Lightbar (AnsiWindow):
         """
         Initialize colors['selected'] and colors['unselected'].
         """
-        import x84.bbs.session
-        term = x84.bbs.session.getterminal()
+        from x84.bbs.session import getterminal
+        self.colors['highlight'] = getterminal().reverse_green
         AnsiWindow.init_theme(self)
-        self.colors['selected'] = term.reverse_green
-        self.colors['unselected'] = term.white
 
     def init_keystrokes(self):
         """
