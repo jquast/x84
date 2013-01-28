@@ -18,7 +18,7 @@ class LineEditor(object):
     # This should really be gnu/readline, but its not really accessible ..
     _hidden = False
     _width = 0
-    _highlight = None
+    _highlight = u''
 
     def __init__(self, width=None, content=u''):
         """
@@ -167,7 +167,6 @@ class ScrollingEditor(AnsiWindow):
     # pylint: disable=R0902,R0904
     #        Too many instance attributes (14/7)
     #        Too many public methods (33/20)
-    _highlight = None
 
     def __init__(self, width, yloc, xloc):
         """
@@ -185,6 +184,7 @@ class ScrollingEditor(AnsiWindow):
         self._bell = False
         self._trim_char = '$ '
         self.content = u''
+        self._highlight = u''
         height = 3  # 2 of 3 for top and bottom border
         # (optionaly displayed .. is this best x/y coord?
         #   once working, lets set default as borderless!)
@@ -208,9 +208,9 @@ class ScrollingEditor(AnsiWindow):
         economic and terminal-agnostic 'input field'. By default term.reverse
         is used. Set to u'' to disable.
         """
-        import x84.bbs.session
+        from x84.bbs.session import getterminal
         if self._highlight is None:
-            return x84.bbs.session.getterminal().reverse
+            return getterminal().reverse
         return self._highlight
 
     @highlight.setter
@@ -441,11 +441,11 @@ class ScrollingEditor(AnsiWindow):
                      * (self.visible_width - len(prnt)))
         else:
             prnt = self.content
-        return (self.highlight
+        high = 0 != len(self.highlight)
+        return ((self.highlight if high else u'')
                 + self.pos(self.ypadding, self.xpadding)
                 + prnt + self.fixate()
-                + getterminal().normal
-                if 0 != len(self.highlight) else u'')
+                + (getterminal().normal if high else u''))
 
     def backspace(self):
         """
