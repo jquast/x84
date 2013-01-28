@@ -64,7 +64,7 @@ def get_pager(lcallers, lcalls):
     pager.ypadding = 1
     pager.alignment = 'center'
     pager.colors['border'] = term.red
-    pager.colors['selected'] = term.yellow_reverse
+    pager.colors['highlight'] = term.yellow_reverse
     pager.update([(lcallers[n], txt,)
                   for (n, txt) in enumerate(lcalls.split('\n'))])
     return pager
