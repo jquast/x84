@@ -182,7 +182,6 @@ def main():
                 dirty = False
             continue
         inp = getch(1)
-        print 'loop'
         if inp is not None:
             dirty = process_keystroke(
                 lightbar if not is_dumb(session, term) else None,
