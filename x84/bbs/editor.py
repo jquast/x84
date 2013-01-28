@@ -18,7 +18,6 @@ class LineEditor(object):
     # This should really be gnu/readline, but its not really accessible ..
     _hidden = False
     _width = 0
-    _timeout = None
     _highlight = None
 
     def __init__(self, width=None, content=u''):
@@ -168,6 +167,8 @@ class ScrollingEditor(AnsiWindow):
     # pylint: disable=R0902,R0904
     #        Too many instance attributes (14/7)
     #        Too many public methods (33/20)
+    _highlight = None
+
     def __init__(self, width, yloc, xloc):
         """
         Construct a Line editor at (y,x) location of width (n).
