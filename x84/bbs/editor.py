@@ -18,7 +18,6 @@ class LineEditor(object):
     # This should really be gnu/readline, but its not really accessible ..
     _hidden = False
     _width = 0
-    _highlight = u''
 
     def __init__(self, width=None, content=u''):
         """
@@ -28,6 +27,7 @@ class LineEditor(object):
         self._width = width
         self.content = content
         self._quit = False
+        self._highlight = None
         self._carriage_returned = False
         self.init_keystrokes()
 
@@ -46,15 +46,17 @@ class LineEditor(object):
     @property
     def highlight(self):
         """
-        highlight: when of non-zero length, a terminal sequence such as
-        term.cyan_reverse before printing ' '*width + '\b'+width, used before
-        reading input in read() and refresh(). this gives the effect of
-        economic and terminal-agnostic 'input field'. By default term.reverse
-        is used. Set to u'' to disable.
+        highlight: when of non-zero length, a terminal sequence
+        such as term.cyan_reverse -- used before printing:
+            (' ' * width + '\b' * width), on read() and before
+        displaying test content on refresh().
+        This gives the effect of economic and terminal-agnostic
+        'input field'. By default term.reverse is used when unset.
+        Set to u'' to disable entirely.
         """
-        import x84.bbs.session
+        from x84.bbs.session import getterminal
         if self._highlight is None:
-            return x84.bbs.session.getterminal().reverse
+            return getterminal().reverse
         return self._highlight
 
     @highlight.setter
@@ -105,16 +107,13 @@ class LineEditor(object):
         Returns unicode byts suitable for drawing line.
         No movement or positional sequences are returned.
         """
-        rstr = u''
-        if 0 != len(self.highlight):
-            rstr += self.highlight
-            rstr += ' ' * self.width
-            rstr += '\b' * self.width
-        if self.hidden:
-            rstr += self.hidden * len(self.content)
-        else:
-            rstr += self.content
-        return rstr
+        high = 0 != len(self.highlight)
+        lightbar = ((self.highlight if high else u'')
+                    + ' ' * self.width
+                    + '\b' * self.width)
+        content = (self.hidden * len(self.content)
+                   if self.hidden else self.content)
+        return u''.join((lightbar, content,))
 
     def process_keystroke(self, keystroke):
         """
@@ -184,7 +183,7 @@ class ScrollingEditor(AnsiWindow):
         self._bell = False
         self._trim_char = '$ '
         self.content = u''
-        self._highlight = u''
+        self._highlight = None
         height = 3  # 2 of 3 for top and bottom border
         # (optionaly displayed .. is this best x/y coord?
         #   once working, lets set default as borderless!)
@@ -202,11 +201,13 @@ class ScrollingEditor(AnsiWindow):
     @property
     def highlight(self):
         """
-        highlight: when of non-zero length, a terminal sequence such as
-        term.cyan_reverse before printing ' '*width + '\b'+width, used before
-        reading input in read() and refresh(). this gives the effect of
-        economic and terminal-agnostic 'input field'. By default term.reverse
-        is used. Set to u'' to disable.
+        highlight: when of non-zero length, a terminal sequence
+        such as term.cyan_reverse -- used before printing:
+            (' ' * width + '\b' * width), on read() and before
+        displaying test content on refresh().
+        This gives the effect of economic and terminal-agnostic
+        'input field'. By default term.reverse is used when unset.
+        Set to u'' to disable entirely.
         """
         from x84.bbs.session import getterminal
         if self._highlight is None:
@@ -442,10 +443,12 @@ class ScrollingEditor(AnsiWindow):
         else:
             prnt = self.content
         high = 0 != len(self.highlight)
-        return ((self.highlight if high else u'')
-                + self.pos(self.ypadding, self.xpadding)
-                + prnt + self.fixate()
-                + (getterminal().normal if high else u''))
+        return u''.join((
+            self.highlight if high else u'',
+            self.pos(self.ypadding, self.xpadding),
+            prnt,
+            getterminal().normal if high else u'',
+            self.fixate(),))
 
     def backspace(self):
         """
