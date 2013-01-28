@@ -72,7 +72,7 @@ class Lightbar (AnsiWindow):
             'selected', self.colors.get('highlight', u''))
             if entry == self.index
             else self.colors.get(
-                'unselected', self.colors.get('lowlight'), u''))
+                'unselected', self.colors.get('lowlight', u'')))
         ucs += self.align(self.content[entry][1])
         return ucs + term.normal
 
