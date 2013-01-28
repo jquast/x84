@@ -68,9 +68,11 @@ class Lightbar (AnsiWindow):
         if entry >= len(self.content):
             # out-of-bounds;
             return self.glyphs.get('erase', u' ') * self.visible_width
-        ucs += (self.colors.get('selected', u'')
-                if entry == self.index
-                else self.colors.get('unselected', u''))
+        ucs += (self.colors.get(
+            'selected', self.colors.get('highlight', u''))
+            if entry == self.index
+            else self.colors.get(
+                'unselected', self.colors.get('lowlight'), u''))
         ucs += self.align(self.content[entry][1])
         return ucs + term.normal
 
