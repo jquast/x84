@@ -2,6 +2,7 @@
  Main menu script for x/84, http://github.com/jquast/x84
 """
 
+
 def refresh():
     from x84.bbs import getterminal, echo, Ansi, from_cp437
     import os
@@ -10,23 +11,44 @@ def refresh():
     echo(u''.join((term.normal, term.clear, term.normal_cursor)))
     art = ([Ansi(from_cp437(line)) for line in open(os.path.join(
         os.path.dirname(__file__), 'art', 'main.asc'))])
-    max_len = max([line.rstrip().__len__() for line in art])
-    if max_len <= term.width:
+
+    def disp_art():
         for line in art:
-            echo(line.rstrip().center(term.width).rstrip() + '\r\n')
+            echo((line.rstrip().center(term.width).rstrip())[:term.width - 1]
+                 + u'\r\n')
 
     def disp_entry(char, blurb):
         return Ansi(term.bold_blue('(') + term.blue_reverse(char)
                     + term.bold_blue + ')' + term.bright_white(blurb) + u' ')
-    echo(term.move(len(art) - 10, term.width / 4) or '\r\n')
-    echo(disp_entry('b', 'bs lister').ljust(term.width / 5))
-    echo(disp_entry('l', 'ast calls').ljust(term.width / 5))
-    echo(disp_entry('o', 'ne liners').ljust(term.width / 5))
-    echo(term.move(len(art) - 8, term.width / 4) or '\r\n')
-    echo(disp_entry('z', 'news').ljust(term.width / 5))
-    echo(disp_entry('p', 'rofile').ljust(term.width / 5))
-    echo(disp_entry('g', 'oodbye').ljust(term.width / 5))
+
+    def pos_row(n):
+        art_row = 12
+        art_middl = 8
+        art_width = 30
+        return term.move(min(term.height - (art_row - n),
+                             max(len(art) - art_row,
+                                 art_middl + n)),
+                         max(1, (term.width / 2) - art_width)
+                         ) or '\r\n'
+
+    disp_art()
+    # group 1,
+    echo(pos_row(0))
+    echo(disp_entry('b', 'bS liStER'))
+    echo(disp_entry('l', 'ASt CAllS'))
+    echo(disp_entry('o', 'NE liNERS'))
+    # group 2,
+    echo(pos_row(2))
+    echo(disp_entry('n', 'NEWS'))
+    echo(disp_entry('w', 'EAthER fORECASt'))
+    echo(disp_entry('p', 'ROfilE EditOR'))
+    # group 3,
+    echo(pos_row(4))
+    echo(disp_entry('!', 'POSt A MSG'))
+    echo(disp_entry('r', 'EAd All MSGS'))
+    echo(disp_entry('g', 'OOdbYE/lOGOff'))
     echo(u'\r\n\r\n')
+
 
 def main():
     from x84.bbs import getsession, getterminal, getch, goto, gosub
@@ -39,7 +61,10 @@ def main():
             dirty = False
         choice = getch(1)
         if choice == u'*':
+            # reload main menu using hidden option '*'
+            # for making changes to main.py
             goto('main')
+        # group 1,
         elif choice == u'b':
             gosub('bbslist')
             dirty = True
@@ -49,11 +74,21 @@ def main():
         elif choice == u'o':
             gosub('ol')
             dirty = True
-        elif choice == u'z':
+        # group 2,
+        elif choice == u'n':
             gosub('news')
             dirty = True
-        elif choice == u'g':
-            goto('logoff')
+        elif choice == u'w':
+            gosub('weather')
+            dirty = True
         elif choice == u'p':
             gosub('profile')
             dirty = True
+        # group 3,
+        elif choice == u'!':
+            gosub('writemsg')
+            dirty = True
+        elif choice == u'r':
+            goto('readmsgs')
+        elif choice == u'g':
+            goto('logoff')
