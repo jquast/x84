@@ -5,8 +5,8 @@ import datetime
 import x84.bbs.dbproxy
 import x84.bbs.session
 
-MSGDB = x84.bbs.dbproxy.DBProxy('msgbase.msgs')
-TAGDB = x84.bbs.dbproxy.DBProxy('msgbase.tags')
+MSGDB = x84.bbs.dbproxy.DBProxy('Msgs')
+TAGDB = x84.bbs.dbproxy.DBProxy('tags')
 
 
 def get_msg(idx):
