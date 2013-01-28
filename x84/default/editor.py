@@ -227,6 +227,7 @@ def main(uattr=u'draft'):
         lightbar = Lightbar(height, width, yloc, xloc)
         lightbar.glyphs['left-vert'] = lightbar.glyphs['right-vert'] = u''
         lightbar.colors['border'] = term.blue
+        lightbar.colors['highlight'] = term.blue_reverse
         lightbar.update([(row, line) for (row, line) in
                          enumerate(Ansi(ucs).wrap(
                              lightbar.visible_width).split('\r\n'))])
@@ -244,6 +245,7 @@ def main(uattr=u'draft'):
         lneditor.enable_scrolling = True
         lneditor.glyphs['bot-horiz'] = u''
         lneditor.glyphs['top-horiz'] = u''
+        lneditor.colors['highlight'] = term.green_reverse
         lneditor.colors['border'] = term.bold_green
         (key, ucs) = lightbar.selection
         lneditor.update(ucs)
