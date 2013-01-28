@@ -27,9 +27,18 @@ class LineEditor(object):
         self._width = width
         self.content = content
         self._quit = False
-        self._highlight = None
         self._carriage_returned = False
+        self.colors = dict()
         self.init_keystrokes()
+        self.init_theme()
+
+    def init_theme(self):
+        """
+        Initialize colors['highlight'].
+        """
+        import x84.bbs.session
+        term = x84.bbs.session.getterminal()
+        self.colors['highlight'] = term.reverse
 
     def init_keystrokes(self):
         """
@@ -42,28 +51,6 @@ class LineEditor(object):
         self.keyset['backspace'].append(term.KEY_BACKSPACE)
         self.keyset['enter'].append(term.KEY_ENTER)
         self.keyset['exit'].append(term.KEY_EXIT)
-
-    @property
-    def highlight(self):
-        """
-        highlight: when of non-zero length, a terminal sequence
-        such as term.cyan_reverse -- used before printing:
-            (' ' * width + '\b' * width), on read() and before
-        displaying test content on refresh().
-        This gives the effect of economic and terminal-agnostic
-        'input field'. By default term.reverse is used when unset.
-        Set to u'' to disable entirely.
-        """
-        from x84.bbs.session import getterminal
-        if self._highlight is None:
-            return getterminal().reverse
-        return self._highlight
-
-    @highlight.setter
-    def highlight(self, value):
-        # pylint: disable=C0111
-        #         Missing docstring
-        self._highlight = value
 
     @property
     def quit(self):
@@ -107,13 +94,13 @@ class LineEditor(object):
         Returns unicode byts suitable for drawing line.
         No movement or positional sequences are returned.
         """
-        high = 0 != len(self.highlight)
-        lightbar = ((self.highlight if high else u'')
-                    + ' ' * self.width
-                    + '\b' * self.width)
+        from x84.bbs.session import getterminal
+        lightbar = u''.join((self.colors.get('highlight', u''),
+                             ' ' * self.width,
+                             '\b' * self.width))
         content = (self.hidden * len(self.content)
                    if self.hidden else self.content)
-        return u''.join((lightbar, content,))
+        return u''.join((lightbar, content, getterminal().cursor_visible))
 
     def process_keystroke(self, keystroke):
         """
@@ -150,8 +137,7 @@ class LineEditor(object):
         while not self._quit and not self._carriage_returned:
             inp = session.read_event('input')
             echo(self.process_keystroke(inp))
-        if 0 != len(self.highlight):
-            echo(term.normal)
+        echo(term.normal)
         if self._quit:
             return None
         return self.content
@@ -183,12 +169,13 @@ class ScrollingEditor(AnsiWindow):
         self._bell = False
         self._trim_char = '$ '
         self.content = u''
-        self._highlight = None
-        height = 3  # 2 of 3 for top and bottom border
+        height = 3  # TODO: 2 of 3 for top and bottom border
         # (optionaly displayed .. is this best x/y coord?
         #   once working, lets set default as borderless!)
         AnsiWindow.__init__(self, height, width, yloc, xloc)
         self.init_keystrokes()
+        self.init_theme()
+
     __init__.__doc__ = AnsiWindow.__init__.__doc__
 
     @property
@@ -197,28 +184,6 @@ class ScrollingEditor(AnsiWindow):
         Tuple of shift amount and column position of line editor.
         """
         return (self._horiz_shift, self._horiz_pos)
-
-    @property
-    def highlight(self):
-        """
-        highlight: when of non-zero length, a terminal sequence
-        such as term.cyan_reverse -- used before printing:
-            (' ' * width + '\b' * width), on read() and before
-        displaying test content on refresh().
-        This gives the effect of economic and terminal-agnostic
-        'input field'. By default term.reverse is used when unset.
-        Set to u'' to disable entirely.
-        """
-        from x84.bbs.session import getterminal
-        if self._highlight is None:
-            return getterminal().reverse
-        return self._highlight
-
-    @highlight.setter
-    def highlight(self, value):
-        # pylint: disable=C0111
-        #         Missing docstring
-        self._highlight = value
 
     @property
     def eol(self):
@@ -357,6 +322,16 @@ class ScrollingEditor(AnsiWindow):
         #         Missing docstring
         self._max_length = value
 
+    def init_theme(self):
+        """
+        Initialize colors['highlight'] as REVERSE and trim_char as '$ '.
+        """
+        import x84.bbs.session
+        term = x84.bbs.session.getterminal()
+        AnsiWindow.init_theme(self)
+        self.colors['highlight'] = term.yellow_reverse
+        self.trim_char = '$ '
+
     def init_keystrokes(self):
         """
         This initializer sets glyphs and colors appropriate for a "theme",
@@ -413,8 +388,9 @@ class ScrollingEditor(AnsiWindow):
         position in window. Set x_adjust to -1 to position cursor 'on'
         the last character, or 0 for 'after' (default).
         """
+        from x84.bbs.session import getterminal
         xpos = self._xpadding + self._horiz_pos + x_adjust
-        return self.pos(1, xpos)
+        return self.pos(1, xpos) + getterminal().cursor_visible
 
     def refresh(self):
         """
@@ -438,16 +414,15 @@ class ScrollingEditor(AnsiWindow):
         if self._horiz_shift > 0:
             scrl = self._horiz_shift + len(self.trim_char)
             prnt = self.trim_char + self.content[scrl:]
-            prnt += (self.glyphs.get('erase', u'~')
-                     * (self.visible_width - len(prnt)))
         else:
             prnt = self.content
-        high = 0 != len(self.highlight)
+        prnt += (self.glyphs.get('erase', u' ')
+                 * (self.visible_width - len(prnt)))
         return u''.join((
-            self.highlight if high else u'',
             self.pos(self.ypadding, self.xpadding),
+            self.colors.get('highlight', u''),
             prnt,
-            getterminal().normal if high else u'',
+            getterminal().normal,
             self.fixate(),))
 
     def backspace(self):
@@ -476,7 +451,8 @@ class ScrollingEditor(AnsiWindow):
         self._horiz_shift = 0
         self._horiz_pos = 0
         self.content = ucs
-        assert unichr(27) not in ucs, ('Editor is not sequence-safe')
+        assert unichr(27) not in ucs, ('Editor is not ESC sequence-safe')
+        # TODO: assert binary, also ..
 
     def add(self, u_chr):
         """
