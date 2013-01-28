@@ -69,9 +69,9 @@ class AnsiWindow(object):
         self.colors['normal'] = term.normal
         if term.number_of_colors != 0:
             self.colors['border'] = term.cyan
-
-        self.glyphs['erase'] = u' '
+        # start with default 'ascii'
         self.glyphs = GLYPHSETS['ascii'].copy()
+        # PC-DOS 'thin' on smart terminals
         if session.env.get('TERM') != 'unknown':
             self.glyphs = GLYPHSETS['thin'].copy()
 
@@ -220,7 +220,7 @@ class AnsiWindow(object):
         topleft = self.glyphs.get('top-left', u'/')
         leftvert = self.glyphs.get('left-vert', u'|')
         rightvert = self.glyphs.get('right-vert', u'|')
-        botleft = self.glyphs.get('bot-left', u'V')
+        botleft = self.glyphs.get('bot-left', u'\\')
         bhoriz = self.glyphs.get('bot-horiz', u'-') * (max(0, self.width - 2))
         botright = self.glyphs.get('bot-right', u'/')
         rstr = u''
