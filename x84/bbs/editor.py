@@ -21,6 +21,29 @@ class LineEditor(object):
     _timeout = None
     _highlight = None
 
+    def __init__(self, width=None, content=u''):
+        """
+        Arguments:
+            width: the maximum input length
+        """
+        self._width = width
+        self.content = content
+        self._quit = False
+        self._carriage_returned = False
+        self.init_keystrokes()
+
+    def init_keystrokes(self):
+        """
+        This initializer sets keyboard keys for backspace/exit.
+        """
+        import x84.bbs.session
+        term = x84.bbs.session.getterminal()
+        self.keyset = PC_KEYSET
+        self.keyset['refresh'].append(term.KEY_REFRESH)
+        self.keyset['backspace'].append(term.KEY_BACKSPACE)
+        self.keyset['enter'].append(term.KEY_ENTER)
+        self.keyset['exit'].append(term.KEY_EXIT)
+
     @property
     def highlight(self):
         """
@@ -40,6 +63,14 @@ class LineEditor(object):
         # pylint: disable=C0111
         #         Missing docstring
         self._highlight = value
+
+    @property
+    def quit(self):
+        """
+        Returns: True if a terminating or quit character was handled by
+        process_keystroke(), such as the escape key, or 'q' by default.
+        """
+        return self._quit
 
     @property
     def hidden(self):
@@ -70,14 +101,6 @@ class LineEditor(object):
         #         Missing docstring
         self._width = value
 
-    def __init__(self, width=None, content=u''):
-        """
-        Arguments:
-            width: the maximum input length
-        """
-        self._width = width
-        self.content = content
-
     def refresh(self):
         """
         Returns unicode byts suitable for drawing line.
@@ -94,38 +117,46 @@ class LineEditor(object):
             rstr += self.content
         return rstr
 
+    def process_keystroke(self, keystroke):
+        """
+        Process the keystroke received by read method and take action.
+        """
+        self._quit = False
+        if keystroke in self.keyset['refresh']:
+            return self.refresh()
+        elif keystroke in self.keyset['backspace']:
+            if len(self.content) > 0:
+                self.content = self.content[:-1]
+                return u'\b \b'
+        elif keystroke in self.keyset['enter']:
+            self._carriage_returned = True
+        elif keystroke in self.keyset['exit']:
+            self._quit = True
+        elif type(keystroke) is int:
+            None
+        elif (ord(keystroke) >= ord(' ') and
+                (len(self.content) < self.width or self.width == 0)):
+            self.content += keystroke
+            return keystroke if not self.hidden else self.hidden
+        return u''
+
     def read(self):
         """
         Reads input until the ENTER or ESCAPE key is pressed (Blocking).
         Allows backspacing. Returns unicode text, or None when cancelled.
         """
-        import x84.bbs.session
-        import x84.bbs.output
-        x84.bbs.output.echo(self.refresh())
-        session = x84.bbs.session.getsession()
-        term = x84.bbs.session.getterminal()
-        while True:
+        from x84.bbs.output import echo
+        from x84.bbs.session import getsession, getterminal
+        session, term = getsession(), getterminal()
+        echo(self.refresh())
+        while not self._quit and not self._carriage_returned:
             inp = session.read_event('input')
-            if inp == term.KEY_EXIT:
-                if 0 != len(self.highlight):
-                    x84.bbs.output.echo(term.normal)
-                return None
-            elif inp == term.KEY_ENTER:
-                if 0 != len(self.highlight):
-                    x84.bbs.output.echo(term.normal)
-                return self.content
-            elif inp == term.KEY_BACKSPACE:
-                if len(self.content) > 0:
-                    self.content = self.content[:-1]
-                    x84.bbs.output.echo(u'\b \b')
-            elif (type(inp) is not int
-                    and ord(inp) >= ord(' ')
-                    and (len(self.content) < self.width or self.width == 0)):
-                self.content += inp
-                if self.hidden:
-                    x84.bbs.output.echo(self.hidden)
-                else:
-                    x84.bbs.output.echo(inp)
+            echo(self.process_keystroke(inp))
+        if 0 != len(self.highlight):
+            echo(term.normal)
+        if self._quit:
+            return None
+        return self.content
 
 
 class ScrollingEditor(AnsiWindow):
@@ -152,7 +183,6 @@ class ScrollingEditor(AnsiWindow):
         self._quit = False
         self._bell = False
         self._trim_char = '$ '
-        self.keyset = PC_KEYSET
         self.content = u''
         height = 3  # 2 of 3 for top and bottom border
         # (optionaly displayed .. is this best x/y coord?
@@ -167,6 +197,26 @@ class ScrollingEditor(AnsiWindow):
         Tuple of shift amount and column position of line editor.
         """
         return (self._horiz_shift, self._horiz_pos)
+
+    @property
+    def highlight(self):
+        """
+        highlight: when of non-zero length, a terminal sequence such as
+        term.cyan_reverse before printing ' '*width + '\b'+width, used before
+        reading input in read() and refresh(). this gives the effect of
+        economic and terminal-agnostic 'input field'. By default term.reverse
+        is used. Set to u'' to disable.
+        """
+        import x84.bbs.session
+        if self._highlight is None:
+            return x84.bbs.session.getterminal().reverse
+        return self._highlight
+
+    @highlight.setter
+    def highlight(self, value):
+        # pylint: disable=C0111
+        #         Missing docstring
+        self._highlight = value
 
     @property
     def eol(self):
@@ -321,7 +371,7 @@ class ScrollingEditor(AnsiWindow):
 
     def process_keystroke(self, keystroke):
         """
-        Process the keystroke received by run method and take action.
+        Process the keystroke received by read method and take action.
         """
         self._quit = False
         if keystroke in self.keyset['refresh']:
@@ -338,6 +388,23 @@ class ScrollingEditor(AnsiWindow):
             return u''
         return self.add(keystroke)
 
+    def read(self):
+        """
+        Reads input until the ENTER or ESCAPE key is pressed (Blocking).
+        Allows backspacing. Returns unicode text, or None when cancelled.
+        """
+        from x84.bbs.session import getsession, getterminal
+        from x84.bbs.output import echo
+        session, term = getsession(), getterminal()
+        echo(self.refresh())
+        self._quit = False
+        while not self._carriage_returned or self._quit:
+            inp = session.read_event('input')
+            echo(self.process_keystroke(inp))
+        if not self._quit:
+            return self.content
+        return None
+
     def fixate(self, x_adjust=0):
         """
         Return terminal sequence suitable for placing cursor at current
@@ -352,6 +419,7 @@ class ScrollingEditor(AnsiWindow):
         Return unicode sequence suitable for refreshing the entire line
         and placing the cursor.
         """
+        from x84.bbs.session import getterminal
         # reset position and detect new position
         self._horiz_lastshift = self._horiz_shift
         self._horiz_shift = 0
@@ -372,8 +440,11 @@ class ScrollingEditor(AnsiWindow):
                      * (self.visible_width - len(prnt)))
         else:
             prnt = self.content
-        return (self.pos(self.ypadding, self.xpadding)
-                + prnt + self.fixate())
+        return (self.highlight
+                + self.pos(self.ypadding, self.xpadding)
+                + prnt + self.fixate()
+                + getterminal().normal
+                if 0 != len(self.highlight) else u'')
 
     def backspace(self):
         """
@@ -411,7 +482,7 @@ class ScrollingEditor(AnsiWindow):
         character addition caused the window to scroll horizontally.
         Otherwise, the input is simply returned to be displayed ('local echo').
         """
-        if self.eol and not self.enable_scrolling:
+        if self.eol:
             # cannot input, at end of line!
             return u''
         # append to input
