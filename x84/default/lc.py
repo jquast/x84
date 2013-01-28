@@ -86,10 +86,11 @@ def lc_retrieve():
     rstr = u''
     nicks = []
     for ((tm_lc, handle), (nc, origin)) in (reversed(sorted(udb.items()))):
-        nicks.append(handle)
         rstr += '%-*s' % (padd_handle, handle)
         rstr += '%-*s' % (padd_origin, origin)
         rstr += timeago(time.time() - tm_lc)
+        rstr += '\n'
+        nicks.append(handle)
 #            (term.bold_yellow(origin[:len(origin) / 2])
 #                 + term.bold_yellow(origin[len(origin) / 2:])
 #                 + u' ' * (max(1, padd_location - len(origin))) + u' ')
