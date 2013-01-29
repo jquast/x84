@@ -16,11 +16,10 @@ setup(name='x84',
           'sqlite', 'utf8', 'cp437', 'rfc857', 'rfc858', 'rfc859',
           'rfc1073', 'rfc1572', 'naws'],
       license='ISC',
-      packages=['x84', 'x84.default', 'x84.bbs'],
+      packages=['x84', 'x84.default', 'x84.default.art', 'x84.bbs'],
       package_data={
           '': ['README.rst'],
-          'x84.default': ['art/*.asc', 'art/*.ans', 'art/*.txt'
-                          'art/top-*.ans', 'art/top-*.asc'],
+          'x84.default.art': ['*.asc', '*.ans', '*.txt'],
       },
       requires=['requests', 'sauce', 'sqlitedict', 'xmodem'],
       scripts=['bin/x84'],
