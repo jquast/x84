@@ -46,8 +46,8 @@ class Selector(AnsiWindow):
         """
         Initialize colors['selected'] and colors['unselected'].
         """
-        import x84.bbs.session
-        term = x84.bbs.session.getterminal()
+        from x84.bbs.session import getterminal
+        term = getterminal()
         AnsiWindow.init_theme(self)
         self.colors['selected'] = term.reverse
         self.colors['unselected'] = term.normal
@@ -57,8 +57,8 @@ class Selector(AnsiWindow):
         Merge curses-detected application keys into a VI_KEYSET-formatted
         keyset, for keys 'refresh', 'left', 'right', 'enter', and 'exit'.
         """
-        import x84.bbs.session
-        term = x84.bbs.session.getsession().terminal
+        from x84.bbs.session import getterminal
+        term = getterminal()
         self.keyset['refresh'].append(term.KEY_REFRESH)
         self.keyset['left'].append(term.KEY_LEFT)
         self.keyset['right'].append(term.KEY_RIGHT)
