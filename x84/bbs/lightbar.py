@@ -152,6 +152,20 @@ class Lightbar (AnsiWindow):
             self._quit = True
         return rstr
 
+    def read(self):
+        """
+        Reads input until the ENTER or ESCAPE key is pressed (Blocking).
+        Allows backspacing. Returns unicode text, or None when cancelled.
+        """
+        from x84.bbs.session import getsession
+        from x84.bbs.output import echo
+        session = getsession()
+        self._selected = False
+        echo(self.refresh())
+        while not self._selected or self._quit:
+            echo(self.process_keystroke(session.read_event('input')))
+        return self.selection[0]
+
     @property
     def quit(self):
         """
