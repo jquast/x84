@@ -159,10 +159,11 @@ class ConnectTelnet (threading.Thread):
         server end (engine.py) polls the parent end of a pipe, while the client
         (session.py) polls the child.
         """
+        logger = logging.getLogger()
         if not self.client.active:
+            logger.debug('session aborted; socket was closed.')
             return
         import multiprocessing
-        logger = logging.getLogger()
         parent_conn, child_conn = multiprocessing.Pipe()
         lock = threading.Lock()
         child_args = (child_conn, self.client.addrport(), self.client.env,)
@@ -230,10 +231,10 @@ class ConnectTelnet (threading.Thread):
             self._set_socket_opts()
             self.banner()
             self._spawn_session()
-        except socket.error, err:
+        except socket.error as err:
             logger.debug('Connection closed: %s', err)
             self.client.deactivate()
-        except Disconnected, err:
+        except Disconnected as err:
             logger.debug('Connection closed: %s', err)
             self.client.deactivate()
 
