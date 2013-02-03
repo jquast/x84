@@ -271,16 +271,14 @@ class Session(object):
                 # Pokemon exception, log and Cc: telnet client, then resume.
                 e_type, e_value, e_tb = sys.exc_info()
                 self.write(self.terminal.normal + u'\r\n')
+                terrs = list()
                 for line in traceback.format_tb(e_tb):
                     for subln in line.split('\n'):
-                        logger.error(subln.rstrip())
-                        self.write(subln.rstrip() + u'\r\n')
-                for line in traceback.format_exception_only(e_type, e_value):
-                    logger.error(line.rstrip())
-                    self.write(self.terminal.bold_red(line.rstrip()) + u'\r\n')
-                if not self.lock.acquire(False):
-                    logger.error('session.lock forcefully unacquired')
-                    self.lock = threading.Lock()
+                        terrs.append (subln)
+                terrs.extend(traceback.format_exception_only(e_type, e_value))
+                for etxt in terrs:
+                        logger.error(etxt.rstrip())
+                        self.write(etxt.rstrip() + u'\r\n')
             error_recovery()
         self.close()
         return None
