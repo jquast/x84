@@ -61,6 +61,14 @@ class LineEditor(object):
         return self._quit
 
     @property
+    def carriage_returned(self):
+        """
+        Returns True when last keystroke caused carriage to be returned.
+        (KEY_ENTER was pressed)
+        """
+        return self._carriage_returned
+
+    @property
     def hidden(self):
         """
         When not False, represents a single 'mask' character to hide input
@@ -133,14 +141,16 @@ class LineEditor(object):
         from x84.bbs.output import echo
         from x84.bbs.session import getsession, getterminal
         session, term = getsession(), getterminal()
+        self._carriage_returned = False
+        self._quit = False
         echo(self.refresh())
-        while not self._quit and not self._carriage_returned:
+        while not (self.quit or self.carriage_returned):
             inp = session.read_event('input')
             echo(self.process_keystroke(inp))
         echo(term.normal)
-        if self._quit:
-            return None
-        return self.content
+        if not self.quit:
+            return self.content
+        return None
 
 
 class ScrollingEditor(AnsiWindow):
@@ -375,10 +385,11 @@ class ScrollingEditor(AnsiWindow):
         session, term = getsession(), getterminal()
         echo(self.refresh())
         self._quit = False
-        while not self._carriage_returned or self._quit:
+        self._carriage_returned = False
+        while not (self.quit or self.carriage_returned):
             inp = session.read_event('input')
             echo(self.process_keystroke(inp))
-        if not self._quit:
+        if not self.quit:
             return self.content
         return None
 
