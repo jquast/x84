@@ -92,10 +92,6 @@ class DBProxy(object):
 
     # pylint: disable=C0111
     #        Missing docstring
-    def __cmp__(self, obj):
-        return self.proxy_method('__cmp__', obj)
-    __cmp__.__doc__ = dict.__cmp__.__doc__
-
     def __contains__(self, key):
         return self.proxy_method('__contains__', key)
     __contains__.__doc__ = dict.__contains__.__doc__
