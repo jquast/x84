@@ -102,9 +102,12 @@ class Selector(AnsiWindow):
         from x84.bbs.output import echo
         session = getsession()
         self._selected = False
+        self._quit = False
         echo(self.refresh())
-        while not self._selected or self._quit:
+        while not (self.selected or self.quit):
             echo(self.process_keystroke(session.read_event('input')) or u'')
+        if self.quit:
+            return None
         return self.selection
 
     @property
