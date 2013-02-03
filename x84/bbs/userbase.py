@@ -251,10 +251,11 @@ class User(object):
             logger.debug('%r GET %r: default; attr unset.', self.handle, key)
             val = default
         else:
-            logger.debug('get %r GET %r (size: %s)' % (
-                self.handle, key, len(attrs[key])
+            logger.debug('%r GET %r%s.' % (
+                self.handle, key,
+                ' (size: %d)' % (len(attrs[key]),)
                     if hasattr(attrs[key], '__len__')
-                    else '?'))
+                    else '(1)'))
             val = attrs[key]
         adb.release()
         return val
