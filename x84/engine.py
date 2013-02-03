@@ -123,7 +123,7 @@ def _loop(telnetd):
                        if fno in fds):
             try:
                 client.socket_recv()
-            except Disconnected, err:
+            except Disconnected as err:
                 logger.info('%s Connection Closed: %s.',
                             client.addrport(), err)
                 o_client, pipe, lock = lookup(client)
