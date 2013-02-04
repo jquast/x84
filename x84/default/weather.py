@@ -90,6 +90,7 @@ def do_search(search):
         # todo: logger.error
         echo(u'\r\n' + u'StAtUS COdE: %s\r\n\r\n' % (resp.status_code,))
         echo(repr(resp.content))
+        echo(u'\r\n\r\n' + 'PRESS ANY kEY')
         getch()
     else:
         xml_stream = StringIO.StringIO(resp.content)
@@ -136,7 +137,8 @@ def get_zipsearch(zipcode=u''):
 
 
 def chose_location_dummy(locations):
-    from x84.bbs import getterminal, echo
+    from x84.bbs import getterminal, echo, getch, LineEditor
+    term = getterminal()
     msg_enteridx = (
             term.bold_yellow(u'('),
             term.underline_yellow(u'0'),
@@ -148,25 +150,29 @@ def chose_location_dummy(locations):
             term.yellow('EXit'),
             term.bold_yellow(u')'), u' ',
             term.reverse_yellow(':'),)
-    max_nwidth = len('%d' % (len(locations - 1),))
+    max_nwidth = len('%d' % (len(locations) - 1,))
     def disp_entry(num, loc):
         return u''.join((
-            term.bold_yellow('u['),
+            term.bold_yellow(u'['),
             u'%*d' % (max_nwidth, num),
             term.bold_yellow(u']'), u' ',
             term.yellow(loc['city']), u', ',
             term.yellow(loc['state']), u'\r\n',))
+    echo(u'\r\n\r\n')
+    lno = 3
     for num, loc in enumerate(locations):
         echo(disp_entry(num, loc))
-        if 0 == num % (term.height - 1):
-            echo(term.reverse('--MORE--'))
+        lno+=1
+        if lno != 0 and (0 == lno % (term.height)):
+            echo(term.yellow_reverse('--MORE--'))
             if getch() is None:
                 break
             echo(u'\r\n')
+            lno+=1
     idx = u''
     while True:
-        echo(u''.join(msg_enteridx))
-        idx = LineEditor.read(width=max_width, content=idx)
+        echo(u'\r\n' + u''.join(msg_enteridx))
+        idx = LineEditor(width=max_nwidth, content=idx).read()
         if idx is None or len(idx) == 0:
             return None
         try:
@@ -292,8 +298,8 @@ def disp_forecast(forecast):
                 ).split('\r\n'):
             lno += 1
             echo(line + u'\r\n')
-            if 0 == lno % (term.height - 4):
-                echo(term.reverse('--MORE--'))
+            if 0 == lno % (term.height - 1):
+                echo(term.yellow_reverse('--MORE--'))
                 if getch() is None:
                     return False
                 echo(u'\r\n')
@@ -336,9 +342,9 @@ def main():
     session, term = getsession(), getterminal()
 
     echo(u'\r\n\r\n')
-    search = u''
     location = session.user.get('location', dict())
-    while not 'postal' in location:
+    while True:
+        search = location.get('postal', u'')
         disp_search_help()
         search = get_zipsearch(search)
         if search is None or 0 == len(search):
@@ -347,17 +353,37 @@ def main():
         if 0 != len(locations):
             location = (locations.pop() if 1 == len(locations)
                     else chose_location(locations) or dict())
-    root = do_fetch(location.get('postal'))
-    if root is None:
-        return
-    weather = parse_weather(root)
-    if False == location_prompt(location, 'WEAthER'):
-        return
-    disp_weather(weather)
-    if False == location_prompt(location, 'fORECASt'):
-        return
-    forecast = parse_forecast(root)
-    disp_forecast(forecast)
-    echo(u'\r\n')
-    echo(term.yellow_reverse('--ENd Of tRANSMiSSiON--'))
-    getch()
+        root = do_fetch(location.get('postal'))
+        if root is None:
+            return
+        weather = parse_weather(root)
+        if False == location_prompt(location, 'WEAthER'):
+            break
+        disp_weather(weather)
+        if False == location_prompt(location, 'fORECASt'):
+            break
+        forecast = parse_forecast(root)
+        disp_forecast(forecast)
+        echo(u'\r\n')
+        echo(term.yellow_reverse('--ENd Of tRANSMiSSiON--'))
+        getch()
+        break
+
+    if (sorted(location.items())
+            != sorted(session.user.get('location', dict()).items())):
+        echo(u''.join((u'\r\n\r\n',
+            term.yellow(u'SAVE lOCAtION'),
+            term.yellow(' ? '),
+            term.bold_yellow(u'['),
+            term.underline_yellow(u'yn'),
+            term.bold_yellow(u']'),
+            u': '),))
+        while True:
+            yn = getch()
+            if yn is None or yn in (u'n', u'N', 'q', 'Q', term.KEY_EXIT):
+                break
+            if yn in (u'y', u'Y', u' ', term.KEY_ENTER):
+                session.user['location'] = location
+                break
+
+
