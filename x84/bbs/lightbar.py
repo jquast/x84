@@ -10,7 +10,7 @@ NETHACK_KEYSET = {'home': [u'y', '0'],
                   'up': [u'k'],
                   'down': [u'j'],
                   'enter': [u'\r'],
-                  'exit': [u'q'],
+                  'exit': [u'q', u'Q', unichr(27),],
                   }
 
 
