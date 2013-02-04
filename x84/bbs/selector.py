@@ -13,7 +13,7 @@ VI_KEYSET = {
     'left': [u'h'],
     'right': [u'l'],
     'enter': [u'\r'],
-    'exit': [u'q', u'Q', unichr(3)],
+    'exit': [u'q', u'Q', unichr(27), ],
 }
 
 

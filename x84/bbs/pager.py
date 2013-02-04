@@ -12,7 +12,7 @@ VI_KEYSET = {
     'down': [u'j', u'J', u'\r'],
     'pgup': [u'b', u'B'],
     'pgdown': [u'f', u'F'],
-    'exit': [u'q', u'Q'],
+    'exit': [u'q', u'Q', unichr(27), ],
 }
 
 
