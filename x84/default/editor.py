@@ -243,6 +243,7 @@ def main(uattr=u'draft'):
         xloc = max(0, (term.width / 2) - (width / 2))
         lneditor = ScrollingEditor(width, yloc, xloc)
         lneditor.enable_scrolling = True
+        lneditor.max_length = 65534
         lneditor.glyphs['bot-horiz'] = u''
         lneditor.glyphs['top-horiz'] = u''
         lneditor.colors['highlight'] = term.green_reverse
