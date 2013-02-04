@@ -88,7 +88,7 @@ class Msg(object):
         Save message to database
         """
         MSGDB.acquire()
-        nxt = max(MSGDB.keys()) + 1
+        nxt = max(MSGDB.keys() or (-1,)) + 1
         self.idx = nxt
         self._stime = datetime.datetime.now()
         MSGDB[nxt] = self
