@@ -135,7 +135,7 @@ def get_zipsearch(zipcode=u''):
     return LineEditor(width=min(30, term.width - 5), content=zipcode).read()
 
 
-def chose_location_dummy():
+def chose_location_dummy(locations):
     from x84.bbs import getterminal, echo
     msg_enteridx = (
             term.bold_yellow(u'('),
@@ -339,8 +339,7 @@ def main():
     search = u''
     location = session.user.get('location', dict())
     while not 'postal' in location:
-        if False == session.user.get('expert', False):
-            disp_search_help()
+        disp_search_help()
         search = get_zipsearch(search)
         if search is None or 0 == len(search):
             return # exit
