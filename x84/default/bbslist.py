@@ -196,34 +196,34 @@ def get_bbsinfo(key, active=True):
              + highlight(u': ')
              + bbs['bbsname']
              + highlight('  +o ')
-             + bbs['sysop'] + u'\n')
+             + bbs['sysop'] + u'\r\n')
     rstr += (lowlight('AddRESS')
              + highlight(': ')
              + bbs['address']
              + highlight(': ')
-             + bbs['port'] + u'\n')
+             + bbs['port'] + u'\r\n')
     rstr += (lowlight('lOCAtiON')
              + highlight(': ')
-             + bbs['location'] + '\n')
+             + bbs['location'] + '\r\n')
     rstr += (lowlight('SOftWARE')
              + highlight(': ')
-             + bbs['software'] + '\n')
+             + bbs['software'] + '\r\n')
     epoch = time.mktime(time.strptime(bbs['timestamp'], '%Y-%m-%d %H:%M:%S'))
     rstr += (lowlight('tiMEStAMP')
              + highlight(':')
              + lowlight(timeago(time.time() - epoch))
-             + ' ago\n')
+             + ' ago\r\n')
     ratings = DBProxy('bbslist', 'ratings')[key]
     rstr += (lowlight('RAtiNG') + highlight(': ')
-             + '%s (%2.2f of %d)\n' % (
+             + '%s (%2.2f of %d)\r\n' % (
                  highlight(calc_rating(ratings)),
                  0 if 0 == len(ratings) else
                  sum([rtg for (hndl, rtg) in ratings])
                  / len(ratings), len(ratings)))
-    rstr += u'\n' + bbs['notes']
+    rstr += u'\r\n' + bbs['notes']
     comments = DBProxy('bbslist', 'comments')[key]
     for handle, comment in comments:
-        rstr += '\n\n' + lowlight(handle)
+        rstr += '\r\n\r\n' + lowlight(handle)
         rstr += highlight(': ')
         rstr += comment
     return rstr
@@ -238,10 +238,10 @@ def get_swinfo(entry, pager, active=True):
             "It's a fresh face to an old favorite. Although Enthral is "
             "still in it's alpha stages, the system is quite stable and "
             "is already very feature rich. Currently available for "
-            "Linux, BSD, and Apple's OS X.\n\n"
-            "   " + term.bold_blue('http://enthralbbs.com/') + "\n\n"
+            "Linux, BSD, and Apple's OS X.\r\n\r\n"
+            "   " + term.bold_blue('http://enthralbbs.com/') + "\r\n\r\n"
             "Author: Mercyful Fate\n"
-            "IRC: #enthral on irc.bbs-scene.org\n")
+            "IRC: #enthral on irc.bbs-scene.org\r\n")
         output += pager.title(u'- about ' + term.blue('Enthral') + u' -')
     elif entry and entry.strip().lower() == 'mystic':
         output += pager.update(
@@ -252,10 +252,10 @@ def get_swinfo(entry, pager, active=True):
             "easy customization thanks to its ACS based menu system "
             "along with fully editable strings and ANSI themes. "
             "Mystic also includes its own Pascal like MPL scripting "
-            "language for even further flexibility.\n\n"
-            "  " + term.bold_blue('http://mysticbbs.com/') + "\n\n"
-            "Author: g00r00\n"
-            "IRC: #MysticBBS on irc.efnet.org\n")
+            "language for even further flexibility.\r\n\r\n"
+            "  " + term.bold_blue('http://mysticbbs.com/') + "\r\n\r\n"
+            "Author: g00r00\r\n"
+            "IRC: #MysticBBS on irc.efnet.org\r\n")
         output += pager.title(u'- about ' + term.blue('Mystic') + u' -')
     elif entry and entry.strip().lower() == 'synchronet':
         output += pager.update(
@@ -264,21 +264,21 @@ def get_swinfo(entry, pager, active=True):
             "into your own custom online service supporting multiple "
             "simultaneous users with hierarchical message and file "
             "areas, multi-user chat, and the ever-popular BBS door "
-            "games.\n\n"
+            "games.\r\n\r\n"
             "Synchronet has since been substantially redesigned as "
             "an Internet-only BBS package for Win32 and Unix-x86 "
             "platforms and is an Open Source project under "
-            "continuous development.\n\n"
-            "  " + term.bold_blue('http://www.synchro.net/\n') + "\n\n"
-            "Author: Deuce\n"
+            "continuous development.\r\n\r\n"
+            "  " + term.bold_blue('http://www.synchro.net/\r\n') + "\r\n\r\n"
+            "Author: Deuce\r\n"
             "IRC: #synchronet on irc.bbs-scene.org")
         output += pager.title(u'- about ' + term.blue('Synchronet') + u' -')
     elif entry and entry.strip().lower() == 'the progressive':
         output += pager.update(
             "This bbs features threading, intra-process communication, "
             "and easy scripting in python. X/84 is a continuation of "
-            "this codebase.\n\n"
-            + "\n\nAuthor: jojo\n"
+            "this codebase.\r\n\r\n"
+            + "\r\n\r\nAuthor: jojo\r\n"
             "IRC: #prsv on irc.efnet.org")
         output += pager.title(u'- about ' + term.blue('The Progressive -'))
     elif entry and entry.strip().lower() == 'x/84':
@@ -287,9 +287,9 @@ def get_swinfo(entry, pager, active=True):
             "server specificly designed for BBS's, MUD's, and high "
             "scriptability. It is a Continuation of 'The Progressive' "
             "and is the only BBS software to support both CP437 and "
-            "UTF8 encoding.\n\n"
-            "  " + term.bold_blue('https://github.com/jquast/x84/\n')
-            + "\n\nAuthor: dingo, jojo\n"
+            "UTF8 encoding.\r\n\r\n"
+            "  " + term.bold_blue('https://github.com/jquast/x84/\r\n')
+            + "\r\n\r\nAuthor: dingo, jojo\r\n"
             "IRC: #prsv on irc.efnet.org")
         output += pager.title(u'- about ' + term.blue('X/84') + u' -')
     else:
