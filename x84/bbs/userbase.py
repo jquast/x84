@@ -246,17 +246,18 @@ class User(object):
             logger.debug(
                 '%r GET %r: default; missing attrs.', self.handle, key)
             val = default
-        attrs = adb[self.handle]
-        if not key in attrs:
-            logger.debug('%r GET %r: default; attr unset.', self.handle, key)
-            val = default
         else:
-            logger.debug('%r GET %r%s.' % (
-                self.handle, key,
-                ' (size: %d)' % (len(attrs[key]),)
-                    if hasattr(attrs[key], '__len__')
-                    else '(1)'))
-            val = attrs[key]
+            attrs = adb[self.handle]
+            if not key in attrs:
+                logger.debug('%r GET %r: default; attr unset.', self.handle, key)
+                val = default
+            else:
+                logger.debug('%r GET %r%s.' % (
+                    self.handle, key,
+                    ' (size: %d)' % (len(attrs[key]),)
+                        if hasattr(attrs[key], '__len__')
+                        else '(1)'))
+                val = attrs[key]
         adb.release()
         return val
     get.__doc__ = dict.get.__doc__
