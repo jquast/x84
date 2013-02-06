@@ -74,10 +74,11 @@ class DBHandler(threading.Thread):
                     result = func(*self.args)
             # pylint: disable=W0703
             #         Catching too general exception
-            except Exception as exception:
+            except Exception as err:
                 # Pokemon exception; package & raise from session process,
-                self.pipe.send(('exception', exception,))
+                self.pipe.send(('exception', err,))
                 dictdb.close()
+                logger.exception(err)
                 return
             self.pipe.send((self.event, result))
             dictdb.close()
@@ -94,10 +95,11 @@ class DBHandler(threading.Thread):
                     self.pipe.send((self.event, item,))
         # pylint: disable=W0703
         #         Catching too general exception
-        except Exception as exception:
+        except Exception as err:
             # Pokemon exception; package & raise from session process,
-            self.pipe.send(('exception', exception,))
+            self.pipe.send(('exception', err,))
             dictdb.close()
+            logger.exception(err)
             return
 
         self.pipe.send((self.event, (None, StopIteration,),))
