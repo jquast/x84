@@ -5,21 +5,13 @@ Files to make/finish
 --------------------
 local.py
 default/msgreader.py
-default/msgwriter.py / editor.py (utf-8!)
-default/ueditor.py
 default/page.py
   hijack another session with a gosub(),
   they will use term.fullscreen (),
 default/irc.py
-default/weather.py
 default/si.py <-- merge in torus.py
 default/ttyplay.py
 default/wfc.py
-default/plan.py (browse, xmodem up/down)
-
-? telnet.py
-BINARY mode correctly; ftp://kermit.columbia.edu/kermit/f/telnet.txt
-we just use '\r\n' in echo, and strip \0 from \r in get_input, etc.,
 
 DOCS
 ----
@@ -36,9 +28,8 @@ TESTING
 * TERM=unknown -- this should create an 'expert mode' bbs, with
   no frills, no lightbars, no artwork, etc. -- for low bandwidth
   terminals.
-* assert that any line that y and x, yloc, xloc, ypos, xpos, row, col
-  are used, that they appear in order of Y, X.
-* assert that any method or function that returns ansi string sequences ends with term.normal.
+* assert that any method or function that returns ansi string
+  sequences ends with term.normal.
 * assert that UTF-8 is always referred to as 'utf8',
   and is referred to as minimally as possible, fewest knobs.
 
@@ -47,8 +38,8 @@ OSX: iTerm2, Terminal.app
 Windows: PuTTy, SyncTerm, mtel, telnet (-t vtnt?)
 BSD/Linux: uxterm, bsdtelnet, linux console
 
-PARKING LOT
-===========
+PARKING LOT, 2.0
+================
 Lord / dosemu / freedos / dosbox eample
 flesh out fileserver ... zIPE's call.
   at least hook on_* methods
@@ -64,5 +55,3 @@ and register as a client to a running engine.py,
     executing arbitrary code due to the pickling process,
     but if you trust the clients, this is a way to build a 'farm'
     of bbs systems .. and may be how local.py should run;
-
-
