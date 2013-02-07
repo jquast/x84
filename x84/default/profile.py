@@ -78,7 +78,7 @@ def process_keystroke(lightbar, inp, user):
                            lightbar is not None and
                            lightbar.selection[0] == u'.'):
         echo(term.move(0, 0) + term.normal + term.clear)
-        echo(term.move((term.height / 3), 0))
+        echo(term.move(int(term.height * .8), 0))
         for line in Ansi(about_dot_plan).wrap(term.width / 3).split('\r\n'):
             echo(line.center(term.width) + u'\r\n')
         echo('\r\n\r\nPRESS ANY kEY ...')
