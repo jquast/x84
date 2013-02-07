@@ -1,74 +1,134 @@
-"""
-Last Callers script for x/84, http://github.com/jquast/x84
-"""
+""" Last Callers script for x/84, http://github.com/jquast/x84 """
+# this also allows viewing of '.plan' attribute string when set by user,
+# or 'e'diting a user when executed by sysop -- gosub('profile', user)
 
-import os
-from x84.bbs import getterminal, echo, getch, list_users, get_user, ini
-from x84.bbs import timeago, getsession, Ansi, Lightbar
-
-
-def dummy_pager(last_callers):
-    term = getterminal()
-    prompt_msg = u'\r\n\r\n[c]ONtiNUE, [s]tOP, [n]ON-StOP  ?\b\b'
-    nonstop = False
-    if term.width > 71:
-        echo(term.normal + u'\r\n')
-        echo(u'\r\n'.join((line.rstrip().center(term.width).rstrip()
-                          for line in open(
-                              os.path.join(os.path.dirname(__file__),
-                                           'art', 'lc.asc')))))
-    else:
-        echo(term.normal + '\r\n')
-        echo('// ' + term.red('LASt CAllERS').center(term.width))
-    echo(u'\r\n\r\n')
-    for row in range(len(last_callers)):
-        echo(Ansi(last_callers[row]).ljust(term.width / 2).center(term.width))
-        echo(u'\r\n')
-        if not nonstop and row > 0 and 0 == (row % (term.height - 2)):
-            echo(prompt_msg)
-            inp = getch()
-            if inp in (u's', u'S', u'q', u'Q', term.KEY_EXIT):
-                return
-            if inp in ('n', u'N'):
-                nonstop = True
-    echo(u'\r\npress any key .. ')
+def pak():
+    from x84.bbs import echo, getch
+    msg_pak = u'PRESS ANY kEY'
+    echo(u'\r\n%s ... ' % (msg_pak,))
     getch()
     return
 
 
-def redraw(pager):
+def view_plan(user):
+    from x84.bbs import getterminal, echo, Ansi
     term = getterminal()
-    rstr = term.move(0, 0) + term.normal + term.clear
-    for line in open(os.path.join(os.path.dirname(__file__), 'art', 'lc.asc')):
-        rstr += line.center(term.width).rstrip() + '\r\n'
-    rstr += pager.border()
-    if len(pager.content) < pager.visible_height:
-        rstr += pager.footer(u'%s-%s (q)uit %s-%s' % (
-            term.bold_white, term.normal, term.bold_white, term.normal))
-    else:
-        rstr += pager.footer(u'%s-%s up%s/%sdown%s/%s(q)uit %s-%s' % (
-            term.bold_white, term.normal, term.bold_red, term.normal,
-            term.bold_red, term.normal, term.bold_white, term.normal))
-    rstr += pager.refresh()
-    return rstr
+    echo(u'\r\n\r\n')
+    echo(Ansi(user.get('.plan', u'No Plan.')).wrap(term.width))
+    pak()
+
+
+def dummy_pager(last_callers):
+    from x84.bbs import getterminal, getsession, echo, getch, ini
+    from x84.bbs import LineEditor, Ansi, list_users, get_user, gosub
+    session, term = getsession, getterminal()
+    msg_prompt = (
+            u'\r\n\r\n%sONtiNUE, %stOP, %sON-StOP %siEW .PlAN%s ?\b\b' % (
+                term.bold(u'[c]'),
+                term.bold(u'[s]'),
+                term.bold(u'n'),
+                term.bold(u'[v]'),
+                u' [e]dit USR' if (
+                    'sysop' in session.user.groups) else u'',))
+    msg_partial = u'PARtiAl MAtChES'
+    msg_prompt_handle = u'ViEW .PlAN ::- ENtER hANdlE: '
+
+    redraw()
+    echo(u'\r\n\r\n')
+    nonstop = False
+    for row in range(len(last_callers)):
+        echo(Ansi(last_callers[row]).ljust(term.width / 2).center(term.width))
+        echo(u'\r\n')
+        if ((not nonstop and row > 0 and 0 == (row % (term.height - 2)))
+                or (row == len(last_callers) - 1)):
+            echo(msg_prompt)
+            inp = getch()
+            if inp in (u's', u'S', u'q', u'Q', term.KEY_EXIT):
+                return
+            if inp in (u'v', u'V') or 'sysop' in session.user.groups and (
+                    inp in (u'e', u'E')):
+                echo(u'\r\n')
+                echo(msg_prompt_handle)
+                handle = LineEditor(ini.CFG.get('nua', 'max_user')).read()
+                echo (u'\r\n\r\n')
+                usrlist = list_users()
+                if handle is None or 0 == len(handle.strip()):
+                    continue
+                handle = handle.strip()
+                if handle.lower() in [nick.lower() for nick in list_users()]:
+                    user = get_user((nick for nick in usrlist
+                        if nick.lower() == handle.lower()).next())
+                    if 'sysop' in session.user.groups and (
+                            inp in (u'e', u'E')):
+                        gosub('profile', user)
+                    else:
+                        view_plan(user)
+                else:
+                    misses = [nick for nick in usrlist.keys()
+                        if nick.lower().startswith(handle[:1].lower())]
+                    if len(misses) > 0:
+                        echo(u'%s:\r\n\r\n%s\r\n' % (msg_partial,
+                            Ansi(', '.join(misses)).wrap(term.width)))
+                    continue
+            if inp in ('n', u'N'):
+                nonstop = True
+    pak()
+
+def refresh_opts(pager, user):
+    from x84.bbs import getsession, getterminal
+    session, term = getsession(), getterminal()
+    has_plan = 0 != len(
+            user.get('.plan', u'').strip() if user is not None else u'')
+    decorate = lambda key, desc: u''.join((
+        term.bold(u'('), term.red_underline(key,),
+        term.bold(u')'), term.bold_red(desc.split()[0]),
+        u' '.join(desc.split()[1:]),
+        term.bold_red(u' -'),))
+    return pager.footer(u''.join((
+        term.bold_red(u'- '),
+        decorate(u'Escape/q', 'Uit'),
+        decorate(u'v','iEW .PLAN') if has_plan else u'',
+        decorate(u'e','dit USR') if 'sysop' in session.user.groups else u'',
+        )))
 
 
 def get_pager(lcallers, lcalls):
+    from x84.bbs import getterminal, Lightbar
     term = getterminal()
-    width = 65
-    height = term.height - 15
-    yloc = 10
-    xloc = max(3, int((float(term.width) / 2) - (float(width) / 2)))
+    width = min(60, term.width - 1)
+    height = max(5, min(len(lcallers), term.height - 15))
+    xloc = (term.width / 2) - (width / 2)
+    yloc = term.height - (height + 1)
     pager = Lightbar(height, width, yloc, xloc)
+    pager.glyphs['left-vert'] = u''
+    pager.glyphs['right-vert'] = u''
     pager.xpadding = 2
     pager.ypadding = 1
     pager.alignment = 'center'
-    pager.colors['border'] = term.red
+    pager.colors['border'] = term.yellow
     pager.colors['highlight'] = term.yellow_reverse
     pager.update([(lcallers[n], txt,)
                   for (n, txt) in enumerate(lcalls.split('\n'))])
     return pager
 
+
+def redraw(pager=None):
+    from x84.bbs import getterminal
+    import os
+    term = getterminal()
+    rstr = u'\r\n\r\n'
+    artfile = os.path.join(os.path.dirname(__file__), 'art', 'lc.asc')
+    if os.path.exists(artfile):
+        rstr += u'\r\n'.join([
+            line.rstrip()[:term.width].center(term.width)
+            for line in open(artfile)])
+        rstr += u'\r\n\r\n'
+    rstr += term.bold_red_underline(u'// ')
+    rstr += term.red('LASt CAllERS'.center(term.width - 3))
+    rstr += u'\r\n\r\n'
+    if pager is not None:
+        rstr += u'\r\n' * pager.height + pager.border() + pager.refresh()
+    return rstr
 
 def lc_retrieve():
     """
@@ -76,8 +136,8 @@ def lc_retrieve():
     color the last callers to the system, and 'nicknames' is simply a list
     of last callers (for lightbar selection key).
     """
+    from x84.bbs import list_users, get_user, ini, timeago
     import time
-    #term = getterminal()
     udb = dict()
     for handle in list_users():
         user = get_user(handle)
@@ -92,39 +152,49 @@ def lc_retrieve():
         rstr += timeago(time.time() - tm_lc)
         rstr += '\n'
         nicks.append(handle)
-#            (term.bold_yellow(origin[:len(origin) / 2])
-#                 + term.bold_yellow(origin[len(origin) / 2:])
-#                 + u' ' * (max(1, padd_location - len(origin))) + u' ')
-#        rstr += (term.bold_yellow(timeago(time.time() - tm_lc))
-#                 + term.red(' ago  n') + term.bold_yellow('C')
-#                 + term.red('/') + term.bold_red(str(nc)) + u'\n')
     return (nicks, rstr.rstrip())
 
 
 def main():
+    from x84.bbs import getsession, getterminal, echo, getch, get_user, gosub
     session, term = getsession(), getterminal()
     session.activity = u'Viewing last callers'
-    dirty = True
     lcallers, lcalls_txt = lc_retrieve()
-    if (session.env.get('TERM') == 'unknown'
-            or term.number_of_colors == 0
-            or term.height <= 20 or term.width <= 71 or
-            session.user.get('expert', False)):
-        dummy_pager(lcalls_txt.split(u'\n'))
+    user = None
+    pager = None
+    dirty = True
+    ropts = u''
+    if (0 == term.number_of_colors
+            or session.user.get('expert', False)):
+        dummy_pager(lcalls_txt.split('\n'))
         return
-    while True:
-        if (term.height <= 20 or term.width <= 71):
-            # window became too small
-            dummy_pager(lcalls_txt.split('\n'))
-            return
-        if dirty:
+    while pager is None or not pager.quit:
+        if dirty or pager is None or session.poll_event('refresh'):
             pager = get_pager(lcallers, lcalls_txt)
             echo(redraw(pager))
+            ropts = refresh_opts(pager, user)
+            echo(ropts)
+        nxt_user = get_user(pager.selection[0])
+        if nxt_user != user or dirty:
+            user = nxt_user
+            nxt_ropts = refresh_opts(pager, user)
+            if ropts != nxt_ropts:
+                ropts = nxt_ropts
+                echo(ropts)
+            echo(pager.pos(pager.yloc + (pager.height - 1)))
             dirty = False
-        inp = getch(1)
         if session.poll_event('refresh'):
             dirty = True
+            continue
+        inp = getch(1)
         if inp is not None:
-            echo(pager.process_keystroke(inp))
-            if pager.quit:
-                break
+            if inp in (u'v', u'V'):
+                view_plan(user)
+                dirty = True
+            elif inp in (u'e', u'E') and 'sysop' in session.user.groups:
+                gosub('profile', user.handle)
+                dirty = True
+            else:
+                echo(pager.process_keystroke(inp))
+
+
