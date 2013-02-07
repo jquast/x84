@@ -377,9 +377,9 @@ class Terminal(object):
         """
         logger = logging.getLogger()
         if isinstance(data, str):
-            logger.debug('decoding: %r', data)
+#            logger.debug('decoding: %r', data)
             data = data.decode(encoding, 'replace')
-        logger.debug('decoded: %r', data)
+#        logger.debug('decoded: %r', data)
 
         def scan_keymap(text):
             """
