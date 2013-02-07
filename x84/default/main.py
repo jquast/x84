@@ -90,6 +90,6 @@ def main():
             gosub('writemsg')
             dirty = True
         elif choice == u'r':
-            goto('readmsgs')
+            gosub('readmsgs')
         elif choice == u'g':
             goto('logoff')
