@@ -5,32 +5,42 @@ This script displays a CP437 artwork (block ansi), and prompts the user to
 chose 'utf8' or 'cp437' encoding. Other than the default, 'utf8', the
 Session.write() method takes special handling of a session.encoding value
 of 'cp437' for encoding translation.
+
+feedback appreciated in the refresh() method; special characters
+are used to "switch" terminals from one mode to another -- do any work?
 """
 
 import os
-from x84.bbs import getsession, getterminal, getch, Selector
-from x84.bbs import echo, showcp437, Ansi
+
+def get_selector(selection):
+    """
+    Instantiate a new selector, dynamicly for the window size.
+    """
+    from x84.bbs import getterminal, Selector
+    term = getterminal()
+    width = max(30, (term.width / 2) - 10)
+    xloc = max(0, (term.width / 2) - (width / 2))
+    sel = Selector(yloc=term.height - 1,
+                   xloc=xloc, width=width,
+                   left='utf8', right='cp437')
+    sel.selection = selection
+    return sel
 
 
 def main():
+    from x84.bbs import getsession, getterminal, echo, getch, Ansi, from_cp437
     session, term = getsession(), getterminal()
-    if term.number_of_colors == 256:
-        artfile = os.path.join(
-            os.path.dirname(__file__), 'art', 'plant-256.ans')
-    else:
-        artfile = os.path.join(
-            os.path.dirname(__file__), 'art', 'plant.ans')
-
+    artfile = os.path.join(
+        os.path.dirname(__file__), 'art', (
+            'plant-256.ans' if term.number_of_colors == 256
+            else 'plant.ans'))
     enc_prompt = (
         u'Press left/right until artwork looks best. Clients should'
         ' select utf8 encoding and Andale Mono font. Older clients or'
         ' clients with appropriate 8-bit fontsets can select cp437, though'
         ' some characters may appear as "?".')
-
     save_msg = u"\r\n\r\n'%s' is now your preferred encoding ..\r\n"
-
-    if (session.env.get('TERM') == 'unknown') or (
-            session.user.get('expert', False)):
+    if session.user.get('expert', False):
         echo(u'\r\n\r\n(U) UTF-8 encoding or (C) CP437 encoding [uc] ?\b\b')
         while True:
             inp = getch()
@@ -45,18 +55,8 @@ def main():
         getch(1.0)
         return
 
-    def get_selector(selection):
-        """
-        Instantiate a new selector, dynamicly for the window size.
-        """
-        width = max(30, (term.width / 2) - 10)
-        xloc = max(0, (term.width / 2) - (width / 2))
-        sel = Selector(yloc=term.height - 1,
-                       xloc=xloc, width=width,
-                       left='utf8', right='cp437')
-        sel.selection = selection
-        return sel
-
+    art = (from_cp437(open(artfile).read()).splitlines()
+            if os.path.exists(artfile) else [u''])
     def refresh(sel):
         session.flush_event('refresh')
         session.encoding = selector.selection
@@ -72,17 +72,18 @@ def main():
             echo(unichr(27) + u')U')
         else:
             assert False, "Only encodings 'utf8' and 'cp437' supported."
-        # clear & display art
-        echo(term.move(0, 0) + term.normal + term.clear)
-        for line in showcp437(artfile):
-            echo(line)
-        echo(term.normal + u'\r\n\r\n')
-        echo(Ansi(enc_prompt).wrap((term.width / 2) + (term.width / 3)))
-        echo(u'\r\n\r\n')
-        echo(sel.refresh())
+        # display art, banner, paragraph, refresh selector refresh
+        buf = [line for line in art]
+        return u''.join((
+            u'\r\n\r\n',
+            u'\r\n'.join(buf),
+            u'\r\n\r\n',
+            Ansi(enc_prompt).wrap(int(term.width * .95)),
+            u'\r\n\r\n',
+            sel.refresh(),))
 
     selector = get_selector('utf8')
-    refresh(selector)
+    echo(refresh(selector))
     while True:
         inp = getch(1)
         if inp == term.KEY_ENTER:
@@ -98,8 +99,8 @@ def main():
                 return
             if selector.moved:
                 # set and refresh art in new encoding
-                refresh(selector)
+                echo(refresh(selector))
         if session.poll_event('refresh') is not None:
             # instantiate a new selector in case the window size has changed.
             selector = get_selector(session.encoding)
-            refresh(selector)
+            echo(refresh(selector))
