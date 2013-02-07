@@ -1,45 +1,145 @@
-""" Whos online script for X/84, https://github.com/jquast/x84 """
+""" Who's online script for X/84, https://github.com/jquast/x84 """
 
 import time
+SELF_ID = -1
+
+
+def request_info(session_ids):
+    # send individual info-req messages
+    from x84.bbs import getsession
+    session = getsession()
+    for sid in session_ids:
+        session.send_event('route', (sid, 'info-req',))
+
 
 def main(login_handle=None):
-    from x84.bbs import getsession, getterminal
-    from x84.bbs import get_user
+    from x84.bbs import getsession, getterminal, getch, echo
     session, term = getsession(), getterminal()
     session.activity = u"Who's Online"
     delay = session.user.get('screen delay', 10)
-    blank = session.user.get('blank timeout', 1800)
     lastfresh = time.time()
-    session = getsession()
-    is_sysop = 'sysop' in session.user.groups
+    poll_ayt = 3  # poll for new sessions
+    echo(u'\r\n\r\n')
+    echo(u''.center((term.width / 2) - 3))
+    echo(term.underline('...'))
+    echo(term.bold_green(" whO'S ONliNE"))
+    echo(u'\r\n\r\n')
+#    is_sysop = 'sysop' in session.user.groups
+#    blank = session.user.get('blank timeout', 1800)
 
-    SYSTEM, SESSIONS = 1,2
 
     sessions = dict()
     dirty = True
+    ayt_lastfresh = time.time()
 
-    # send global are-you-there request
-    session.send_event('global', 'AYT')
+    def broadcast_AYT(last_update):
+        # broadcast are-you-there
+        if time.time() - last_update > poll_ayt:
+            session.send_event('global', 'AYT')
+            last_update = time.time()
+        return last_update
+
+
     while True:
-        # add users who respond to AYT to sessions list
-        data = session.poll_event('global')
+        ayt_lastfresh = broadcast_AYT(ayt_lastfresh)
+        inp = getch(1)
+        if session.poll_event('refresh') or (
+                inp in (u' ', term.KEY_REFRESH, unichr(12))):
+            dirty = True
+        if inp in (u'q', 'Q', term.KEY_EXIT, unichr(27)):
+            return
+
+        # add sessions that respond to AYT
+        data = session.poll_event('ACK')
         if data is not None:
             sender, msg = data
             if msg[0] == 'ACK':
                 handle = msg[1]
-                sessions[sender] = (handle, time.time())
-                dirty=True
-            continue
-        # remove users who haven't responded to AYT
-        for sender, (handle, lastfresh) in sessions.items()[:]:
-            if time.time() - lastfresh > min(5, (delay * 2)):
-                del sessions[sender]
-        inp = getch(1)
-        if dirty:
-            refresh()
+                if sender in sessions:
+                    sessions[sender]['handle'] = handle
+                else:
+                    sessions[sender] = dict((
+                        ('handle', handle),
+                        ('lastfresh', time.time()),))
+                    dirty = True
 
-def refresh():
-    pass
+        # update sessions that respond to info-req
+        data = session.poll_event('info-ack')
+        if data is not None:
+            sender, attrs = data
+            sessions[sender] = attrs
+            sessions[sender]['lastfresh'] = time.time()
+
+        # update our own session
+        sessions[SELF_ID] = session.info()
+        sessions[SELF_ID]['lastfresh'] = time.time()
+
+        # request that all sessions update ( except our own )
+        request_info(set(sessions.keys()) ^ set([-1]))
+
+        # prune users who haven't responded to AYT
+        for sender, attrs in sessions.items()[:]:
+            if time.time() - attrs['lastfresh'] > min(5, (delay * 2)):
+                del sessions[sid]
+                dirty = True
+
+        if dirty: #or (delay and time.time() -lastfresh > delay):
+            refresh(sessions)
+            lastfresh = time.time()
+            dirty = False
+
+def refresh(sessions):
+    from x84.bbs import getsession, getterminal, ini, echo
+    session, term = getsession(), getterminal()
+    decorate = lambda key, desc: u''.join((
+        term.green(u'('), term.green_underline(key,),
+        term.green(u')'), term.bold(desc.split()[0]),
+        u' '.join(desc.split()[1:]),
+        u' ',))
+    echo(u'\r\n\r\n')
+    for idx, (sid, attrs) in enumerate(sorted(sessions.items())):
+        echo(u''.join((
+            term.green(u'[ '),
+            term.bold_green('%*d' % (len(u'%d' % (len(sessions),)), idx,)),
+            term.green(u' ]'),
+            '%4is idle' % attrs.get('idle'),
+            term.bold_green(': '),
+            term.bold('%-*s' % (
+                ini.CFG.getint('nua', 'max_user'),
+                attrs.get('handle', u''))),
+            term.green(u' - '),
+            attrs.get('activity', u''),
+            u'\r\n',
+            )))
+    echo(u'\r\n')
+    if 'sysop' in session.user.groups:
+        echo(u''.join(((u' '),
+            decorate('v', 'iEW'),
+            decorate('e', 'diT USR'),
+            decorate('Escape/q', 'Uit'),
+            decorate(' ', 'REfRESh'),
+            term.green_reverse(':'),
+            u' ',
+            )))
+    else:
+        echo(u''.join(((u' '),
+            decorate('Escape/q', 'Uit'),
+            decorate(' ', 'REfRESh'),
+            term.green_reverse(':'),
+            u' ',
+            )))
+#                'TERM': 'xterm-256color',
+#                'handle': u'dingo',
+#                'script': 'online',
+#                'connect_time': 1360246564.06864,
+#                'ttyrec': u'dingo',
+#                'LINES': 24,
+#                'encoding': 'utf8',
+#                'idle': 14.390225887298584,
+#                'lastfresh': 1360246595.539143,
+#                'activity': u"Who's Online",
+#                'id': '<undefined>',
+#                'COLUMNS': 79
 #        if clist.moved or (delay and time.time() -lastfresh > delay):
 #            info.update (describe(sessions[clist.selection]))
 #            lastfresh = time.time()
@@ -276,4 +376,6 @@ def refresh():
 #          + '%s\n' % (groups,) \
 #          + termdata
 #
+
+
 
