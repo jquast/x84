@@ -74,6 +74,14 @@ class Lightbar (AnsiWindow):
         ucs += self.align(self.content[entry][1])
         return ucs + term.normal
 
+    def fixate(self):
+        """
+        Reterm unicode terminal sequence for moving cursor to current
+        selection.
+        """
+        return self.pos(self.ypadding + self.vitem_idx,
+                self.xpadding + self.visible_width)
+
     def refresh(self):
         """
         Refresh full lightbar window contents
