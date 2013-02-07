@@ -11,11 +11,10 @@
 __url__ = u'https://github.com/jquast/x84/'
 
 import os
-from x84.bbs import getterminal, getsession, ini, echo, goto, Door, getch
-from x84.bbs import get_user, LineEditor, gosub, find_user
 
 
 def denied(msg):
+    from x84.bbs import getterminal, echo, getch
     term = getterminal()
     echo(msg + term.normal)
     getch(1.0)
@@ -28,8 +27,10 @@ def get_username(handle=u''):
     (default=no). A unicode handle of non-zero length is returned when the
     login handle matches a userbase record.
     """
+    from x84.bbs import getterminal, ini, echo, LineEditor, gosub, goto
+    from x84.bbs import find_user, getch
     term = getterminal()
-    prompt_user = u'\r\n\r\n  user: '
+    prompt_user = u'\r\n  user: '
     apply_msg = u'\r\n\r\n  --> Create new account? [ynq]   <--' + '\b' * 5
     allow_apply = ini.CFG.getboolean('nua', 'allow_apply')
     enable_anonymous = ini.CFG.getboolean('matrix', 'enable_anonymous')
@@ -78,6 +79,7 @@ def get_username(handle=u''):
 
 
 def try_reset(user):
+    from x84.bbs import echo, getch, gosub
     prompt_reset = u'RESEt PASSWORD (bY E-MAil)? [yn]'
     echo(prompt_reset)
     while True:
@@ -90,6 +92,7 @@ def try_reset(user):
 
 
 def try_pass(user):
+    from x84.bbs import getsession, getterminal, ini, LineEditor, echo, goto
     session, term = getsession(), getterminal()
     prompt_pass = u'\r\n\r\n  pass: '
     status_auth = u'\r\n\r\n  ' + term.yellow_reverse(u"Encrypting ..")
@@ -119,6 +122,7 @@ def uname():
     """
     On unix systems with uname, call with -a on connect
     """
+    from x84.bbs import Door
     for uname_filepath in ('/usr/bin/uname', '/bin/uname'):
         if os.path.exists(uname_filepath):
             Door(uname_filepath, args=('-a',)).run()
@@ -127,29 +131,35 @@ def uname():
 
 def main():
     import logging
+    from x84.bbs import getsession, getterminal, ini, echo, get_user, goto
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
-    handle = (session.env.get('USER', '') .decode('iso8859-1', 'replace'))
+    handle = (session.env.get('USER', '').decode('iso8859-1', 'replace'))
     anon_allowed_msg = u"'anonymous' login enabled.\r\n"
     enable_anonymous = ini.CFG.getboolean('matrix', 'enable_anonymous')
     enable_pwreset = ini.CFG.getboolean('matrix', 'enable_pwreset')
     bbsname = ini.CFG.get('system', 'bbsname')
+    artfile = os.path.join(os.path.dirname(__file__), 'art', '1984.asc')
     max_tries = 10
-
     session.flush_event('refresh')
-    echo(term.normal + u'\r\nConnected to %s, see %s for source\r\n' % (
-        bbsname, __url__))
     uname()
-    echo(u'\r\n')
-    if term.width >= 76:
-        for line in open(os.path.join
-                         (os.path.dirname(__file__), 'art', '1984.asc'), 'r'):
-            echo(line.rstrip().center(term.width).rstrip() + u'\r\n')
-        echo(u'\r\n')
-    if session.env.get('TERM') == 'unknown':
-        echo(u'! TERM is unknown\r\n\r\n')
-    if enable_anonymous:
-        echo(anon_allowed_msg)
+    # display banner
+    echo(u''.join((
+        term.normal, u'\r\n',
+        u'Connected to %s, see %s for source\r\n' % (bbsname, __url__),
+        u'\r\n'.join([line[:term.width].rstrip() for line in open(artfile)]),
+        u'\r\n\r\n',
+        term.bold(u'tERM'), u': ',
+        term.cyan_underline(session.env['TERM']),
+        u'\r\n',
+        term.bold(u'diMENSiONs'), u': ', '%s%s%s' % (
+            term.bold_cyan(str(term.width)),
+            term.cyan(u'x'),
+            term.bold_cyan(str(term.height)),),
+        u'\r\n\r\n',
+        anon_allowed_msg if enable_anonymous else u'',
+        )))
+    # prompt for username & password
     for n in range(0, max_tries):
         handle = get_username(handle)
         if handle != u'':
@@ -160,5 +170,5 @@ def main():
                 try_reset(user)
             else:
                 logger.info('%r failed password', handle)
-    logger.info('maximum tries exceeded')
+    logger.warn('maximum tries exceeded')
     goto('logoff')
