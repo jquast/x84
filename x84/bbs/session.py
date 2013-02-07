@@ -280,6 +280,7 @@ class Session(object):
                         logger.error(etxt.rstrip())
                         self.write(etxt.rstrip() + u'\r\n')
             error_recovery()
+        logger.info('end of script stack.')
         self.close()
         return None
 
