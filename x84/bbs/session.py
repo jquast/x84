@@ -365,9 +365,11 @@ class Session(object):
         if event == 'global':
             sender, mesg = data
             if mesg == 'AYT':
-                self.send_event('route', (sender, 'ACK', self.user.handle,))
+                self.send_event('route',
+                        (sender, 'ACK', self.sid, self.user.handle,))
+                # becomes 'ACK' of data 'sid, handle'
                 logger.debug('reply-to global AYT')
-                return
+                return True
 
         # accept 'page' as instant chat when 'mesg' is True
         if event == 'page':
@@ -375,14 +377,14 @@ class Session(object):
                 logger.debug('recieving page')
                 self.runscript('chat', data)
                 self.buffer_event('refresh', 'page-return')
-                return
+                return True
 
         # respond to 'info-req' events by returning pickled session info
         if event == 'info-req':
-            sender, mesg = data
-            logger.debug('reply-to info-req')
-            self.send_event('route', (sender, 'info-ack', self.info(),))
-            return
+            sid = data[0]
+            logger.debug('%s reply-to %s: info-req', self.sid, sid)
+            self.send_event('route', (sid, 'info-ack', self.sid, self.info(),))
+            return True
 
         # init new unmanaged & unlimited-sized buffer ;p
         if not event in self._buffer:
@@ -400,7 +402,7 @@ class Session(object):
                 (self.terminal.columns, self.terminal.rows) = data[1]
             # store only most recent 'refresh' event
             self._buffer[event] = list((data,))
-            return
+            return True
 
         # buffer all else
         self._buffer[event].insert(0, data)
@@ -499,12 +501,13 @@ class Session(object):
             poll = None if waitfor == float('inf') else waitfor
             if self.pipe.poll(poll):
                 event, data = self.pipe.recv()
-                self.buffer_event(event, data)
+                retval = self.buffer_event(event, data)
+                logger.debug('event %s %s.', event,
+                    'caught' if event in events else
+                    'handled' if retval is not None else
+                    'buffered',)
                 if event in events:
-                    logger.debug('event %s caught.', (event,))
                     return (event, self._event_pop(event))
-                else:
-                    logger.debug('event %s buffered.', (event,))
             if timeout == -1:
                 return (None, None)
             waitfor = timeleft(stime)
