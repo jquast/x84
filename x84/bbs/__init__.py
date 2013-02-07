@@ -76,16 +76,25 @@ def ropen(filename, mode='rb'):
 
 def showcp437(filepattern):
     """
-    Display a cp437 artfile relative to current script path, trimming SAUCE
-    data and translating cp437 to utf8. A glob pattern can be used, such as
-    'art/login*.ans'
+    yield unicode sequences for any given ANSI Art (of cp437 encoding). Effort
+    is made to strip SAUCE data, translate cp437 to unicode, and trim artwork
+    too large to display. If keyboard input is pressed, 'msg_cancel' is
+    returned as the last line of art
     """
     import sauce
-    fobj = ropen(filepattern, 'rb') \
-        if '*' in filepattern or '?' in filepattern \
-        else open(filepattern, 'rb')
+    session, term = getsession(), getterminal()
+    msg_cancel = u''.join(( term.bold(u'--'),
+        u' CANCEllEd bY iNPUt ', term.bold(u'--'),))
+    msg_notfound = u''.join(( term.bold_red(u'--'),
+        u'no files matching %s' % (filepattern,), term.bold_red(u'--'),))
+    fobj = (ropen(filepattern)
+            if '*' in filepattern or '?' in filepattern
+            else open(filepattern, 'rb'))
     if fobj is None:
-        return (u'\r\n<no files matching %s>\r\n' % (
-            filepattern,))
-    term = getterminal()
-    return Ansi(from_cp437(sauce.SAUCE(fobj).__str__())).wrap(80) + term.normal
+        yield msg_notfound + u'\r\n'
+        return
+    for line in from_cp437(sauce.SAUCE(fobj).__str__()).splitlines():
+        if session.poll_event('input'):
+            yield msg_cancel + u'\r\n'
+            return
+        yield Ansi(line).wrap(term.width).split('\r\n')[0] + u'\r\n'

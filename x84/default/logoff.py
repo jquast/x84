@@ -11,7 +11,6 @@ def main():
             session.handle is not None
             ) else 'anonymous'
     max_user = ini.CFG.getint('nua', 'max_user')
-    expert = False
     prompt_msg = u'[spnG]: ' if session.user.get('expert', False) else (
                 u'%s:AY SOMEthiNG %s:REViOUS %s:EXt %s:Et thE fUCk Off !\b' % (
                     term.bold_blue_underline(u's'), term.blue_underline(u'p'),
@@ -76,7 +75,8 @@ def main():
         refresh screen, database, and return database index
         """
         echo(u''.join((u'\r\n\r\n', term.clear_eol,)))
-        showcp437(artfile)
+        for line in showcp437(artfile):
+            echo(line)
         idx = refresh_automsg(-1 if idx is None else idx)
         refresh_prompt(prompt_msg)
         return idx
@@ -107,7 +107,7 @@ def main():
             if msg is not None and msg.strip():
                 echo(u''.join((u'\r\n\r\n', write_msg,)))
                 db.acquire()
-                idx = max([int(idx) for idx in db.keys()] or [-1]) + 1
+                idx = max([int(ixx) for ixx in db.keys()] or [-1]) + 1
                 db[idx] = (time.time(), handle, msg.strip())
                 db.release()
                 session.send_event('global', ('automsg', True,))

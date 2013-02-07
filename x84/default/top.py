@@ -26,38 +26,21 @@ BADGE256 = (
 def display_intro():
     # try to display something impressive, yet compatible
     session, term = getsession(), getterminal()
-    rstr = u''
+    artfile = os.path.join(os.path.dirname(__file__), 'art', '*.ans'
+            if term.number_of_colors != 0 else '*.asc')
+
     if not session.user.get('expert', False) and (
             session.env.get('TERM') != 'unknown'):
-        rstr += term.move(0, 0) + term.clear
+        echo(term.move(0, 0) + term.clear)
 
     # color terminal gets art
     if (session.env.get('TERM') != 'unknown'
             and term.number_of_colors != 0):
-        if term.width >= 79:
-            rstr += showcp437(os.path.join(
-                os.path.dirname(__file__), 'art', '*.ans'))
-        elif term.width >= 76:
-            rstr += showcp437(os.path.join(
-                os.path.dirname(__file__), 'art', '*.asc'))
-        elif term.width >= 40:
-            if term.number_of_colors >= 256:
-                rstr += showcp437(os.path.join(
-                    os.path.dirname(__file__), 'art', 'plant-256.ans'))
-            else:
-                rstr += showcp437(os.path.join(
-                    os.path.dirname(__file__), 'art', 'plant.ans'))
-        else:
-            rstr += u'[top]\r\n'
+        for line in (showcp437(artfile)):
+            echo(line)
 
-    # non-color terminal gets ascii
-    else:
-        if term.width >= 76:
-            rstr += showcp437(os.path.join(
-                os.path.dirname(__file__), 'art', '*.asc'))
     if term.number_of_colors == 256:
-        rstr += '\r\n\r\n' + BADGE256
-    return rstr
+        echo('\r\n\r\n' + BADGE256)
 
 
 def get_ynbar():
@@ -117,7 +100,7 @@ def main(handle=None):
             session.encoding, fun))
 
     # 5. impress with art, prompt for quick login (goto 'main'),
-    echo(display_intro())
+    display_intro()
     if (session.env.get('TERM') == 'unknown'
             or session.user.get('expert', False)):
         echo(u'\r\n QUiCk lOGiN? [yn]')
@@ -141,7 +124,7 @@ def main(handle=None):
                 swp = ynbar.selection
                 ynbar = get_ynbar()
                 ynbar.selection = swp
-                echo(display_intro())
+                display_intro()
                 echo(redraw_quicklogin(ynbar))
             if ynbar.quit:
                 goto('main')

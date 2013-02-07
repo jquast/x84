@@ -38,7 +38,8 @@ def main():
         " refresh main menu screen "
         session.activity = u'Main Menu'
         clear()
-        showcp437(u'art/speedmain.asc')
+        for line in showcp437(u'art/speedmain.asc'):
+            echo(line)
         # speak session variables as equivalent os environment values
         echo(u'\r\nTERM: %s' % (term.terminal_type,))
         echo(u', LINES: %d' % (term.rows,))

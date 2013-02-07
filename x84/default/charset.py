@@ -74,7 +74,8 @@ def main():
             assert False, "Only encodings 'utf8' and 'cp437' supported."
         # clear & display art
         echo(term.move(0, 0) + term.normal + term.clear)
-        echo(showcp437(artfile))
+        for line in showcp437(artfile):
+            echo(line)
         echo(term.normal + u'\r\n\r\n')
         echo(Ansi(enc_prompt).wrap((term.width / 2) + (term.width / 3)))
         echo(u'\r\n\r\n')

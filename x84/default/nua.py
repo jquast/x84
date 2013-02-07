@@ -2,16 +2,13 @@
  New user account script for x/84, https://github.com/jquast/x84
 """
 
-import os
-# pylint: disable=W0614
-#        Unused import from wildcard import
-from x84.bbs import *
 
 
 def warning(msg, cpsec=10.0, min_sec=3.0, split_loc=3):
     """
     Display a 2-tone warning to user with a dynamic pause
     """
+    from x84.bbs import getterminal, echo, getch
     term = getterminal()
     echo(u''.join((term.clear_eol, term.normal, u'\r\n\r\n',
                    term.bold_red, msg[:-
@@ -26,7 +23,8 @@ def set_handle(user):
     """
     Prompt for a user.handle, minumum length.
     """
-    import os.path  # os.path.sep not allowed in nicks
+    from x84.bbs import getterminal, echo, ini, LineEditor, find_user
+    import os  # os.path.sep not allowed in nicks
     term = getterminal()
     prompt_handle = u'username: '
     msg_empty = u'ENtER AN AliAS'
@@ -56,6 +54,7 @@ def set_location(user):
     """
     Prompt for and set user.location, may be empty
     """
+    from x84.bbs import getterminal, echo, ini, LineEditor
     term = getterminal()
     prompt_location = u'origin (optional): '
     width = ini.CFG.getint('nua', 'max_location')
@@ -69,6 +68,7 @@ def set_email(user):
     """
     Prompt for and set user.email, may be empty
     """
+    from x84.bbs import getterminal, echo, ini, LineEditor
     term = getterminal()
     prompt_email = u'e-mail (optional): '
     width = ini.CFG.getint('nua', 'max_email')
@@ -82,6 +82,7 @@ def set_password(user):
     """
     Prompt for user.password, minimum length.
     """
+    from x84.bbs import getterminal, echo, ini, LineEditor
     term = getterminal()
     prompt_password = u'password: '
     prompt_verify = u'   again: '
@@ -115,6 +116,7 @@ def prompt_ok():
     """
     Prompt user to continue, True if they select yes.
     """
+    from x84.bbs import getsession, getterminal, echo, getch, Selector
     session, term = getsession(), getterminal()
     prompt_confirm = u'EVERYthiNG lOOk Ok ?'
     prompt_continue = u'YES (CONtiNUE)'
@@ -146,7 +148,10 @@ def prompt_ok():
 
 
 def main(handle=u''):
+    from x84.bbs import getsession, getterminal, echo, ini, User, goto
+    from x84.bbs import showcp437
     session, term = getsession(), getterminal()
+    import os
     session.activity = u'Applying for an account'
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'nua.asc')
     msg_header = u'NEW USER APPliCAtiON'
@@ -154,7 +159,9 @@ def main(handle=u''):
     topscript = ini.CFG.get('matrix', 'topscript')
 
     # display art and msg_header as banner
-    echo(term.clear + term.normal + showcp437(artfile))
+    echo(u'\r\n\r\n')
+    for line in showcp437(artfile):
+        echo(line)
     echo(u'\r\n\r\n' + term.reverse + msg_header.center(term.width))
 
     # create new user record for manipulation
