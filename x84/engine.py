@@ -305,22 +305,33 @@ def _loop(telnetd):
             client.sock.close()
             del telnetd.clients[fileno]
 
-        # poll for: new connections, telnet client input, session pipe input,
+        # poll for: new connections,
+        #           telnet client input,
+        #           session IPC input,
         # pylint: disable=W0612
         #        Unused variable 'lock'
-        recv_list = set([fileno_telnetd] + telnetd.clients.keys() +
+        client_fds = set([fileno_telnetd] + telnetd.clients.keys() +
                         [pipe.fileno() for client, pipe, lock in terminals()])
 
-        # send data, prune if disconnected
-        recv_list = telnet_send(recv_list)
+        # send, pruning list of any clients d/c during activity
+        client_fds = telnet_send(client_fds)
 
-        fds = select.select(recv_list, [], [], 1)[0]
-        if fileno_telnetd in fds:
+        # poll for recv,
+        ready_read = list()
+        try:
+            ready_read.extend(select.select(client_fds, [], [], 1))[0]
+        except select.error as err:
+            logger.exception(err)
+
+        if fileno_telnetd in ready_read:
             accept()
 
-        telnet_recv(fds)
+        # recv telnet,
+        telnet_recv(ready_read)
+        # send session ev,
         session_send()
-        session_recv(fds)
+        # recv session ev,
+        session_recv(ready_read)
 
 if __name__ == '__main__':
     exit(main())
