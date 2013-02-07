@@ -10,11 +10,11 @@ def pak():
     return
 
 
-def view_plan(user):
-    from x84.bbs import getterminal, echo, Ansi
+def view_plan(handle):
+    from x84.bbs import getterminal, echo, Ansi, get_user
     term = getterminal()
     echo(u'\r\n\r\n')
-    echo(Ansi(user.get('.plan', u'No Plan.')).wrap(term.width))
+    echo(Ansi(get_user(handle).get('.plan', u'No Plan.')).wrap(term.width))
     pak()
 
 
@@ -60,9 +60,9 @@ def dummy_pager(last_callers):
                         if nick.lower() == handle.lower()).next())
                     if 'sysop' in session.user.groups and (
                             inp in (u'e', u'E')):
-                        gosub('profile', user)
+                        gosub('profile', user.handle)
                     else:
-                        view_plan(user)
+                        view_plan(user.handle)
                 else:
                     misses = [nick for nick in usrlist.keys()
                         if nick.lower().startswith(handle[:1].lower())]
@@ -74,11 +74,11 @@ def dummy_pager(last_callers):
                 nonstop = True
     pak()
 
-def refresh_opts(pager, user):
-    from x84.bbs import getsession, getterminal
+def refresh_opts(pager, handle):
+    from x84.bbs import getsession, getterminal, get_user
     session, term = getsession(), getterminal()
     has_plan = 0 != len(
-            user.get('.plan', u'').strip() if user is not None else u'')
+            get_user(handle).get('.plan', u'').strip() if handle else u'')
     decorate = lambda key, desc: u''.join((
         term.bold(u'('), term.red_underline(key,),
         term.bold(u')'), term.bold_red(desc.split()[0]),
@@ -156,14 +156,14 @@ def lc_retrieve():
 
 
 def main():
-    from x84.bbs import getsession, getterminal, echo, getch, get_user, gosub
+    from x84.bbs import getsession, getterminal, echo, getch, gosub
     session, term = getsession(), getterminal()
     session.activity = u'Viewing last callers'
     lcallers, lcalls_txt = lc_retrieve()
-    user = None
     pager = None
     dirty = True
     ropts = u''
+    handle = None
     if (0 == term.number_of_colors
             or session.user.get('expert', False)):
         dummy_pager(lcalls_txt.split('\n'))
@@ -172,15 +172,12 @@ def main():
         if dirty or pager is None or session.poll_event('refresh'):
             pager = get_pager(lcallers, lcalls_txt)
             echo(redraw(pager))
-            ropts = refresh_opts(pager, user)
+            ropts = refresh_opts(pager, handle)
             echo(ropts)
-        nxt_user = get_user(pager.selection[0])
-        if nxt_user != user or dirty:
-            user = nxt_user
-            nxt_ropts = refresh_opts(pager, user)
-            if ropts != nxt_ropts:
-                ropts = nxt_ropts
-                echo(ropts)
+        sel = pager.selection[0]
+        if sel != handle or dirty:
+            handle = sel
+            echo(refresh_opts(pager, handle))
             echo(pager.pos(pager.yloc + (pager.height - 1)))
             dirty = False
         if session.poll_event('refresh'):
@@ -189,12 +186,10 @@ def main():
         inp = getch(1)
         if inp is not None:
             if inp in (u'v', u'V'):
-                view_plan(user)
+                view_plan(handle)
                 dirty = True
             elif inp in (u'e', u'E') and 'sysop' in session.user.groups:
-                gosub('profile', user.handle)
+                gosub('profile', handle)
                 dirty = True
             else:
                 echo(pager.process_keystroke(inp))
-
-
