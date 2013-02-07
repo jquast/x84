@@ -85,7 +85,6 @@ def main():
     while True:
         if session.poll_event('refresh'):
             idx = refresh_all()
-            session.flush_event('refresh')
         elif session.poll_event('automsg'):
             refresh_automsg(-1)
             echo(u'\a')  # bel
