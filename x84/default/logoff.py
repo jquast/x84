@@ -32,10 +32,10 @@ def main():
         u'\r\n'.join([board_fmt % (
             term.bold(host.rjust(25)),
             term.reverse(board.center(30)),
-            term.bold_black_underline(sysop),)
+            term.bold_underline(sysop),)
             for (host, board, sysop) in boards]),
         u'\r\n\r\n',
-        term.black_bold(
+        term.bold(
             u'back to the mundane world...'),
         u'\r\n',))
     commit_msg = term.bold_blue(
