@@ -319,7 +319,7 @@ def _loop(telnetd):
         # poll for recv,
         ready_read = list()
         try:
-            ready_read.extend(select.select(client_fds, [], [], 1))[0]
+            ready_read.extend(select.select(client_fds, [], [], 1)[0])
         except select.error as err:
             logger.exception(err)
 
