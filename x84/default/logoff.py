@@ -90,7 +90,7 @@ def main():
             echo(u'\a')  # bel
             refresh_prompt(prompt_msg)
         inp = getch(1)
-        if inp in (u'g', u'G', term.KEY_EXIT,):
+        if inp in (u'g', u'G', term.KEY_EXIT, unichr(27), unichr(3),):
             echo(goodbye_msg)
             getch(2)
             disconnect()
