@@ -48,13 +48,13 @@ class Session(object):
     #        Too many instance attributes (29/7)
     #        Too many public methods (25/20)
 
-    def __init__(self, terminal, pipe, source, env):
+    def __init__(self, terminal, pipe, sid, env):
         """
         Instantiate a Session instanance, only one session may be instantiated
         per process. Arguments:
             terminal: blessings.Terminal,
             pipe: multiprocessing.Pipe child end
-            source: origin of the connect (ip, port),
+            source: session id by engine: origin of telnet connection (ip:port),
             env: dict of environment variables, such as 'TERM', 'USER'.
         """
         # pylint: disable=W0603
@@ -64,7 +64,7 @@ class Session(object):
         SESSION = self
         self.pipe = pipe
         self.terminal = terminal
-        self.source = source
+        self.sid = sid
         self.env = env
         self.lock = threading.Lock()
         self._user = None
@@ -333,11 +333,27 @@ class Session(object):
             flushed.append(data)
         return flushed
 
+    def info(self):
+        return dict((
+            ('TERM', self.env.get('TERM', u'unknown')),
+            ('LINES', self.terminal.height,),
+            ('COLUMNS', self.terminal.width,),
+            ('sid', self.sid,),
+            ('handle', self.user.handle,),
+            ('script', (self._script_stack[-1][0]
+                if len(self._script_stack) else None)),
+            ('ttyrec', self._fp_ttyrec.name if self._fp_ttyrec is not None else u'',),
+            ('connect_time', self.connect_time),
+            ('idle', self.idle),
+            ('activity', self.activity),
+            ('encoding', self.encoding),
+            ))
+
     def buffer_event(self, event, data=None):
         """
-        Push data into buffer keyed by event. Allow only the most recent
-        refresh event to be buffered. Respond to 'AYT' (are you there)
-        requests with user handle.
+        Push data into buffer keyed by event. Handle special events:
+            'exception', 'global' AYT (are you there),
+            'page', 'info-req', 'refresh', and 'input'.
         """
         # exceptions aren't buffered; they are thrown!
         if event == 'exception':
@@ -345,33 +361,49 @@ class Session(object):
             #        Raising NoneType while only classes, (..) allowed
             raise data
 
-        # init new unmanaged & unlimited-sized buffer ;p
-        if not event in self._buffer:
-            self._buffer[event] = list()
-
         # respond to global 'AYT' requests
         if event == 'global':
             sender, mesg = data
             if mesg == 'AYT':
-                self.send_event('route', sender, ('ACK', self.user.handle,))
+                self.send_event('route', (sender, 'ACK', self.user.handle,))
+                logger.debug('reply-to global AYT')
                 return
 
-        # allow instant chat when 'mesg' is True
+        # accept 'page' as instant chat when 'mesg' is True
         if event == 'page':
             if self.user.get('mesg', True):
+                logger.debug('recieving page')
                 self.runscript('chat', data)
                 self.buffer_event('refresh', 'page-return')
                 return
+
+        # respond to 'info-req' events by returning pickled session info
+        if event == 'info-req':
+            sender, mesg = data
+            logger.debug('reply-to info-req')
+            self.send_event('route', (sender, 'info-ack', self.info(),))
+            return
+
+        # init new unmanaged & unlimited-sized buffer ;p
+        if not event in self._buffer:
+            self._buffer[event] = list()
+
+        # buffer input
         if event == 'input':
             self.buffer_input(data)
-        elif event == 'refresh':
+            return
+
+        # buffer only 1 most recent 'refresh' event
+        if event == 'refresh':
             if data[0] == 'resize':
                 # inherit terminal dimensions values
                 (self.terminal.columns, self.terminal.rows) = data[1]
             # store only most recent 'refresh' event
             self._buffer[event] = list((data,))
-        else:
-            self._buffer[event].insert(0, data)
+            return
+
+        # buffer all else
+        self._buffer[event].insert(0, data)
 
     def buffer_input(self, data):
         """
