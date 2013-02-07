@@ -337,8 +337,7 @@ def disp_weather(weather):
 
 
 def main():
-    from x84.bbs import getsession, getterminal, echo, LineEditor, getch
-    from x84.bbs import Lightbar, Pager
+    from x84.bbs import getsession, getterminal, echo, getch
     session, term = getsession(), getterminal()
 
     echo(u'\r\n\r\n')
@@ -373,7 +372,10 @@ def main():
             != sorted(session.user.get('location', dict()).items())):
         echo(u''.join((u'\r\n\r\n',
             term.yellow(u'SAVE lOCAtION'),
-            term.yellow(' ? '),
+            term.bold_yellow(' ('),
+            term.bold_black(u'PRiVAtE'),
+            term.bold_yellow(') '),
+            term.yellow('? '),
             term.bold_yellow(u'['),
             term.underline_yellow(u'yn'),
             term.bold_yellow(u']'),
