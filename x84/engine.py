@@ -259,11 +259,12 @@ def _loop(telnetd):
                 elif event == 'route':
                     for o_client, o_pipe, o_lock in terminals():
                         if o_client.addrport() == data[0]:
+                            send_event, send_val = data[1], data[2:]
                             if not o_lock.acquire(False):
                                 logger.warn('%s is blocking route',
                                         client.addrport())
                             else:
-                                o_pipe.send((event, (client.addrport(), data[1],)))
+                                o_pipe.send((send_event, send_val))
                                 o_lock.release()
                             break
 
