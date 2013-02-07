@@ -30,6 +30,7 @@ TESTING
   terminals.
 * assert that any method or function that returns ansi string
   sequences ends with term.normal.
+* assert session.activity is set for every script
 * assert that UTF-8 is always referred to as 'utf8',
   and is referred to as minimally as possible, fewest knobs.
 
