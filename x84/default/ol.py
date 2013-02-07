@@ -126,12 +126,14 @@ def get_oltxt():
         atime = timeago(time.time() - time.mktime(
             time.strptime(onel['timestamp'], '%Y-%m-%d %H:%M:%S'))).strip()
         output.append(u''.join((
-            term.bold_white('('), color(onel['alias']),
+            term.bold_white('('),
+            color(atime), term.bold_black(u' ago'),
+            term.bold_black(u' '),
+            color(onel['alias']),
             term.bold_black(u'/'), onel['bbsname'],
             term.bold_white(u')'), color(u': '),
             Ansi(onel['oneliner']).decode_pipe(),
-            term.bold_black(u'  /'), color(atime),
-            term.bold_black(u' ago'),)))
+            )))
     return output[(BUF_HISTORY * -1):]
 
 
