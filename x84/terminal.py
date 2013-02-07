@@ -88,11 +88,11 @@ def terminals():
     return TERMINALS[:]
 
 
-def start_process(pipe, origin, env):
+def start_process(pipe, sid, env):
     """
     A multiprocessing.Process target. Arguments:
         pipe: multiprocessing.Pipe
-        origin: string describing session source (fe. IP address & Port)
+        sid: string describing session source (fe. IP address & Port)
         env: dictionary of client environment variables (requires 'TERM')
     """
     from x84.bbs.session import Session
@@ -106,7 +106,7 @@ def start_process(pipe, origin, env):
     term = init_term(pipe, env)
 
     # spawn and begin a new session
-    session = Session(term, pipe, origin, env)
+    session = Session(term, pipe, sid, env)
     session.run()
     flush_pipe(pipe)
     pipe.send(('exit', None))
