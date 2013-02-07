@@ -15,6 +15,7 @@ def view_plan(handle):
     term = getterminal()
     echo(u'\r\n\r\n')
     echo(Ansi(get_user(handle).get('.plan', u'No Plan.')).wrap(term.width))
+    echo(u'\r\n')
     pak()
 
 
@@ -84,7 +85,7 @@ def refresh_opts(pager, handle):
         term.bold(u')'), term.bold_red(desc.split()[0]),
         u' '.join(desc.split()[1:]),
         term.bold_red(u' -'),))
-    return pager.footer(u''.join((
+    return pager.border() + pager.footer(u''.join((
         term.bold_red(u'- '),
         decorate(u'Escape/q', 'Uit'),
         decorate(u'v','iEW .PLAN') if has_plan else u'',
@@ -162,7 +163,6 @@ def main():
     lcallers, lcalls_txt = lc_retrieve()
     pager = None
     dirty = True
-    ropts = u''
     handle = None
     if (0 == term.number_of_colors
             or session.user.get('expert', False)):
@@ -172,16 +172,13 @@ def main():
         if dirty or pager is None or session.poll_event('refresh'):
             pager = get_pager(lcallers, lcalls_txt)
             echo(redraw(pager))
-            ropts = refresh_opts(pager, handle)
-            echo(ropts)
+            echo(refresh_opts(pager, handle))
         sel = pager.selection[0]
         if sel != handle or dirty:
             handle = sel
             echo(refresh_opts(pager, handle))
             echo(pager.pos(pager.yloc + (pager.height - 1)))
             dirty = False
-        if session.poll_event('refresh'):
-            dirty = True
             continue
         inp = getch(1)
         if inp is not None:
