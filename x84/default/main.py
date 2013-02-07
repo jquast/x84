@@ -37,6 +37,7 @@ def refresh():
     echo(disp_entry('b', 'bS liStER'))
     echo(disp_entry('l', 'ASt CAllS'))
     echo(disp_entry('o', 'NE liNERS'))
+    echo(disp_entry('$', "WhO'S ONliNE"))
     # group 2,
     echo(pos_row(2))
     echo(disp_entry('n', 'NEWS'))
@@ -75,6 +76,9 @@ def main():
         elif choice == u'o':
             gosub('ol')
             dirty = True
+        elif choice == u'$':
+            gosub('online')
+            dirty = True
         # group 2,
         elif choice == u'n':
             gosub('news')
@@ -91,5 +95,6 @@ def main():
             dirty = True
         elif choice == u'r':
             gosub('readmsgs')
+            dirty = True
         elif choice == u'g':
             goto('logoff')
