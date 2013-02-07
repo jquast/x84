@@ -258,11 +258,12 @@ def _loop(telnetd):
 
                 elif event == 'route':
                     for o_client, o_pipe, o_lock in terminals():
-                        if o_client.origin == data[0]:
+                        if o_client.addrport() == data[0]:
                             if not o_lock.acquire(False):
-                                logger.warn('zZz')  # TODO: buffer ..
+                                logger.warn('%s is blocking route',
+                                        client.addrport())
                             else:
-                                o_pipe.send((event, (client.origin, data[1],)))
+                                o_pipe.send((event, (client.addrport(), data[1],)))
                                 o_lock.release()
                             break
 
@@ -270,9 +271,10 @@ def _loop(telnetd):
                     for o_client, o_pipe, o_lock in terminals():
                         if o_client != client:
                             if not o_lock.acquire(False):
-                                logger.warn('zZz')  # TODO: buffer ..
+                                logger.warn('%s is blocking broadcast',
+                                        client.addrport())
                             else:
-                                o_pipe.send((event, (client.origin, data,)))
+                                o_pipe.send((event, (client.addrport(), data,)))
                                 o_lock.release()
                             break
 
