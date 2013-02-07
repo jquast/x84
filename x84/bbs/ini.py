@@ -161,7 +161,7 @@ def init_bbs_ini():
          'sysop anonymous',)))
 
     cfg_bbs.add_section('msg')
-    cfg_bbs.set('msg', 'max_subject', 60)
+    cfg_bbs.set('msg', 'max_subject', '60')
     return cfg_bbs
 
 

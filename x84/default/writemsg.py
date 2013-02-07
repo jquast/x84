@@ -79,7 +79,7 @@ def get_recipient(msg):
 def get_subject(msg):
     from x84.bbs import getterminal, LineEditor, echo, ini
     term = getterminal()
-    max_subject = ini.CFG.getint('msg', 'max_subject')
+    max_subject = int(ini.CFG.getint('msg', 'max_subject'))
     ln = LineEditor(max_subject, msg.subject)
     ln.highlight = term.blue_reverse
     echo(term.clear_eol + u'     SUBjECt: ')
