@@ -262,7 +262,7 @@ def _loop(telnetd):
                             if not o_lock.acquire(False):
                                 logger.warn('zZz')  # TODO: buffer ..
                             else:
-                                o_pipe.send((event, (client.origin, data[1])))
+                                o_pipe.send((event, (client.origin, data[1],)))
                                 o_lock.release()
                             break
 
@@ -272,7 +272,7 @@ def _loop(telnetd):
                             if not o_lock.acquire(False):
                                 logger.warn('zZz')  # TODO: buffer ..
                             else:
-                                o_pipe.send((event, data,))
+                                o_pipe.send((event, (client.origin, data,)))
                                 o_lock.release()
                             break
 
