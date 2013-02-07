@@ -203,13 +203,14 @@ def main(user=None):
 def lborder(lightbar, user):
     from x84.bbs import getsession, getterminal
     session, term = getsession(), getterminal()
-    is_self = bool(user.handle != session.user.handle)
+    is_self = bool(user.handle == session.user.handle)
+    assert 'sysop' in session.user.groups or is_self
     sel = lightbar.selection[0]
     val = u''
     if sel == 'c':
-        val = session.encoding if is_self else u''
+        val = session.encoding if is_self else u'x'
     elif sel == 't':
-        val = session.env.get('TERM', 'unknown') if is_self else u''
+        val = session.env.get('TERM', 'unknown') if is_self else u'x'
     elif sel == 'l':
         val = user.location.strip()
         if 'sysop' in session.user.groups:
@@ -228,7 +229,7 @@ def lborder(lightbar, user):
             lightbar.title(u'- USER PROfilE EditOR -'),
             lightbar.footer(''.join((
                 u'- ',
-                term.bold_black(val[:lightbar.visible_width - 4]),
+                val[:lightbar.visible_width - 4],
                 u' -',))),
             ))
 
