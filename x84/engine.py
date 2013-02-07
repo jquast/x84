@@ -249,6 +249,8 @@ def _loop(telnetd):
                     return
 
                 elif event == 'logger':
+                    if data.levelno >= logging.INFO:
+                        data.msg = '%s %s' % (client.addrport(), data.msg)
                     logger.handle(data)
 
                 elif event == 'output':
