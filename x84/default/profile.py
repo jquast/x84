@@ -11,7 +11,7 @@ about_dot_plan = (u'The .plan file is a throwback to early Unix '
                   + u'greetz, etc.')
 
 
-def process_keystroke(lightbar, inp):
+def process_keystroke(lightbar, inp, user):
     from x84.bbs import getsession, getterminal, echo, getch, gosub
     from x84.bbs import LineEditor, Ansi
     from x84.default.nua import set_email, set_location
@@ -50,12 +50,12 @@ def process_keystroke(lightbar, inp):
                                  lightbar is not None and
                                  lightbar.selection[0] == u'l'):
         echo(term.move(term.height - 1, 0))
-        set_location(session.user)
-        echo(u"\r\n\r\nSEt lOCAtiON tO '%s'? [yn]" % (session.user.location,))
+        set_location(user)
+        echo(u"\r\n\r\nSEt lOCAtiON tO '%s'? [yn]" % (user.location,))
         while True:
             ch = getch()
             if str(ch).lower() == 'y':
-                session.user.save()
+                user.save()
                 break
             elif str(ch).lower() == 'n':
                 break
@@ -64,12 +64,12 @@ def process_keystroke(lightbar, inp):
                                  lightbar is not None and
                                  lightbar.selection[0] == u'e'):
         echo(term.move(term.height - 1, 0))
-        set_email(session.user)
-        echo(u"\r\n\r\nSEt EMAil tO '%s'? [yn]" % (session.user.email,))
+        set_email(user)
+        echo(u"\r\n\r\nSEt EMAil tO '%s'? [yn]" % (user.email,))
         while True:
             ch = getch()
             if str(ch).lower() == 'y':
-                session.user.save()
+                user.save()
                 break
             elif str(ch).lower() == 'n':
                 break
@@ -79,7 +79,7 @@ def process_keystroke(lightbar, inp):
                            lightbar.selection[0] == u'.'):
         echo(term.move(0, 0) + term.normal + term.clear)
         echo(term.move((term.height / 3), 0))
-        for line in Ansi(about_dot_plan).wrap(term.width / 2).split('\r\n'):
+        for line in Ansi(about_dot_plan).wrap(term.width / 3).split('\r\n'):
             echo(line.center(term.width) + u'\r\n')
         echo('\r\n\r\nPRESS ANY kEY ...')
         getch()
@@ -88,13 +88,13 @@ def process_keystroke(lightbar, inp):
     elif inp in (u'x', u'X') or (inp == term.KEY_ENTER and
                                  lightbar is not None and
                                  lightbar.selection[0] == u'x'):
-        expert = not session.user.get('expert', False)
+        expert = not user.get('expert', False)
         echo(u"\r\n\r\n%s EXPERt MOdE? [yn]" % (
             'enable' if expert else 'disable',))
         while True:
             ch = getch()
             if str(ch).lower() == 'y':
-                session.user['expert'] = expert
+                user['expert'] = expert
                 break
             elif str(ch).lower() == 'n':
                 break
@@ -107,23 +107,23 @@ def process_keystroke(lightbar, inp):
     return False
 
 
-def dummy_pager():
+def dummy_pager(user):
     from x84.bbs import getsession, getterminal, echo, Ansi, getch
     session, term = getsession(), getterminal()
-    plan = session.user.get('.plan', False)
+    plan = user.get('.plan', False)
     menu = ['(c)%-20s - %s' % (u'hARACtER ENCOdiNG',
                                term.bold(session.encoding),),
             '(t)%-20s - %s' % (u'ERMiNAl tYPE',
                                term.bold(session.env.get('TERM', 'unknown')),),
             '(l)%-20s - %s' % (u'OCAtiON',
-                               term.bold(session.user.location),),
+                               term.bold(user.location),),
             '(e)%-20s - %s' % (u'MAil AddRESS',
-                               term.bold(session.user.email),),
+                               term.bold(user.email),),
             '(.)%-20s - %s' % (u'PlAN filE', '%d bytes' % (
                 len(plan),) if plan else '(NO PlAN.)'),
             '(x)%-20s - %s' % (u'PERt MOdE',
                                term.bold(u'ENAblEd'
-                                         if session.user.get('expert', False)
+                                         if user.get('expert', False)
                                          else 'diSAblEd')),
             '(q)Uit', ]
     echo(term.move(0, 0) + term.normal + term.clear)
@@ -135,22 +135,18 @@ def dummy_pager():
             getch()
         echo(u'\r\n' + ' ' * xpos + line)
     echo(u'\r\n\r\n Enter option [ctle.xq]: ')
-    return process_keystroke(None, getch())
+    return process_keystroke(None, getch(), user)
 
 
 def is_dumb(session, term):
     return (session.env.get('TERM') == 'unknown'
             or session.user.get('expert', False)
-            or term.width < 78 or term.height < 20)
+            or term.width < 60)
 
 
 def refresh(lightbar):
     from x84.bbs import getsession, getterminal, echo
     session, term = getsession(), getterminal()
-    echo(term.move(0, 0) + term.normal + term.clear)
-    echo(u'\r\n\r\n')
-    echo(u'USER PROfilE EditOR'.center(term.width))
-    echo(u'\r\n\r\n')
     lightbar.update(((u'c', u'ChARACtER ENCOdiNG',),
                      (u't', u'tERMiNAl tYPE',),
                      (u'l', u'lOCAtiON',),
@@ -158,31 +154,81 @@ def refresh(lightbar):
                      (u'.', u'.PlAN',),
                      (u'x', u'EXPERt MOdE',),
                      (u'q', u'QUit',)))
-    lightbar.colors['border'] = term.bold_green
-    echo(lightbar.border() + lightbar.refresh())
+    echo(u'\r\n\r\n')
+    echo(u'art request...'.center(term.width))
+    echo(u'\r\n\r\n')
+    echo(term.bold_blue_underline(u'// '))
+    echo(u'\r\n' * lightbar.height)
+    echo(lightbar.refresh())
 
 
-def main():
-    from x84.bbs import getsession, getterminal, Lightbar, getch
+def main(user=None):
+    from x84.bbs import getsession, getterminal, echo, getch
+    from x84.bbs import Lightbar, get_user
     session, term = getsession(), getterminal()
+    user = session.user if (
+            'sysop' not in session.user.groups) or (user is None
+            ) else get_user(user)
     global EXIT
     EXIT = False
-    lightbar = Lightbar(9, 25,
-                        (term.height / 2) - (9 / 2),
-                        (term.width / 2) - (20 / 2))
-    lightbar.alignment = 'center'
+    lightbar = None
     dirty = True
-    inp = None
     while not EXIT:
-        if dirty or session.poll_event('refresh'):
+        if session.poll_event('refresh') or dirty:
+            wide = min(60, term.width - 5)
             if is_dumb(session, term):
-                dirty = dummy_pager()
+                dirty = dummy_pager(user)
             else:
+                lightbar = Lightbar(height=11, width=wide,
+                                    yloc=term.height - 12,
+                                    xloc=(term.width / 2) - (wide / 2))
+                lightbar.alignment = 'center'
+                lightbar.ypadding = 2
+                lightbar.glyphs['right-vert'] = u''
+                lightbar.glyphs['left-vert'] = u''
+                lightbar.colors['border'] = term.bold_blue
+                lightbar.colors['highlight'] = term.blue_reverse
                 refresh(lightbar)
+                echo(lborder(lightbar, user))
                 dirty = False
-            continue
         inp = getch(1)
         if inp is not None:
-            dirty = process_keystroke(
-                lightbar if not is_dumb(session, term) else None,
-                inp)
+            if is_dumb(session, term):
+                dirty = process_keystroke(None, inp, user)
+            else:
+                dirty = process_keystroke(lightbar, inp, user)
+                if lightbar.moved:
+                    echo(lborder(lightbar, user))
+
+def lborder(lightbar, user):
+    from x84.bbs import getsession, getterminal
+    session, term = getsession(), getterminal()
+    is_self = bool(user.handle != session.user.handle)
+    sel = lightbar.selection[0]
+    val = u''
+    if sel == 'c':
+        val = session.encoding if is_self else u''
+    elif sel == 't':
+        val = session.env.get('TERM', 'unknown') if is_self else u''
+    elif sel == 'l':
+        val = user.location.strip()
+        if 'sysop' in session.user.groups:
+            postal = user.get('location',dict()).get('postal', u'')
+            if 0 != len(postal):
+                val += ' - %s' % (postal,)
+    elif sel == 'e':
+        val = user.email
+    elif sel == '.':
+        plan = user.get('.plan', False)
+        val = u'%d bytes' % (len(plan),) if plan else u''
+    elif sel == 'x':
+        val = u'ENAblEd' if user.get('expert', False) else (
+                u'diSABlEd')
+    return u''.join((lightbar.border(),
+            lightbar.title(u'- USER PROfilE EditOR -'),
+            lightbar.footer(''.join((
+                u'- ',
+                term.bold_black(val[:lightbar.visible_width - 4]),
+                u' -',))),
+            ))
+
