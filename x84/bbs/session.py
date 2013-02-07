@@ -336,7 +336,8 @@ class Session(object):
     def buffer_event(self, event, data=None):
         """
         Push data into buffer keyed by event. Allow only the most recent
-        refresh event to be buffered.
+        refresh event to be buffered. Respond to 'AYT' (are you there)
+        requests with user handle.
         """
         # exceptions aren't buffered; they are thrown!
         if event == 'exception':
@@ -348,6 +349,19 @@ class Session(object):
         if not event in self._buffer:
             self._buffer[event] = list()
 
+        # respond to global 'AYT' requests
+        if event == 'global':
+            sender, mesg = data
+            if mesg == 'AYT':
+                self.send_event('route', sender, ('ACK', self.user.handle,))
+                return
+
+        # allow instant chat when 'mesg' is True
+        if event == 'page':
+            if self.user.get('mesg', True):
+                self.runscript('chat', data)
+                self.buffer_event('refresh', 'page-return')
+                return
         if event == 'input':
             self.buffer_input(data)
         elif event == 'refresh':
