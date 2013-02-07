@@ -21,7 +21,7 @@ SESSION = None
 # TTYREC_UCOMPRESS = 15000
 TTYREC_UCOMPRESS = None  # disabled for ttyplay -p(eek)
 TTYREC_HEADER = unichr(27) + u'[8;%d;%dt'
-TTYREC_ROTATE = 4
+#TTYREC_ROTATE = 4
 TTYREC_PADD = 10
 logger = logging.getLogger()  # deprecation warning !
 
@@ -667,6 +667,7 @@ class Session(object):
             while sec > TTYREC_PADD:
                 write_chunk(sec, usec, 0, bytes())
                 sec -= TTYREC_PADD
+                sec = 0 if sec < 0 else sec
             return write_chunk(sec, usec, len_text, text)
 
         # a sort of monkey patching (compression);
