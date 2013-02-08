@@ -120,7 +120,7 @@ def get_art(fname):
         art_line = line.rstrip()[:term.width]
         width = len(art_line) if len(art_line) > width else width
         buf.append(art_line)
-    return [line.ljust(width).center(term.width) for line in buf]
+    return [line.rstrip().ljust(width).center(term.width) for line in buf]
 
 def redraw(pager=None):
     from x84.bbs import getterminal
