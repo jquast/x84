@@ -306,7 +306,7 @@ class ConnectTelnet (threading.Thread):
         if not self.client.active:
             return
         logger.debug('failed: negotiate about window size')
-        self._try_cornerquery()
+        #self._try_cornerquery()
 
     def _try_cornerquery(self):
         """
