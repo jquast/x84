@@ -42,6 +42,7 @@ class Session(object):
     # pylint: disable=R0902,R0904
     #        Too many instance attributes (29/7)
     #        Too many public methods (25/20)
+    TRIM_CP437 = u''.join(chr(14), chr(15),)
 
     def __init__(self, terminal, pipe, sid, env, encoding='utf8'):
         """
@@ -302,7 +303,7 @@ class Session(object):
                              if glyph in x84.bbs.cp437.CP437
                              else unicode(
                                  text[idx], encoding, 'replace').translate(
-                                     None, (chr(14), chr(15))))
+                                     None, self.TRIM_CP437))
                             for (idx, glyph) in enumerate(ucs)])
         else:
             encoding = self.encoding
