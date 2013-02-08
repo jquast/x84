@@ -8,7 +8,6 @@
  or even swapping the modem into a strange stop/bit/parity configuration,
  callback mechanisms, etc.. read all about it in old e-zines.
 """
-__url__ = u'https://github.com/jquast/x84/'
 
 import os
 
@@ -132,6 +131,7 @@ def uname():
 def main():
     import logging
     from x84.bbs import getsession, getterminal, ini, echo, get_user, goto
+    from x84.engine import __url__ as url
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
     handle = (session.env.get('USER', '').decode('iso8859-1', 'replace'))
@@ -146,7 +146,7 @@ def main():
     # display banner
     echo(u''.join((
         term.normal, u'\r\n',
-        u'Connected to %s, see %s for source\r\n' % (bbsname, __url__),
+        u'Connected to %s, see %s for source\r\n' % (bbsname, url),
         u'\r\n'.join([line[:term.width].rstrip() for line in open(artfile)]),
         u'\r\n\r\n',
         term.bold(u'tERM'), u': ',
