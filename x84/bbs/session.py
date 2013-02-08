@@ -292,10 +292,17 @@ class Session(object):
             # re-encode things as "iso8859-1" but really encoded for cp437.
             # For example, u'\u2591' becomes u'\xb0' (unichr(176)),
             # -- the original ansi shaded block for cp437 terminals.
+            #
+            # additionally, the 'shift-in' and 'shift-out' characters
+            # display as '*' on SyncTerm, I think they stem from curses:
+            # http://lkml.indiana.edu/hypermail/linux/kernel/0602.2/0868.html
+            # regardless, remove them using str.translate()
             text = ucs.encode(encoding, 'replace')
             ucs = u''.join([(unichr(x84.bbs.cp437.CP437.index(glyph))
                              if glyph in x84.bbs.cp437.CP437
-                             else unicode(text[idx], encoding, 'replace'))
+                             else unicode(
+                                 text[idx], encoding, 'replace').translate(
+                                     None, (chr(14), chr(15))))
                             for (idx, glyph) in enumerate(ucs)])
         else:
             encoding = self.encoding
