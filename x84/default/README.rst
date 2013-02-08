@@ -1,4 +1,3 @@
-
 Customizing your board
 ======================
 
@@ -6,7 +5,7 @@ The ``default.ini`` option, *scriptpath*, of section *system*, defines folder ``
 
 By default, matrix.py_ is called on-connect, which chains to nua.py_ for new account creation, top.py_ when authenticated, and main.py_ for a main menu.
 
-Copy the contents of this folder to a new folder, change the .ini file to point to it, and you can begin customizing your matrix, topscripts, and art files.
+Copy the contents of the ``'default/'`` folder to a new folder, change the .ini file to point to it, and you can begin customizing your matrix, topscripts, and art files.
 
 matrix.py
 ---------
