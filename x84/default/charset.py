@@ -30,6 +30,7 @@ def get_selector(selection):
 def main():
     from x84.bbs import getsession, getterminal, echo, getch, Ansi, from_cp437
     session, term = getsession(), getterminal()
+    session.activity = u'Selecting chracter set'
     artfile = os.path.join(
         os.path.dirname(__file__), 'art', (
             'plant-256.ans' if term.number_of_colors == 256

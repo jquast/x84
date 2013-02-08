@@ -216,6 +216,7 @@ def main(uattr=u'draft'):
     SAVEKEY = uattr
     EXIT = False
     input_buffer = session.user.get(SAVEKEY, u'')
+    session.activity = 'editing %s' % (SAVEKEY,)
 
     def get_lightbar(ucs, pos=None):
         # width 40 <=> 80 wide only
