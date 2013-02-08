@@ -20,16 +20,21 @@ def init_term(pipe, env):
     from x84.bbs import ini
     from x84.bbs.ipc import IPCStream
     from x84.blessings import Terminal
+    encoding = 'utf8'
     if (env.get('TERM', 'unknown') == 'ansi'
             and ini.CFG.get('system', 'termcap-ansi', u'no') != 'no'):
         # special workaround for systems with 'ansi-bbs' termcap,
         # translate 'ansi' -> 'ansi-bbs'
         # http://wiki.synchro.net/install:nix?s[]=termcap#terminal_capabilities
         env['TERM'] = ini.CFG.get('system', 'termcap-ansi')
+        encoding = 'cp437'
+    elif env.get('TERM', 'unknown') == 'unknown':
+        encoding = 'cp437'
     return Terminal(env.get('TERM', 'unknown'),
                     IPCStream(pipe),
                     int(env.get('LINES', '24')),
-                    int(env.get('COLUMNS', '80')))
+                    int(env.get('COLUMNS', '80')
+                        encoding=encoding))
 
 
 def mkipc_rlog(pipe):
