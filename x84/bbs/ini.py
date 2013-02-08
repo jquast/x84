@@ -114,6 +114,7 @@ def init_bbs_ini():
     cfg_bbs.set('system', 'mail_addr',
                 '%s@%s' % (getpass.getuser(), socket.gethostname()))
     cfg_bbs.set('system', 'mail_smtphost', 'localhost')
+    cfg_bbs.set('system', 'termcap-ansi', 'ansi-bbs')
 
     cfg_bbs.add_section('telnet')
     cfg_bbs.set('telnet', 'addr', '127.0.0.1')
