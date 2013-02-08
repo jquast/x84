@@ -324,7 +324,7 @@ class ConnectTelnet (threading.Thread):
         self.client.send_str('\x1b[s')
         for kind, query_seq, response_pattern in self.WINSIZE_TRICK:
             logger.debug('move-to corner & query for %s', kind)
-            self.client.send_str('\x1b[999;999H')
+            self.client.send_str('\x1b[255;255')
             self.client.send_str(query_seq)
             self.client.socket_send()  # push
             st_time = time.time()
