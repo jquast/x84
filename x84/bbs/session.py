@@ -18,11 +18,6 @@ import x84.bbs.cp437
 import x84.bbs.ini
 
 SESSION = None
-# TTYREC_UCOMPRESS = 15000
-TTYREC_UCOMPRESS = None  # disabled for ttyplay -p(eek)
-TTYREC_HEADER = unichr(27) + u'[8;%d;%dt'
-#TTYREC_ROTATE = 4
-TTYREC_PADD = 10
 logger = logging.getLogger()  # deprecation warning !
 
 
@@ -157,9 +152,6 @@ class Session(object):
         self._user = value
         logger = logging.getLogger()
         logger.info('user = %r', value.handle)
-        if self.is_recording and self._ttyrec_fname != value.handle:
-            # mv None.0 -> userName.0
-            self.rename_recording(self._ttyrec_fname, value.handle)
 
     @property
     def source(self):
@@ -568,48 +560,6 @@ class Session(object):
         if self.is_recording:
             self.stop_recording()
 
-# TODO: Somehow move these to ttyrec.py to keep session.py terse;
-# TODO: lol, also exceptions . shite ...
-    def rename_recording(self, src, dst):
-        """
-        Rotate ttyrec recording keyed by dst to make way for dst.0 by renaming
-        src.0 to dst.0; not really sure this is correct ^_*
-        """
-        # acquire tty recording lock
-        self.lock.acquire()
-        logger = logging.getLogger()
-        while True:
-            self.send_event('lock-ttyrec', ('acquire', 5.0))
-            if self.read_event('lock-ttyrec'):
-                break
-            logger.warn('failed to acquire ttyrec lock')
-            time.sleep(0.6)
-#        self.rotate_recordings(dst)
-        os.rename(os.path.join(self._ttyrec_folder, '%s.0' % (src,)),
-                  os.path.join(self._ttyrec_folder, '%s.0' % (dst,)))
-        # release tty recording lock
-        self.send_event('lock-ttyrec', ('release', None))
-        self._ttyrec_fname = dst
-        self.lock.release()
-
-#    def rotate_recordings(self, key):
-#        """
-#        Rotate any existing ttyrec files for key.
-#        """
-#        logger = logging.getLogger()
-#        # if .8 exists, move .8 to .9, obliterating .9;
-#        # if .7 exists, move .7 to .8, obliterating .8; (..repeat)
-#        # aren't there helper functions for this stuff? :p
-#        for n in range(TTYREC_ROTATE):
-#            src = os.path.join(self._ttyrec_folder,
-#                               '%s.%d' % (key, (TTYREC_ROTATE - 1) - (n)))
-#            dst = os.path.join(self._ttyrec_folder,
-#                               '%s.%d' % (key, (TTYREC_ROTATE - 1) - (n - 1)))
-#            if os.path.exists(src):
-#                os.rename(src, dst)
-#                logger.debug('mv %r -> %r', src, os.path.basename(dst))
-#        dst = os.path.join(self._ttyrec_folder, '%s.0' % (key,))
-#        assert TTYREC_ROTATE != 0 and not os.path.exists(dst), dst
 
     @property
     def is_recording(self):
@@ -633,22 +583,17 @@ class Session(object):
         """
         logger = logging.getLogger()
         assert self._fp_ttyrec is None, ('already recording')
-        if dst is None:
-            dst = self.user.handle or 'None'
-        self._ttyrec_fname = dst
-        # acquire tty recording lock
-        self.lock.acquire()
+        digit = 0
         while True:
-            self.send_event('lock-ttyrec', ('acquire', 5.0))
-            if self.read_event('lock-ttyrec'):
+            self._ttyrec_fname = '%s%d-%s.ttyrec' % (
+                    time.strftime('%Y%m%d.%H%M%S'), digit,
+                    self.sid.split(':', 1)[0],)
+            if not os.path.exists(self._ttyrec_fname):
                 break
-            logger.warn('failed to acquire ttyrec lock')
-            time.sleep(0.6)
-        # rotate logfiles,
-#        self.rotate_recordings(self._ttyrec_fname)
-        # open ttyrec logfile for writing
-        filename = os.path.join(self._ttyrec_folder,
-                                '%s.0' % (self._ttyrec_fname,))
+            digit += 1
+        assert os.path.sep not in self._ttyrec_fname
+
+        filename = os.path.join(self._ttyrec_folder, self._ttyrec_fname)
         if not os.path.exists(self._ttyrec_folder):
             logger.info('creating ttyrec folder, %s.', self._ttyrec_folder)
             os.makedirs(self._ttyrec_folder)
@@ -657,9 +602,6 @@ class Session(object):
         self._recording = True
         self._ttyrec_write_header()
         logger.info('REC %s' % (filename,))
-        # release tty recording lock
-        self.send_event('lock-ttyrec', ('release', None))
-        self.lock.release()
 
     def _ttyrec_write_header(self):
         """
@@ -667,7 +609,7 @@ class Session(object):
         sequence to indicate UTF-8 mode.
         """
         (height, width) = self.terminal.height, self.terminal.width
-        self._ttyrec_write(TTYREC_HEADER % (height, width,))
+        self._ttyrec_write(unichr(27) + u'[8;%d;%dt' % (height, width,))
         # ESC %G activates UTF-8 with an unspecified implementation level from
         # ISO 2022 in a way that allows to go back to ISO 2022 again.
         self._ttyrec_write(unichr(27) + u'%G')
@@ -708,27 +650,6 @@ class Session(object):
             self._fp_ttyrec.flush()
         text = ucs.encode('utf8', 'replace')
         len_text = len(text)
-        # write full chunk and return, unless compression is used.
-        # Also, when more than TTYREC_PADD has elapsed, first a
-        # 0-lengthed padding is inserted for every TTYREC_PADD seconds.
-        if(TTYREC_UCOMPRESS is None
-           or sec != self._ttyrec_sec
-           or usec - self._ttyrec_usec > TTYREC_UCOMPRESS):
-            while sec > TTYREC_PADD:
-                write_chunk(sec, usec, 0, bytes())
-                sec -= TTYREC_PADD
-                sec = 0 if sec < 0 else sec
-            return write_chunk(sec, usec, len_text, text)
-
-        # a sort of monkey patching (compression);
-        #   1. rewind to last length byte
-        last_bp2 = struct.pack('<I', self._ttyrec_len_text)
-        new_bp2 = struct.pack('<I', self._ttyrec_len_text + len_text)
-        self._fp_ttyrec.seek((self._ttyrec_len_text + len(last_bp2)) * -1, 2)
-        #   2. re-write length byte
-        self._fp_ttyrec.write(new_bp2)
-        #   3. append additional text after existing chunk record
-        self._fp_ttyrec.seek(self._ttyrec_len_text, 1)
-        self._fp_ttyrec.write(text)
-        self._ttyrec_len_text = self._ttyrec_len_text + len_text
-        self._fp_ttyrec.flush()
+        # TODO: padd every 1 or 10 seconds, so 'VCR' type apps
+        # can FF/RW easier
+        return write_chunk(sec, usec, len_text, text)
