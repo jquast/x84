@@ -137,11 +137,11 @@ def process_keystroke(inp, lightbar):
         return True
     if inp in keys['xmodem']:
         echo(statusline(
-            lightbar, edit=False, msg='- X/MOdEM -',
-            cmds=term.yellow('  SENd OR RECEiVE?')))
+            lightbar, edit=False, msg=u'- X/MOdEM -',
+            cmds=term.yellow(u'  SENd OR RECEiVE?')))
         sr = Selector(yloc=lightbar.yloc + lightbar.height - 1,
                       xloc=term.width - 38, width=12,
-                      left=' UPlOad ', right=' dOWNlOAd ')
+                      left=u' UPlOad ', right=u' dOWNlOAd ')
         sr.colors['selected'] = term.reverse_blue
         sr.keyset['left'].extend((u's', u'S', u'u', u'U'))
         sr.keyset['right'].extend((u'r', u'R', u'd', u'D'))
