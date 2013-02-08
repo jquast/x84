@@ -662,15 +662,15 @@ def rate_bbs(key):
     msg_invalid = u'\r\n\r\niNVAlid ENtRY.\r\n'
     echo(term.move(term.height, 0) + '\r\n')
     echo(prompt_rating)
-    rating = LineEditor(3).read()
-    if rating is None or 0 == len(rating.strip()):
+    s_rating = LineEditor(3).read()
+    if s_rating is None or 0 == len(s_rating.strip()):
         return
     try:
-        f_rating = float(rating)
+        f_rating = float(s_rating)
     except ValueError:
         echo(msg_invalid)
         return
-    if rating < 0 or rating > 4:
+    if f_rating < 0 or f_rating > 4:
         echo(msg_invalid)
         return
     entry = (session.handle, f_rating)
