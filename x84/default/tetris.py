@@ -1,34 +1,12 @@
 # Single player tetris, originally written for The Progressive (prsv)
 # Copyright (C) 2007-2013 Johannes Lundberg
 
-#from bbs import *
-
-deps = [ 'bbs' ]
-
-import os
 from time import time as timenow
 from random import randint
-from x84.bbs import getterminal, Ansi, from_cp437, getch, showcp437, goto
-from x84.bbs import echo as echo_unbuffered
-
-charcache = ''
-def echo(s):
-  global charcache
-  charcache += s
-def flush():
-  global charcache
-  echo_unbuffered(charcache)
-  charcache = ''
-
-def clear():
-  echo ('\33[H\33[J')
-
-def gotoxy(x,y):
-  term = getterminal()
-  echo (term.move(y,x))
 
 # Help for the artistic developer
 def showcharset():
+  from x84.bbs import echo
   echo ('**   ')
   for c in range(16):
     echo ('%X '%c)
@@ -176,46 +154,62 @@ layout = [
 ],
 ]
 
-class RectRedraw:
-  x1 = None
-  y1 = None
-  x2 = None
-  y2 = None
-  def max (r, val, valmax):
-    if val>valmax:
-      return valmax
-    return val
-  def min (r, val, valmin):
-    if val<valmin:
-      return valmin
-    return val
-  def merge(r, x1, y1, x2, y2):
-    if r.x1 == None or r.x1 > x1:
-      r.x1 = r.min (x1,0)
-    if r.y1 == None or r.y1 > y1:
-      r.y1 = r.min (y1,0)
-    if r.x2 == None or r.x2 < x2:
-      r.x2 = r.max (x2,10)
-    if r.y2 == None or r.y2 < y2:
-      r.y2 = r.max (y2,20)
-    #print r.x1,r.y1,r.x2,r.y2
-  def clean(r):
-    r.x1 = None
-    r.y1 = None
-    r.x2 = None
-    r.y2 = None
-
 def play():
+  import os
+  from x84.bbs import getterminal, getch
+  from x84.bbs import echo as echo_unbuffered
   term = getterminal()
-  rr = RectRedraw()
   field = []
-  for i in range(20):
-    field.append([0]*10)
-  #echo (str(field))
-  #readkey()
-  echo (term.clear)
-  #showcp437( os.path.join(os.path.dirname(__file__), 'tetris.ans' ))
-  #echo( os.path.join(os.path.dirname(__file__), 'tetris.ans' ))
+  global charcache
+  charcache = u''
+  field_width = 10
+  field_height = 20
+  class RectRedraw:
+    x1 = None
+    y1 = None
+    x2 = None
+    y2 = None
+    def max (r, val, valmax):
+      if val>valmax:
+        return valmax
+      return val
+    def min (r, val, valmin):
+      if val<valmin:
+        return valmin
+      return val
+    def merge(r, x1, y1, x2, y2):
+      if r.x1 == None or r.x1 > x1:
+        r.x1 = r.min (x1,0)
+      if r.y1 == None or r.y1 > y1:
+        r.y1 = r.min (y1,0)
+      if r.x2 == None or r.x2 < x2:
+        r.x2 = r.max (x2,field_width)
+      if r.y2 == None or r.y2 < y2:
+        r.y2 = r.max (y2,field_height)
+      #print r.x1,r.y1,r.x2,r.y2
+    def clean(r):
+      r.x1 = None
+      r.y1 = None
+      r.x2 = None
+      r.y2 = None
+  rr = RectRedraw()
+  for i in range(field_height):
+    field.append([0] * field_width)
+  def echo(s):
+    global charcache
+    charcache += s
+  echo_unbuffered(u''.join((
+      u'REAdY YOUR tERMiNAl %s ' % (term.bold_blue('(!)'),),
+      u'\r\n\r\n',
+      u'%s PRESS ANY kEY' % (term.bold_black('...'),),
+      u'\r\n',)))
+  artfile = os.path.join(os.path.dirname(__file__), 'tetris.ans' )
+  if os.path.exists(artfile):
+      #showcp437( artfile)
+      pass
+  echo_unbuffered(u'\r\n' * (term.height + 1))  # cls
+  def gotoxy(x,y):
+    echo (term.move(y,x))
   def plotblock (color, lastcolor):
     if color:
       c=u'\u2588\u2588' #'\xDB\xDB'
@@ -241,31 +235,31 @@ def play():
       lastcolor = color
     return lastcolor
   def redrawfieldbig(rr):
-    #rr.merge(0,0,10,20)
+    #rr.merge(0,0,field_width,field_height)
     lastcolor=''
     if rr.x1 == None or rr.y1 == None:
       return
     # Only draw the parts which have been marked by the
     # redraw rectangle
     for y in range(rr.y1,rr.y2):
-      gotoxy(10+rr.x1*2,2+y)
+      gotoxy(field_width+rr.x1*2,2+y)
       for x in range(rr.x1,rr.x2):
         lastcolor = plotblock(field[y][x],lastcolor)
     echo('\33[0m')
     rr.clean()
   def drawfieldbig():
     lastcolor=''
-    for y in range(0,20):
-      gotoxy(10,2+y)
-      for x in range(10):
+    for y in range(0,field_height):
+      gotoxy(field_width,2+y)
+      for x in range(field_width):
         lastcolor = plotblock(field[y][x],lastcolor)
     echo('\33[0m')
   def drawfield():
     lastcolor=''
-    for y in range(0,20,2):
-      gotoxy(10,2+y/2)
+    for y in range(0,field_height,2):
+      gotoxy(field_width,2+y/2)
       # Which block to show, full, half-up, half-down or empty.
-      for x in range(10):
+      for x in range(field_width):
         color = field[y][x]+field[y+1][x]*8
         if       field[y][x] and     field[y+1][x]:
           c='\u2588' #'\xDB'
@@ -306,8 +300,11 @@ def play():
   xpos = 2   # X position
   #ypos = -2  # Y position
   ypos = -len(layout[p][0])
-  score = 0
-
+  #score = 0
+  def flush():
+    global charcache
+    echo_unbuffered(charcache)
+    charcache = u''
   def fillpiece(x,y,p,r,value):
     row=0
     for line in layout[p][r]:
@@ -380,7 +377,7 @@ def play():
   #shownext(nextpiece)
 
   # Full redraw first frame
-  rr.merge(0,0,10,20)
+  rr.merge(0,0,field_width,field_height)
 
   #cursor_hide()
   buffer = ''
@@ -401,7 +398,7 @@ def play():
     #hidepiece()
     if key:
       if key in [term.KEY_ENTER, term.KEY_ESCAPE, 'q']:
-        goto('main')
+        return
       elif key == term.KEY_LEFT:
         xpos,ypos,r,m=movepiece(xpos-1,ypos,r)
       elif key == term.KEY_RIGHT:
@@ -426,25 +423,32 @@ def play():
       if not moved:
         # Any complete rows to remove?
         complete=[]
-        for y in range(20):
+        for y in range(field_height):
           x=0
-          while x<10:
+          while x<field_width:
             if field[y][x] == 0:
               break
             x += 1
-          if x == 10:
+          if x == field_width:
             complete.append(y)
         if len(complete)>0:
-          # Flash
-        
+          # scroll a page, Flash
+          echo(u'\r\n' * term.height)
+          for n in range(5):
+              echo(u'\033#8')
+              getch(0.1)
+              echo(term.clear)
+              getch(0.1)
+          # echo centered: you die
+          getch()
           # Add score
           # Shrink field
           for line in complete:
             del field[line]
-            field.insert(0,[0]*10)
+            field.insert(0,[0]*field_width)
 
           # Redraw complete field
-          rr.merge (0, 0, 10, 20)
+          rr.merge (0, 0, field_width, field_height)
 
         # Time for a new piece
         p         = nextpiece
@@ -455,15 +459,14 @@ def play():
         showpiece(xpos,ypos,p,r)
         #shownext(nextpiece)
 
-  #cursor_show()
-  #clear()
-  #echo('\33[0m')
   #showcharset()
   #echo('\xDC\xDB\xDC '+RED+'\xDF\xDB\xDC '+BROWN+'\xDC\xDC\xDC\xDC   '+GREEN+'\xDB\xDB \xDB\xDF\xDF')
   #echo('\r\n\r\n')
   #echo(CYAN+'\xDC\xDB\xDC '+PURPLE+'\xDF\xDB\xDC   '+BROWN+'\xDC\xDC\xDC\xDC '+GREY+'\xDB\xDB '+BLUE+'\xDB\xDF\xDF')
-  #readkey()
+  #getch()
 
 def main():
-  play()
-  #scripttest()
+  from x84.bbs import getterminal
+  term = getterminal()
+  with term.hidden_cursor():
+      play()
