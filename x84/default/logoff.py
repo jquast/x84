@@ -6,6 +6,7 @@ def main():
     from x84.bbs import disconnect, getch
     import time, os
     session, term = getsession(), getterminal()
+    session.activity = 'logging off'
     db = DBProxy('automsg')
     handle = session.handle if (
             session.handle is not None
