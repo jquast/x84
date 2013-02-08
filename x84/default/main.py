@@ -23,6 +23,7 @@ def refresh():
             ('o', 'NE liNERS'),
             ('w', "hO'S ONliNE"),
             ('n', 'EWS'),
+            ('s', 'YStEM iNfO'),
             ('$', 'EAthER fORECASt'),
             ('e', 'Edit PROfilE'),
             ('!', 'POSt A MSG'),
@@ -65,6 +66,8 @@ def main():
             gosub('lc')
         elif choice == u'o':
             gosub('ol')
+        elif choice == u's':
+            gosub('si')
         elif choice == u'w':
             gosub('online')
         elif choice == u'n':
