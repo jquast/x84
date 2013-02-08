@@ -6,6 +6,7 @@ Command-line launcher and main event loop for x/84
 # which don't belong there right here. Don't include metadata in
 # any other part of x/84, its a pita to maintain.
 __author__ = "Johannes Lundberg, Jeffrey Quast"
+__url__ = u'https://github.com/jquast/x84/'
 __copyright__ = "Copyright 2012"
 __credits__ = ["Wijnand Modderman-Lenstra", "zipe", "spidy", "Mercyful Fate"]
 __license__ = 'ISC'
