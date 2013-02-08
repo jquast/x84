@@ -317,7 +317,6 @@ class TelnetClient(object):
         """
         self._iac_do(NEW_ENVIRON)
         self._note_reply_pending(NEW_ENVIRON, True)
-        self.request_env()
 
     def request_env(self):
         """
