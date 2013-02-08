@@ -199,15 +199,18 @@ def play():
     global charcache
     charcache += s
   echo_unbuffered(u''.join((
+      u'\r\n\r\n',
       u'REAdY YOUR tERMiNAl %s ' % (term.bold_blue('(!)'),),
       u'\r\n\r\n',
       u'%s PRESS ANY kEY' % (term.bold_black('...'),),
       u'\r\n',)))
+  getch()
   artfile = os.path.join(os.path.dirname(__file__), 'tetris.ans' )
   if os.path.exists(artfile):
       #showcp437( artfile)
       pass
   echo_unbuffered(u'\r\n' * (term.height + 1))  # cls
+
   def gotoxy(x,y):
     echo (term.move(y,x))
   def plotblock (color, lastcolor):
@@ -466,7 +469,8 @@ def play():
   #getch()
 
 def main():
-  from x84.bbs import getterminal
+  from x84.bbs import getterminal, echo
   term = getterminal()
   with term.hidden_cursor():
       play()
+  echo(term.move(term.height, 0))
