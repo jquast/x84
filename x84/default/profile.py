@@ -85,6 +85,20 @@ def process_keystroke(lightbar, inp, user):
         getch()
         gosub('editor', '.plan')
         return True
+    elif inp in (u'm', u'M') or (inp == term.KEY_ENTER and
+                                 lightbar is not None and
+                                 lightbar.selection[0] == u'm'):
+        mesg = False if user.get('mesg', True) else True
+        echo(u"\r\n\r\n%s iNStANt MESSAGiNG? [yn]" % (
+            'enable' if mesg else 'disable',))
+        while True:
+            ch = getch()
+            if str(ch).lower() == 'y':
+                user['mesg'] = mesg
+                break
+            elif str(ch).lower() == 'n':
+                break
+        return True
     elif inp in (u'x', u'X') or (inp == term.KEY_ENTER and
                                  lightbar is not None and
                                  lightbar.selection[0] == u'x'):
@@ -117,8 +131,11 @@ def dummy_pager(user):
                                term.bold(session.env.get('TERM', 'unknown')),),
             '(l)%-20s - %s' % (u'OCAtiON',
                                term.bold(user.location),),
-            '(e)%-20s - %s' % (u'MAil AddRESS',
+            '(e)%-20s - %s' % (u'-MAil AddRESS',
                                term.bold(user.email),),
+            '(m)%-20s - %s' % (u'ESG',
+                                term.bold(u'[%s]' % ('y'
+                                    if user.get('mesg', True) else 'n',),)),
             '(.)%-20s - %s' % (u'PlAN filE', '%d bytes' % (
                 len(plan),) if plan else '(NO PlAN.)'),
             '(x)%-20s - %s' % (u'PERt MOdE',
@@ -151,6 +168,7 @@ def refresh(lightbar):
                      (u't', u'tERMiNAl tYPE',),
                      (u'l', u'lOCAtiON',),
                      (u'e', u'EMAil',),
+                     (u'm', u'ESG',),
                      (u'.', u'.PlAN',),
                      (u'x', u'EXPERt MOdE',),
                      (u'q', u'QUit',)))
@@ -219,6 +237,8 @@ def lborder(lightbar, user):
                 val += ' - %s' % (postal,)
     elif sel == 'e':
         val = user.email
+    elif sel == 'm':
+        val = 'y' if user.get('mesg', True) else 'n'
     elif sel == '.':
         plan = user.get('.plan', False)
         val = u'%d bytes' % (len(plan),) if plan else u''
