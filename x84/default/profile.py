@@ -227,14 +227,14 @@ def refresh(lightbar):
     echo(lightbar.refresh())
 
 
-def main(user=None):
+def main(handle=None):
     from x84.bbs import getsession, getterminal, echo, getch
     from x84.bbs import Lightbar, get_user
     session, term = getsession(), getterminal()
     session.activity = 'Editing profile'
     user = session.user if (
-            'sysop' not in session.user.groups) or (user is None
-            ) else get_user(user)
+            'sysop' not in session.user.groups) or (handle is None
+            ) else get_user(handle)
     global EXIT
     EXIT = False
     lightbar = None
