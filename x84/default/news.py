@@ -1,14 +1,12 @@
 """
 'sysop news' script for x/84, https://github.com/jquast/x84
 """
-
-import os
-# pylint: disable=W0614
-#        Unused import from wildcard import
-from x84.bbs import getterminal, echo, getch, Pager, getsession
-
+NEWS_ART = None
+NEWSAGE = 0
+NEWS = None
 
 def dummy_pager(news_txt):
+    from x84.bbs import getterminal, echo, getch
     term = getterminal()
     prompt_msg = u'\r\n[c]ontinue, [s]top, [n]on-stop  ?\b\b'
     nonstop = False
@@ -29,15 +27,16 @@ def dummy_pager(news_txt):
 
 
 def get_pager(news_txt, position=None):
+    from x84.bbs import getterminal, Pager
     term = getterminal()
-    width = term.width - 6
-    yloc = min(10, max(0, term.height - 10))
-    height = term.height - yloc - 1
-    xloc = max(3, int((float(term.width) / 2) - (float(width) / 2)))
+    width = min(130, (term.width - 2))
+    height = term.height - len(redraw(None).splitlines())
+    yloc = term.height - height
+    xloc = (term.width / 2) - (width / 2)
     pager = Pager(height, width, yloc, xloc)
-    pager.xpadding = 1
-    pager.ypadding = 1
-    pager.colors['border'] = term.red
+    pager.colors['border'] = term.blue
+    pager.glyphs['left-vert'] = u''
+    pager.glyphs['right-vert'] = u''
     pager.update('\n'.join(news_txt))
     if position is not None:
         pager.position = position
@@ -45,46 +44,65 @@ def get_pager(news_txt, position=None):
 
 
 def redraw(pager):
+    from x84.bbs import getterminal
+    import os
+    global NEWS_ART  # in-memory cache
     term = getterminal()
-    rstr = term.normal + '\r\n\r\n'
-    if term.width >= 64:
-        rstr += '\r\n'.join((line.rstrip().center(term.width).rstrip()
-                             for line in open(os.path.join(
-                os.path.dirname(__file__), 'art', 'news.asc'))))
-    rstr += term.normal + '\r\n\r\n'
-    if pager is not None:
-        rstr += pager.refresh()
-        rstr += pager.border()
-        rstr += pager.footer(u'- demo   -   demo -')
-    return rstr
+    artfile = os.path.join(os.path.dirname(__file__), 'art', 'news.asc')
+    if NEWS_ART is None:
+        NEWS_ART = [line for line in open(artfile)]
+    # left-align, center, strip, and trim each line of ascii art
+    ladjust = lambda line: (
+            line.rstrip().center(term.width)[:term.width].rstrip())
+    title = u''.join(( u']- ', term.bold_blue('PARtY NEWS'), ' [-',))
+    footer = u''.join(( u'-[ ',
+            term.underline(u'arrow keys'), u'-',
+            term.underline(u'Escape/q'), u'uit',
+            u' ]-',
+            ))
+    return u''.join(( u'\r\n\r\n',
+        '\r\n'.join((ladjust(line) for line in NEWS_ART)), u'\r\n',
+        u''.join((
+            u'\r\n' * pager.height,
+            pager.refresh(),
+            pager.border(),
+            pager.title(title),
+            pager.footer(footer),)) if pager is not None else u'',))
 
 
 def main():
+    from x84.bbs import getsession, getterminal, echo, getch
     import codecs
+    import time
+    import os
+    global NEWS, NEWSAGE  # in-memory cache
     session, term = getsession(), getterminal()
     session.activity = 'Reading news'
-    news_path = os.path.join(os.path.dirname(__file__), 'art', 'news.txt')
-    try:
-        news_txt = [line.rstrip()
-                    for line in codecs.open(news_path, 'rb', 'utf8')]
-    except IOError:
-        news_txt = ['`news` has not yet been comprimised.', ]
+    newsfile = os.path.join(os.path.dirname(__file__), 'art', 'news.txt')
+    if not os.path.exists(newsfile):
+        echo(u'\r\n\r\nNo news.')
+        return
 
-    if (session.env.get('TERM') == 'unknown'
-            or session.user.get('expert', False) or term.width < 64):
-        return dummy_pager(news_txt)
-    echo(term.home + term.normal + term.clear)
-    pager = get_pager(news_txt)
-    echo(redraw(pager))
+    if NEWS is None or os.stat(newsfile).st_mtime > NEWSAGE:
+        # open a utf-8 file for international encodings/art/language
+        NEWS = [line.rstrip() for line in codecs.open(newsfile, 'rb', 'utf8')]
+        NEWSAGE = time.time()
+    if (session.user.get('expert', False)):
+        return dummy_pager(NEWS)
+
+    pager = None
+    dirty = True
     while True:
+        if dirty:
+            pos = pager.position if pager is not None else None
+            pager = get_pager(NEWS, pos)
+            echo(redraw(pager))
+            dirty = False
+        if session.poll_event('refresh'):
+            dirty = True
+            continue
         inp = getch(1)
         if inp is not None:
             echo(pager.process_keystroke(inp))
             if pager.quit:
                 return
-        if session.poll_event('refresh'):
-            echo(term.home + term.normal + term.clear)
-            if term.width < 64:
-                return dummy_pager(news_txt)
-            pager = get_pager(news_txt, pager.position)
-            echo(redraw(pager))
