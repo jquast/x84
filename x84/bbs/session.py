@@ -42,7 +42,7 @@ class Session(object):
     # pylint: disable=R0902,R0904
     #        Too many instance attributes (29/7)
     #        Too many public methods (25/20)
-    TRIM_CP437 = u''.join((unichr(14), unichr(15),))
+    TRIM_CP437 = bytes(chr(14) + chr(15))
 
     def __init__(self, terminal, pipe, sid, env, encoding='utf8'):
         """
