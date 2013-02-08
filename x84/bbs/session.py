@@ -43,7 +43,7 @@ class Session(object):
     #        Too many instance attributes (29/7)
     #        Too many public methods (25/20)
 
-    def __init__(self, terminal, pipe, sid, env):
+    def __init__(self, terminal, pipe, sid, env, encoding='utf8'):
         """
         Instantiate a Session instanance, only one session may be instantiated
         per process. Arguments:
@@ -76,7 +76,7 @@ class Session(object):
         self._enable_keycodes = True
         self._activity = u'<uninitialized>'
         self._source = '<undefined>'
-        self._encoding = 'utf8'
+        self._encoding = encoding
         self._recording = False
         # event buffer
         self._buffer = dict()
