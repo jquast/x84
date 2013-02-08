@@ -96,40 +96,51 @@ def refresh_opts(pager, handle):
 def get_pager(lcallers, lcalls):
     from x84.bbs import getterminal, Lightbar
     term = getterminal()
-    width = min(60, term.width - 1)
-    height = max(5, min(len(lcallers), term.height - 15))
+    assert term.height >= 10 and term.width >= 50
+    width = max(min(term.width - 5, 50), 50)
+    height = max(min(term.height - 13, 10), 10)
     xloc = (term.width / 2) - (width / 2)
-    yloc = term.height - (height + 1)
+    yloc = term.height - height
     pager = Lightbar(height, width, yloc, xloc)
-    pager.glyphs['left-vert'] = u''
-    pager.glyphs['right-vert'] = u''
-    pager.xpadding = 2
-    pager.ypadding = 1
-    pager.alignment = 'center'
+    pager.glyphs['left-vert'] = pager.glyphs['right-vert'] = u''
+    pager.colors['highlight'] = term.red_reverse
     pager.colors['border'] = term.yellow
-    pager.colors['highlight'] = term.yellow_reverse
+    pager.xpadding, pager.ypadding = 2, 1
+    pager.alignment = 'center'
     pager.update([(lcallers[n], txt,)
                   for (n, txt) in enumerate(lcalls.split('\n'))])
     return pager
 
+def get_art(fname):
+    from x84.bbs import getterminal
+    term = getterminal()
+    buf = list()
+    width = 0
+    for line in open(fname):
+        art_line = line.rstrip()[:term.width]
+        width = len(art_line) if len(art_line) > width else width
+        buf.append(art_line)
+    return [line.ljust(width).center(term.width) for line in buf]
 
 def redraw(pager=None):
     from x84.bbs import getterminal
     import os
     term = getterminal()
-    rstr = u'\r\n\r\n'
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'lc.asc')
-    if os.path.exists(artfile):
-        rstr += u'\r\n'.join([
-            line.rstrip()[:term.width].center(term.width)
-            for line in open(artfile)])
-        rstr += u'\r\n\r\n'
-    rstr += term.bold_red_underline(u'// ')
-    rstr += term.red('LASt CAllERS'.center(term.width - 3))
-    rstr += u'\r\n\r\n'
-    if pager is not None:
-        rstr += u'\r\n' * pager.height + pager.border() + pager.refresh()
-    return rstr
+    # return banner, artfile contents, pager refreshed
+    return u''.join((
+        u'\r\n\r\n',
+        term.bold_red(u'/'.rjust(
+            pager.xloc if pager is not None else term.width / 3)),
+        term.red(u'/'), u'l', term.red('AS'),
+        term.bold_red('t '), u'C', term.red('A'),
+        term.bold_red('ll'), term.red('ERS'),
+        u'\r\n',
+        u'\r\n'.join(get_art(artfile)),
+        u'\r\n',
+        u'\r\n' * pager.height,
+        pager.border(),
+        pager.refresh(),))
 
 def lc_retrieve():
     """
