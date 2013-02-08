@@ -32,9 +32,13 @@ def main ():
             ]
     melt_colors = (
             [term.normal]
+            + [term.bold_blue]*3
+            + [term.red]*4
+            + [term.bold_red]
+            + [term.bold_white]
+            + [term.normal]*6
             + [term.blue]*2
-            + [term.bold_blue]*2
-            + [term.bold_cyan]
+            + [term.bold_blue]
             + [term.bold_white]
             + [term.normal])
     art = from_cp437(open(artfile).read()) if os.path.exists(artfile) else u''
@@ -51,19 +55,29 @@ def main ():
       float(random.choice(range(term.height))))) for n in range(numStars)])
     melting = {}
     plusStar = False
-    tm_out, tMIN, tMAX, tSTEP = 0.08, 0.02, 2.0, .02
+    tm_out, tMIN, tMAX, tSTEP = 0.08, 0.01, 2.0, .01
     wind = (0.7, 0.1, 0.01, 0.01)
 
     def refresh ():
         echo(u'\r\n\r\n')
-        if term.width < width + 3:
-            echo (term.bold_red + 'your screen is too thin! (%s/%s)\r\n' \
-              'press any key...' % (term.width, width+5))
+        if term.width < width:
+            echo(u''.join((
+                term.move(term.height, 0),
+                u'\r\n\r\n',
+                term.bold_red + 'screen too thin! (%s/%s)' % (
+                    term.width, width,),
+                u'\r\n\r\n',
+                u'press any key...',)))
             getch ()
             return (None, None)
         if term.height < height:
-            echo (term.bold_red + 'your screen is too short! (%s/%s)\r\n' \
-              'press any key...' % (term.height, height))
+            echo(u''.join((
+                term.move(term.height, 0),
+                u'\r\n\r\n',
+                term.bold_red + 'screen too short! (%s/%s)' % (
+                    term.height, height),
+                u'\r\n\r\n',
+                u'press any key...',)))
             getch ()
             return (None, None)
         x = (term.width /2) -(width /2)
@@ -143,6 +157,16 @@ def main ():
     with term.hidden_cursor():
         while txt_x is not None and txt_y is not None:
             if session.poll_event('refresh'):
+                numStars = int(numStars)
+                stars = dict([(n, (random.choice('\\|/-'),
+                  float(random.choice(range(term.width))),
+                  float(random.choice(range(term.height)))))
+                  for n in range(numStars)])
+                otxt = list(art.splitlines())
+                for n, b in enumerate(body):
+                    while n > len(otxt):
+                        otxt += [u'',]
+                    otxt[n] = otxt[n][:int(term.width/2.5)] + u' ' + b
                 txt_x, txt_y = refresh()
                 continue
             inp = getch(tm_out)
@@ -153,17 +177,19 @@ def main ():
                 if tm_out <= tMAX:
                     tm_out += tSTEP
             elif inp in (term.KEY_LEFT, 'h'):
-                numStars = int(numStars * .5)
-                stars = dict([(n, (random.choice('\\|/-'),
-                  float(random.choice(range(term.width))),
-                  float(random.choice(range(term.height)))))
-                  for n in range(numStars)])
-            elif inp in (term.KEY_RIGHT, 'l') and numStars < 1500:
-                numStars = int(numStars * 1.5)
-                stars = dict([(n, (random.choice('\\|/-'),
-                  float(random.choice(range(term.width))),
-                  float(random.choice(range(term.height)))))
-                  for n in range(numStars)])
+                if numStars > 2:
+                    numStars = int(numStars * .5)
+                    stars = dict([(n, (random.choice('\\|/-'),
+                      float(random.choice(range(term.width))),
+                      float(random.choice(range(term.height)))))
+                      for n in range(numStars)])
+            elif inp in (term.KEY_RIGHT, 'l'):
+                if numStars < (term.width * term.height) / 4:
+                    numStars = int(numStars * 1.5)
+                    stars = dict([(n, (random.choice('\\|/-'),
+                      float(random.choice(range(term.width))),
+                      float(random.choice(range(term.height)))))
+                      for n in range(numStars)])
             elif inp in (u'*',) and not plusStar:
                 plusStar = True
             elif inp in (u'*',) and plusStar:
