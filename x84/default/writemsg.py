@@ -22,7 +22,7 @@ def refresh(msg, level=0):
              + u'\r\n\r\n')
     if level > 3:
         echo(u'     bOdY: ' + u'\r\n\r\n')
-        echo(msg.body + u'\r\n\r\n')
+        echo(u'\r\n'.join(msg.body.splitlines()) + u'\r\n\r\n')
     return
 
 
