@@ -34,8 +34,8 @@ def main():
     lookup_log = ('/etc/x84/logging.ini',
                   os.path.expanduser('~/.x84/logging.ini'))
     try:
-        opts, tail = getopt.getopt(sys.argv[1:], ":", (
-            'config', 'logger', 'help'))
+        opts, tail = getopt.getopt(sys.argv[1:], u'', (
+            'config=', 'logger=', 'help'))
     except getopt.GetoptError as err:
         sys.stderr.write('%s\n' % (err,))
         return 1
