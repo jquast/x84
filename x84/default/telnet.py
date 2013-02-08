@@ -47,7 +47,7 @@ def main(host, port=None, encoding='cp437'):
                         + chr(0) + telnetlib.IAC + telnetlib.SE)
     telnet_client.set_option_negotiation_callback(callback_cmdopt)
 
-    echo(u"\r\nEscape character is 'ctrl-^.'")
+    echo(u"\r\n\r\nEscape character is 'ctrl-^.'")
     if not session.user.get('expert', False):
         getch(3)
     echo(u'\r\nTrying %s:%s... ' % (host, port,))
@@ -79,7 +79,9 @@ def main(host, port=None, encoding='cp437'):
                 echo(u'\r\n' + term.clear_el + term.normal)
                 break
             elif inp == '\r':
-                telnet_client.write('\r\x00')  # RFC telnet return ..
+                # TODO -- there is an RFC about this, and which to do
+                # and when, ala BINARY? what to do, what to do ..
+                telnet_client.write('\r\x00')
             elif inp is not None:
                 telnet_client.write(inp)
         except Exception as err:
