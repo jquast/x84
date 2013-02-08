@@ -66,7 +66,6 @@ def main(host, port=None, encoding='cp437'):
     echo(u'\r\nConnected to %s.' % (host,))
     session.activity = 'connected to %s' % (host,)
 
-
     while True:
         try:
             unistring = (from_cp437(telnet_client.read_very_eager())

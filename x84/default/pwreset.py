@@ -16,6 +16,7 @@ from email.mime.text import MIMEText
 def main(handle):
     # by request from midget; a password reset form
     session, term = getsession(), getterminal()
+    session.activity = 'resetting passwd for %s' % (handle,)
     user = get_user(handle)
     logger = logging.getLogger()
 

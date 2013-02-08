@@ -469,8 +469,8 @@ def play():
   #getch()
 
 def main():
-  from x84.bbs import getterminal, echo
-  term = getterminal()
+  from x84.bbs import getsession, getterminal, echo
+  session, term = getsession(), getterminal()
   with term.hidden_cursor():
       play()
   echo(term.move(term.height, 0))

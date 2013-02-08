@@ -231,6 +231,7 @@ def main(user=None):
     from x84.bbs import getsession, getterminal, echo, getch
     from x84.bbs import Lightbar, get_user
     session, term = getsession(), getterminal()
+    session.activity = 'Editing profile'
     user = session.user if (
             'sysop' not in session.user.groups) or (user is None
             ) else get_user(user)

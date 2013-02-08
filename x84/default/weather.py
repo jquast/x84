@@ -339,6 +339,7 @@ def disp_weather(weather):
 def main():
     from x84.bbs import getsession, getterminal, echo, getch
     session, term = getsession(), getterminal()
+    session.activity = 'Weather'
 
     echo(u'\r\n\r\n')
     location = session.user.get('location', dict())

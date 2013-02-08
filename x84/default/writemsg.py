@@ -188,6 +188,7 @@ def main():
     msg = Msg()
 
     while True:
+        session.activity = 'Writing a msg'
         refresh(msg)
         if not get_recipient(msg):
             if get_abort():
