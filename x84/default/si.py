@@ -197,7 +197,7 @@ def main ():
                     erase (star)
                 plusStar = False
             elif inp is not None:
-                echo(term.move(21,0))
+                echo(term.move(term.height, 0))
                 break
             melt ()
             for starKey, starVal in stars.items():
