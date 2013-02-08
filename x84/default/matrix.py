@@ -157,6 +157,9 @@ def main():
             term.bold_cyan(str(term.width)),
             term.cyan(u'x'),
             term.bold_cyan(str(term.height)),),
+        u'\r\n',
+        term.bold(u'ENCOdiNG'), u': ',
+        term.cyan_underline(session.encoding),
         u'\r\n\r\n',
         anon_allowed_msg if enable_anonymous else u'',
         )))
