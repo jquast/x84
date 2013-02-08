@@ -1,44 +1,51 @@
 """ System info for x/84 BBS, https://github.com/jquast/x84 """
 
 def main ():
-    from x84.bbs import getsession, Ansi, echo, getch, from_cp437
+    from x84.bbs import getsession, getterminal, Ansi, echo, getch, from_cp437
     from x84.engine import __url__ as url
     import platform
     import random
     import sys
     import os
+    session, term = getsession(), getterminal()
+    session.activity = 'System Info'
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'plant.ans',)
-    body = u'\r\n'.join((
-        ' Authors:',
-        '   Johannes Lundberg <johannes.lundberg@gmail.com>',
-        '   Jeffrey Quast <dingo@1984.ws>',
-        '   Wijnand Modderman-Lenstra <maze@pyth0n.org>',
-        ' Artwork: spidy!food, hellbeard!impure',))
-    PAK = 'Press any key ... (or +-*)'
-    session = getsession()
-    term = session.terminal
-    melt_colors = ([term.normal]
-            + [term.bold_white]*16
-            + [term.bold_cyan]*16
-            + [term.bold_blue])
     system, node, release, version, machine, processor = platform.uname()
-    xxx = from_cp437(open(artfile).read()) if os.path.exists(artfile) else u''
-    otxt = u''.join((
-        xxx,
-        body, u'\r\n',
-        u' System: %s %s %s\r\n' % (system, release, machine),
-        u' Software: X/84, %s; ' % (url,),
-        platform.python_implementation(),
-        (platform.python_version()
-            if hasattr(platform, 'python_implementation')
-            else '%s %s\r\n' % ('.'.join(map(str, sys.version_info[:3])))),
-        '-'.join(map(str, sys.version_info[3:])),
-        u'\r\n',
-        PAK.center(term.width).rstrip() + '\r\n',))
-    print otxt
-    width = max([len(Ansi(line)) for line in otxt.splitlines()])
-    height = len(otxt.splitlines())
-    numStars = int((term.width *term.height) *.03)
+    body = [u'AUthORS:',
+            u'Johannes Lundberg',
+            u'Jeffrey Quast',
+            u'Wijnand Modderman-Lenstra',
+            u'',
+            u'ARtWORk:',
+            u'spidy!food,',
+            u'hellbeard!impure',
+            u'\r\n',
+            u'SYStEM: %s %s %s' % (system, release, machine),
+            u'SOftWARE: X/84',
+            url,
+            u'\r\n',
+            (platform.python_implementation() + u' '
+                + '-'.join(map(str, sys.version_info[3:])))
+            + u' ' + (platform.python_version()
+                if hasattr(platform, 'python_implementation')
+                else u'.'.join(map(str, sys.version_info[:3]))),
+            ]
+    melt_colors = (
+            [term.normal]
+            + [term.blue]*2
+            + [term.bold_blue]*2
+            + [term.bold_cyan]
+            + [term.bold_white]
+            + [term.normal])
+    art = from_cp437(open(artfile).read()) if os.path.exists(artfile) else u''
+    otxt = list(art.splitlines())
+    for n, b in enumerate(body):
+        while n > len(otxt):
+            otxt += [u'',]
+        otxt[n] = otxt[n][:int(term.width/2.5)] + u' ' + b
+    width = max([len(Ansi(line)) for line in otxt])
+    height = len(otxt)
+    numStars = int((term.width *term.height) *.002)
     stars = dict([(n, (random.choice('\\|/-'),
       float(random.choice(range(term.width))),
       float(random.choice(range(term.height))))) for n in range(numStars)])
@@ -48,9 +55,8 @@ def main ():
     wind = (0.7, 0.1, 0.01, 0.01)
 
     def refresh ():
-        session.activity = 'System Info'
         echo(u'\r\n\r\n')
-        if term.width < width+3:
+        if term.width < width + 3:
             echo (term.bold_red + 'your screen is too thin! (%s/%s)\r\n' \
               'press any key...' % (term.width, width+5))
             getch ()
@@ -62,9 +68,11 @@ def main ():
             return (None, None)
         x = (term.width /2) -(width /2)
         y = (term.height /2) -(height /2)
-        echo(u'\r\n' * term.height)
-        echo (''.join([term.move(y+abs_y, x) + data \
-              for abs_y, data in enumerate(otxt)]))
+        echo(u''.join((
+            term.normal,
+            (u'\r\n' + term.clear_eol) * term.height,
+            u''.join([term.move(y + abs_y, x) + line
+                for abs_y, line in enumerate(otxt)]),)))
         return x, y
 
     txt_x, txt_y = refresh ()
@@ -72,9 +80,9 @@ def main ():
         return
 
     def charAtPos(y, x, txt_y, txt_x):
-        return ' ' if y-txt_y < 0 or y-txt_y >= height \
-            or x-txt_x < 0 or x-txt_x >= len(otxt[y-txt_y]) \
-            else otxt[y-txt_y][x-txt_x]
+        return (u' ' if y-txt_y < 0 or y-txt_y >= height
+                or x-txt_x < 0 or x-txt_x >= len(otxt[y-txt_y])
+                else otxt[y-txt_y][x-txt_x])
 
     def iterWind(xs, ys, xd, yd):
         # an easterly wind
@@ -86,11 +94,16 @@ def main ():
         return xs, ys, xd, yd
 
     def iterStar(c, x, y):
-        if c == '\\': char = '|'
-        elif c == '|': char = '/'
-        elif c == '/': char = '-'
-        elif c == '-': char = '\\'
-        x += wind[0]; y += wind[1]
+        if c == '\\':
+            char = '|'
+        elif c == '|':
+            char = '/'
+        elif c == '/':
+            char = '-'
+        elif c == '-':
+            char = '\\'
+        x += wind[0]
+        y += wind[1]
         if x < 1 or x > term.width:
             x = (1.0 if x > term.width
                     else float(term.width))
@@ -128,22 +141,37 @@ def main ():
             echo (term.move(int(y), int(x)) + melt_colors[-1] + star)
 
     with term.hidden_cursor():
-        while True:
+        while txt_x is not None and txt_y is not None:
             if session.poll_event('refresh'):
                 txt_x, txt_y = refresh()
+                continue
             inp = getch(tm_out)
-            if inp in (u'+',):
+            if inp in (term.KEY_UP, 'k'):
                 if tm_out >= tMIN:
                     tm_out -= tSTEP
-            elif inp in (u'-',):
+            elif inp in (term.KEY_DOWN, 'j'):
                 if tm_out <= tMAX:
                     tm_out += tSTEP
+            elif inp in (term.KEY_LEFT, 'h'):
+                numStars = int(numStars * .5)
+                stars = dict([(n, (random.choice('\\|/-'),
+                  float(random.choice(range(term.width))),
+                  float(random.choice(range(term.height)))))
+                  for n in range(numStars)])
+            elif inp in (term.KEY_RIGHT, 'l') and numStars < 1500:
+                numStars = int(numStars * 1.5)
+                stars = dict([(n, (random.choice('\\|/-'),
+                  float(random.choice(range(term.width))),
+                  float(random.choice(range(term.height)))))
+                  for n in range(numStars)])
             elif inp in (u'*',) and not plusStar:
                 plusStar = True
             elif inp in (u'*',) and plusStar:
                 for star in stars:
                     erase (star)
                 plusStar = False
+            elif inp is not None:
+                break
             melt ()
             for starKey, starVal in stars.items():
                 erase (starKey)
