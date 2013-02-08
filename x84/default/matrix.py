@@ -134,6 +134,7 @@ def main():
     from x84.engine import __url__ as url
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
+    session.activity = u'Logging in'
     handle = (session.env.get('USER', '').decode('iso8859-1', 'replace'))
     anon_allowed_msg = u"'anonymous' login enabled.\r\n"
     enable_anonymous = ini.CFG.getboolean('matrix', 'enable_anonymous')
@@ -163,6 +164,7 @@ def main():
     for n in range(0, max_tries):
         handle = get_username(handle)
         if handle != u'':
+            session.activity = u'Logging in'
             user = get_user(handle)
             try_pass(user)
             echo(u'\r\n\r\n')
