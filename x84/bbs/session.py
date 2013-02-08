@@ -18,7 +18,7 @@ import x84.bbs.cp437
 import x84.bbs.ini
 
 SESSION = None
-logger = logging.getLogger()  # deprecation warning !
+logger = logging.getLogger()
 
 
 def getsession():
@@ -218,7 +218,6 @@ class Session(object):
         Scripts manipulate control flow of scripts using goto and gosub.
         """
         from x84.bbs.exception import Goto, Disconnected
-
         logger = logging.getLogger()
 
         def error_recovery():
@@ -266,7 +265,7 @@ class Session(object):
                 terrs = list()
                 for line in traceback.format_tb(e_tb):
                     for subln in line.split('\n'):
-                        terrs.append (subln)
+                        terrs.append(subln)
                 terrs.extend(traceback.format_exception_only(e_type, e_value))
                 for etxt in terrs:
                         logger.error(etxt.rstrip())
@@ -333,13 +332,14 @@ class Session(object):
             ('sid', self.sid,),
             ('handle', self.user.handle,),
             ('script', (self._script_stack[-1][0]
-                if len(self._script_stack) else None)),
-            ('ttyrec', self._fp_ttyrec.name if self._fp_ttyrec is not None else u'',),
+                        if len(self._script_stack) else None)),
+            ('ttyrec',
+             self._fp_ttyrec.name if self._fp_ttyrec is not None else u'',),
             ('connect_time', self.connect_time),
             ('idle', self.idle),
             ('activity', self.activity),
             ('encoding', self.encoding),
-            ))
+        ))
 
     def buffer_event(self, event, data=None):
         """
@@ -358,7 +358,7 @@ class Session(object):
             sender, mesg = data
             if mesg == 'AYT':
                 self.send_event('route',
-                        (sender, 'ACK', self.sid, self.user.handle,))
+                               (sender, 'ACK', self.sid, self.user.handle,))
                 # becomes 'ACK' of data 'sid, handle'
                 logger.debug('reply-to global AYT')
                 return True
@@ -495,9 +495,9 @@ class Session(object):
                 event, data = self.pipe.recv()
                 retval = self.buffer_event(event, data)
                 logger.debug('event %s %s.', event,
-                    'caught' if event in events else
-                    'handled' if retval is not None else
-                    'buffered',)
+                             'caught' if event in events else
+                             'handled' if retval is not None else
+                             'buffered',)
                 if event in events:
                     return (event, self._event_pop(event))
             if timeout == -1:
@@ -560,7 +560,6 @@ class Session(object):
         if self.is_recording:
             self.stop_recording()
 
-
     @property
     def is_recording(self):
         """
@@ -586,8 +585,8 @@ class Session(object):
         digit = 0
         while True:
             self._ttyrec_fname = '%s%d-%s.ttyrec' % (
-                    time.strftime('%Y%m%d.%H%M%S'), digit,
-                    self.sid.split(':', 1)[0],)
+                time.strftime('%Y%m%d.%H%M%S'), digit,
+                self.sid.split(':', 1)[0],)
             if not os.path.exists(self._ttyrec_fname):
                 break
             digit += 1
