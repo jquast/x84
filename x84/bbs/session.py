@@ -303,8 +303,8 @@ class Session(object):
                              if glyph in x84.bbs.cp437.CP437
                              and not glyph in self.TRIM_CP437
                              else unicode(
-                                 text[idx], encoding, 'replace').translate(
-                                     None, self.TRIM_CP437))
+                                 text[idx].translate(None, self.TRIM_CP437),
+                                 encoding, 'replace'))
                             for (idx, glyph) in enumerate(ucs)])
         else:
             encoding = self.encoding
