@@ -133,9 +133,9 @@ class ConnectTelnet (threading.Thread):
     Accept new Telnet Connection and negotiate options.
     """
     DEBUG = False
-    TIME_NEGOTIATE = 0.50
-    TIME_WAIT = 1.25
-    TIME_POLL = 0.05
+    TIME_NEGOTIATE = 1.50
+    TIME_WAIT = 2.25
+    TIME_POLL = 0.15
     TTYPE_UNDETECTED = 'unknown'
     WINSIZE_TRICK = (
         ('vt100', ('\x1b[6n'), re.compile(chr(27) + r"\[(\d+);(\d+)R")),
