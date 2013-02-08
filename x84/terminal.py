@@ -33,7 +33,7 @@ def init_term(pipe, env):
     return Terminal(env.get('TERM', 'unknown'),
                     IPCStream(pipe),
                     int(env.get('LINES', '24')),
-                    int(env.get('COLUMNS', '80')
+                    int(env.get('COLUMNS', '80'),
                         encoding=encoding))
 
 
