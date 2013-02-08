@@ -23,10 +23,10 @@ def refresh():
             ('o', 'NE liNERS'),
             ('w', "hO'S ONliNE"),
             ('n', 'EWS'),
-            ('s', 'YStEM iNfO'),
-            ('$', 'EAthER fORECASt'),
-            ('e', 'Edit PROfilE'),
-            ('!', 'POSt A MSG'),
+            ('s', 'YS. iNfO'),
+            ('f', 'fORECASt'),
+            ('e', 'dit PROfilE'),
+            ('p', 'OSt A MSG'),
             ('r', 'EAd All MSGS'),
             ('g', 'OOdbYE /lOGOff'),)
     buf_str = u''
@@ -74,13 +74,13 @@ def main():
             gosub('online')
         elif choice == u'n':
             gosub('news')
-        elif choice == u'$':
+        elif choice == u'f':
             gosub('weather')
-        elif choice == u'p':
+        elif choice == u'e':
             gosub('profile')
         elif choice == u't':
             gosub('tetris')  # currently hidden (jojo's)
-        elif choice == u'!':
+        elif choice == u'p':
             gosub('writemsg')
         elif choice == u'r':
             gosub('readmsgs')
