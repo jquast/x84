@@ -4,9 +4,10 @@
 
 
 def refresh():
-    from x84.bbs import getterminal, echo, Ansi, showcp437
+    from x84.bbs import getsession, getterminal, echo, Ansi, showcp437
     import os
-    term = getterminal()
+    session, term = getsession(), getterminal()
+    session.activity = u'Main menu'
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'main.asc')
     echo(u''.join((
         u'\r\n\r\n',
