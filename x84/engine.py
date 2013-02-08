@@ -257,6 +257,16 @@ def _loop(telnetd):
                 elif event == 'output':
                     client.send_unicode(ucs=data[0], encoding=data[1])
 
+                elif event == 'remote-disconnect':
+                    for o_client, o_pipe, o_lock in terminals():
+                        if o_client.addrport() == data[0]:
+                            send_event, send_val = data[1], data[2:]
+                            pipe.send(('exception',
+                                Disconnected('disconnected by %s' % (
+                                    client.addrport(),)),))
+                            unregister(client, pipe, lock)
+                            break
+
                 elif event == 'route':
                     for o_client, o_pipe, o_lock in terminals():
                         if o_client.addrport() == data[0]:
