@@ -1,11 +1,8 @@
 """ Who's online script for X/84, https://github.com/jquast/x84 """
-
-# TODO: like 'iostat', only show prompt & headings once per screenful,
-# and of course, bake in various functionality like disconnect, chat
-
 import time
 SELF_ID = -1
-
+# slen: returns terminal width of ascii representation of #sessions
+slen = lambda sessions: len(u'%d' % (len(sessions),))
 
 def request_info(session_ids):
     # send individual info-req messages
@@ -15,13 +12,24 @@ def request_info(session_ids):
         session.send_event('route', (sid, 'info-req', session.sid,))
 
 
+def banner():
+    from x84.bbs import getterminal
+    term = getterminal()
+    return u''.join((
+        u''.center((term.width / 2) - 3),
+        term.green_underline('.'),
+        term.green_bold_underline('.'),
+        term.underline('.'),
+        term.bold_green(" whO'S ONliNE"),))
+
+
 def main(login_handle=None):
     from x84.bbs import getsession, getterminal, getch, echo
     session, term = getsession(), getterminal()
     session.activity = u"Who's Online"
     poll_ayt = 5
-    fresh = 10
-    ayt_lastfresh = time.time()
+    fresh = 1
+    ayt_lastfresh = 0
     def broadcast_AYT(last_update):
         # broadcast are-you-there
         if time.time() - last_update > poll_ayt:
@@ -29,14 +37,9 @@ def main(login_handle=None):
             last_update = time.time()
         return last_update
 
-    echo(u'\r\n\r\n')
-    echo(u''.center((term.width / 2) - 3))
-    echo(term.underline('...'))
-    echo(term.bold_green(" whO'S ONliNE"))
-    echo(u'\r\n\r\n')
-
     sessions = dict()
     dirty = True
+    cur_row = 0
     while True:
         ayt_lastfresh = broadcast_AYT(ayt_lastfresh)
         inp = getch(0.5)
@@ -51,10 +54,8 @@ def main(login_handle=None):
         if data is not None:
             sid, handle = data
             if sid in sessions:
-                print 'ACK dupe'
                 sessions[sid]['handle'] = handle
             else:
-                print 'NEW user'
                 sessions[sid] = dict((
                     ('handle', handle),
                     ('lastfresh', time.time()),))
@@ -63,10 +64,8 @@ def main(login_handle=None):
         # update sessions that respond to info-req
         data = session.poll_event('info-ack')
         if data is not None:
-            print 'got info', data
             sid, attrs = data
             if sessions.get(sid, dict()).get('activity') != attrs['activity']:
-                print 'new activity'
                 # and refresh screen if activity changes
                 dirty = True
             sessions[sid] = attrs
@@ -84,58 +83,81 @@ def main(login_handle=None):
 
         # prune users who haven't responded to AYT
         for sid, attrs in sessions.items()[:]:
-            if time.time() - attrs['lastfresh'] > fresh:
-                print 'delete', time.time() - attr['lastfresh'], fresh
+            if time.time() - attrs['lastfresh'] > (poll_ayt * 2):
                 del sessions[sid]
                 dirty = True
 
         if dirty:
-            refresh(sessions)
+            otxt = update(sessions)
+            olen = len(otxt.splitlines())
+            if 0 == cur_row or (cur_row + olen) >= term.height:
+                otxt_b = banner()
+                otxt_h = heading(sessions)
+                cur_row = len(otxt_b.splitlines()) + len(otxt_h.splitlines())
+                echo(u'\r\n'.join((u'\r\n\r\n', otxt_b, otxt_h, otxt)))
+            else:
+                echo(u''.join((
+                    u'\r\n',
+                    '-'.center(term.width).rstrip(),
+                    u'\r\n')))
+                echo(otxt)
+            cur_row += olen
             dirty = False
 
-def refresh(sessions):
-    from x84.bbs import getsession, getterminal, ini, echo, Ansi
+def update(sessions):
+    from x84.bbs import getsession, getterminal, ini
+    session, term = getsession(), getterminal()
+    max_user = ini.CFG.getint('nua', 'max_user')
+    return u'\r\n'.join(([u''.join((
+            u'%*d' % (4 + slen(sessions), node),
+            u'%4is' % (attrs.get('idle', 0),), u' ',
+            u'%-*s' % (max_user, (
+                attrs.get('handle', u'** Connecting')
+                if attrs.get('handle') != session.user.handle
+                else session.user.handle),),
+            term.green(u' - '),
+            term.bold_green((attrs.get('activity', u''))
+                if attrs.get('handle') != session.user.handle else
+                session.activity),
+            )) for node, (sid, attrs) in get_nodes(sessions)]))
+
+
+def get_nodes(sessions):
+    return enumerate(sorted(sessions.items()))
+
+
+def heading(sessions):
+    from x84.bbs import getsession, getterminal, ini
+    session, term = getsession(), getterminal()
+    max_user = ini.CFG.getint('nua', 'max_user')
+    return u'\r\n'.join((
+        u'\r\n'.join([pline.center(term.width)
+            for pline in prompt().splitlines()]),
+        u'\r\n',
+        term.green_underline(u''.join((
+            'node'.rjust(4 + slen(sessions)),
+            'idle'.rjust(5),
+            ' handle'.ljust(max_user + 3),
+            'activity',))),))
+
+def prompt():
+    from x84.bbs import getsession, getterminal, Ansi
     session, term = getsession(), getterminal()
     decorate = lambda key, desc: u''.join((
-        term.green(u'('), term.green_underline(key,),
-        term.green(u')'), term.bold(desc.split()[0]),
-        u' '.join(desc.split()[1:]),
-        u' ',))
-    echo(u'\r\n\r\n')
-    for idx, (sid, attrs) in enumerate(sorted(sessions.items())):
-        echo(u''.join((
-            term.green(u'[ '),
-            term.bold_green('%*d' % (len(u'%d' % (len(sessions),)), idx,)),
-            term.green(u' ]'),
-            '%4is idle' % attrs.get('idle', 0),
-            term.bold_green(': '),
-            term.bold('%-*s' % (
-                ini.CFG.getint('nua', 'max_user'),
-                attrs.get('handle', u''))),
-            term.green(u' - '),
-            attrs.get('activity', u''),
-            u'\r\n',
-            )))
-    echo(u'\r\n')
-    if 'sysop' in session.user.groups:
-        echo(Ansi(u''.join(((u' '),
-            decorate('c', 'hAt'),
-            decorate('p', 'lAYbACk'),
-            decorate('w', 'AtCh'),
-            decorate('d', 'iSCONNECt'),
-            decorate('s', 'ENd MSG'),
-            decorate('e', 'diT USR'),
-            decorate('Escape/q', 'Uit'),
-            decorate('Spacebar', 'REfRESh'),
-            term.green_reverse(':'),
-            u' ',
-            ))).wrap(term.width))
-    else:
-        echo(Ansi(u''.join(((u' '),
-            decorate('c', 'hAt'),
-            decorate('s', 'ENd MSG'),
-            decorate('Escape/q', 'Uit'),
-            decorate('Spacebar', 'REfRESh'),
-            term.green_reverse(':'),
-            u' ',
-            ))).wrap(term.width))
+        u'(', term.green_underline(key,),
+        u')', term.reverse_green(desc.split()[0]), u' ',
+        u' '.join(desc.split()[1:]), u' ',))
+    return Ansi(u''.join((
+        term.green_reverse(':keys'), u' ',
+        decorate('c', 'hAt USR'),
+        decorate('s', 'ENd MSG'),
+        (u''.join((
+        decorate('p', 'lAYbACk REC'),
+        decorate('w', 'AtCh liVE'),
+        decorate('d', 'iSCONNECt SiD'),
+        decorate('e', 'diT USR'),
+        decorate('v', 'iEW SiD AttRS'),
+        u' ',)) if 'sysop' in session.user.groups else u''),
+        decorate('Escape/q', 'Uit'),
+        decorate('Spacebar', 'REfRESh'),
+        ))).wrap(int(term.width * .7))
