@@ -156,7 +156,7 @@ layout = [
 
 def play():
   import os
-  from x84.bbs import getterminal, getch
+  from x84.bbs import getterminal, getch, from_cp437, Ansi
   from x84.bbs import echo as echo_unbuffered
   term = getterminal()
   field = []
@@ -198,18 +198,18 @@ def play():
   def echo(s):
     global charcache
     charcache += s
+  assert term.height > (field_height + 1)
   echo_unbuffered(u''.join((
       u'\r\n\r\n',
       u'REAdY YOUR tERMiNAl %s ' % (term.bold_blue('(!)'),),
       u'\r\n\r\n',
       u'%s PRESS ANY kEY' % (term.bold_black('...'),),
-      u'\r\n',)))
+      )))
   getch()
-  artfile = os.path.join(os.path.dirname(__file__), 'tetris.ans' )
+  artfile = os.path.join(os.path.dirname(__file__), 'tetris.ans')
+  echo_unbuffered(u'\r\n' * (term.height))  # cls
   if os.path.exists(artfile):
-      #showcp437( artfile)
-      pass
-  echo_unbuffered(u'\r\n' * (term.height + 1))  # cls
+      echo_unbuffered(from_cp437(open(artfile).read()))
 
   def gotoxy(x,y):
     echo (term.move(y,x))
@@ -248,7 +248,7 @@ def play():
       gotoxy(field_width+rr.x1*2,2+y)
       for x in range(rr.x1,rr.x2):
         lastcolor = plotblock(field[y][x],lastcolor)
-    echo('\33[0m')
+    echo(term.normal)
     rr.clean()
   def drawfieldbig():
     lastcolor=''
@@ -256,7 +256,7 @@ def play():
       gotoxy(field_width,2+y)
       for x in range(field_width):
         lastcolor = plotblock(field[y][x],lastcolor)
-    echo('\33[0m')
+    echo(term.normal)
   def drawfield():
     lastcolor=''
     for y in range(0,field_height,2):
@@ -293,7 +293,7 @@ def play():
           echo('\33[0;'+fg+bg+'m')
           echo(c)
           lastcolor = color
-    echo('\33[0m')
+    echo(term.normal)
 
   #p    = -1  # Current piece type
   nextpiece = randint(0,len(layout)-1)
@@ -383,7 +383,7 @@ def play():
   rr.merge(0,0,field_width,field_height)
 
   #cursor_hide()
-  buffer = ''
+  buf = ''
   while 1:
     redrawfieldbig(rr)
     #gotoxy(0,0)
@@ -393,8 +393,8 @@ def play():
     slice=nexttick-timenow()
     if slice <0:
       slice=0
-    echo(buffer)
-    buffer = ''
+    echo(buf)
+    buf = ''
     flush()
     key=getch(slice+0.01)
     now=timenow()
