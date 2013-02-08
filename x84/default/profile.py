@@ -16,6 +16,7 @@ def process_keystroke(lightbar, inp, user):
     from x84.bbs import LineEditor, Ansi
     from x84.default.nua import set_email, set_location
     session, term = getsession(), getterminal()
+    invalid = u'\r\niNVAlid.'
     if lightbar is not None:
         echo(lightbar.process_keystroke(inp))
         if lightbar.moved:
@@ -42,6 +43,50 @@ def process_keystroke(lightbar, inp, user):
             ch = getch()
             if str(ch).lower() == 'y':
                 session.env['TERM'] = TERM
+                break
+            elif str(ch).lower() == 'n':
+                break
+        return True
+    elif inp in (u'w', u'W') or (inp == term.KEY_ENTER and
+                                 lightbar is not None and
+                                 lightbar.selection[0] == u'w'):
+        echo(u'\r\ntERMiNAl Width: ')
+        width = LineEditor(3, str(term.width)).read()
+        try:
+            width = int(width)
+        except ValueError:
+            echo(invalid)
+            return True
+        if width < 0 or width > 999:
+            echo(invalid)
+            return True
+        echo(u"\r\n\r\nset COLUMNS=%d? [yn]" % (width,))
+        while True:
+            ch = getch()
+            if str(ch).lower() == 'y':
+                term.columns = width
+                break
+            elif str(ch).lower() == 'n':
+                break
+        return True
+    elif inp in (u'h', u'H') or (inp == term.KEY_ENTER and
+                                 lightbar is not None and
+                                 lightbar.selection[0] == u'h'):
+        echo(u'\r\ntERMiNAl hEiGht: ')
+        height = LineEditor(3, str(term.height)).read()
+        try:
+            height = int(height)
+        except ValueError:
+            echo(invalid)
+            return True
+        if height < 0 or height > 999:
+            echo(invalid)
+            return True
+        echo(u"\r\n\r\nset LINES=%d? [yn]" % (height,))
+        while True:
+            ch = getch()
+            if str(ch).lower() == 'y':
+                term.rows = height
                 break
             elif str(ch).lower() == 'n':
                 break
@@ -166,9 +211,11 @@ def refresh(lightbar):
     session, term = getsession(), getterminal()
     lightbar.update(((u'c', u'ChARACtER ENCOdiNG',),
                      (u't', u'tERMiNAl tYPE',),
+                     (u'h', u'tERMiNAl hEiGht',),
+                     (u'w', u'tERMiNAl Width',),
                      (u'l', u'lOCAtiON',),
                      (u'e', u'EMAil',),
-                     (u'm', u'ESG',),
+                     (u'm', u'MESG',),
                      (u'.', u'.PlAN',),
                      (u'x', u'EXPERt MOdE',),
                      (u'q', u'QUit',)))
@@ -197,8 +244,8 @@ def main(user=None):
             if is_dumb(session, term):
                 dirty = dummy_pager(user)
             else:
-                lightbar = Lightbar(height=11, width=wide,
-                                    yloc=term.height - 12,
+                lightbar = Lightbar(height=14, width=wide,
+                                    yloc=term.height - 14,
                                     xloc=(term.width / 2) - (wide / 2))
                 lightbar.alignment = 'center'
                 lightbar.ypadding = 2
@@ -229,6 +276,10 @@ def lborder(lightbar, user):
         val = session.encoding if is_self else u'x'
     elif sel == 't':
         val = session.env.get('TERM', 'unknown') if is_self else u'x'
+    elif sel == 'h':
+        val = str(term.height)
+    elif sel == 'w':
+        val = str(term.width)
     elif sel == 'l':
         val = user.location.strip()
         if 'sysop' in session.user.groups:
