@@ -54,10 +54,12 @@ def main():
     session, term = getsession(), getterminal()
 
     choice = -1
+    norefresh = False
     while True:
-        if choice is not None:
+        if choice is not None and not norefresh:
             refresh()
         choice = getch(1)
+        norefresh = False
         if choice == u'*':
             goto('main')  # reload main menu using hidden option '*'
         elif choice == u'b':
@@ -84,3 +86,5 @@ def main():
             gosub('readmsgs')
         elif choice == u'g':
             goto('logoff')
+        else:
+            norefresh = True
