@@ -42,7 +42,7 @@ class Session(object):
     # pylint: disable=R0902,R0904
     #        Too many instance attributes (29/7)
     #        Too many public methods (25/20)
-    TRIM_CP437 = u''.join((chr(14), chr(15),))
+    TRIM_CP437 = u''.join((unichr(14), unichr(15),))
 
     def __init__(self, terminal, pipe, sid, env, encoding='utf8'):
         """
@@ -301,6 +301,7 @@ class Session(object):
             text = ucs.encode(encoding, 'replace')
             ucs = u''.join([(unichr(x84.bbs.cp437.CP437.index(glyph))
                              if glyph in x84.bbs.cp437.CP437
+                             and not glyph in self.TRIM_CP437
                              else unicode(
                                  text[idx], encoding, 'replace').translate(
                                      None, self.TRIM_CP437))
