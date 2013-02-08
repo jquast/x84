@@ -181,11 +181,11 @@ def get_abort():
     return False
 
 
-def main():
+def main(msg=None):
     from x84.bbs import getsession, getterminal
     from x84.bbs.msgbase import Msg
     session, term = getsession(), getterminal()
-    msg = Msg()
+    msg = Msg() if msg is None else msg
 
     while True:
         session.activity = 'Writing a msg'
