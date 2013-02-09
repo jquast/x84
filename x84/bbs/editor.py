@@ -280,7 +280,8 @@ class ScrollingEditor(AnsiWindow):
         """
         Returns number of columns from right-edge that the horizontal editor
         signals bell=True, indicating that the end is near and the carriage
-        should be returned.
+        should be soon returned. This also indicates the distance from margin
+        a user may type into until ScrollingEditor horizontally shifts.
         """
         return int(float(self.visible_width) * (float(self.margin_pct) * .01))
 
@@ -478,7 +479,7 @@ class ScrollingEditor(AnsiWindow):
             return u''
         # append to input
         self.content += u_chr
-        if self._horiz_pos >= (self.visible_width):
+        if self._horiz_pos >= (self.visible_width - self.margin_amt):
             # scrolling is required,
             return self.refresh()
         # return character appended as output, ensure .fixate() is used first!
