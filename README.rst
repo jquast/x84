@@ -97,19 +97,19 @@ X/84 does not require privileged access, and its basic configuration binds to po
 
 **Linux** using privbind_, run the BBS as user 'bbs', group 'adm'::
 
-``sudo privbind -u bbs -g adm x84``
+sudo privbind -u bbs -g adm x84
 
 **Solaris** 10, grant net_privaddr privilege to user 'bbs'::
 
-``usermod -K defaultpriv=basic,net_privaddr bbs``
+usermod -K defaultpriv=basic,net_privaddr bbs
 
 **BSD**, redirection using pf(4)::
 
-``pass in on egress inet from any to any port telnet rdr-to 192.168.1.11 port 6023``
+pass in on egress inet from any to any port telnet rdr-to 192.168.1.11 port 6023
 
-**Other**, Usingirect socat_, listen on 192.168.1.11 and for each connection, fork as 'nobody', and pipe the connection to 127.0.0.1 port 6023. This has the disadvantage that x84 is unable to identify the originating IP.
+**Other**, Usingirect socat_, listen on 192.168.1.11 and for each connection, fork as 'nobody', and pipe the connection to 127.0.0.1 port 6023. This has the disadvantage that x84 is unable to identify the originating IP::
 
-``sudo socat -d -d -lmlocal2 TCP4-LISTEN:23,bind=192.168.1.11,su=nobody,fork,reuseaddr TCP4:127.0.0.1:6023``
+sudo socat -d -d -lmlocal2 TCP4-LISTEN:23,bind=192.168.1.11,su=nobody,fork,reuseaddr TCP4:127.0.0.1:6023
 
 Developer Environment
 =====================
