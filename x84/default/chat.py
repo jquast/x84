@@ -121,7 +121,8 @@ def show_say(handle, mesg):
     return u''.join((
         time.strftime('%H:%M'), u' ',
         term.bold_black(u'<'),
-        (term.bold_red(u'@') if 'sysop' in get_user(handle).groups
+        (term.bold_red(u'@') if handle != 'anonymous'
+            and 'sysop' in get_user(handle).groups
             else u''),
         (handle if handle != session.handle
             else term.bold(handle)),
@@ -280,7 +281,9 @@ def main(channel=None, caller=None):
         if session.poll_event('refresh') or (
                 inp in (term.KEY_REFRESH, unichr(12))):
             pager = get_pager(pager)
+            saved_inp = readline.content
             readline = get_inputbar(pager)
+            readline.content = saved_inp
             echo(refresh(pager, readline, init=True))
             dirty = None
 
@@ -318,13 +321,12 @@ def main(channel=None, caller=None):
                 echo(readline.refresh())
             elif 0 == len(otxt):
                 if type(inp) is int:
-                    echo(term.normal)
                     echo(pager.process_keystroke(inp))
             else:
                 echo(u''.join((
                     readline.fixate(-1),
                     readline.colors.get('highlight', u''),
-                    otxt,)))
+                    otxt, term.normal)))
 
         # update pager contents. Its a lot for 9600bps ..
         if dirty is not None and time.time() - dirty > POLL_OUT:
