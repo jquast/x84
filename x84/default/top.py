@@ -3,13 +3,7 @@ Post-login screen for x/84, http://github.com/jquast/x84
 
 When handle is None or u'', an in-memory account 'anonymous' is created
 and assigned to the session.
-
-Otherwise the user record of the handle passed is retreived and assigned.
 """
-
-import os
-from x84.bbs import echo, getsession, getterminal, showcp437, Selector, User
-from x84.bbs import get_user, gosub, getch, goto
 
 # generated using lolcat ..
 BADGE256 = (
@@ -24,26 +18,23 @@ BADGE256 = (
 
 
 def display_intro():
-    # try to display something impressive, yet compatible
+    from x84.bbs import getsession, getterminal, showcp437, echo
+    import os
     session, term = getsession(), getterminal()
-    artfile = os.path.join(os.path.dirname(__file__), 'art', '*.ans'
-            if term.number_of_colors != 0 else '*.asc')
-
-    if not session.user.get('expert', False) and (
-            session.env.get('TERM') != 'unknown'):
-        echo(term.move(0, 0) + term.clear)
-
-    # color terminal gets art
-    if (session.env.get('TERM') != 'unknown'
-            and term.number_of_colors != 0):
-        for line in (showcp437(artfile)):
-            echo(line)
-
+    # display random artwork ..
+    artfile = os.path.join(os.path.dirname(__file__), 'art',
+            '*.ans' if term.number_of_colors != 0 else '*.asc')
+    echo(u'\r\n\r\n')
+    for line in (showcp437(artfile)):
+        echo(line)
     if term.number_of_colors == 256:
-        echo('\r\n\r\n' + BADGE256)
+        echo(u''.join((
+            term.normal, '\r\n\r\n',
+            BADGE256, u'\r\n')))
 
 
 def get_ynbar():
+    from x84.bbs import getterminal, Selector
     term = getterminal()
     ynbar = Selector(yloc=term.height - 1,
                      xloc=term.width - 30,
@@ -56,38 +47,40 @@ def get_ynbar():
 
 
 def redraw_quicklogin(ynbar):
+    from x84.bbs import getterminal
     prompt_ql = u' QUiCk lOGiN ?! '
     term = getterminal()
-    rstr = u''
-    rstr += term.move(ynbar.yloc - 1, ynbar.xloc) + term.normal
-    rstr += term.bold_blue(prompt_ql)
-    rstr += ynbar.refresh()
-    return rstr
+    return u''.join((
+            term.move(ynbar.yloc - 1, ynbar.xloc),
+            term.normal,
+            term.bold_blue(prompt_ql),
+            ynbar.refresh(),
+            ))
 
 
 def main(handle=None):
+    from x84.bbs import getsession, getterminal, echo, getch
+    from x84.bbs import goto, gosub, User, get_user
     import logging
     import time
     session, term = getsession(), getterminal()
     session.activity = 'top'
     logger = logging.getLogger()
-    # 1. determine user record,
-    if handle in (None, 'anonymous'):
-        logger.warn('anonymous login (source=%s).', session.source)
-        user = User(u'anonymous')
+    # 1. determine & assign user record,
+    if handle in (None, u'', 'anonymous',):
+        logger.warn('anonymous login by %s.', session.sid)
+        session.user = User(u'anonymous')
     else:
         logger.info('%r logged in.', handle)
-        user = get_user(handle)
-    # 2. assign session user
-    session.user = user
+        session.user = get_user(handle)
 
-    # 3. update call records
+    # 2. update call records
     session.user.calls += 1
     session.user.lastcall = time.time()
     if session.user.handle != 'anonymous':
         session.user.save()
 
-    # 4. if no preferred charset run charset.py selector
+    # 3. if no preferred charset run charset.py selector
     if session.user.get('charset', None) is None:
         gosub('charset')
     else:
@@ -99,10 +92,9 @@ def main(handle=None):
         echo(u'\r\n\r\nUsing preferred charset, %s%s.\r\n' % (
             session.encoding, fun))
 
-    # 5. impress with art, prompt for quick login (goto 'main'),
+    # 4. impress with art, prompt for quick login (goto 'main'),
     display_intro()
-    if (session.env.get('TERM') == 'unknown'
-            or session.user.get('expert', False)):
+    if session.user.get('expert', False):
         echo(u'\r\n QUiCk lOGiN? [yn]')
         while True:
             yn = getch(1)
