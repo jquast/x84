@@ -238,7 +238,8 @@ class Session(object):
         while len(self._script_stack):
             logger.debug('script_stack: %r', self._script_stack)
             try:
-                return self.runscript(*self._script_stack.pop())
+                self.runscript(*self._script_stack.pop())
+                continue
             except Goto, err:
                 logger.debug('Goto: %s', err)
                 self._script_stack = [err[0] + tuple(err[1:])]
