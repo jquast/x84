@@ -295,7 +295,6 @@ def _loop(telnetd):
                             else:
                                 o_pipe.send((event, data,))
                                 o_lock.release()
-                            break
 
                 elif event.startswith('db'):
                     # db query-> database dictionary method,
