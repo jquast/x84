@@ -1,9 +1,15 @@
 x/84
 ====
 
-**x/84 is a python telnet server for modern UTF-8 terminals**. x/84 supplies a scripting engine for developing **MUD**, **BBS**, or dgamelaunch_-style servers with CLI telnet interfaces. Technologies used in x/84 are derived from miniboa_ (Apache 2.0 Licensed) for telnet, `blessings`_ (MIT Licensed) for curses TERM capabilities, and sqlitedict_ (Public Domain) for shared database access. Inter-process communication (such as chat) is possible using the multiprocessing_ module, and recordings of sessions are stored in ttyplay_-compatible format files.
+**x/84 is a python telnet server for modern UTF-8 terminals**.
 
-With the exception of the python interpreter itself, x/84 is **pure** python, but **requires a posix** operating system. Therefor **Windows is not a supported platform** at this time. Alternative implementations of python may also work. Blowfish encryption of user account passwords may be optionally enabled, but requires a complete Python C environment to install the dependent module, py-bcrypt. Otherwise, a best-effort sha256 hash is implemented.
+x/84 supplies a scripting engine for developing **MUD** or **BBS** engines, dgamelaunch_-style servers with CLI telnet interfaces, or communications development for packet radio networks.
+
+Technologies used in x/84 are derived from miniboa_ (Apache 2.0 Licensed) for telnet, `blessings`_ (MIT Licensed) for terminal capabilities, and sqlitedict_ (Public Domain) for database.
+
+Inter-process communication (such as chat) is provided through an event messaging system through the multiprocessing_ module, and recordings of sessions are stored in ttyplay_-compatible format files.
+
+Only python is used in x/84 and its direct dependencies, but **requires a posix** operating system. Alternative implementations of python may also work. Blowfish encryption of user account passwords is recommended but requires a C/cPython environment to install the dependent module, py-bcrypt. Otherwise, a best-effort sha256 hash is implemented by default.
 
 **ANSI Art**, (such as you would find on the ACiD "dark domains" DVD) is translated for reasonably accurate reproductions for both UTF-8 and IBM CP437 terminals. This allows classic DOS art to be used on modern terminals such as Terminal.app, or classic emulating terminals such as SyncTerm.
 
@@ -73,14 +79,15 @@ Which takes optional command line arguments,
 Compatible Clients
 ==================
 
-Any UTF-8 client is compatible, but some fonts do art as multi-language. For Macintosh systems, 'Andale Mono' works flawlessly. Other than UTF-8, only IBM CP437 encoding is supported.
-
-* iTerm: Menu item iTerm -> Preferences, section Profiles, select 'Text' tab, chose 'Andale Mono' font.
+Any UTF-8 client is compatible. For Apple systems, 'Andale Mono' works flawlessly. Other utf-8 terminals:
 * PuTTy: Under preference item Window -> Translation, option 'Remote character set', change 'iso8859-1' to 'UTF-8'.
+* iTerm: Menu item iTerm -> Preferences, section Profiles, select 'Text' tab, chose 'Andale Mono' font.
 * Terminal.app: Menu item Terminal -> Preferences, chose profile 'Pro', (Font Andale Mono), enable 'use bright colors for bold text'.
-* uxterm: XXX todo.. bright blink?
-* SyncTerm, mtel: Select cp437 when prompted by the bbs system (charset.py).
-* others: Select cp437 when prompted by the bbs system (charset.py).  Use a font of cp437 encoding, such as *Terminus*.
+* uxterm or other utf-8 rxvt and xterm variants. classic rxvt, xterm, dtterm.
+
+Other than UTF-8, only IBM CP437 encoding is supported. Any 8-bit telnet client with CP437 font is supported.
+
+Examples of these include PuTTy, SyncTerm, mtel, linux/bsd cons+bsd telnet. Some non-DOS terminal emulators may require installing a fontset, such as *Terminus* to provide CP437 art.
 
 Binding to port 23
 ==================
@@ -119,11 +126,6 @@ For developing from git, simply clone and execute the ./x84/bin/dev-setup python
 3. Launch x/84 using virtualenv:
 
 ``./x84/bin/x84-dev``
-
-Monitoring
-==========
-
-Sessions are recorded to a ~/.x84/ttyrecordings/ folder by default, and can be played with ttyplay_ or compatible utility. The ``-p`` option can be used to monitor live sessions, analogous to ``tail -f``.
 
 Other BBS Software
 ==================
