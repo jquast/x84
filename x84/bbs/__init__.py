@@ -3,6 +3,7 @@ x/84 bbs module, https://github.com/jquast/x84
 """
 
 from x84.bbs.userbase import list_users, get_user, find_user, User, Group
+from x84.bbs.msgbase import list_msgs, get_msg, list_tags, Msg
 from x84.bbs.exception import Disconnected, Goto
 from x84.bbs.editor import LineEditor, ScrollingEditor
 from x84.bbs.output import echo, timeago, Ansi
