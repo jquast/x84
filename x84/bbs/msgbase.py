@@ -2,11 +2,10 @@
 msgbase package for x/84, https://github.com/jquast/x84
 """
 import datetime
-import x84.bbs.dbproxy
-import x84.bbs.session
+from x84.bbs.dbproxy import DBProxy
 
-MSGDB = x84.bbs.dbproxy.DBProxy('Msgs')
-TAGDB = x84.bbs.dbproxy.DBProxy('tags')
+MSGDB = DBProxy('Msgs')
+TAGDB = DBProxy('tags')
 
 
 def get_msg(idx):
@@ -73,9 +72,10 @@ class Msg(object):
         """
 
     def __init__(self, recipient=None, subject=u'', body=u''):
+        from x84.bbs.session import getsession
         self._ctime = datetime.datetime.now()
         self._stime = None
-        self.author = x84.bbs.session.getsession().handle
+        self.author = getsession().handle
         self.recipient = recipient
         self.subject = subject
         self.body = body
