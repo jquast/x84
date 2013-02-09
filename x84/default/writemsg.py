@@ -6,8 +6,9 @@ Write public or private posts for x/84, https://github.com/jquast/x84/
 def refresh(msg, level=0):
     from x84.bbs import getterminal, echo
     term = getterminal()
-    echo(term.clear + term.normal + u'\r\n\r\n')
-    echo(term.bold_black(u'art needed ../') + u'\r\n\r\n')
+    echo(u'\r\n\r\n')
+    echo(term.bold_black(u'art needed ../'.center(term.width).rstrip()))
+    echo(u'\r\n\r\n')
     echo(u'    AUthOR: ' + term.bold_blue(msg.author) + u'\r\n\r\n')
     if level > 0:
         echo(u'   RECiPiENt: ')
