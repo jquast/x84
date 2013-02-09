@@ -103,12 +103,16 @@ class LineEditor(object):
         No movement or positional sequences are returned.
         """
         from x84.bbs.session import getterminal
-        lightbar = u''.join((self.colors.get('highlight', u''),
-                             ' ' * self.width,
-                             '\b' * self.width))
+        lightbar = u''.join((
+            self.colors.get('highlight', u''),
+            ' ' * self.width,
+            '\b' * self.width))
         content = (self.hidden * len(self.content)
                    if self.hidden else self.content)
-        return u''.join((lightbar, content, getterminal().cursor_visible))
+        return u''.join((
+            lightbar,
+            content,
+            getterminal().cursor_visible))
 
     def process_keystroke(self, keystroke):
         """
@@ -408,8 +412,14 @@ class ScrollingEditor(AnsiWindow):
         """
         Return unicode sequence suitable for refreshing the entire line
         and placing the cursor.
+
+        A strange by-product; if scrolling was not previously enabled,
+        it is if wrapping must occur; this can happen if a non-scrolling
+        editor was provided a very large .content buffer, then later
+        .refresh()'d. -- essentially enabling infinate scrolling
         """
-        from x84.bbs.session import getterminal
+        from x84.bbs import getterminal
+        term = getterminal()
         # reset position and detect new position
         self._horiz_lastshift = self._horiz_shift
         self._horiz_shift = 0
@@ -420,7 +430,6 @@ class ScrollingEditor(AnsiWindow):
             if self._horiz_pos > (self.visible_width - self.scroll_amt):
                 self._horiz_shift += self.scroll_amt
                 self._horiz_pos -= self.scroll_amt
-                # if scrolling was not previously enabled, it is now!
                 self.enable_scrolling = True
             self._horiz_pos += 1
         if self._horiz_shift > 0:
@@ -428,13 +437,12 @@ class ScrollingEditor(AnsiWindow):
             prnt = self.trim_char + self.content[scrl:]
         else:
             prnt = self.content
-        prnt += (self.glyphs.get('erase', u' ')
-                 * (self.visible_width - (len(prnt) + 1)))
+        erase_len = self.visible_width - (len(prnt))
         return u''.join((
             self.pos(self.ypadding, self.xpadding),
             self.colors.get('highlight', u''),
-            prnt,
-            getterminal().normal,
+            prnt + self.glyphs.get('erase', u' ') * erase_len,
+            term.normal,
             self.fixate(),))
 
     def backspace(self):
