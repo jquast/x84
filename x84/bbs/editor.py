@@ -428,7 +428,7 @@ class ScrollingEditor(AnsiWindow):
         else:
             prnt = self.content
         prnt += (self.glyphs.get('erase', u' ')
-                 * (self.visible_width - len(prnt)))
+                 * (self.visible_width - (len(prnt) + 1)))
         return u''.join((
             self.pos(self.ypadding, self.xpadding),
             self.colors.get('highlight', u''),
