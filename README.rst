@@ -3,7 +3,7 @@ x/84
 
 **x/84 is a python telnet server for modern UTF-8 terminals**.
 
-x/84 supplies a scripting engine for developing **MUD** or **BBS** engines, dgamelaunch_-style servers with CLI telnet interfaces, or communications development for packet radio networks.
+x/84 supplies a scripting engine for developing **MUD** or **BBS** engines, dgamelaunch_-style servers with CLI telnet interfaces, or communication interfaces for packet radio networks.
 
 Technologies used in x/84 are derived from miniboa_ (Apache 2.0 Licensed) for telnet, `blessings`_ (MIT Licensed) for terminal capabilities, and sqlitedict_ (Public Domain) for database. Recordings of sessions are stored in ttyplay_-compatible format files.
 
