@@ -235,5 +235,5 @@ class Pager(AnsiWindow):
         """
         import x84.bbs.output
         self.content.extend(x84.bbs.output.Ansi(ucs)
-                            .wrap(self.visible_width - 1).split('\r\n'))
+                            .wrap(self.visible_width - 1).splitlines())
         return self.move_end() or self.refresh(self.bottom)
