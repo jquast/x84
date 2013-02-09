@@ -4,6 +4,7 @@ Output and Ansi art unicode helpers for x/84, https://github.com/jquast/x84
 import re
 import math
 import warnings
+import textwrap
 
 from x84.bbs.session import getterminal, getsession
 from x84.bbs.wcswidth import wcswidth
@@ -14,6 +15,46 @@ ANSI_CODEPAGE = re.compile(r'\033\([A-Z]')
 ANSI_WILLMOVE = re.compile(r'\033\[[HJuABCDEF]')
 ANSI_WONTMOVE = re.compile(r'\033\[[sm]')
 
+class AnsiWrapper(textwrap.TextWrapper):
+    def _wrap_chunks(self, chunks):
+        """_wrap_chunks(chunks : [string]) -> [string]
+        Ansi string safe, sortof.
+        """
+        lines = []
+        if self.width <= 0:
+            raise ValueError("invalid width %r (must be > 0)" % self.width)
+        chunks.reverse()
+        while chunks:
+            cur_line = []
+            cur_len = 0
+            if lines:
+                indent = self.subsequent_indent
+            else:
+                indent = self.initial_indent
+            width = self.width - len(indent)
+            if self.drop_whitespace and chunks[-1].strip() == '' and lines:
+                del chunks[-1]
+            while chunks:
+                l = len(Ansi(chunks[-1]))
+                if cur_len + l <= width:
+                    cur_line.append(chunks.pop())
+                    cur_len += l
+                else:
+                    break
+            if chunks and len(Ansi(chunks[-1])) > width:
+                self._handle_long_word(chunks, cur_line, cur_len, width)
+            if self.drop_whitespace and cur_line and cur_line[-1].strip() == '':
+                del cur_line[-1]
+            if cur_line:
+                lines.append(indent + u''.join(cur_line))
+        return lines
+
+def ansiwrap(ucs, width=70, **kwargs):
+        """
+        Wrap a single paragraph of Unicode Ansi sequences,
+        returning a list of wrapped lines.
+        """
+        return AnsiWrapper(width=width, **kwargs).wrap(ucs)
 
 def echo(ucs):
     """
@@ -122,7 +163,7 @@ class Ansi(unicode):
                 + u' ' * (max(0, int(math.ceil(split)))))
     center.__doc__ = unicode.center.__doc__
 
-    def wrap(self, width):
+    def wrap(self, width, indent=u' '):
         """
         A.wrap(width) --> unicode
 
@@ -134,18 +175,8 @@ class Ansi(unicode):
         """
         lines = []
         for paragraph in self.splitlines():
-            line = []
-            len_line = 0
-            for word in paragraph.rstrip().split(' '):
-                len_word = Ansi(word).__len__()
-                if len_line + len_word <= width:
-                    line.append(word)
-                    len_line += len_word + 1
-                else:
-                    lines.append(' '.join(line))
-                    line = [word]
-                    len_line = len_word + 1
-            lines.append(' '.join(line))
+            map(lines.append,
+                    ansiwrap(paragraph, width, subsequent_indent=indent))
         return '\r\n'.join(lines)
 
     def is_movement(self):
@@ -366,3 +397,6 @@ class Ansi(unicode):
             return 0
         # unknown...
         return 0
+
+
+
