@@ -63,13 +63,11 @@ def flush_pipe(pipe):
     warned = False
     while pipe.poll():
         if not warned:
-            logger.warn('pipe assertion, leftover bit(s):')
+            logger.warn('pipe assertion, leftover bit(s) if any follow:')
             warned = True
         event, data = pipe.recv()
         if event == 'logger':
             logger.handle(data)
-        else:
-            logger.warn(repr((event, data,)))
     if warned:
         logger.warn('END pipe assertion')
 
