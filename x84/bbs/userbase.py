@@ -170,7 +170,6 @@ class User(object):
         """
         self._handle = handle
         self._password = (None, None)
-        self._handle = u''
         self._location = u''
         self._email = u''
         self._groups = set()
