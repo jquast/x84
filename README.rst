@@ -9,7 +9,7 @@ Technologies used in x/84 are derived from miniboa_ (Apache 2.0 Licensed) for te
 
 Asynchronous inter-process communication between sessions is provided through a simple event queueing framework, allowing  user scripting of 'shared' experiences between unix processes using the multiprocessing_ module. Several examples of these are provided, such as ``chat.py``.
 
-Only python is required, but **requires a posix** operating system. Alternative implementations of python may also work. Blowfish encryption of user account passwords is recommended for low cpu systems, but requires a C/cPython environment to install the dependent module, py-bcrypt. Otherwise, a slow best-effort sha256 hash is implemented by default. x/84 is meant to be highly portable, and has been used on Raspberry Pi, Android, Mac, OpenBSD, etc.
+Only python is required, but **requires a posix** operating system. Alternative implementations of python may also work. Blowfish encryption of user account passwords is recommended, but not required, for low cpu systems, but requires a C compiler to install the dependent module, py-bcrypt. Otherwise, a slow best-effort sha256 hash is implemented by default. x/84 is meant to be highly portable, and has been used on Raspberry Pi, Android, Mac, OpenBSD, etc.
 
 **ANSI Art**, (such as you would find on the ACiD "dark domains" DVD) is translated for reasonably accurate reproductions for both UTF-8 and IBM CP437 terminals. This allows classic DOS art to be used on modern terminals such as Terminal.app, or classic emulating terminals such as SyncTerm. Sauce records are also transcribed.
 
