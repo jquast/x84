@@ -1,10 +1,10 @@
 """ Who's online script for X/84, https://github.com/jquast/x84 """
 import time
 SELF_ID = -1
-POLL_KEY = 0.15 # blocking ;; how often to poll keyboard
+POLL_KEY = 0.10 # blocking ;; how often to poll keyboard
 POLL_INF = 1.50 # seconds elapsed until re-ask clients for more details
 POLL_AYT = 2.00 # seconds elapsed until global 'are you there?' is checked,
-POLL_OUT = 0.50 # seconds elapsed before screen updates
+POLL_OUT = 0.20 # seconds elapsed before screen updates
 # slen: returns terminal width of ascii representation of #sessions
 slen = lambda sessions: len(u'%d' % (len(sessions),))
 
@@ -34,9 +34,11 @@ def update(sessions):
     return u'\r\n'.join(([u''.join((
             u'%*d' % (4 + slen(sessions), node),
             u'%4is' % (attrs.get('idle', 0),), u' ',
-            u'%-*s' % (max_user, (
+            (term.bold_green(u'%-*s' % (max_user, (
                 u'** diSCONNECtEd' if 'delete' in attrs
-                else attrs.get('handle', u'** CONNECtiNG')),),
+                else attrs.get('handle', u'** CONNECtiNG')),)
+                ) if attrs.get('handle', u'') != session.user.handle
+                else term.green(u'%-*s' % (max_user, session.user.handle))),
             term.green(u' - '),
             term.bold_green((attrs.get('activity', u''))
                 if attrs.get('sid') != session.sid else
@@ -130,9 +132,16 @@ def watch(sessions):
 
 
 def chat(sessions):
-    from x84.bbs import gosub
+    from x84.bbs import gosub, getsession
+    session = getsession()
     (node, tgt_session) = get_node(sessions)
     if node is not None:
+        # page other user,
+        channel = tgt_session['sid']
+        sender = (session.user.handle
+                if not 'sysop' in session.user.groups else -1)
+        session.send_event('route', (
+            tgt_session['sid'], 'page', channel, sender))
         gosub('chat', tgt_session['sid'])
         return True
 
@@ -170,15 +179,14 @@ def sendmsg(sessions):
         return True
 
 
-def main(login_handle=None):
+def main():
     from x84.bbs import getsession, getterminal, getch, echo
     session, term = getsession(), getterminal()
-    session.activity = u"Who's Online"
     ayt_lastfresh = 0
     def broadcast_AYT(last_update):
         # broadcast are-you-there
         if time.time() - last_update > POLL_AYT:
-            session.send_event('global', 'AYT')
+            session.send_event('global', ('AYT', session.sid,))
             last_update = time.time()
         return last_update
 
@@ -239,10 +247,11 @@ def main(login_handle=None):
         # request that all sessions update if more stale than POLL_INF,
         # or is missing session info (only AYT replied so far!),
         # or has been displayed as 'Disconnected' (marked for deletion)
-        request_info(set([key for key, attr in sessions.items()
-            if time.time() - attr['lastfresh'] > POLL_INF
-            or attr.get('idle', -1) == -1
-            or attr.get('delete', 0) == 1]) ^ set([-1]))
+        request_info([key for key, attr in sessions.items()
+            if key != -1 and (
+                time.time() - attr['lastfresh'] > POLL_INF
+                or attr.get('idle', -1) == -1
+                or attr.get('delete', 0) == 1)])
 
         # prune users who haven't responded to AYT
         for sid, attrs in sessions.items()[:]:
@@ -251,6 +260,7 @@ def main(login_handle=None):
                 dirty = time.time()
 
         if dirty is not None and time.time() - dirty > POLL_OUT:
+            session.activity = u"Who's Online"
             otxt = update(sessions)
             olen = len(otxt.splitlines())
             if 0 == cur_row or (cur_row + olen) >= term.height:
