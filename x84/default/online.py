@@ -72,6 +72,7 @@ def prompt():
         u')', term.reverse_green(desc.split()[0]), u' ',
         u' '.join(desc.split()[1:]), u' ',))
     return Ansi(u''.join((
+        u' '*2,
         term.green_reverse(':keys'), u' ',
         decorate('c', 'hAt USR'),
         decorate('s', 'ENd MSG'),
@@ -84,7 +85,7 @@ def prompt():
         u' ',)) if 'sysop' in session.user.groups else u''),
         decorate('Escape/q', 'Uit'),
         decorate('Spacebar', 'REfRESh'),
-        ))).wrap(int(term.width * .7))
+        ))).wrap(int(term.width * .7), indent=u' '*8)
 
 
 def get_node(sessions):
@@ -127,7 +128,7 @@ def watch(sessions):
     from x84.bbs import gosub
     (node, tgt_session) = get_node(sessions)
     if node is not None:
-        gosub('ttyplay', tgt_session['ttyrec'], peek=True)
+        gosub('ttyplay', tgt_session['ttyrec'], True)
         return True
 
 
@@ -147,13 +148,18 @@ def chat(sessions):
 
 
 def view(sessions):
-    from x84.bbs import echo
+    from x84.bbs import echo, getterminal
+    term = getterminal()
     (node, tgt_session) = get_node(sessions)
     if node is not None:
+        maxlen = max([len(key) for key in tgt_session.keys()])
         echo(u''.join((
             u'\r\n\r\n',
-            u'\r\n'.join(['%s: %s' % (key, value,)
-                for key, value in tgt_session.items()]),
+            u'\r\n'.join(['%s%s %s' % (
+                term.bold('%*s' % (maxlen, key)),
+                term.bold_green(':'),
+                term.green(str(value)),)
+                for key, value in sorted(tgt_session.items())]),
             )))
         return True
 
@@ -199,24 +205,31 @@ def main():
         if session.poll_event('refresh') or (
                 inp in (u' ', term.KEY_REFRESH, unichr(12))):
             dirty = time.time()
-        if inp in (u'q', 'Q', term.KEY_EXIT, unichr(27)):
+            cur_row = 0
+        elif inp in (u'q', 'Q', term.KEY_EXIT, unichr(27)):
             return
-        if inp in (u'c', 'C'):
+        elif inp in (u'c', 'C'):
             cur_row = 0 if chat(sessions) else cur_row
             dirty = time.time()
-        if inp is not None and 'sysop' in session.user.groups:
+        elif inp in (u's', 'S'):
+            cur_row = 0 if sendmsg(sessions) else cur_row
             dirty = time.time()
+        elif inp is not None and 'sysop' in session.user.groups:
             if inp in (u'e', u'E'):
                 cur_row = 0 if edit(sessions) else cur_row
+                dirty = time.time()
             elif inp in (u'p', u'P'):
                 cur_row = 0 if playback(sessions) else cur_row
+                dirty = time.time()
             elif inp in (u'w', u'W'):
                 cur_row = 0 if watch(sessions) else cur_row
+                dirty = time.time()
             elif inp in (u'v', u'V'):
-                view(sessions)
-                cur_row = 0
+                cur_row = 0 if view(sessions) else cur_row + 3
+                dirty = time.time()
             elif inp in (u'd', u'D'):
                 disconnect(sessions)
+                dirty = time.time()
 
         # add sessions that respond to AYT
         data = session.poll_event('ACK')
