@@ -4,8 +4,47 @@
 # is not used, so each line causes a full screen fresh ..
 
 import time
-POLL_KEY = 0.25 # blocking ;; how often to poll keyboard
-POLL_OUT = 1.50 # seconds elapsed before screen update, prevents flood
+POLL_KEY = 0.05 # blocking ;; how often to poll keyboard
+POLL_OUT = 0.25 # seconds elapsed before screen update, prevents flood
+
+
+CHANNEL = None
+NICKS = dict()
+
+def show_help():
+    return u'\n'.join((
+        u'   /join #channel',
+        u'   /act mesg',
+        u'   /part [reason]',
+        u'   /quit [reason]',
+        u'   /users',
+        u'   /whois handle',))
+
+def process(mesg):
+    from x84.bbs import getsession
+    session = getsession()
+    sid, tgt_channel, (handle, cmd, args) = mesg
+    global CHANNEL, NICKS
+    if (CHANNEL != tgt_channel and 'sysop' not in session.user.groups):
+        return
+    if cmd == 'join':
+        if handle not in NICKS:
+            NICKS[handle] = sid
+            return show_join(handle, sid, tgt_channel)
+    elif handle not in NICKS:
+        NICKS[handle] = sid
+    if cmd == 'part':
+        if handle in NICKS:
+            del NICKS[handle]
+        return show_part(handle, sid, tgt_channel, args)
+    elif cmd == 'say':
+        return show_say(handle, args)
+    elif cmd == 'act':
+        return show_act(handle, args)
+    else:
+        return u'unhandled: %r' % (mesg,)
+    return None
+
 
 def show_act(handle, mesg):
     from x84.bbs import getsession, getterminal
@@ -42,172 +81,252 @@ def show_part(handle, sid, chan, reason):
             term.cyan(sid), term.bold_black(']'), u' ',))
             if 'sysop' in session.user.groups else u''),
         'has left ',
-        term.bold(chan),))
+        term.bold(chan),
+        u' (%s)' % (reason,) if reason and 0 != len(reason) else u'',))
 
+def show_whois(attrs):
+    from x84.bbs import getsession, getterminal, timeago
+    session, term = getsession(), getterminal()
+    return u''.join((
+        time.strftime('%H:%M'), u' ',
+        term.blue('-'), u'!', term.blue('-'),
+        u' ', term.bold(attrs['handle']), u' ',
+        (u''.join((term.bold_black('['),
+            term.cyan(attrs['sid']), term.bold_black(']'), u' ',))
+            if 'sysop' in session.user.groups else u''), u'\n',
+        time.strftime('%H:%M'), u' ',
+        term.blue('-'), u'!', term.blue('-'),
+        u' ', u'CONNECtED ',
+        term.bold_cyan(timeago(time.time() - attrs['connect_time'])),
+        ' AGO.', u'\n',
+        time.strftime('%H:%M'), u' ',
+        term.blue('-'), u'!', term.blue('-'),
+        u' ', term.bold(u'idlE: '),
+        term.bold_cyan(timeago(time.time() - attrs['idle'])), u'\n',
+        ))
+
+def show_nicks(handles):
+    from x84.bbs import getterminal
+    term = getterminal()
+    return u''.join((
+        time.strftime('%H:%M'), u' ',
+        term.blue('-'), u'!', term.blue('-'),
+        u' ', term.bold_cyan('%d' % (len(handles))), u' ',
+        u'user%s: ' % (u's' if len(handles) > 1 else u''),
+        u', '.join(handles) + u'\n',))
 
 def show_say(handle, mesg):
     from x84.bbs import getsession, getterminal, get_user
-    session, term = getsession, getterminal
+    session, term = getsession(), getterminal()
     return u''.join((
         time.strftime('%H:%M'), u' ',
-        term.bold_black('<'),
+        term.bold_black(u'<'),
         (term.bold_red(u'@') if 'sysop' in get_user(handle).groups
             else u''),
         (handle if handle != session.handle
             else term.bold(handle)),
-        term.bold_black('>'), u' ',
+        term.bold_black(u'>'), u' ',
         mesg,))
 
-def get_inputbar():
-    from x84.bbs import ScrollingEditor
+def get_inputbar(pager):
+    from x84.bbs import getterminal, ScrollingEditor
     term = getterminal()
-    width = term.width - 4
-    yloc = term.height - 3
-    xloc = 3
+    width = pager.visible_width - 2
+    yloc = (pager.yloc + pager.height) - 2
+    xloc = pager.xloc + 2
     ibar = ScrollingEditor(width, yloc, xloc)
     ibar.enable_scrolling = True
     ibar.max_length = 512
+    ibar.colors['highlight'] = term.cyan_reverse
     return ibar
 
-def get_pager(buf):
-    from x84.bbs import Pager, getterminal
+def get_pager(pager=None):
+    from x84.bbs import getterminal, Pager
     term = getterminal()
-    height = (term.height - 6)
+    height = (term.height - 4)
     width = int(term.width * .9)
-    yloc = term.height - height - 3
+    yloc = term.height - height - 1
     xloc = (term.width / 2) - (width / 2)
+    content = pager and pager.content
     pager = Pager(height, width, yloc, xloc)
     pager.enable_scrolling = True
     pager.colors['border'] = term.cyan
-    pager.glyphs['right-vert'] = u''
+    pager.glyphs['right-vert'] = u'|'
+    pager.glyphs['left-vert'] = u'|'
     pager.glyphs['bot-horiz'] = u''
-    pager.update(buf)
+    if content:
+        pager.update('\n'.join(content))
     return pager
 
 
-def main(channel=None):
+def main(channel=None, caller=None):
     from x84.bbs import getsession, getterminal, getch, echo
     session, term = getsession(), getterminal()
-    channel = '#partyline' if channel is None else channel
-    EXIT=False
-    nicks = dict()
+    global CHANNEL, EXIT, NICKS
+    CHANNEL = '#partyline' if channel is None else channel
+    EXIT = False
+    NICKS = dict()
 
+    # sysop repy_to is -1 to force user, otherwise prompt
+    if channel == session.sid and caller not in (-1, None):
+        echo(u''.join((
+            term.normal, u'\b',
+            u'\r\n', term.clear_eol,
+            u'\r\n', term.clear_eol,
+            term.bold_green(u' ** '),
+            caller,
+            u' would like to chat, accept? ',
+            term.bold(u'['),
+            term.bold_green_underline(u'yn'),
+            term.bold(u']'),
+            )))
+        while True:
+            ch = getch()
+            if str(ch).lower() == 'y':
+                break
+            elif str(ch).lower() == 'n':
+                return False
 
-    def refresh(pager, init=False):
+    def refresh(pager, ipb, init=False):
+        session.activity = 'Chatting in %s' % (
+                CHANNEL if not CHANNEL.startswith('#')
+                and not 'sysop' in session.user.groups
+                else u'PRiVAtE ChANNEl',) if CHANNEL is not None else (
+                        u'WAitiNG fOR ChAt')
         return u''.join((
-            u''.join((u'\r\n\r\n',
+            u''.join((u'\r\n', term.clear_eol,
+                u'\r\n', term.clear_eol,
                 term.bold_cyan(u'//'),
                 u' CitZENS bANd'.center(term.width).rstrip(),
-                u'\r\n\r\n',
-                u'\r\n' * pager.height,
+                term.clear_eol,
+                (u'\r\n' + term.clear_eol) * (pager.height + 2),
                 pager.border())) if init else u'',
-            pager.title(channel),
-            pager.move_end(),))
+            pager.title(u''.join((
+                term.bold_cyan(u']- '),
+                CHANNEL if CHANNEL is not None else u'',
+                term.bold_cyan(u' -['),))),
+            pager.refresh(),
+            ipb.refresh(),))
 
-
-    def cmd(msg):
-        global EXIT, channel
+    def cmd(pager, msg):
         cmd, args = msg.split()[0], msg.split()[1:]
+        global CHANNEL, NICKS
         if cmd == '/help':
-            echo(u"\r\nDon't panic.")
-        if cmd == '/join' and len(args) == 1:
-            join(channel)
-            channel = args[0]
+            pager.append(show_help())
+            return True
+        elif cmd == '/join' and len(args) == 1:
+            part_chan('lEAViNG fOR ANOthER ChANNEl')
+            CHANNEL = args[0]
+            NICKS = dict()
+            join_chan()
+            return True
+        elif cmd in ('/act', '/me',):
+            act(u' '.join(args))
+        elif cmd == '/say':
+            say(u' '.join(args))
+        elif cmd == '/part':
+            part_chan(u' '.join(args))
+            CHANNEL = None
+            NICKS = dict()
+            return True
         elif cmd == '/quit':
-            EXIT=True
-        else:
-            return False
-        return True
+            part_chan('quit')
+            global EXIT
+            EXIT = True
+        elif cmd == '/users':
+            pager.append(show_nicks(NICKS.keys()))
+            return True
+        elif cmd == '/whois' and len(args) == 1:
+            whois(args[0])
+        return False
 
     def broadcast_cc(payload):
         session.send_event('global', ('chat', payload))
         session.buffer_event('global', ('chat', payload))
 
-    def join():
-        payload = (session.sid, channel, (session.user.handle, 'join', None))
+    def join_chan():
+        payload = (session.sid, CHANNEL, (session.user.handle, 'join', None))
         broadcast_cc(payload)
 
     def say(mesg):
-        payload = (session.sid, channel, (session.user.handle, 'say', mesg))
+        payload = (session.sid, CHANNEL, (session.user.handle, 'say', mesg))
         broadcast_cc(payload)
 
     def act(mesg):
-        payload = (session.sid, channel, (session.user.handle, 'act', mesg))
+        payload = (session.sid, CHANNEL, (session.user.handle, 'act', mesg))
         broadcast_cc(payload)
 
-    def part(reason):
-        payload = (session.sid, channel, (session.user.handle, 'part', reason))
+    def part_chan(reason):
+        payload = (session.sid, CHANNEL, (session.user.handle, 'part', reason))
         broadcast_cc(payload)
 
-
-    def process(buf, mesg):
-        global nicks
-        sid, tgt_channel, (handle, cmd, args) = mesg
-        if (channel != tgt_channel and 'sysop' not in session.user.groups):
-            # not for us!
+    def whois(handle):
+        if not handle in NICKS:
             return
-        if cmd == 'join' or handle not in nicks:
-            buf.append(show_join(handle, sid, tgt_channel))
-            nicks[handle] = sid
-        if cmd == 'say':
-            buf.append(show_say(handle, args))
-        elif cmd == 'act':
-            buf.append(show_act(handle, args))
-        elif cmd == 'part':
-            buf.append(show_part(handle, sid, tgt_channel, args))
-        return buf
+        session.send_event('route', (NICKS[handle], 'info-req', session.sid,))
 
-    # input bar
-    readline = get_inputbar()
-    echo(readline.refresh())
+    def whois_response(attrs):
+        return show_whois(attrs)
 
-    # output window
-    pager = get_pager()
-    echo(refresh(pager, init=True))
+    pager = get_pager(None)  # output window
+    readline = get_inputbar(pager)  # input bar
+    echo(refresh(pager, readline, init=True))
     dirty = time.time()
+    join_chan()
     while not EXIT:
         inp = getch(POLL_KEY)
 
         # poll for and process screen resize
         if session.poll_event('refresh') or (
-                inp in (u' ', term.KEY_REFRESH, unichr(12))):
-            pager = get_pager(buf)
-            echo(refresh(pager, init=True))
+                inp in (term.KEY_REFRESH, unichr(12))):
+            pager = get_pager(pager)
+            readline = get_inputbar(pager)
+            echo(refresh(pager, readline, init=True))
             dirty = None
 
         # poll for and process chat events,
         mesg = session.poll_event('global')
-        if mesg is not None and mesg[0] == 'chat':
-            n_buf = process(buf, mesg[1])
-            if len(buf) > pager.height * 16:
-                buf = buf[:pager.height * 16]
-                pager.update(buf)
-                dirty = time.time()
-            elif len(n_buf) != len(buf):
-                pager.update(buf)
-                dirty = time.time()
-            buf = n_buf
+        if mesg is not None:
+            otxt = process(mesg[1])
+            if otxt is not None:
+                echo(pager.append(otxt))
+                dirty = None if dirty is None else time.time()
+
+        # poll for whois response
+        data = session.poll_event('info-ack')
+        if data is not None:
+            sid, attrs = data
+            echo(pager.append(whois_response(attrs)))
+            dirty = None if dirty is None else time.time()
 
         # process keystroke as input, or, failing that,
         # as a command key to the pager. refresh portions of
         # input bar or act on cariage return, accordingly.
-        if inp in (u'q', 'Q', term.KEY_EXIT, unichr(27)):
+        if inp in (term.KEY_EXIT, unichr(27)):
             return
         elif inp is not None:
-            echo(readline.fixate())
             otxt = readline.process_keystroke(inp)
-            if 0 == len(otxt) and type(inp) is int:
-                echo(pager.process_keystroke(inp)
-            elif(readline.carriage_returned and len(readline.content)):
+            if readline.carriage_returned:
                 if readline.content.startswith('/'):
-                    cmd(readline.content)
-                elif 0 != len(readline.content.strip()):
+                    if cmd(pager, readline.content):
+                        pager = get_pager(pager)
+                        echo(refresh(pager, readline, init=True))
+                elif (0 != len(readline.content.strip())
+                        and CHANNEL is not None):
                     say(readline.content)
-                    readline = get_inputbar()
-                    echo(readline.refresh())
-                else:
-                    echo(otxt)
+                readline = get_inputbar(pager)
+                echo(readline.refresh())
+            elif 0 == len(otxt):
+                if type(inp) is int:
+                    echo(term.normal)
+                    echo(pager.process_keystroke(inp))
+            else:
+                echo(u''.join((
+                    readline.fixate(-1),
+                    readline.colors.get('highlight', u''),
+                    otxt,)))
 
         # update pager contents. Its a lot for 9600bps ..
         if dirty is not None and time.time() - dirty > POLL_OUT:
-            echo(refresh(pager))
+            echo(refresh(pager, readline))
+            dirty = None
