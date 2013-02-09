@@ -79,6 +79,8 @@ def get_pager(buf):
     pager = Pager(height, width, yloc, xloc)
     pager.enable_scrolling = True
     pager.colors['border'] = term.cyan
+    pager.glyphs['right-vert'] = u''
+    pager.glyphs['bot-horiz'] = u''
     pager.update(buf)
     return pager
 
@@ -99,8 +101,8 @@ def main(channel=None):
                 u'\r\n\r\n',
                 u'\r\n' * pager.height,
                 pager.border())) if init else u'',
-            pager.title(channel)
-            pager.move_end()
+            pager.title(channel),
+            pager.move_end(),))
 
 
     def cmd(msg):
