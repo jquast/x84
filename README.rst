@@ -79,7 +79,7 @@ Which takes optional command line arguments,
 Compatible Clients
 ==================
 
-Any UTF-8 client is compatible. For Apple systems, 'Andale Mono' works flawlessly. Other utf-8 terminals:
+Any UTF-8 client is compatible. For Apple systems, 'Andale Mono' works flawlessly. Other utf-8 terminals,
 * PuTTy: Under preference item Window -> Translation, option 'Remote character set', change 'iso8859-1' to 'UTF-8'.
 * iTerm: Menu item iTerm -> Preferences, section Profiles, select 'Text' tab, chose 'Andale Mono' font.
 * Terminal.app: Menu item Terminal -> Preferences, chose profile 'Pro', (Font Andale Mono), enable 'use bright colors for bold text'.
