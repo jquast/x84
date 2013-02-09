@@ -69,10 +69,11 @@ class ColoredConsoleHandler(logging.StreamHandler):
         src_record.space = ' '
         src_record.sep = ' - '
         src_record.prefix = ''
-        return \
-            (self.color_levelname
-            (skip_repeat_line1
-            (src_record)))
+#        return \
+#            (self.color_levelname
+#            (skip_repeat_line1
+#            (src_record)))
+        return (self.color_levelname (src_record))
 
     def emit(self, src_record):
         """ Emit record to console """
