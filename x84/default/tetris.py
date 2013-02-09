@@ -306,7 +306,7 @@ def play():
   p         = randint(0,len(layout)-1)
   p = 1
   r    = 0   # Current rotation
-  xpos = 2   # X position
+  xpos = 4   # X position
   #ypos = -2  # Y position
   ypos = -len(layout[p][0])
   level = 1
@@ -438,6 +438,16 @@ def play():
       xpos,ypos,r,moved=movepiece(xpos,ypos+1,r)
       # Piece has touched down?
       if not moved:
+        # Is the player dead?
+        if ypos <= -len(layout[p][0]):
+          echo_unbuffered (
+            term.move(fieldy1+10/2,fieldx1-11)+'                                   '+
+            term.move(fieldy1+10/2+1,fieldx1-11)+'  !! gAME OVeR!! Score was: %5d  ' % score + 
+            term.move(fieldy1+10/2+2,fieldx1-11)+'                                   '
+          )
+          getch()
+          return
+      
         # Any complete rows to remove?
         complete=[]
         for y in range(field_height):
