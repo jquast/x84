@@ -1,7 +1,7 @@
 """
 telnet client for X/84 BBS, https://github.com/jquast/x84/
 """
-TIME_POLL = 0.05
+KEY_POLL = 0.015
 
 
 
@@ -55,7 +55,7 @@ def main(host, port=None, encoding='cp437'):
     echo(u'\r\nTrying %s:%s... ' % (host, port,))
     try:
         telnet_client.open(host, port)
-    except Exception, err:
+    except:
         e_type, e_value, e_tb = sys.exc_info()
         echo(term.bold_red('%s: %s\r\n' % (e_type, e_value,)))
         echo(u'\r\n\r\n press any key ..')
@@ -79,18 +79,16 @@ def main(host, port=None, encoding='cp437'):
                 telnet_client.close()
                 echo(u'\r\n' + term.clear_el + term.normal)
                 break
-            elif inp == '\r':
-                # TODO -- there is an RFC about this, and which to do
-                # and when, ala BINARY? what to do, what to do ..
-                telnet_client.write('\r\x00')
+            elif inp in ('\r', '\n'):
+                telnet_client.write('\r')
             elif inp is not None:
                 telnet_client.write(inp)
-        except Exception as err:
+        except:
             e_type, e_value, e_tb = sys.exc_info()
             echo(term.normal + u'\r\n')
             echo(term.bold_red('%s: %s\r\n' % (e_type, e_value,)))
             break
-        inp = getch(timeout=TIME_POLL)
+        inp = getch(timeout=KEY_POLL)
     echo(u'\r\nConnection closed.\r\n')
     echo(u''.join(('\r\n\r\n', term.clear_el, term.normal, 'press any key')))
     session.flush_event('input')
