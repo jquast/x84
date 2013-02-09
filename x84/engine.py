@@ -323,6 +323,7 @@ def _loop(telnetd):
     while True:
         # close & delete inactive sockets,
         for fileno, client in inactive()[:]:
+            logger.debug('close %s', telnetd.clients[fileno].addrport(),)
             client.sock.close()
             del telnetd.clients[fileno]
 
