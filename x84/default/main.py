@@ -24,6 +24,7 @@ def refresh():
             ('o', 'NE liNERS'),
             ('w', "hO'S ONliNE"),
             ('n', 'EWS'),
+            ('c', 'ChAt'),
             ('s', 'YS. iNfO'),
             ('f', 'fORECASt'),
             ('e', 'dit PROfilE'),
@@ -54,38 +55,41 @@ def main():
     from x84.bbs import getsession, getterminal, getch, goto, gosub
     session, term = getsession(), getterminal()
 
-    choice = -1
+    inp = -1
     norefresh = False
     while True:
-        if choice is not None and not norefresh:
+        if ((inp is not None and not norefresh)
+                or session.poll_event('refresh')):
             refresh()
-        choice = getch(1)
+        inp = getch(1)
         norefresh = False
-        if choice == u'*':
+        if inp == u'*':
             goto('main')  # reload main menu using hidden option '*'
-        elif choice == u'b':
+        elif inp == u'b':
             gosub('bbslist')
-        elif choice == u'l':
+        elif inp == u'l':
             gosub('lc')
-        elif choice == u'o':
+        elif inp == u'o':
             gosub('ol')
-        elif choice == u's':
+        elif inp == u's':
             gosub('si')
-        elif choice == u'w':
+        elif inp == u'w':
             gosub('online')
-        elif choice == u'n':
+        elif inp == u'n':
             gosub('news')
-        elif choice == u'f':
+        elif inp == u'f':
             gosub('weather')
-        elif choice == u'e':
+        elif inp == u'e':
             gosub('profile')
-        elif choice == u't':
+        elif inp == u't':
             gosub('tetris')  # currently hidden (jojo's)
-        elif choice == u'p':
+        elif inp == u'c':
+            gosub('chat')
+        elif inp == u'p':
             gosub('writemsg')
-        elif choice == u'r':
+        elif inp == u'r':
             gosub('readmsgs')
-        elif choice == u'g':
+        elif inp == u'g':
             goto('logoff')
         else:
             norefresh = True
