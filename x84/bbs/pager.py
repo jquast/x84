@@ -221,7 +221,7 @@ class Pager(AnsiWindow):
         import x84.bbs.output
         try:
             self.content = x84.bbs.output.Ansi(ucs).wrap(
-                self.visible_width).split('\r\n')
+                self.visible_width).splitlines()
         except AssertionError, err:
             # indeterminate length
             logger = logging.getLogger()
