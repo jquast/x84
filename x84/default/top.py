@@ -37,7 +37,7 @@ def get_ynbar():
     from x84.bbs import getterminal, Selector
     term = getterminal()
     ynbar = Selector(yloc=term.height - 1,
-                     xloc=term.width - 30,
+                     xloc=term.width - 31,
                      width=30, left='Yes', right='No')
     if term.number_of_colors:
         ynbar.colors['selected'] = term.green_reverse
@@ -81,7 +81,8 @@ def main(handle=None):
         session.user.save()
 
     # 3. if no preferred charset run charset.py selector
-    if session.user.get('charset', None) is None:
+    if (session.user.get('charset', None) is None
+            or session.user.handle == 'anonymous'):
         gosub('charset')
     else:
         # load default charset
