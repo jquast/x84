@@ -83,18 +83,23 @@ def showcp437(filepattern):
     """
     import sauce
     session, term = getsession(), getterminal()
-    msg_cancel = u''.join(( term.bold(u'--'),
-        u' CANCEllEd bY iNPUt ', term.bold(u'--'),))
-    msg_notfound = u''.join(( term.bold_red(u'--'),
-        u'no files matching %s' % (filepattern,), term.bold_red(u'--'),))
+    msg_cancel = u''.join((term.normal,
+        term.bold_blue(u'--'),
+        u'CANCEllEd bY iNPUt ',
+        term.bold_blue(u'--'),))
+    msg_notfound = u''.join((
+        term.bold_red(u'--'),
+        u'no files matching %s' % (filepattern,),
+        term.bold_red(u'--'),))
     fobj = (ropen(filepattern)
             if '*' in filepattern or '?' in filepattern
             else open(filepattern, 'rb'))
     if fobj is None:
         yield msg_notfound + u'\r\n'
         return
+    # allow slow terminals to cancel by pressing a keystroke
     for line in from_cp437(sauce.SAUCE(fobj).__str__()).splitlines():
         if session.poll_event('input'):
-            yield msg_cancel + u'\r\n'
+            yield u'\r\n' + msg_cancel + u'\r\n'
             return
-        yield Ansi(line).wrap(term.width).split('\r\n')[0] + u'\r\n'
+        yield line + u'\r\n'
