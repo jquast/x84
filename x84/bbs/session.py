@@ -50,7 +50,7 @@ class Session(object):
         per process. Arguments:
             terminal: blessings.Terminal,
             pipe: multiprocessing.Pipe child end
-            source: session id by engine: origin of telnet connection (ip:port),
+            sid: session id by engine: origin of telnet connection (ip:port),
             env: dict of environment variables, such as 'TERM', 'USER'.
         """
         # pylint: disable=W0603
@@ -76,7 +76,6 @@ class Session(object):
         self._last_input_time = time.time()
         self._enable_keycodes = True
         self._activity = u'<uninitialized>'
-        self._source = '<undefined>'
         self._encoding = encoding
         self._recording = False
         # event buffer
@@ -153,19 +152,6 @@ class Session(object):
         self._user = value
         logger = logging.getLogger()
         logger.info('user = %r', value.handle)
-
-    @property
-    def source(self):
-        """
-        A string describing the session source
-        """
-        return '%s' % (self._source,)
-
-    @source.setter
-    def source(self, value):
-        # pylint: disable=C0111
-        #         Missing docstring
-        self._source = value
 
     @property
     def encoding(self):
@@ -511,10 +497,11 @@ class Session(object):
             if self.pipe.poll(poll):
                 event, data = self.pipe.recv()
                 retval = self.buffer_event(event, data)
-                logger.debug('event %s %s.', event,
-                             'caught' if event in events else
-                             'handled' if retval is not None else
-                             'buffered',)
+                if event != 'input':
+                    logger.debug('event %s %s.', event,
+                                 'caught' if event in events else
+                                 'handled' if retval is not None else
+                                 'buffered',)
                 if event in events:
                     return (event, self._event_pop(event))
             if timeout == -1:
