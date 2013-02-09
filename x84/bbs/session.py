@@ -408,6 +408,11 @@ class Session(object):
         # buffer all else
         self._buffer[event].insert(0, data)
 
+        # global events are meant to be missed if unwanted, so
+        # we keep only the 100 most recent.
+        if event == 'global' and len(self._buffer[event]) > 150:
+            self._buffer[event] = self._buffer[event][:100]
+
     def buffer_input(self, data):
         """
         Update idle time, and encode input using session encoding such as

@@ -235,6 +235,9 @@ def _loop(telnetd):
             """
             has_data = lambda pipe: bool(len(select.select(
                 [pipe.fileno()], [], [], 0)[0]))
+            disp_handle = lambda handle: ((handle + u' ')
+                    if handle is not None and 0 != len(handle)
+                    else u'')
             while True:
                 try:
                     event, data = pipe.recv()
@@ -248,10 +251,12 @@ def _loop(telnetd):
                 if event == 'exit':
                     unregister(client, pipe, lock)
                     return
-
                 elif event == 'logger':
-                    if data.levelno >= logging.INFO:
-                        data.msg = '%s %s' % (client.addrport(), data.msg)
+                    # prefix message with 'ip:port/nick '
+                    data.msg = '%s[%s] %s' % (
+                            disp_handle(data.handle),
+                            client.addrport(),
+                            data.msg)
                     logger.handle(data)
 
                 elif event == 'output':

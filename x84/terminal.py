@@ -41,7 +41,9 @@ def mkipc_rlog(pipe):
     root = logging.getLogger()
     for hdlr in root.handlers:
         root.removeHandler(hdlr)
-    root.addHandler(IPCLogHandler(pipe))
+    new_hdlr = IPCLogHandler(pipe)
+    root.addHandler(new_hdlr)
+    return new_hdlr
 
 
 def register(client, pipe, lock):
@@ -107,7 +109,7 @@ def start_process(pipe, sid, env):
     # root handler has dangerously forked file descriptors.
     # replace with ipc 'logger' events so that only the main
     # process is responsible for logging.
-    mkipc_rlog(pipe)
+    hdlr = mkipc_rlog(pipe)
 
     # initialize blessings terminal based on env's TERM.
     term = init_term(pipe, env)
@@ -117,6 +119,9 @@ def start_process(pipe, sid, env):
         encoding = 'cp437'
     # spawn and begin a new session
     session = Session(term, pipe, sid, env, encoding)
+    # copy ptr to session instance to logger, so nicks can be
+    # added to the log handler
+    hdlr.session = session
     session.run()
     flush_pipe(pipe)
     pipe.send(('exit', None))

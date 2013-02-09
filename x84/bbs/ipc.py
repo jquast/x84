@@ -12,6 +12,7 @@ class IPCLogHandler(logging.Handler):
     def __init__(self, pipe):
         logging.Handler.__init__(self)
         self.pipe = pipe
+        self.session = None
 
     def emit(self, record):
         """
@@ -26,6 +27,8 @@ class IPCLogHandler(logging.Handler):
                 # pylint: disable=W0104
                 #         Statement seems to have no effect
                 dummy  # pflakes ;/
+            record.handle = (self.session.handle
+                    if self.session is not None else None)
             self.pipe.send(('logger', record))
         except (KeyboardInterrupt, SystemExit):
             raise
