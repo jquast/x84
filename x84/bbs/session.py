@@ -363,20 +363,23 @@ class Session(object):
             raise data
 
         # respond to global 'AYT' requests
-        if event == 'global':
-            sender, mesg = data
-            if mesg == 'AYT':
-                self.send_event('route',
-                               (sender, 'ACK', self.sid, self.user.handle,))
-                # becomes 'ACK' of data 'sid, handle'
-                logger.debug('reply-to global AYT')
-                return True
+        if event == 'global' and data[0] == 'AYT':
+            reply_to = data[1]
+            self.send_event('route', (
+                reply_to, 'ACK',
+                self.sid, self.user.handle,))
+            # becomes 'ACK' of data 'sid, handle'
+            logger.debug('reply-to global AYT')
+            return True
 
-        # accept 'page' as instant chat when 'mesg' is True
-        if event == 'page':
-            if self.user.get('mesg', True):
-                logger.debug('recieving page')
-                self.runscript('chat', data)
+        # accept 'page' as instant chat when 'mesg' is True, or sender is -1
+        # -- intent is that sysop can always 'chat' a user ..
+        if event == 'page' and self._script_stack[-1:][0][0] != 'chat':
+            channel, sender = data
+            if self.user.get('mesg', True) or sender == -1:
+                logger.info('paged by %s' % (sender,))
+                if not self.runscript('chat', channel, sender):
+                    logger.info('rejected page by %s' % (sender,))
                 self.buffer_event('refresh', 'page-return')
                 return True
 
