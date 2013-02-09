@@ -133,7 +133,7 @@ def chat(sessions):
     from x84.bbs import gosub
     (node, tgt_session) = get_node(sessions)
     if node is not None:
-        gosub(chat, tgt_session['sid'])
+        gosub('chat', tgt_session['sid'])
         return True
 
 
