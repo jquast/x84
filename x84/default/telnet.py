@@ -26,16 +26,18 @@ def main(host, port=None, encoding='cp437'):
         if cmd == telnetlib.WILL:
             if opt in (telnetlib.ECHO, telnetlib.SGA):
                 socket.sendall(telnetlib.IAC + telnetlib.DO + opt)
-        if cmd == telnetlib.DO:
+        elif cmd == telnetlib.DO:
             if opt == telnetlib.SGA:
                 socket.sendall(telnetlib.IAC + telnetlib.WILL + opt)
-            if opt == telnetlib.TTYPE:
+            elif opt == telnetlib.TTYPE:
                 socket.sendall(telnetlib.IAC + telnetlib.WILL + opt)
                 socket.sendall(telnetlib.IAC + telnetlib.SB
                         + telnetlib.TTYPE + IS + session.env.get('TERM')
                         + chr(0) + telnetlib.IAC + telnetlib.SE)
             elif opt == telnetlib.NAWS:
-                socket.sendall(telnetlib.IAC + telnetlib.SB + telnetlib.NAWS
+                socket.sendall(telnetlib.IAC + telnetlib.WILL + opt)
+                socket.sendall(telnetlib.IAC + telnetlib.SB
+                        + telnetlib.NAWS
                         + struct.pack('!HH', term.width, term.height)
                         + telnetlib.IAC + telnetlib.SE)
             else:
