@@ -71,27 +71,19 @@ class Selector(AnsiWindow):
         suitable for refresh when changed.
         """
         self._moved = False
-        rstr = u''
         if keystroke in self.keyset['refresh']:
-            rstr += self.refresh()
+            return self.refresh()
         elif keystroke in self.keyset['left']:
-            rstr += self.move_left()
+            return self.move_left()
         elif keystroke in self.keyset['right']:
-            rstr += self.move_right()
+            return self.move_right()
         elif keystroke in self.keyset['toggle']:
-            rstr += self.toggle()
+            return self.toggle()
         elif keystroke in self.keyset['exit']:
             self._quit = True
         elif keystroke in self.keyset['enter']:
             self._selected = True
-        else:
-            import x84.bbs.session
-            logger = logging.getLogger()
-            logger.debug(
-                'unhandled, %r', keystroke
-                if type(keystroke) is not int
-                else x84.bbs.session.getterminal().keyname(keystroke))
-        return rstr
+        return u''
 
     def read(self):
         """
@@ -173,14 +165,18 @@ class Selector(AnsiWindow):
         """
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
-        rstr = self.pos(0, 0)
-        attrs = (self.colors['selected'], self.colors['unselected'])
-        a_left = attrs[0] if self.selection == self.left else attrs[1]
-        a_right = attrs[1] if self.selection == self.left else attrs[0]
-        u_left = self.left.center(int(math.ceil(self.width / 2)))
-        u_right = self.right.center(int(math.floor(self.width / 2)))
-        rstr += a_left + u_left + a_right + u_right + term.normal
-        return rstr
+        attr_l = (self.colors.get('selected', u'')
+                if self.selection == self.left
+                else self.colors.get('unselected'))
+        attr_r = (self.colors.get('selected', u'')
+                if self.selection == self.right
+                else self.colors.get('unselected'))
+        return u''.join((
+            self.pos(0, 0), term.normal, attr_l,
+            self.left.center(int(math.ceil(self.width / 2))),
+            term.normal, attr_r,
+            self.right.center(int(math.floor(self.width / 2))),
+            term.normal,))
 
     def move_right(self):
         """
