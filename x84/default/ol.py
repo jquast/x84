@@ -51,7 +51,7 @@ class FetchUpdates(threading.Thread):
         # to catch it. theres some things that should be CDATA wrapped ..
         buf = ''.join((byte for byte in req.content
                        if ord(byte) >= 0x20
-                       or ord(byte) in (0x09, 0x0a, 0x0d)))
+                       or ord(byte) in (0x09, 0x0a, 0x0d, 0x7f)))
         xml_nodes = xml.etree.ElementTree.XML(buf).findall('node')
         for node in xml_nodes:
             self.content.append(
@@ -165,8 +165,8 @@ def banner():
     if term.width >= 78:
         output += term.home + term.normal + term.clear
         # xzip's ansi is line-clean, center-align with terminal width,
-        art = open(os.path.join(
-            os.path.dirname(__file__), 'art', 'ol.ans')).readlines()
+        artfile = os.path.join(os.path.dirname(__file__), 'ol.ans')
+        art = open(artfile).readlines()
         max_ans = max([len(Ansi(from_cp437(line.rstrip()))) for line in art])
         for line in art:
             padded = Ansi(from_cp437(line.rstrip())).center(max_ans)
