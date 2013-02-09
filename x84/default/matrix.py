@@ -15,7 +15,7 @@ import os
 def denied(msg):
     from x84.bbs import getterminal, echo, getch
     term = getterminal()
-    echo(msg + term.normal)
+    echo(u'\r\n' + term.bold_red(msg))
     getch(1.0)
 
 
@@ -49,7 +49,7 @@ def get_username(handle=u''):
         if allow_apply:
             gosub('nua', u'')
             return u''
-        denied(term.bright_red + denied_msg)
+        denied(denied_msg)
         return u''
     elif handle.lower() in byecmds:
         goto('logoff')
@@ -62,7 +62,7 @@ def get_username(handle=u''):
     if u_handle is not None:
         return u_handle  # matched
     if allow_apply is False:
-        denied(term.bright_red(denied_msg))
+        denied(denied_msg)
         return u''
 
     echo(apply_msg)
