@@ -154,6 +154,11 @@ layout = [
 ],
 ]
 
+fieldx1 = 32
+fieldy1 = 10
+scorex1 = 11
+scorey1 = 11
+
 def play():
   import os
   from x84.bbs import getterminal, getch, from_cp437, Ansi
@@ -260,20 +265,21 @@ def play():
   def drawfield():
     lastcolor=''
     for y in range(0,field_height,2):
-      gotoxy(field_width,2+y/2)
+      #gotoxy(field_width,2+y/2)
+      gotoxy(fieldx1+2,fieldy1+1+y/2)
       # Which block to show, full, half-up, half-down or empty.
       for x in range(field_width):
         color = field[y][x]+field[y+1][x]*8
         if       field[y][x] and     field[y+1][x]:
-          c='\u2588' #'\xDB'
+          c=u'\u2588' #'\xDB'
           if field[y][x] == field[y+1][x]:
             color = color%8
           else:
-            c='\xDF'
+            c=u'\u2580' #'\xDF'
         elif     field[y][x] and not field[y+1][x]:
-          c='\xDF'
+          c=u'\u2580' #'\xDF'
         elif not field[y][x] and     field[y+1][x]:
-          c='\xDC'
+          c=u'\u2584' #'\xDC'
         else: # both empty
           c=' '
         # Output optimization
@@ -303,7 +309,9 @@ def play():
   xpos = 2   # X position
   #ypos = -2  # Y position
   ypos = -len(layout[p][0])
-  #score = 0
+  level = 1
+  score = 0
+  lines = 0
   def flush():
     global charcache
     echo_unbuffered(charcache)
@@ -365,15 +373,20 @@ def play():
       for x in range(len(layout[p][r][0])):
         #plotblock(layoutcolor[layout[p][r][y][x]],lastcolor)
         plotblock(layout[p][r][y][x],lastcolor)
+  def drawstats():
+    echo(term.move(scorey1,scorex1) + '%d' % level)
+    echo(term.move(scorey1+2,scorex1) + '%d' % lines)
+    echo(term.move(scorey1+3,scorex1) + '%d' % score)
 
   #clear()
   # temp background
   #for i in range(12):
-  #  gotoxy(8,1+i)
-  #  echo('\xB0'*14)
-  for i in range(22):
-    gotoxy(8,1+i)
-    echo(u'\u2592'*24)
+  #  gotoxy(fieldx1,fieldy1+i)
+  #  echo(u'\u2592'*14) #'\xB0'
+  drawstats()
+  #for i in range(22):
+  #  gotoxy(fieldx1,fieldy1+i)
+  #  echo(u'\u2592'*24)
   ticksize = 0.4
   nexttick = timenow()+ticksize
   showpiece(xpos,ypos,p,r)
@@ -385,7 +398,8 @@ def play():
   #cursor_hide()
   buf = ''
   while 1:
-    redrawfieldbig(rr)
+    #redrawfieldbig(rr)
+    drawfield()
     #gotoxy(0,0)
     #echo('\33[37mx: %d, y: %d, p: %d         '%(xpos,ypos,p))
     #key=None
@@ -436,19 +450,26 @@ def play():
             complete.append(y)
         if len(complete)>0:
           # scroll a page, Flash
-          echo(u'\r\n' * term.height)
-          for n in range(5):
-              echo(u'\033#8')
-              getch(0.1)
-              echo(term.clear)
-              getch(0.1)
+          #echo(u'\r\n' * term.height)
+          #for n in range(5):
+          #    echo(u'\033#8')
+          #    getch(0.1)
+          #    echo(term.clear)
+          #    getch(0.1)
           # echo centered: you die
-          getch()
+          #getch()
           # Add score
+          lines += len(complete)
+          score += len(complete)*len(complete)*100
           # Shrink field
           for line in complete:
             del field[line]
             field.insert(0,[0]*field_width)
+
+          if lines >= level*10:
+            level += 1
+            ticksize = 0.4 - level*0.02
+          drawstats()
 
           # Redraw complete field
           rr.merge (0, 0, field_width, field_height)
@@ -471,6 +492,10 @@ def play():
 def main():
   from x84.bbs import getsession, getterminal, echo
   session, term = getsession(), getterminal()
+  from x84.bbs.cp437 import CP437
   with term.hidden_cursor():
       play()
+  #showcharset()
+  #echo(str(CP437[0xDF]) + '\n')
+  #echo(str(CP437[0xDC]) + '\n')
   echo(term.move(term.height, 0))
