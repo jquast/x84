@@ -24,19 +24,6 @@ def register_score(handle, score):
     else:
         if score > db[handle]:
             db[handle] = score
-    db['fake1'] = 1
-    db['fake2'] = 2
-    db['fake3'] = 3
-    db['fake4'] = 4
-    db['fake5'] = 5
-    db['fake6'] = 6
-    db['fake7'] = 7
-    db['fake8'] = 8
-    db['fake9'] = 9
-    db['fake10'] = 10
-    db['fake11'] = 11
-    db['fake12'] = 12
-    db['fake13'] = 13
 
 
 def show_scores(score):
