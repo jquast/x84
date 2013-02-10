@@ -242,6 +242,7 @@ def main():
                     ('handle', handle),
                     ('lastfresh', time.time()),))
                 dirty = time.time()
+                echo(u'\a')
 
         # update sessions that respond to info-req
         data = session.poll_event('info-ack')
