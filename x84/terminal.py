@@ -60,16 +60,10 @@ def flush_pipe(pipe):
     to prevent zombie processes with IPC waiting to be picked up.
     """
     logger = logging.getLogger()
-    warned = False
     while pipe.poll():
-        if not warned:
-            logger.warn('pipe assertion, leftover bit(s) if any follow:')
-            warned = True
         event, data = pipe.recv()
         if event == 'logger':
             logger.handle(data)
-    if warned:
-        logger.warn('END pipe assertion')
 
 
 def unregister(client, pipe, lock):
