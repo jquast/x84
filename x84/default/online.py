@@ -239,7 +239,8 @@ def main():
             else:
                 sessions[sid] = dict((
                     ('handle', handle),
-                    ('lastfresh', time.time()),))
+                    ('lastfresh', time.time()),
+                    ('lastasked', time.time()),)
                 dirty = time.time()
                 echo(u'\a')
 
@@ -264,8 +265,8 @@ def main():
             if sid == SELF_ID:
                 continue
             if attrs.get('idle', -1) == -1 or (
-                    time.time() - attrs['lastfresh'] > POLL_INF
-                    and time.time() - attrs['lastasked'] > POLL_INF):
+                    time.time() - attrs.get('lastfresh') > POLL_INF
+                    and time.time() - attrs.get('lastasked') > POLL_INF):
                 request_info(sid)
                 attrs['lastasked'] = time.time()
 
