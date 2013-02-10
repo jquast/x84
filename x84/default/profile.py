@@ -278,9 +278,9 @@ def lborder(lightbar, user):
     elif sel == 't':
         val = session.env.get('TERM', 'unknown') if is_self else u'x'
     elif sel == 'h':
-        val = str(term.height)
+        val = str(term.height) if is_self else u'x'
     elif sel == 'w':
-        val = str(term.width)
+        val = str(term.width) if is_self else u'x'
     elif sel == 'l':
         val = user.location.strip()
         if 'sysop' in session.user.groups:
