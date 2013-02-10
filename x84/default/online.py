@@ -267,7 +267,7 @@ def main():
                 or attr.get('delete', 0) == 1)])
 
         # prune users who haven't responded to AYT
-        for sid, attrs in sessions.items()[:]:
+        for sid, attrs in sessions.items():
             if time.time() - attrs['lastfresh'] > (POLL_AYT * 2):
                 sessions[sid]['delete'] = 1
                 dirty = time.time()
@@ -293,4 +293,4 @@ def main():
         # delete disconnected sessions
         for sid, attrs in sessions.items()[:]:
             if attrs.get('delete', 0) == 1:
-                del sessions[sid]['delete']
+                del sessions[sid]
