@@ -27,13 +27,13 @@ def process(mesg):
     global CHANNEL, NICKS
     if (CHANNEL != tgt_channel and 'sysop' not in session.user.groups):
         return
-    if cmd == 'join':
+    elif cmd == 'join':
         if handle not in NICKS:
             NICKS[handle] = sid
             return show_join(handle, sid, tgt_channel)
     elif handle not in NICKS:
         NICKS[handle] = sid
-    if cmd == 'part':
+    elif cmd == 'part':
         if handle in NICKS:
             del NICKS[handle]
         return show_part(handle, sid, tgt_channel, args)
@@ -212,32 +212,32 @@ def main(channel=None, caller=None):
     def cmd(pager, msg):
         cmd, args = msg.split()[0], msg.split()[1:]
         global CHANNEL, NICKS
-        if cmd == '/help':
+        if cmd.lower() == '/help':
             pager.append(show_help())
             return True
-        elif cmd == '/join' and len(args) == 1:
+        elif cmd.lower() == '/join' and len(args) == 1:
             part_chan('lEAViNG fOR ANOthER ChANNEl')
             CHANNEL = args[0]
             NICKS = dict()
             join_chan()
             return True
-        elif cmd in ('/act', '/me',):
+        elif cmd.lower() in ('/act', '/me',):
             act(u' '.join(args))
-        elif cmd == '/say':
+        elif cmd.lower() == '/say':
             say(u' '.join(args))
-        elif cmd == '/part':
+        elif cmd.lower() == '/part':
             part_chan(u' '.join(args))
             CHANNEL = None
             NICKS = dict()
             return True
-        elif cmd == '/quit':
+        elif cmd.lower() == '/quit':
             part_chan('quit')
             global EXIT
             EXIT = True
-        elif cmd == '/users':
+        elif cmd.lower() == '/users':
             pager.append(show_nicks(NICKS.keys()))
             return True
-        elif cmd == '/whois' and len(args) == 1:
+        elif cmd.lower() == '/whois' and len(args) == 1:
             whois(args[0])
         return False
 
@@ -272,6 +272,7 @@ def main(channel=None, caller=None):
     pager = get_pager(None)  # output window
     readline = get_inputbar(pager)  # input bar
     echo(refresh(pager, readline, init=True))
+    echo(pager.append("tYPE '/quit' tO EXit."))
     dirty = time.time()
     join_chan()
     while not EXIT:
@@ -305,8 +306,6 @@ def main(channel=None, caller=None):
         # process keystroke as input, or, failing that,
         # as a command key to the pager. refresh portions of
         # input bar or act on cariage return, accordingly.
-        if inp in (term.KEY_EXIT, unichr(27)):
-            return
         elif inp is not None:
             otxt = readline.process_keystroke(inp)
             if readline.carriage_returned:
