@@ -25,6 +25,7 @@ def refresh():
             ('w', "hO'S ONliNE"),
             ('n', 'EWS'),
             ('c', 'ChAt'),
+            ('t', 'tEtRiS'),
             ('s', 'YS. iNfO'),
             ('f', 'fORECASt'),
             ('e', 'dit PROfilE'),
@@ -82,7 +83,7 @@ def main():
         elif inp == u'e':
             gosub('profile')
         elif inp == u't':
-            gosub('tetris')  # currently hidden (jojo's)
+            gosub('tetris')
         elif inp == u'c':
             gosub('chat')
         elif inp == u'p':
