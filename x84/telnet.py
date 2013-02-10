@@ -378,9 +378,9 @@ class TelnetClient(object):
                 if err[0] == 11:
                     logger.warn('%s: %s (bandwidth exceed)',
                             self.addrport(), err[1],)
-                    pass
-                raise Disconnected(
-                    'socket send %d: %s' % (err[0], err[1],))
+                else:
+                    raise Disconnected(
+                        'socket send %d: %s' % (err[0], err[1],))
 
         sent = send(ready_bytes)
         if sent < len(ready_bytes):
