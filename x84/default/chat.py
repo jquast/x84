@@ -171,7 +171,7 @@ def main(channel=None, caller=None):
     # sysop repy_to is -1 to force user, otherwise prompt
     if channel == session.sid and caller not in (-1, None):
         echo(u''.join((
-            term.normal, u'\b',
+            term.normal, u'\a',
             u'\r\n', term.clear_eol,
             u'\r\n', term.clear_eol,
             term.bold_green(u' ** '),
