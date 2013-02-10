@@ -355,8 +355,6 @@ class Session(object):
             self.send_event('route', (
                 reply_to, 'ACK',
                 self.sid, self.user.handle,))
-            # becomes 'ACK' of data 'sid, handle'
-            logger.debug('reply-to global AYT')
             return True
 
         # accept 'page' as instant chat when 'mesg' is True, or sender is -1
@@ -373,7 +371,6 @@ class Session(object):
         # respond to 'info-req' events by returning pickled session info
         if event == 'info-req':
             sid = data[0]
-            logger.debug('%s reply-to %s: info-req', self.sid, sid)
             self.send_event('route', (sid, 'info-ack', self.sid, self.info(),))
             return True
 
