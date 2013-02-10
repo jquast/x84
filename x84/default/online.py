@@ -1,19 +1,18 @@
 """ Who's online script for X/84, https://github.com/jquast/x84 """
 import time
 SELF_ID = -1
-POLL_KEY = 0.10 # blocking ;; how often to poll keyboard
-POLL_INF = 1.50 # seconds elapsed until re-ask clients for more details
-POLL_AYT = 2.00 # seconds elapsed until global 'are you there?' is checked,
-POLL_OUT = 0.20 # seconds elapsed before screen updates
+POLL_KEY = 0.05 # blocking ;; how often to poll keyboard
+POLL_INF = 2.00 # seconds elapsed until re-ask clients for more details
+POLL_AYT = 4.00 # seconds elapsed until global 'are you there?' is checked,
+POLL_OUT = 0.30 # seconds elapsed before screen updates
 # slen: returns terminal width of ascii representation of #sessions
 slen = lambda sessions: len(u'%d' % (len(sessions),))
 
-def request_info(session_ids):
+def request_info(sid):
     # send individual info-req messages
     from x84.bbs import getsession
     session = getsession()
-    for sid in session_ids:
-        session.send_event('route', (sid, 'info-req', session.sid,))
+    session.send_event('route', (sid, 'info-req', session.sid,))
 
 
 def banner():
@@ -261,11 +260,14 @@ def main():
         # request that all sessions update if more stale than POLL_INF,
         # or is missing session info (only AYT replied so far!),
         # or has been displayed as 'Disconnected' (marked for deletion)
-        request_info([key for key, attr in sessions.items()
-            if key != -1 and (
-                time.time() - attr['lastfresh'] > POLL_INF
-                or attr.get('idle', -1) == -1
-                or attr.get('delete', 0) == 1)])
+        for sid, attrs in sessions.items():
+            if sid == SELF_ID:
+                continue
+            if attrs.get('idle', -1) == -1 or (
+                    time.time() - attrs['lastfresh'] > POLL_INF
+                    and time.time() - attrs['lastasked'] > POLL_INF):
+                request_info(sid)
+                attrs['lastasked'] = time.time()
 
         # prune users who haven't responded to AYT
         for sid, attrs in sessions.items():
