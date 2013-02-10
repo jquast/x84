@@ -68,7 +68,10 @@ def main():
             term.blue_reverse(msg.ljust(automsg_len)),
             term.bold(u'\\'),
             term.blue(asc_ago),)))
-        echo(Ansi(disp).wrap(term.width))
+        echo(u''.join((
+            u'\r\n\r\n',
+            Ansi(disp).wrap(term.width),
+            )))
         return idx
 
     def refresh_all(idx=None):
