@@ -179,7 +179,7 @@ def init_log_ini():
     # for multiprocessing/threads, use: %(processName)s %(threadName) !
     cfg_log.set('formatter_default', 'format',
                 '%(asctime)s %(levelname)s '
-                '%(filename)12s:%(lineno)-4s '
+                '%(filename)11s:%(lineno)-3s '
                 '- %(message)s')
     cfg_log.set('formatter_default', 'class', 'logging.Formatter')
 
