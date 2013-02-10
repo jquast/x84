@@ -39,23 +39,24 @@ def show_scores(score):
     score_fmt = '%-' + str(score_len) + 's %' + str(handle_len) + 's'
 
     # line up over tetris game, but logo & 'made by jojo' in view
-    # -- since we have so much screen width, columize the scores
+    # -- since we have so much screen width, columize the scores,
+    # looks like the math brings it out to 2 or 3 columns.
     height = 11
-    width = 79
+    width = 73
     yloc = 10
-    xloc = 0
+    xloc = 3
     pager = Pager(height=height, width=width, yloc=yloc, xloc=xloc)
-    pager.xpadding = 0
+    pager.xpadding = 1
     pager.glyphs['left-vert'] = u''
     pager.glyphs['right-vert'] = u''
     pager.colors['border'] = term.blue_reverse
     pager.alignment = 'center'
     def ismine(col):
         return col.split() == [str(score), session.user.handle]
-    # http://code.activestate.com/recipes/425397-split-a-list-into-roughly-equal-sized-pieces/#c3
     column_len = len(score_fmt % (u'', u'',))
     columns = pager.visible_width / column_len
     def split_seq(seq, p):
+        # http://code.activestate.com/recipes/425397-split-a-list-into-roughly-equal-sized-pieces/#c3
         newseq = []
         n = len(seq) / p    # min items per subsequence
         r = len(seq) % p    # remaindered items
@@ -65,33 +66,32 @@ def show_scores(score):
             r = max(0, r-1)  # use up remainders
             b,e = e, e + n + min(1, r)  # min(1,r) is always 0 or 1
         return newseq
-    score_txt = zip(*split_seq(
-        [score_fmt % record for record in scores], columns))
+
+    # do not columnize until we have at least that many records !
+    if len(scores) > columns:
+        score_txt = zip(*split_seq(
+            [score_fmt % record for record in scores], columns))
+    else:
+        columns = len(scores)
+        score_txt = [[score_fmt % record for record in scores]]
+
     spacer = u' ' * ((pager.visible_width - (column_len * columns))/columns)
     pager.append(spacer.join([score_fmt % (
         term.bold_blue_underline('SCORE'.ljust(score_len)),
         term.bold_blue_underline('hANdlE'.rjust(handle_len),))] * columns))
+    empty_slot = u''.join((
+        term.bold_black('.'.ljust(score_len + 1)),
+        term.bold_black('.'.rjust(handle_len))))
+    # display scores, bold our in blue, if any,
+    # fill additional columns with '.'
     for row in score_txt:
         pager.append(spacer.join([col if not ismine(col)
-            else term.bold_blue(col) for col in row]))
+            else term.bold_blue(col) for col in row]
+            + [empty_slot] * (columns - len(row))))
+    # append additional empty slot rows
     while len(pager.content) < pager.visible_height:
-        pager.append(spacer.join([
-            term.bold_black('.'.ljust(score_len + 1))
-            + term.bold_black('.'.rjust(handle_len))] * columns))
-#    row = 0
-#    ptr = pager.visible_height
-#    while len(score_txt) > pager.visible_height:
-#        page2 = score_txt[pager.visible_height]
-#    while len(score_txt) > pager.visible_height:
-#    for _score, _handle in scores:
-#        pager.append('%-20s %-9s' % (
-#            term.bold_blue_underline('hANdlE'),
-#            term.bold_blue_underline('SCORE',)))
-#        #    lightbar.update([((_score, _handle),
-#        u'%-20s %-9d' % (_handle, _score,)
-#        if notmine(_handle, _score) else term.bold_blue(
-#            u'%-20s %-9d' % (_handle, _score,)))
-#        for _score, _handle in scores[:lightbar.visible_height]])
+        pager.append(spacer.join([empty_slot] * columns))
+
     dirty = True
     while True:
         inp = getch(1)
