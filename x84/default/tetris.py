@@ -10,23 +10,23 @@ def main():
     session, term = getsession(), getterminal()
     assert term.width >= 79 and term.height >= 23
     with term.hidden_cursor():
-        score = play()
+        score,level,lines = play()
         if score > 0:
-            register_score(session.user.handle, score)
-            show_scores(score)
+            register_score(session.user.handle, (score,level,lines))
+        show_scores((score,level,lines))
 
 
-def register_score(handle, score):
+def register_score(handle, stats):
     from x84.bbs import DBProxy
     db = DBProxy('tetris')
     if not handle in db:
-        db[handle] = score
+        db[handle] = stats
     else:
-        if score > db[handle]:
-            db[handle] = score
+        if stats[0] > db[handle][0]:
+            db[handle] = stats
 
 
-def show_scores(score):
+def show_scores(stats):
     from x84.bbs import DBProxy, Pager, getterminal
     from x84.bbs import getch, echo, getsession, ini
     session, term = getsession(), getterminal()
@@ -35,8 +35,11 @@ def show_scores(score):
                 for (_handle, _score) in DBProxy('tetris').items()],
             reverse=True)
     handle_len = ini.CFG.getint('nua', 'max_user')
-    score_len = 9
+    score_len = 13
     score_fmt = '%-' + str(score_len) + 's %' + str(handle_len) + 's'
+
+    if not scores:
+        return
 
     # line up over tetris game, but logo & 'made by jojo' in view
     # -- since we have so much screen width, columize the scores,
@@ -52,7 +55,7 @@ def show_scores(score):
     pager.colors['border'] = term.blue_reverse
     pager.alignment = 'center'
     def ismine(col):
-        return col.split() == [str(score), session.user.handle]
+        return col.split() == [str(stats[0]), session.user.handle]
     column_len = len(score_fmt % (u'', u'',))
     columns = pager.visible_width / column_len
     def split_seq(seq, p):
@@ -516,7 +519,7 @@ def play():
         # hidepiece()
         if key is not None:
             if key in (u'q', u'Q'):
-                return 0
+                return 0,0,0
             elif key in (u'S',):
                 show_scores(0)
             elif key in (term.KEY_LEFT, u'h',):
@@ -561,7 +564,7 @@ def play():
                         inp = getch()
                         if inp in (u'\r', term.KEY_ENTER):
                             break
-                    return score
+                    return score,level,lines
 
                 # Any complete rows to remove?
                 complete = []
@@ -597,19 +600,3 @@ def play():
                 xpos = 4
                 ypos = -len(layout[p][0])
                 showpiece(xpos, ypos, p, r)
-
-
-# Help for the artistic developer
-def showcharset():
-    from x84.bbs import echo
-    echo('**   ')
-    for c in range(16):
-        echo('%X ' % c)
-    echo('\r\n' + '   +' + '-' * 32 + '\r\n')
-    for b in range(2, 256 / 16):
-        echo('%0X | ' % (b * 16))
-        n = 16 * b
-        for i in range(n, n + 16):
-            echo(chr(i) + ' ')
-        echo('\r\n')
-    echo('\r\n')
