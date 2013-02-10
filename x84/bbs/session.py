@@ -184,10 +184,7 @@ class Session(object):
     def enable_keycodes(self, value):
         # pylint: disable=C0111
         #         Missing docstring
-        if value != self._enable_keycodes:
-            logger = logging.getLogger()
-            logger.debug('enable_keycodes=%s', value)
-            self._enable_keycodes = value
+        self._enable_keycodes = value
 
     @property
     def pid(self):
