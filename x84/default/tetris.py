@@ -9,13 +9,6 @@ def main():
     from x84.bbs import getsession, getterminal
     session, term = getsession(), getterminal()
     assert term.width >= 79 and term.height >= 23
-# intermediary fix ;/
-    from x84.bbs import DBProxy
-    db = DBProxy('tetris')
-    for handle, score in db.items()[:]:
-        if type(score) is int:
-            del db[handle]
-# delete me
     with term.hidden_cursor():
         score = play()
         if score[0] > 0:
