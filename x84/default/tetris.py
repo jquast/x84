@@ -9,37 +9,44 @@ def main():
     from x84.bbs import getsession, getterminal
     session, term = getsession(), getterminal()
     assert term.width >= 79 and term.height >= 23
+# intermediary fix ;/
+    from x84.bbs import DBProxy
+    db = DBProxy('tetris')
+    for handle, score in db.items()[:]:
+        if type(score) is int:
+            del db[handle]
+# delete me
     with term.hidden_cursor():
-        score,level,lines = play()
-        if score > 0:
-            register_score(session.user.handle, (score,level,lines))
-        show_scores((score,level,lines))
+        score = play()
+        if score[0] > 0:
+            register_score(session.user.handle, score)
+        show_scores(score)
 
 
-def register_score(handle, stats):
+def register_score(handle, score):
     from x84.bbs import DBProxy
     db = DBProxy('tetris')
     if not handle in db:
-        db[handle] = stats
-    else:
-        if stats[0] > db[handle][0]:
-            db[handle] = stats
+        db[handle] = score
+    elif score[0] > db[handle][0]:
+            db[handle] = score
 
 
-def show_scores(stats):
+def show_scores(my_score):
     from x84.bbs import DBProxy, Pager, getterminal
     from x84.bbs import getch, echo, getsession, ini
     session, term = getsession(), getterminal()
     scores = sorted(
-            [ (_score, _handle)
-                for (_handle, _score) in DBProxy('tetris').items()],
+            [ (_score, _level, _handle)
+                for (_handle, (_score, _level, _lines))
+                    in DBProxy('tetris').items()],
             reverse=True)
-    handle_len = ini.CFG.getint('nua', 'max_user')
-    score_len = 13
-    score_fmt = '%-' + str(score_len) + 's %' + str(handle_len) + 's'
-
-    if not scores:
+    if not len(scores):
         return
+    handle_len = ini.CFG.getint('nua', 'max_user')
+    score_len = 10
+    score_fmt = '%-' + str(score_len) + 's %-2s %' + str(handle_len) + 's'
+
 
     # line up over tetris game, but logo & 'made by jojo' in view
     # -- since we have so much screen width, columize the scores,
@@ -55,8 +62,9 @@ def show_scores(stats):
     pager.colors['border'] = term.blue_reverse
     pager.alignment = 'center'
     def ismine(col):
-        return col.split() == [str(stats[0]), session.user.handle]
-    column_len = len(score_fmt % (u'', u'',))
+        return col.split() == [str(my_score[0]), str(my_score[1]),
+                session.user.handle]
+    column_len = len(score_fmt % (u'', u'', u'',))
     columns = pager.visible_width / column_len
     def split_seq(seq, p):
         # http://code.activestate.com/recipes/425397-split-a-list-into-roughly-equal-sized-pieces/#c3
@@ -81,14 +89,17 @@ def show_scores(stats):
     spacer = u' ' * ((pager.visible_width - (column_len * columns))/columns)
     pager.append(spacer.join([score_fmt % (
         term.bold_blue_underline('SCORE'.ljust(score_len)),
+        term.bold_blue_underline('lV')+ u' ',
         term.bold_blue_underline('hANdlE'.rjust(handle_len),))] * columns))
     empty_slot = u''.join((
         term.bold_black('.'.ljust(score_len + 1)),
+        term.bold_black('.'.ljust(3)),
         term.bold_black('.'.rjust(handle_len))))
     # display scores, bold our in blue, if any,
     # fill additional columns with '.'
     for row in score_txt:
-        pager.append(spacer.join([col if not ismine(col)
+        pager.append(spacer.join(
+            [col if not ismine(col)
             else term.bold_blue(col) for col in row]
             + [empty_slot] * (columns - len(row))))
     # append additional empty slot rows
@@ -521,7 +532,7 @@ def play():
             if key in (u'q', u'Q'):
                 return 0,0,0
             elif key in (u'S',):
-                show_scores(0)
+                show_scores ((score, level, lines))
             elif key in (term.KEY_LEFT, u'h',):
                 xpos, ypos, r, m = movepiece(xpos - 1, ypos, r)
             elif key in (term.KEY_RIGHT, u'l',):
@@ -564,7 +575,7 @@ def play():
                         inp = getch()
                         if inp in (u'\r', term.KEY_ENTER):
                             break
-                    return score,level,lines
+                    return (score, level, lines)
 
                 # Any complete rows to remove?
                 complete = []
