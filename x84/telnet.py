@@ -236,7 +236,6 @@ class TelnetClient(object):
         Get any input bytes received from the DE. The input_ready method
         returns True when bytes are available.
         """
-        print repr(self.recv_buffer), 'recv_buffer'
         data = self.recv_buffer.tostring()
         self.recv_buffer = array.array('c')
         return data
@@ -409,7 +408,6 @@ class TelnetClient(object):
         try:
             data = self.sock.recv(self.BLOCKSIZE_RECV)
             recv = len(data)
-            print 'recv', repr(data)
             if 0 == recv:
                 raise Disconnected('Closed by client')
         except socket.error, err:
@@ -427,7 +425,6 @@ class TelnetClient(object):
         """
         Buffer non-telnet commands bytestrings into recv_buffer.
         """
-        print repr(byte), 'byte'
         self.recv_buffer.fromstring(byte)
 
     def _iac_sniffer(self, byte):
