@@ -80,7 +80,6 @@ class Session(object):
         self._last_input_time = time.time()
         self._enable_keycodes = True
         self._activity = u'<uninitialized>'
-        self._recording = False
         # event buffer
         self._buffer = dict()
         # save state for ttyrec compression
@@ -580,10 +579,9 @@ class Session(object):
         self._fp_ttyrec.close()
         self._fp_ttyrec = None
 
-    def start_recording(self, dst=None):
+    def start_recording(self):
         """
-        Begin recording to ttyrec file keyed by 'dst'. When 'dst' is None
-        (default), use the handle of the current session.
+        Begin recording to ttyrec file.
         """
         logger = logging.getLogger()
         assert self._fp_ttyrec is None, ('already recording')
@@ -603,7 +601,6 @@ class Session(object):
             os.makedirs(self._ttyrec_folder)
         self._fp_ttyrec = io.open(filename, 'wb+')
         self._ttyrec_sec = -1
-        self._recording = True
         self._ttyrec_write_header()
         logger.info('REC %s' % (filename,))
 
@@ -628,7 +625,7 @@ class Session(object):
         # 'length' portion, and append data to end of stream.
         # .. unfortuantely, this is not compatible with ttyplay -p,
         # so for the time being, it is disabled ..
-        assert self._recording, 'call start_recording() first'
+        assert self._fp_ttyrec is None, 'call start_recording() first'
         timekey = self.duration
 
         # Round down timekey to nearest whole number,
