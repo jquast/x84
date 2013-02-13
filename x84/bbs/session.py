@@ -6,6 +6,7 @@ import traceback
 import threading
 import logging
 import struct
+import codecs
 import math
 import time
 import imp
@@ -43,6 +44,8 @@ class Session(object):
     #        Too many instance attributes (29/7)
     #        Too many public methods (25/20)
     TRIM_CP437 = bytes(chr(14) + chr(15))
+    _encoding = None
+    _decoder = None
 
     def __init__(self, terminal, pipe, sid, env, encoding='utf8'):
         """
@@ -62,6 +65,7 @@ class Session(object):
         self.terminal = terminal
         self.sid = sid
         self.env = env
+        self.encoding = encoding
         self.lock = threading.Lock()
         self._user = None
         self._script_stack = [(x84.bbs.ini.CFG.get('matrix', 'script'),)]
@@ -76,7 +80,6 @@ class Session(object):
         self._last_input_time = time.time()
         self._enable_keycodes = True
         self._activity = u'<uninitialized>'
-        self._encoding = encoding
         self._recording = False
         # event buffer
         self._buffer = dict()
@@ -169,6 +172,7 @@ class Session(object):
             logger.info('encoding=%s', value)
             assert value in ('utf8', 'cp437')
             self._encoding = value
+            self._decoder = codecs.getincrementaldecoder(value)()
 
     @property
     def enable_keycodes(self):
@@ -399,17 +403,17 @@ class Session(object):
 
     def buffer_input(self, data):
         """
-        Update idle time, and encode input using session encoding such as
-        'utf8' or 'cp437'. When enable_keycodes is True, yield single atoms
-        for any detected multibyte sequences.
+        Update idle time, and decode input using session encoding.
+        When enable_keycodes is True (default), yield single atoms
+        for any detected multibyte sequences, these are of type int.
 
         The unfortunate side-effect is something might appear as an
         equivalent KEY_SEQUENCE that is better described as it was
         to traditional getch() users, '\r'(^J) and '\b'(^H) as
         term.KEY_ENTER and term.KEY_BACKSPACE, for example.
 
-        When ^L/KEY_REFRESH in getch() stream as detected, a refresh event is
-        buffered.
+        When ^L/KEY_REFRESH in getch() stream as detected,
+        a refresh event is buffered.
         """
         self._last_input_time = time.time()
         ctrl_l = self.terminal.KEY_REFRESH
@@ -419,13 +423,15 @@ class Session(object):
             logger.debug('<-- %r.', data)
 
         if not self.enable_keycodes:
-            # send keyboard bytes in as-is, 1-by-1, unmanipulated
+            # send keyboard bytes in as-is (no decoding!)
             for keystroke in data:
                 self._buffer['input'].insert(0, keystroke)
             return
 
         # perform keycode translation with modified blessings/curses
-        for keystroke in self.terminal.trans_input(data, self.encoding):
+        for keystroke in self.terminal.trans_input(data, self._decoder):
+            if self._tap_input and logger.isEnabledFor(logging.DEBUG):
+                logger.debug('<== %r.', keystroke)
             if keystroke in (unichr(12), ctrl_l):
                 self._buffer['input'].insert(0, ctrl_l)
                 self._buffer['refresh'] = list((('input', ctrl_l),))

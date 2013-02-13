@@ -96,7 +96,8 @@ def start_process(pipe, sid, env):
         sid: string describing session source (fe. IP address & Port)
         env: dictionary of client environment variables (requires 'TERM')
     """
-    from x84.bbs.session import Session
+    import x84.bbs.ini
+    import x84.bbs.session
 
     # root handler has dangerously forked file descriptors.
     # replace with ipc 'logger' events so that only the main
@@ -106,11 +107,11 @@ def start_process(pipe, sid, env):
     # initialize blessings terminal based on env's TERM.
     term = init_term(pipe, env)
 
-    encoding = 'utf8'
+    encoding = x84.bbs.ini.CFG.get('session', 'default_encoding')
     if env.get('TERM', 'unknown') in ('unknown', 'ansi', 'ansi-bbs'):
         encoding = 'cp437'
     # spawn and begin a new session
-    session = Session(term, pipe, sid, env, encoding)
+    session = x84.bbs.session.Session(term, pipe, sid, env, encoding)
     # copy ptr to session instance to logger, so nicks can be
     # added to the log handler
     hdlr.session = session

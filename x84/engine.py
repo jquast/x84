@@ -196,6 +196,7 @@ def _loop(telnetd):
             # send input to subprocess,
             if client.input_ready() and lock.acquire(False):
                 inp = client.get_input()
+                print repr(inp)
                 pipe.send(('input', inp,))
                 lock.release()
 

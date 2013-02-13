@@ -80,9 +80,9 @@ class Terminal(object):
         # pylint: disable=W0212,E1101
         # Access to a protected member _capability_names of a client class
         # Function 'has_key' has no '_capability_names' member
+        capabilities = curses.has_key._capability_names.iteritems()
         self._keymap = dict([(curses.tigetstr(cap).decode('utf8'), keycode)
-                             for (keycode, cap) in
-                             curses.has_key._capability_names.iteritems()
+                             for (keycode, cap) in capabilities
                              if curses.tigetstr(cap) is not None])
 
         # not complete, but pretty close ..
@@ -370,16 +370,19 @@ class Terminal(object):
             return code.decode('utf8')
         return u''
 
-    def trans_input(self, data, encoding='utf8'):
+    def trans_input(self, text, decoder):
         """
         Yield either a unicode byte or a curses key constant as integer.
-        If data is a bytestring, it is converted to unicode using encoding.
+        If data is a bytestring, it is converted to unicode using incremental
+        decoder, a result from codecs.getincrementaldecoder(encoding).
         """
-        logger = logging.getLogger()
-        if isinstance(data, str):
-#            logger.debug('decoding: %r', data)
-            data = data.decode(encoding, 'replace')
-#        logger.debug('decoded: %r', data)
+        decoded = list()
+        for num, byte in enumerate(text):
+            final=(num+1) == len(text)
+            ucs = decoder.decode(byte, final)
+            if ucs is not None:
+                decoded.append(ucs)
+        data = u''.join(decoded)
 
         def scan_keymap(text):
             """
@@ -391,14 +394,8 @@ class Terminal(object):
             return (None, None)  # no match
 
         while len(data):
-            if ('\r', '\x00') == (data[0],
-                                  data[1] if 1 != len(data) else None):
-                # skip beyond nul (nvt telnet)
-                yield self.KEY_ENTER
-                data = data[2:]
-                continue
-            if ('\r', '\n') == (data[0], data[1] if 1 != len(data) else None):
-                # skip beyond \n (putty, SyncTerm)
+            if data[:2] in (['\r', '\x00'], ['\r', '\n']):
+                # skip beyond nul (nvt telnet), or \n (putty, SyncTerm)
                 yield self.KEY_ENTER
                 data = data[2:]
                 continue
