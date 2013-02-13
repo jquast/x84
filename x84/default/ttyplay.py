@@ -52,15 +52,17 @@ def main(ttyfile=u'', peek=False):
     print args
     d = Door(TTYPLAY, args=args)
     session.activity = u'playing tty recording'
-    chk = session.is_recording
-    if chk:
+    resume_rec = session._record_tty and session.is_recording
+    if resume_rec:
         session.stop_recording()
+        session._record_tty = False
     echo(u'\r\n lOAd CASSEttE ANd PRESS PlAY.\r\n')
     getch()
     with term.fullscreen():
         d.run()
         echo(u'\r\n\r\n')
         echo('PRESS ANY kEY.')
-    if chk:
+    if not session.is_recording and resume_rec:
+        session._record_tty = True
         session.start_recording()
     getch()
