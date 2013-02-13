@@ -154,15 +154,16 @@ def lc_retrieve():
     for handle in list_users():
         user = get_user(handle)
         udb[(user.lastcall, handle)] = (user.calls, user.location)
-    padd_handle = (ini.CFG.getint('nua', 'max_user') + 2) * -1
-    padd_origin = (ini.CFG.getint('nua', 'max_location') + 2) * -1
+    padd_handle = (ini.CFG.getint('nua', 'max_user') + 2)
+    padd_origin = (ini.CFG.getint('nua', 'max_location') + 2)
     rstr = u''
     nicks = []
+    print '1'
     for ((tm_lc, handle), (nc, origin)) in (reversed(sorted(udb.items()))):
-        rstr += u'%-*s' % (padd_handle, handle)
-        rstr += u'%-*s' % (padd_origin, origin)
+        rstr += handle.ljust(padd_handle)
+        rstr += origin.ljust(padd_origin)
         rstr += timeago(time.time() - tm_lc)
-        rstr += '\n'
+        rstr += u'\n'
         nicks.append(handle)
     return (nicks, rstr.rstrip())
 
