@@ -15,7 +15,8 @@ def list_users():
     """
     Returns all user handles.
     """
-    return x84.bbs.dbproxy.DBProxy('userbase').keys()
+    return [handle.decode('utf8')
+            for handle in x84.bbs.dbproxy.DBProxy('userbase').keys()]
 
 
 def get_user(handle):
@@ -31,7 +32,7 @@ def find_user(handle):
     The returned value may not be equal to the argument, or None if not found.
     """
     for key in x84.bbs.dbproxy.DBProxy('userbase').iterkeys():
-        if handle.lower() == key.lower():
+        if handle.lower() == key.decode('utf8').lower():
             return key
 
 
