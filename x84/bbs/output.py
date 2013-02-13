@@ -84,12 +84,12 @@ def timeago(secs, precision=0):
     weeks, days = divmod(days, 7)
     years, weeks = divmod(weeks, 52)
     ((num1, num2), (label1, label2)) = (
-        ((years, weeks), ('y', 'w')) if years >= 1.0 else
-        ((weeks, days), ('w', 'd')) if weeks >= 1.0 else
-        ((days, hours), ('d', 'h')) if days >= 1.0 else
-        ((hours, mins), ('h', 'm')) if hours >= 1.0 else
-        ((mins, secs), ('m', 's')))
-    return ('%2d%s%2.*f%s' % (num1, label1, precision, num2, label2,))
+        ((years, weeks), (u'y', u'w')) if years >= 1.0 else
+        ((weeks, days), (u'w', u'd')) if weeks >= 1.0 else
+        ((days, hours), (u'd', u'h')) if days >= 1.0 else
+        ((hours, mins), (u'h', u'm')) if hours >= 1.0 else
+        ((mins, secs), (u'm', u's')))
+    return (u'%2d%s%2.*f%s' % (num1, label1, precision, num2, label2,))
 
 
 class Ansi(unicode):
