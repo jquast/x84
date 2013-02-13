@@ -31,7 +31,7 @@ def show_scores(my_score):
     from x84.bbs import getch, echo, getsession, ini
     session, term = getsession(), getterminal()
     scores = sorted(
-            [ (_score, _level, _handle)
+            [ (_score, _level, _handle.decode('utf8'))
                 for (_handle, (_score, _level, _lines))
                     in DBProxy('tetris').items()],
             reverse=True)
