@@ -534,7 +534,7 @@ def play():
             elif key in (term.KEY_UP, u'k',):
                 xpos, ypos, r, m = movepiece(
                     xpos, ypos, (r + 1) % len(layout[p]))
-            elif key in (term.KEY_DOWN, 'j',):
+            elif key in (term.KEY_DOWN, u'j',):
                 xpos, ypos, r, m = movepiece(xpos, ypos + 1, r)
             elif key in (' ',):
                 m = True
