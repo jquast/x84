@@ -13,8 +13,8 @@ setup(name='x84',
       keywords=[
           'telnet', 'terminal', 'server', 'ansi', 'bbs', 'mud',
           'curses', 'multiprocessing', 'ttyrec', 'session', 'ttyplay',
-          'sqlite', 'utf8', 'cp437', 'rfc857', 'rfc858', 'rfc859',
-          'rfc1073', 'rfc1572', 'naws'],
+          'sqlite', 'utf8', 'cp437', 'rfc856', 'rfc857', 'rfc858',
+          'rfc859', 'rfc1073', 'rfc1572', 'naws'],
       license='ISC',
       packages=['x84', 'x84.default', 'x84.default.art', 'x84.bbs'],
       package_data={
