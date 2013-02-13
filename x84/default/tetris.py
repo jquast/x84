@@ -39,8 +39,7 @@ def show_scores(my_score):
         return
     handle_len = ini.CFG.getint('nua', 'max_user')
     score_len = 10
-    score_fmt = '%-' + str(score_len) + 's %-2s %' + str(handle_len) + 's'
-
+    score_fmt = u'%-' + str(score_len) + 's %-2s %' + str(handle_len) + 's'
 
     # line up over tetris game, but logo & 'made by jojo' in view
     # -- since we have so much screen width, columize the scores,
