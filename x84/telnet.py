@@ -540,6 +540,11 @@ class TelnetClient(object):
             if self._check_local_option(ECHO) is not True:
                 self._note_local_option(ECHO, True)
                 self._iac_will(ECHO)
+        elif option == BINARY:
+            # DE requests to recv BINARY
+            if self._check_local_option(BINARY) is not True:
+                self._note_local_option(BINARY, True)
+                self._iac_will(BINARY)
         elif option == SGA:
             # DE wants us to supress go-ahead
             if self._check_local_option(SGA) is not True:
@@ -607,17 +612,16 @@ class TelnetClient(object):
         """
         self._note_reply_pending(option, False)
         self._note_reply_pending(option, False)
-        if option == BINARY:
-            # client demands no binary mode
-            if self._check_local_option(BINARY) is not False:
-                self._note_local_option(BINARY, False)
-                self._iac_wont(BINARY)  # agree
-                # but what does this mean; really? :-)
-        elif option == ECHO:
+        if option == ECHO:
             # client demands we do not echo
             if self._check_local_option(ECHO) is not False:
                 self._note_local_option(ECHO, False)
                 self._iac_wont(ECHO)  # agree
+        elif option == BINARY:
+            # client demands no binary mode
+            if self._check_local_option(BINARY) is not False:
+                self._note_local_option(BINARY, False)
+                self._iac_wont(BINARY)
         elif option == SGA:
             # DE demands that we start or continue transmitting
             # GAs (go-aheads) when transmitting data.
@@ -643,6 +647,11 @@ class TelnetClient(object):
         if option == ECHO:
             raise Disconnected(
                 'Refuse WILL ECHO by client, closing connection.')
+        elif option == BINARY:
+            if self.check_remote_option(BINARY) is not True:
+                self._note_remote_option(BINARY, True)
+                # agree to use BINARY
+                self._iac_do(BINARY)
         elif option == NAWS:
             if self.check_remote_option(NAWS) is not True:
                 self._note_remote_option(NAWS, True)
@@ -700,6 +709,11 @@ class TelnetClient(object):
             if self.check_remote_option(ECHO) in (True, UNKNOWN):
                 self._note_remote_option(ECHO, False)
                 self._iac_dont(ECHO)
+        elif option == BINARY:
+            # client demands no binary mode
+            if self.check_remote_option(BINARY) in (True, UNKNOWN):
+                self._note_remote_option(BINARY, False)
+                self._iac_dont(BINARY)
         elif option == SGA:
             if self._check_reply_pending(SGA):
                 self._note_reply_pending(SGA, False)
