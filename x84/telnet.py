@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Handle Asynchronous Telnet Connections.
 Single-process, no threads, select-based.
