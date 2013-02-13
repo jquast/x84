@@ -140,7 +140,6 @@ class ConnectTelnet (threading.Thread):
     """
     Accept new Telnet Connection and negotiate options.
     """
-    DEBUG = False
     TIME_NEGOTIATE = 1.00
     TIME_WAIT = 2.35
     TIME_POLL = 0.05
