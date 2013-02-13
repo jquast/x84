@@ -394,10 +394,15 @@ class Terminal(object):
             return (None, None)  # no match
 
         while len(data):
-            if data[:2] in (['\r', '\x00'], ['\r', '\n']):
+            print repr(data[:2])
+            if data[:2] in (u'\r\x00', u'\r\n'):
                 # skip beyond nul (nvt telnet), or \n (putty, SyncTerm)
                 yield self.KEY_ENTER
                 data = data[2:]
+                continue
+            elif data[:1] in (u'\r', u'\n'):
+                yield self.KEY_ENTER
+                data = data[1:]
                 continue
             keyseq, keycode = scan_keymap(data)
             # keymap KEY_ sequence
