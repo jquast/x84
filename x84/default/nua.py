@@ -25,6 +25,7 @@ def set_handle(user):
     """
     from x84.bbs import getterminal, echo, ini, LineEditor, find_user
     import os  # os.path.sep not allowed in nicks
+    import re
     term = getterminal()
     prompt_handle = u'username: '
     msg_empty = u'ENtER AN AliAS'
@@ -34,6 +35,7 @@ def set_handle(user):
     width = ini.CFG.getint('nua', 'max_user')
     min_user = ini.CFG.getint('nua', 'min_user')
     invalid_nicks = ini.CFG.get('nua', 'invalid_handles').split()
+    handle_validation = re.compile(ini.CFG.get('nua', 'handle_validation'))
     while True:
         echo(u'\r\n\r\n' + term.clear_eol + term.normal + prompt_handle)
         user.handle = LineEditor(width, user.handle).read()
@@ -45,6 +47,8 @@ def set_handle(user):
             warning(msg_tooshort % min_user)
         elif ((user.handle.lower() in invalid_nicks)
                 or os.path.sep in user.handle):
+            warning(msg_invalid)
+        elif not handle_validation.match(user.handle):
             warning(msg_invalid)
         else:
             return
