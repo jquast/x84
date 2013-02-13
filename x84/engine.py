@@ -81,6 +81,7 @@ def _loop(telnetd):
     import select
     import socket
     import time
+    import sys
 
     from x84.bbs.exception import Disconnected
     from x84.terminal import terminals, ConnectTelnet, unregister
@@ -89,6 +90,9 @@ def _loop(telnetd):
     from x84.db import DBHandler
 
     logger = logging.getLogger()
+
+    if sys.maxunicode == 65535:
+        logger.warn('Python not built with wide unicode support!')
     logger.info('listening %s/tcp', telnetd.port)
     timeout = CFG.getint('system', 'timeout')
     fileno_telnetd = telnetd.server_socket.fileno()
