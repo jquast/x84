@@ -594,7 +594,6 @@ class Session(object):
                 break
             digit += 1
         assert os.path.sep not in self._ttyrec_fname
-
         filename = os.path.join(self._ttyrec_folder, self._ttyrec_fname)
         if not os.path.exists(self._ttyrec_folder):
             logger.info('creating ttyrec folder, %s.', self._ttyrec_folder)
@@ -625,7 +624,7 @@ class Session(object):
         # 'length' portion, and append data to end of stream.
         # .. unfortuantely, this is not compatible with ttyplay -p,
         # so for the time being, it is disabled ..
-        assert self._fp_ttyrec is None, 'call start_recording() first'
+        assert self._fp_ttyrec is not None, 'call start_recording() first'
         timekey = self.duration
 
         # Round down timekey to nearest whole number,
