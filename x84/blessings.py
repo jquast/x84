@@ -394,7 +394,6 @@ class Terminal(object):
             return (None, None)  # no match
 
         while len(data):
-            print repr(data[:2])
             if data[:2] in (u'\r\x00', u'\r\n'):
                 # skip beyond nul (nvt telnet), or \n (putty, SyncTerm)
                 yield self.KEY_ENTER
