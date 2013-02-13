@@ -80,7 +80,7 @@ class Terminal(object):
         # pylint: disable=W0212,E1101
         # Access to a protected member _capability_names of a client class
         # Function 'has_key' has no '_capability_names' member
-        self._keymap = dict([(curses.tigetstr(cap).decode('utf-8'), keycode)
+        self._keymap = dict([(curses.tigetstr(cap).decode('utf8'), keycode)
                              for (keycode, cap) in
                              curses.has_key._capability_names.iteritems()
                              if curses.tigetstr(cap) is not None])
@@ -367,7 +367,7 @@ class Terminal(object):
             # We can encode escape sequences as UTF-8 because they never
             # contain chars > 127, and UTF-8 never changes anything within that
             # range..
-            return code.decode('utf-8')
+            return code.decode('utf8')
         return u''
 
     def trans_input(self, data, encoding='utf8'):
@@ -485,8 +485,8 @@ class ParametrizingString(unicode):
             # Re-encode the cap, because tparm() takes a bytestring in Python
             # 3. However, appear to be a plain Unicode string otherwise so
             # concats work.
-            lookup = self.encode('utf-8')
-            parametrized = curses.tparm(lookup, *args).decode('utf-8')
+            lookup = self.encode('utf8')
+            parametrized = curses.tparm(lookup, *args).decode('utf8')
             return (parametrized if self._normal is None else
                     FormattingString(parametrized, self._normal))
         except curses.error:
