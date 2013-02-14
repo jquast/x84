@@ -20,7 +20,7 @@ def list_msgs(tags=('public',)):
     Return set of Msg record indicies matching 1 or more ``tags``.
     """
     msgs = set()
-    for tag in (k_tg for k_tg in tags if k_tg in TAGDB):
+    for tag in (_tag for _tag in tags if _tag in TAGDB):
         msgs.update(TAGDB[tag])
     return msgs
 
