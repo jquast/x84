@@ -39,13 +39,14 @@ def merge_mystic():
             '%d ' % (len(_password)),
             '%s ' % (_location),
             '%s ' % (_email),)))
-        if find_user(handle) is None:
+	match = find_user(handle)
+        if match is None:
             user = User(handle)
             user.location = _location
             user.email = _email
             user.password = _password
         else:
-            user = get_user(handle)
+            user = get_user(match)
         user.groups.add('old-school')
         if WRITE:
             user.save()
