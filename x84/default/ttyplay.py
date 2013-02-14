@@ -65,7 +65,7 @@ def main(ttyfile=u'', peek=False):
     with term.fullscreen():
         d.run()
         echo(u'\r\n\r\n')
-        echo('PRESS ANY kEY.')
+        echo(u'PRESS ANY kEY.')
         getch()
     if not session.is_recording and resume_rec:
         session._record_tty = True
