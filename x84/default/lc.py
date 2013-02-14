@@ -76,10 +76,12 @@ def dummy_pager(last_callers):
     pak()
 
 def refresh_opts(pager, handle):
-    from x84.bbs import getsession, getterminal, get_user
+    from x84.bbs import getsession, getterminal, get_user, find_user
     session, term = getsession(), getterminal()
-    has_plan = 0 != len(
-            get_user(handle).get('.plan', u'').strip() if handle else u'')
+    if not handle or not find_user(handle):
+        has_plan = 0
+    else:
+        has_plan = 0 != len(get_user(handle).get('.plan', u'').strip())
     decorate = lambda key, desc: u''.join((
         term.bold(u'('), term.red_underline(key,),
         term.bold(u')'), term.bold_red(desc.split()[0]),
@@ -186,7 +188,10 @@ def main():
         if dirty or pager is None or session.poll_event('refresh'):
             session.activity = u'Viewing last callers'
             lcallers, lcalls_txt = lc_retrieve()
+            pos = pager.position if pager is not None else 0
             pager = get_pager(lcallers, lcalls_txt)
+            if pos:
+                pager.position = pos
             echo(redraw(pager))
             echo(refresh_opts(pager, handle))
         sel = pager.selection[0]
