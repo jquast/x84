@@ -118,7 +118,8 @@ class Session(object):
     @property
     def activity(self):
         """
-        Current activity (arbitrarily set).
+        Current activity (arbitrarily set). This also updates xterm titles, and
+        is globally broadcasted as a "current activity" in the Who's online script.
         """
         return self._activity
 
@@ -129,7 +130,13 @@ class Session(object):
         if self._activity != value:
             logger = logging.getLogger()
             logger.debug('activity=%s', value)
+            term = self.env.get('TERM', 'unknown')
+            set_title = self.user.get('set-title', (
+                'xterm' in term or 'rxvt' in term
+                or '_xtitle' in self.env))
             self._activity = value
+            if set_title:
+                self.write(u''.join((unichr(27), u']2;%s' % (value,), unichr(7))))
 
     @property
     def handle(self):
