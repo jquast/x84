@@ -25,6 +25,7 @@ def refresh():
             ('w', "hO'S ONliNE"),
             ('n', 'EWS'),
             ('c', 'ChAt'),
+            ('!', 'ENCOdiNG'),
             ('t', 'tEtRiS'),
             ('s', 'YS. iNfO'),
             ('f', 'fORECASt'),
@@ -32,6 +33,8 @@ def refresh():
             ('p', 'OSt A MSG'),
             ('r', 'EAd All MSGS'),
             ('g', 'OOdbYE /lOGOff'),)
+    if 'sysop' in session.user.groups:
+        entries += (('v', 'VidEO CASSEttE'),)
     buf_str = u''
     for key, name in entries:
         out_str = u''.join((
@@ -92,5 +95,9 @@ def main():
             gosub('readmsgs')
         elif inp == u'g':
             goto('logoff')
+        elif inp == u'!':
+            gosub('charset')
+        elif inp == u'v' and 'sysop' in session.user.groups:
+            gosub('ttyplay')
         else:
             norefresh = True
