@@ -376,6 +376,8 @@ def redraw_pager(pager, selection, active=True):
     key, entry = selection
     if key is None:
         output += get_swinfo((entry or u'?').strip(), pager, active)
+        output += pager.footer(u'-'
+                + fancy_green('a', 'dd') + u' -')
     else:
         # describe bbs in pager
         bbsname = DBProxy('bbslist')[key]['bbsname']
@@ -386,10 +388,11 @@ def redraw_pager(pager, selection, active=True):
         ans = u''
         if ansiurl != 'NONE' and 0 != len(ansiurl):
             ans = u'.' + fancy_green('v', 'ansi')
-        output += pager.footer(
-            u'-' + fancy_green('t', 'elnet') + u'.'
-            + fancy_green('c', 'omment') + u'.'
-            + fancy_green('r', 'ate') + ans + u'-')
+        output += pager.footer(u'- '
+            + fancy_green('a', 'dd') + u'.'
+            + fancy_green('t', 'ElNEt') + u'.'
+            + fancy_green('c', 'OMNt') + u'.'
+            + fancy_green('r', 'AtE') + ans + u' -')
         output += pager.pos(pager.height - 2, pager.width - 4)
     # pager scroll indicator ..
     output += pager.pos(pager.height - 2, pager.width - 4)
