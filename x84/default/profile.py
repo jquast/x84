@@ -16,80 +16,129 @@ def process_keystroke(lightbar, inp, user):
     from x84.bbs import LineEditor, Ansi
     from x84.default.nua import set_email, set_location
     session, term = getsession(), getterminal()
+    is_self = bool(user.handle == session.user.handle)
     invalid = u'\r\niNVAlid.'
     if lightbar is not None:
         echo(lightbar.process_keystroke(inp))
         if lightbar.moved:
             return False
-    if inp in (u'c', u'C') or (inp == term.KEY_ENTER and
-                               lightbar is not None and
-                               lightbar.selection[0] == u'c'):
-        gosub('charset')
-        return True
-    elif inp in (u't', u'T') or (inp == term.KEY_ENTER and
-                                 lightbar is not None and
-                                 lightbar.selection[0] == u't'):
-        echo(term.move(term.height - 1, 0))
-        echo(term.bold(u'\r\n\r\nNOTE: ')
-             + u'thiS ONlY SEtS ' + term.bold('TERM')
-             + u' fOR NEW PROCESSES, SUCh AS dOORS. '
-             + u'YOUR BBS SESSiON itSElf diSCOVERS '
-             + term.bold('TERM') + u'ONlY ONCE dURiNG '
-             + u'NEGOtiAtiON ON-CONNECt.\r\n')
-        echo(u'\r\ntERMiNAl tYPE: ')
-        TERM = LineEditor(30, session.env.get('TERM')).read()
-        echo(u"\r\n\r\nset TERM to '%s'? [yn]" % (TERM,))
+    assert is_self or 'sysop' in session.user.groups
+    if is_self:
+        if inp in (u'c', u'C') or (inp == term.KEY_ENTER and
+                                   lightbar is not None and
+                                   lightbar.selection[0] == u'c'):
+            gosub('charset')
+            return True
+        elif inp in (u't', u'T') or (inp == term.KEY_ENTER and
+                                     lightbar is not None and
+                                     lightbar.selection[0] == u't'):
+            echo(term.move(term.height - 1, 0))
+            echo(term.bold(u'\r\n\r\nNOTE: ')
+                 + u'thiS ONlY SEtS ' + term.bold('TERM')
+                 + u' fOR NEW PROCESSES, SUCh AS dOORS. '
+                 + u'YOUR BBS SESSiON itSElf diSCOVERS '
+                 + term.bold('TERM') + u'ONlY ONCE dURiNG '
+                 + u'NEGOtiAtiON ON-CONNECt.\r\n')
+            echo(u'\r\ntERMiNAl tYPE: ')
+            TERM = LineEditor(30, session.env.get('TERM')).read()
+            echo(u"\r\n\r\nset TERM to '%s'? [yn]" % (TERM,))
+            while True:
+                ch = getch()
+                if str(ch).lower() == 'y':
+                    session.env['TERM'] = TERM
+                    break
+                elif str(ch).lower() == 'n':
+                    break
+            return True
+        elif inp in (u'w', u'W') or (inp == term.KEY_ENTER and
+                                     lightbar is not None and
+                                     lightbar.selection[0] == u'w'):
+            echo(u'\r\ntERMiNAl Width: ')
+            width = LineEditor(3, str(term.width)).read()
+            try:
+                width = int(width)
+            except ValueError:
+                echo(invalid)
+                return True
+            if width < 0 or width > 999:
+                echo(invalid)
+                return True
+            echo(u"\r\n\r\nset COLUMNS=%d? [yn]" % (width,))
+            while True:
+                ch = getch()
+                if str(ch).lower() == 'y':
+                    term.columns = width
+                    break
+                elif str(ch).lower() == 'n':
+                    break
+            return True
+        elif inp in (u'h', u'H') or (inp == term.KEY_ENTER and
+                                     lightbar is not None and
+                                     lightbar.selection[0] == u'h'):
+            echo(u'\r\ntERMiNAl hEiGht: ')
+            height = LineEditor(3, str(term.height)).read()
+            try:
+                height = int(height)
+            except ValueError:
+                echo(invalid)
+                return True
+            if height < 0 or height > 999:
+                echo(invalid)
+                return True
+            echo(u"\r\n\r\nset LINES=%d? [yn]" % (height,))
+            while True:
+                ch = getch()
+                if str(ch).lower() == 'y':
+                    term.rows = height
+                    break
+                elif str(ch).lower() == 'n':
+                    break
+            return True
+    if 'sysop' in session.user.groups and (
+            inp in (u's', u'S',) or (inp == term.KEY_ENTER and
+                lightbar is not None and
+                lightbar.selection[0] == u's')):
+        sysop = not 'sysop' in session.user.groups
+        echo(u"\r\n\r\n%s SYSOP ACCESS? [yn]" % (
+            'ENAblE' if sysop else 'diSAblE',))
         while True:
             ch = getch()
             if str(ch).lower() == 'y':
-                session.env['TERM'] = TERM
+                if sysop:
+                    user.groups.add('sysop')
+                    user.save()
                 break
             elif str(ch).lower() == 'n':
                 break
         return True
-    elif inp in (u'w', u'W') or (inp == term.KEY_ENTER and
-                                 lightbar is not None and
-                                 lightbar.selection[0] == u'w'):
-        echo(u'\r\ntERMiNAl Width: ')
-        width = LineEditor(3, str(term.width)).read()
-        try:
-            width = int(width)
-        except ValueError:
-            echo(invalid)
-            return True
-        if width < 0 or width > 999:
-            echo(invalid)
-            return True
-        echo(u"\r\n\r\nset COLUMNS=%d? [yn]" % (width,))
-        while True:
-            ch = getch()
-            if str(ch).lower() == 'y':
-                term.columns = width
-                break
-            elif str(ch).lower() == 'n':
-                break
-        return True
-    elif inp in (u'h', u'H') or (inp == term.KEY_ENTER and
-                                 lightbar is not None and
-                                 lightbar.selection[0] == u'h'):
-        echo(u'\r\ntERMiNAl hEiGht: ')
-        height = LineEditor(3, str(term.height)).read()
-        try:
-            height = int(height)
-        except ValueError:
-            echo(invalid)
-            return True
-        if height < 0 or height > 999:
-            echo(invalid)
-            return True
-        echo(u"\r\n\r\nset LINES=%d? [yn]" % (height,))
-        while True:
-            ch = getch()
-            if str(ch).lower() == 'y':
-                term.rows = height
-                break
-            elif str(ch).lower() == 'n':
-                break
+
+        pass
+    elif inp in (u'.',) or (inp == term.KEY_ENTER and
+                           lightbar is not None and
+                           lightbar.selection[0] == u'.'):
+        echo(term.move(0, 0) + term.normal + term.clear)
+        echo(term.move(int(term.height * .8), 0))
+        for line in Ansi(about_dot_plan).wrap(
+                term.width / 3).splitlines():
+            echo(line.center(term.width).rstrip() + u'\r\n')
+        echo('\r\n\r\nPRESS ANY kEY ...')
+        getch()
+        if is_self:
+            gosub('editor', '.plan')
+        else:
+            tmpkey = '%s-%s' % (user.handle, user.plan)
+            draft = user.get('.plan', u'')
+            session.user[tmpkey] = draft
+            gosub('editor', tmpkey)
+            if session.user.get(tmpkey, u'') != draft:
+                echo(u"\r\n\r\nSEt .PlAN ? [yn]")
+                while True:
+                    ch = getch()
+                    if str(ch).lower() == 'y':
+                        user['.plan'] = session.user[tmpkey]
+                        break
+                    elif str(ch).lower() == 'n':
+                        break
         return True
     elif inp in (u'l', u'L') or (inp == term.KEY_ENTER and
                                  lightbar is not None and
@@ -99,10 +148,10 @@ def process_keystroke(lightbar, inp, user):
         echo(u"\r\n\r\nSEt lOCAtiON tO '%s'? [yn]" % (user.location,))
         while True:
             ch = getch()
-            if str(ch).lower() == 'y':
+            if str(ch).lower() == u'y':
                 user.save()
                 break
-            elif str(ch).lower() == 'n':
+            elif str(ch).lower() == u'n':
                 break
         return True
     elif inp in (u'e', u'E') or (inp == term.KEY_ENTER and
@@ -113,35 +162,24 @@ def process_keystroke(lightbar, inp, user):
         echo(u"\r\n\r\nSEt EMAil tO '%s'? [yn]" % (user.email,))
         while True:
             ch = getch()
-            if str(ch).lower() == 'y':
+            if str(ch).lower() == u'y':
                 user.save()
                 break
-            elif str(ch).lower() == 'n':
+            elif str(ch).lower() == u'n':
                 break
-        return True
-    elif inp in ('.',) or (inp == term.KEY_ENTER and
-                           lightbar is not None and
-                           lightbar.selection[0] == u'.'):
-        echo(term.move(0, 0) + term.normal + term.clear)
-        echo(term.move(int(term.height * .8), 0))
-        for line in Ansi(about_dot_plan).wrap(term.width / 3).split('\r\n'):
-            echo(line.center(term.width) + u'\r\n')
-        echo('\r\n\r\nPRESS ANY kEY ...')
-        getch()
-        gosub('editor', '.plan')
         return True
     elif inp in (u'm', u'M') or (inp == term.KEY_ENTER and
                                  lightbar is not None and
                                  lightbar.selection[0] == u'm'):
         mesg = False if user.get('mesg', True) else True
         echo(u"\r\n\r\n%s iNStANt MESSAGiNG? [yn]" % (
-            'enable' if mesg else 'disable',))
+            'ENAblE' if mesg else 'DiSAblE',))
         while True:
             ch = getch()
-            if str(ch).lower() == 'y':
+            if str(ch).lower() == u'y':
                 user['mesg'] = mesg
                 break
-            elif str(ch).lower() == 'n':
+            elif str(ch).lower() == u'n':
                 break
         return True
     elif inp in (u'x', u'X') or (inp == term.KEY_ENTER and
@@ -149,7 +187,7 @@ def process_keystroke(lightbar, inp, user):
                                  lightbar.selection[0] == u'x'):
         expert = not user.get('expert', False)
         echo(u"\r\n\r\n%s EXPERt MOdE? [yn]" % (
-            'enable' if expert else 'disable',))
+            'ENAblE' if expert else 'DiSAblE',))
         while True:
             ch = getch()
             if str(ch).lower() == 'y':
@@ -158,7 +196,7 @@ def process_keystroke(lightbar, inp, user):
             elif str(ch).lower() == 'n':
                 break
         return True
-    elif inp in ('q',) or (inp == term.KEY_ENTER and
+    elif inp in (u'q', u'Q',) or (inp == term.KEY_ENTER and
                            lightbar is not None and
                            lightbar.selection[0] == u'q'):
         global EXIT
@@ -178,6 +216,10 @@ def dummy_pager(user):
                                term.bold(user.location),),
             '(e)%-20s - %s' % (u'-MAil AddRESS',
                                term.bold(user.email),),
+            '(s)%-20s - %s' % (u'YSOP ACCESS',
+                               term.bold(u'ENAblEd'
+                                         if 'sysop' in user.groups
+                                         else 'diSAblEd')),
             '(m)%-20s - %s' % (u'ESG',
                                 term.bold(u'[%s]' % ('y'
                                     if user.get('mesg', True) else 'n',),)),
@@ -209,16 +251,17 @@ def is_dumb(session, term):
 def refresh(lightbar):
     from x84.bbs import getsession, getterminal, echo
     session, term = getsession(), getterminal()
-    lightbar.update(((u'c', u'ChARACtER ENCOdiNG',),
-                     (u't', u'tERMiNAl tYPE',),
-                     (u'h', u'tERMiNAl hEiGht',),
-                     (u'w', u'tERMiNAl Width',),
-                     (u'l', u'lOCAtiON',),
-                     (u'e', u'EMAil',),
-                     (u'm', u'MESG',),
-                     (u'.', u'.PlAN',),
-                     (u'x', u'EXPERt MOdE',),
-                     (u'q', u'QUit',)))
+    lightbar.update(((u'c', u'C.hARACtER ENCOdiNG',),
+                     (u't', u't.ERMiNAl tYPE',),
+                     (u'h', u'h.EiGht',),
+                     (u'w', u'W.idth',),
+                     (u'l', u'l.OCAtiON',),
+                     (u'e', u'E.MAil',),
+                     (u's', u'S.YSOP ACCESS',),
+                     (u'm', u'M.ESG',),
+                     (u'.', u'..PlAN',),
+                     (u'x', u'X.PERt MOdE',),
+                     (u'q', u'Q.Uit',)))
     echo(u'\r\n\r\n')
     echo(u'art request...'.center(term.width))
     echo(u'\r\n\r\n')
@@ -241,13 +284,15 @@ def main(handle=None):
     dirty = True
     while not EXIT:
         if session.poll_event('refresh') or dirty:
-            wide = min(60, term.width - 5)
+            wide = min(40, term.width - 5)
+            height = 15
             if is_dumb(session, term):
                 dirty = dummy_pager(user)
             else:
-                lightbar = Lightbar(height=14, width=wide,
-                                    yloc=term.height - 14,
-                                    xloc=(term.width / 2) - (wide / 2))
+                lightbar = Lightbar(height=height,
+                        width=wide,
+                        yloc=term.height - height,
+                        xloc=(term.width / 2) - (wide / 2))
                 lightbar.alignment = 'center'
                 lightbar.ypadding = 2
                 lightbar.glyphs['right-vert'] = u''
@@ -294,6 +339,8 @@ def lborder(lightbar, user):
     elif sel == '.':
         plan = user.get('.plan', False)
         val = u'%d bytes' % (len(plan),) if plan else u''
+    elif sel == 's':
+        val = u'ENAblEd' if 'sysop' in user.groups else (u'diSABlEd')
     elif sel == 'x':
         val = u'ENAblEd' if user.get('expert', False) else (
                 u'diSABlEd')
