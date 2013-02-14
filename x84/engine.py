@@ -173,7 +173,10 @@ def _loop(telnetd):
             sock, address_pair = telnetd.server_socket.accept()
             # busy signal
             if telnetd.client_count() > telnetd.MAX_CONNECTIONS:
-                sock.shutdown(socket.SHUT_RDWR)
+                try:
+                    sock.shutdown(socket.SHUT_RDWR)
+                except socket.error:
+                    pass
                 sock.close()
                 logger.error('refused new connect; maximum reached.')
                 return
@@ -329,7 +332,10 @@ def _loop(telnetd):
         # shutdown, close & delete inactive sockets,
         for fileno, client in inactive()[:]:
             logger.debug('close %s', telnetd.clients[fileno].addrport(),)
-            client.sock.shutdown(socket.SHUT_RDWR)
+            try:
+                client.sock.shutdown(socket.SHUT_RDWR)
+            except socket.error:
+                pass
             client.sock.close()
             del telnetd.clients[fileno]
 
