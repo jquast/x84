@@ -66,7 +66,7 @@ def main(ttyfile=u'', peek=False):
         d.run()
         echo(u'\r\n\r\n')
         echo('PRESS ANY kEY.')
+        getch()
     if not session.is_recording and resume_rec:
         session._record_tty = True
         session.start_recording()
-    getch()
