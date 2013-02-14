@@ -114,12 +114,16 @@ def init_bbs_ini():
     cfg_bbs.set('system', 'mail_addr',
                 '%s@%s' % (getpass.getuser(), socket.gethostname()))
     cfg_bbs.set('system', 'mail_smtphost', 'localhost')
+    # change 'ansi' termcaps to 'ansi-bbs', for SynchoTerm
     cfg_bbs.set('system', 'termcap-ansi', 'ansi-bbs')
+    # could be information leak to sensitive sysops
+    cfg_bbs.set('system', 'show_traceback', 'no')
 
     cfg_bbs.add_section('telnet')
     cfg_bbs.set('telnet', 'addr', '127.0.0.1')
     cfg_bbs.set('telnet', 'port', '6023')
 
+    # default path if cmd argument is not absolute,
     cfg_bbs.add_section('door')
     cfg_bbs.set('door', 'path', '/usr/local/bin:/usr/games')
 

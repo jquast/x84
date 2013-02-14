@@ -73,6 +73,7 @@ class Session(object):
         self._tap_output = x84.bbs.ini.CFG.getboolean('session', 'tap_output')
         self._ttyrec_folder = x84.bbs.ini.CFG.get('system', 'ttyrecpath')
         self._record_tty = x84.bbs.ini.CFG.getboolean('session', 'record_tty')
+        self._show_traceback = ini.CFG.getboolean('system', 'show_traceback')
         self._script_module = None
         self._fp_ttyrec = None
         self._ttyrec_fname = None
@@ -240,7 +241,7 @@ class Session(object):
                 # give time for exception to write down pipe before
                 # continuing or exiting, esp. exiting, otherwise
                 # STOP message is not often fully received
-                time.sleep(5)
+                time.sleep(2)
 
         while len(self._script_stack):
             logger.debug('script_stack: %r', self._script_stack)
@@ -256,7 +257,8 @@ class Session(object):
             except Exception, err:
                 # Pokemon exception, log and Cc: telnet client, then resume.
                 e_type, e_value, e_tb = sys.exc_info()
-                self.write(self.terminal.normal + u'\r\n')
+                if self._show_traceback:
+                    self.write(self.terminal.normal + u'\r\n')
                 terrs = list()
                 for line in traceback.format_tb(e_tb):
                     for subln in line.split('\n'):
@@ -264,7 +266,8 @@ class Session(object):
                 terrs.extend(traceback.format_exception_only(e_type, e_value))
                 for etxt in terrs:
                         logger.error(etxt.rstrip())
-                        self.write(etxt.rstrip() + u'\r\n')
+                        if self._show_traceback:
+                            self.write(etxt.rstrip() + u'\r\n')
             error_recovery()
         logger.info('end of script stack.')
         self.close()
