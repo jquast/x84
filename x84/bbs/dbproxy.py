@@ -37,11 +37,12 @@ class DBProxy(object):
         session.send_event(event, (self.table, method, args))
         data = session.read_event(event)
         assert data == (None, 'StartIteration'), (
-            'iterable proxy used on non-iterable, %r', data)
+            'iterable proxy used on non-iterable, %r' % (data,))
         data = session.read_event(event)
         while data != (None, StopIteration):
             yield data
             data = session.read_event(event)
+        session.flush_event(event)
 
     def proxy_method(self, method, *args):
         """
