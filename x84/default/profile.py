@@ -214,7 +214,6 @@ def process_keystroke(lightbar, inp, user):
     elif inp in (u'q', u'Q',) or (inp == term.KEY_ENTER and
                            lightbar is not None and
                            lightbar.selection[0] == u'q'):
-        global EXIT
         EXIT = True
     return False
 
