@@ -163,6 +163,13 @@ def main():
         u'\r\n\r\n',
         anon_allowed_msg if enable_anonymous else u'',
         )))
+    # http://www.termsys.demon.co.uk/vtansi.htm
+    # disable line-wrapping
+    echo(unichr(27) + u'[7l')
+    # http://www.xfree86.org/4.5.0/ctlseqs.html
+    # Save xterm icon and window title on stack.
+    echo(unichr(27) + u'[22;0t')
+
     # prompt for username & password
     for n in range(0, max_tries):
         handle = get_username(handle)
