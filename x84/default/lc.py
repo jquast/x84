@@ -141,8 +141,8 @@ def redraw(pager=None):
         u'\r\n'.join(get_art(artfile)),
         u'\r\n',
         u'\r\n' * (pager.height if pager is not None else term.height),
-        pager.border(),
-        pager.refresh(),))
+        pager.border() if pager is not None else u'',
+        pager.refresh() if pager is not None else u'',))
 
 def lc_retrieve():
     """
