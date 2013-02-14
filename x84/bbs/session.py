@@ -576,6 +576,11 @@ class Session(object):
         Cease recording to ttyrec file (close).
         """
         assert self.is_recording
+        self._ttyrec_write(u''.join((
+            self.term.normal, u'\r\n\r\n',
+            u'\r\n'.join([u'%s: %s' % (key, val)
+            for (key, val) in sorted(self.info().items())]),
+            u'\r\n')))
         self._fp_ttyrec.close()
         self._fp_ttyrec = None
 
