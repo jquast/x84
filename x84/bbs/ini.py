@@ -222,4 +222,7 @@ def init_log_ini():
     cfg_log.set('logger_sqlitedict', 'handlers', 'console, info_file')
     cfg_log.set('logger_sqlitedict', 'qualname', 'sqlitedict')
     cfg_log.set('logger_sqlitedict', 'propagate', '0')
+
+    cfg_log.add_section('ttyplay')
+    cfg_log.set('ttyplay', 'exe', '/usr/bin/ttyplay')
     return cfg_log

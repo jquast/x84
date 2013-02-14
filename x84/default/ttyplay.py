@@ -1,10 +1,14 @@
 """ ttyplay door for x/84, https://github.com/jquast/x84 """
-TTYPLAY = '/usr/local/bin/ttyplay'
 
 def main(ttyfile=u'', peek=False):
     from x84.bbs import getsession, getterminal, echo, getch
-    from x84.bbs import Door, ScrollingEditor, Ansi
+    from x84.bbs import Door, ScrollingEditor, Ansi, ini
     import os, re
+    TTYPLAY = ini.CFG.get('ttyplay', 'exe')
+    if not os.path.exists(TTYPLAY):
+        echo(u'\r\n%s not installed.\r\n' % (TTYPLAY,))
+        getch()
+        return
     session, term = getsession(), getterminal()
     if 'sysop' in session.user.groups:
         folder = os.path.dirname(ttyfile) or session._ttyrec_folder
