@@ -132,8 +132,10 @@ class Door(object):
         """
         Poll input and outpout of ptys,
         """
+        import codecs
         term = x84.bbs.session.getterminal()
         session = x84.bbs.session.getsession()
+        utf8_decoder = codecs.getincrementaldecoder('utf8')()
         while True:
             # block up to self.time_opoll for screen output
             rlist = (self.master_fd,)
@@ -146,10 +148,22 @@ class Door(object):
                     logger.debug('<-- %r', data)
                 # output to terminal as utf8, unless we specify decode_cp437
                 # for special dos-emulated doors such as lord.
-                x84.bbs.output.echo(u''.join(
-                    (x84.bbs.cp437.CP437[ord(ch)] for ch in data)
-                ) if self.decode_cp437
-                    else data.decode('utf8'))
+                if self.decode_cp437:
+                    x84.bbs.output.echo(u''.join(
+                        (x84.bbs.cp437.CP437[ord(ch)] for ch in data)))
+                else:
+                    decoded = list()
+                    def is_final():
+                        return (self.master_fd in
+                                select.select([self.master_fd,], (), (), 0))
+                    for num, byte in enumerate(data):
+                        final=(num+1) == len(data) and is_final()
+                        ucs = utf8_decoder.decode(byte, final)
+                        if ucs is not None:
+                            decoded.append(ucs)
+                    x84.bbs.output.echo(u''.join(decoded))
+
+
 
             # block up to self.time_ipoll for keyboard input
             event, data = session.read_events(
