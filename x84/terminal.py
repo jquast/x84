@@ -324,6 +324,9 @@ class ConnectTelnet (threading.Thread):
         """
         request xterm title and store as _xtitle 'env' variable,
         this is restored on goodbye/logoff..
+
+        actually, going to use restore codes in addition, to, nice to know
+        anyway. may help with terminal id?
         """
         # P s = 2 1 -> Report xterm window's title. Result is OSC l label ST
         # http://invisible-island.net/xterm/ctlseqs/ctlseqs.html#VT100%20Mode
@@ -346,14 +349,37 @@ class ConnectTelnet (threading.Thread):
         if not self.client.active:
             return
         inp = self.client.get_input()
-        print repr(inp), 'x'*10
         match = response_pattern.search(inp)
-        if match:
-            self.client.env['_xtitle'] = match.group(1).decode(
-                    'utf8', 'replace')
-            logger.info('window title: %s', self.client.env['_xtitle'])
+        if not match:
+            logger.debug('failed: xterm-title')
             return
-        logger.debug('failed: xterm-title')
+        self.client.env['_xtitle'] = match.group(1).decode(
+                'utf8', 'replace')
+        logger.info('window title: %s', self.client.env['_xtitle'])
+        self.client.send_str('\x1b[20t')
+        self.client.socket_send()  # push
+        # response is '\x1b]Lbash\x1b\\'
+        response_pattern = re.compile(''.join((
+            re.escape(chr(27)),
+            r"\]L(.*)",
+            re.escape(chr(27)),
+            re.escape('\\'),)))
+        st_time = time.time()
+        while (self.client.idle() < self.TIME_WAIT_SILENT*2
+               and self._timeleft(st_time)
+               and self.client.active):
+            time.sleep(self.TIME_POLL)
+        if not self.client.active:
+            return
+        inp = self.client.get_input()
+        print repr(inp), 'z'*100
+        match = response_pattern.search(inp)
+        if not match:
+            logger.debug('failed: xterm-icon')
+            return
+        self.client.env['_xicon'] = match.group(1).decode(
+                'utf8', 'replace')
+        logger.info('window icon: %s', self.client.env['_xicon'])
 
 
     def _try_cornerquery(self):
