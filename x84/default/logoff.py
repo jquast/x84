@@ -24,7 +24,9 @@ def main():
               ('bloodisland.ph4.se', 'Blood Island', 'xzip',),
               ('ssl.archaicbinary.net', 'Archaic Binary', 'Wayne Smith',),)
     board_fmt = u'%25s %-30s %-15s\r\n'
-    goodbye_msg = u''.join((u'\r\n' * (term.height - 4),
+    goodbye_msg = u''.join((
+        term.move(term.height, 0),
+        u'\r\n' * 10,
         u'tRY ANOthER fiNE bOARd', term.bold(u':'), u'\r\n\r\n',
         board_fmt % (
             term.underline('host'.rjust(25)),
@@ -95,14 +97,12 @@ def main():
             refresh_prompt(prompt_msg)
         inp = getch(1)
         if inp in (u'g', u'G', term.KEY_EXIT, unichr(27), unichr(3),):
-            if 0 != len(session.env.get('_xtitle', u'')):
-                echo(u''.join((
-                    unichr(27),
-                    u']2;%s' % (session.env.get('_xtitle'),),
-                    unichr(7))))
+            # http://www.xfree86.org/4.5.0/ctlseqs.html
+            # Restore xterm icon and window title from stack.
+            echo(unichr(27) + u'[23;0t')
             echo(goodbye_msg)
-            getch(2)
-            disconnect()
+            getch(1.5)
+            disconnect('logoff by user.')
         elif inp in (u'n', u'N', term.KEY_DOWN, term.KEY_NPAGE,):
             idx = refresh_automsg(idx + 1)
             refresh_prompt(prompt_msg)
