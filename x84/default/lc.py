@@ -174,7 +174,6 @@ def lc_retrieve():
 def main():
     from x84.bbs import getsession, getterminal, echo, getch, gosub
     session, term = getsession(), getterminal()
-    session.activity = u'Viewing last callers'
     lcallers, lcalls_txt = lc_retrieve()
     pager = None
     dirty = True
@@ -185,6 +184,7 @@ def main():
         return
     while pager is None or not pager.quit:
         if dirty or pager is None or session.poll_event('refresh'):
+            session.activity = u'Viewing last callers'
             lcallers, lcalls_txt = lc_retrieve()
             pager = get_pager(lcallers, lcalls_txt)
             echo(redraw(pager))
