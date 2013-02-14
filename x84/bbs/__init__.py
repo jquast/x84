@@ -28,8 +28,7 @@ def disconnect(reason=u''):
     """
     Disconnect session. Does not return.
     """
-    raise Disconnected('disconnect%s',
-                       ': %s' % (reason,) if 0 != len(reason) else u'')
+    raise Disconnected(reason,)
 
 
 def getsession():
