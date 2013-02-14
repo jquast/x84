@@ -140,7 +140,7 @@ def redraw(pager=None):
         u'\r\n',
         u'\r\n'.join(get_art(artfile)),
         u'\r\n',
-        u'\r\n' * pager.height,
+        u'\r\n' * (pager.height if pager is not None else term.height),
         pager.border(),
         pager.refresh(),))
 
@@ -150,8 +150,7 @@ def lc_retrieve():
     color the last callers to the system, and 'nicknames' is simply a list
     of last callers (for lightbar selection key).
     """
-    from x84.bbs import list_users, get_user, ini, timeago, getterminal
-    term = getterminal()
+    from x84.bbs import list_users, get_user, ini, timeago
     import time
     udb = dict()
     for handle in list_users():
