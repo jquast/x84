@@ -208,7 +208,7 @@ class User(object):
         # pylint: disable=C0111
         #         Missing docstring
         from x84.bbs import ini
-        if ini.CFG.getboolean('system', 'pass-ucase'):
+        if ini.CFG.getboolean('system', 'pass_ucase'):
             # facebook and mystic storage style, i wouldn't
             # recommend it though.
             self._password = digestpw(value.upper())
