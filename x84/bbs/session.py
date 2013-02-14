@@ -252,7 +252,9 @@ class Session(object):
                 self._script_stack = [err[0] + tuple(err[1:])]
                 continue
             except Disconnected, err:
-                break
+                logger.info('User initiates disconnect.')
+                self.close()
+                return None
             except Exception, err:
                 # Pokemon exception, log and Cc: telnet client, then resume.
                 e_type, e_value, e_tb = sys.exc_info()
