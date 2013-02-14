@@ -60,7 +60,11 @@ def main(ttyfile=u'', peek=False):
     if resume_rec:
         session.stop_recording()
         session._record_tty = False
-    echo(u'\r\n lOAd CASSEttE ANd PRESS PlAY.\r\n')
+    # press any key prompt, instructions for quitting (^c) ..
+    echo(u'\r\n lOAd CASSEttE ANd PRESS %s. PRESS %s tO %s.\r\n' % (
+        term.green_reverse(u'PlAY'),
+        term.green_bold_underline('bREAk'),
+        term.red_reverse(u'StOP'),))
     getch()
     with term.fullscreen():
         d.run()
