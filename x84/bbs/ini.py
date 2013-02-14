@@ -118,6 +118,8 @@ def init_bbs_ini():
     cfg_bbs.set('system', 'termcap-ansi', 'ansi-bbs')
     # could be information leak to sensitive sysops
     cfg_bbs.set('system', 'show_traceback', 'no')
+    # store passwords in uppercase, facebook and mystic bbs does this ..
+    cfg_bbs.set('system', 'pass_ucase', 'no')
 
     cfg_bbs.add_section('telnet')
     cfg_bbs.set('telnet', 'addr', '127.0.0.1')

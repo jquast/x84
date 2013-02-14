@@ -207,7 +207,13 @@ class User(object):
     def password(self, value):
         # pylint: disable=C0111
         #         Missing docstring
-        self._password = digestpw(value)
+        from x84.bbs import ini
+        if ini.CFG.getboolean('system', 'pass-ucase'):
+            # facebook and mystic storage style, i wouldn't
+            # recommend it though.
+            self._password = digestpw(value.upper())
+        else:
+            self._password = digestpw(value)
         logger.info('%s set new password', self.handle)
 
     def auth(self, try_pass):
@@ -220,7 +226,8 @@ class User(object):
         assert len(try_pass) > 0
         assert self.password != (None, None), ('account is without password')
         salt = self.password[0]
-        return self.password == digestpw(try_pass, salt)
+        return (self.password == digestpw(try_pass, salt) or
+                self.password == digestpw(try_pass.upper(), salt))
 
     def __setitem__(self, key, value):
         # pylint: disable=C0111,
