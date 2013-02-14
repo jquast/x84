@@ -60,13 +60,12 @@ def main():
     session, term = getsession(), getterminal()
 
     inp = -1
-    norefresh = False
+    dirty = True
     while True:
-        if ((inp is not None and not norefresh)
-                or session.poll_event('refresh')):
+        if dirty or session.poll_event('refresh'):
             refresh()
         inp = getch(1)
-        norefresh = False
+        dirty = True
         if inp == u'*':
             goto('main')  # reload main menu using hidden option '*'
         elif inp == u'b':
@@ -97,7 +96,11 @@ def main():
             goto('logoff')
         elif inp == u'!':
             gosub('charset')
+        elif inp == '\x1f' and 'sysop' in session.user.groups:
+            # ctrl+_, run a debug script
+            gosub('debug')
         elif inp == u'v' and 'sysop' in session.user.groups:
+            # video cassette player
             gosub('ttyplay')
         else:
-            norefresh = True
+            dirty = False
