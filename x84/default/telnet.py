@@ -57,8 +57,8 @@ def main(host, port=None, encoding='cp437'):
         telnet_client.open(host, port)
     except:
         e_type, e_value, e_tb = sys.exc_info()
-        echo(term.bold_red('%s: %s\r\n' % (e_type, e_value,)))
-        echo(u'\r\n\r\n press any key ..')
+        echo(term.bold_red('\r\n%s: %s\r\n' % (e_type, e_value,)))
+        echo(u'\r\n press any key ..')
         getch()
         return
 
