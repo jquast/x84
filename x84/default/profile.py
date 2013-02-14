@@ -15,6 +15,7 @@ def process_keystroke(lightbar, inp, user):
     from x84.bbs import getsession, getterminal, echo, getch, gosub
     from x84.bbs import LineEditor, Ansi
     from x84.default.nua import set_email, set_location
+    global EXIT
     session, term = getsession(), getterminal()
     is_self = bool(user.handle == session.user.handle)
     invalid = u'\r\niNVAlid.'
@@ -95,6 +96,20 @@ def process_keystroke(lightbar, inp, user):
                     break
             return True
     if 'sysop' in session.user.groups and (
+            inp in (u'd', u'D',) or (inp == term.KEY_ENTER and
+                lightbar is not None and
+                lightbar.selection[0] == u'd')):
+        echo(u"\r\n\r\ndElEtE %s ? [yn]" % (user.handle,))
+        while True:
+            ch = getch()
+            if str(ch).lower() == 'y':
+                user.delete()
+                break
+            elif str(ch).lower() == 'n':
+                break
+        EXIT = True
+        return True
+    elif 'sysop' in session.user.groups and (
             inp in (u's', u'S',) or (inp == term.KEY_ENTER and
                 lightbar is not None and
                 lightbar.selection[0] == u's')):
@@ -113,8 +128,6 @@ def process_keystroke(lightbar, inp, user):
             elif str(ch).lower() == 'n':
                 break
         return True
-
-        pass
     elif inp in (u'.',) or (inp == term.KEY_ENTER and
                            lightbar is not None and
                            lightbar.selection[0] == u'.'):
