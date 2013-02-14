@@ -161,7 +161,6 @@ def lc_retrieve():
     padd_origin = (ini.CFG.getint('nua', 'max_location') + 2)
     rstr = u''
     nicks = []
-    print '1'
     for ((tm_lc, handle), (nc, origin)) in (reversed(sorted(udb.items()))):
         is_sysop = 'sysop' in get_user(handle).groups
         rstr += (u'@' if is_sysop else u''
