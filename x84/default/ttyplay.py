@@ -57,8 +57,8 @@ def main(ttyfile=u'', peek=False):
     with term.fullscreen():
         d.run()
         echo(u'\r\n\r\n')
-        echo(u'PRESS ' + term.green_underline('bREAk.'))
-        while getch() != unichr(3):
+        echo(u'PRESS ' + term.green_underline('q') + u'.')
+        while not getch() in (u'q', u'Q'):
             pass
     if not session.is_recording and resume_rec:
         session._record_tty = True
