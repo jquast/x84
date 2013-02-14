@@ -22,7 +22,7 @@ def view_plan(handle):
 def dummy_pager(last_callers):
     from x84.bbs import getterminal, getsession, echo, getch, ini
     from x84.bbs import LineEditor, Ansi, list_users, get_user, gosub
-    session, term = getsession, getterminal()
+    session, term = getsession(), getterminal()
     msg_prompt = (
             u'\r\n\r\n%sONtiNUE, %stOP, %sON-StOP %siEW .PlAN%s ?\b\b' % (
                 term.bold(u'[c]'),
