@@ -24,7 +24,7 @@ def dummy_pager(last_callers):
     from x84.bbs import LineEditor, Ansi, list_users, get_user, gosub
     session, term = getsession(), getterminal()
     msg_prompt = (
-            u'\r\n\r\n%sONtiNUE, %stOP, %sON-StOP %siEW .PlAN%s ?\b\b' % (
+            u'\r\n%sONtiNUE, %stOP, %sON-StOP %siEW .PlAN%s ?\b\b' % (
                 term.bold(u'[c]'),
                 term.bold(u'[s]'),
                 term.bold(u'n'),
@@ -37,20 +37,23 @@ def dummy_pager(last_callers):
     redraw()
     echo(u'\r\n\r\n')
     nonstop = False
-    for row in range(len(last_callers)):
-        echo(Ansi(last_callers[row]).ljust(term.width / 2).center(term.width))
+    row=10
+    for txt in last_callers:
+        echo(Ansi(txt).ljust(term.width / 2).center(term.width))
         echo(u'\r\n')
-        if ((not nonstop and row > 0 and 0 == (row % (term.height - 2)))
+        row += 1
+        if ((not nonstop and row > 0 and 0 == (row % (term.height - 3)))
                 or (row == len(last_callers) - 1)):
             echo(msg_prompt)
             inp = getch()
+            row = 2
             if inp in (u's', u'S', u'q', u'Q', term.KEY_EXIT):
                 return
             if inp in (u'v', u'V') or 'sysop' in session.user.groups and (
                     inp in (u'e', u'E')):
                 echo(u'\r\n')
                 echo(msg_prompt_handle)
-                handle = LineEditor(ini.CFG.get('nua', 'max_user')).read()
+                handle = LineEditor(ini.CFG.getint('nua', 'max_user')).read()
                 echo (u'\r\n\r\n')
                 usrlist = list_users()
                 if handle is None or 0 == len(handle.strip()):
@@ -73,6 +76,7 @@ def dummy_pager(last_callers):
                     continue
             if inp in ('n', u'N'):
                 nonstop = True
+            echo(u'\r\n\r\n')
     pak()
 
 def refresh_opts(pager, handle):
@@ -140,7 +144,7 @@ def redraw(pager=None):
         u'\r\n',
         u'\r\n'.join(get_art(artfile)),
         u'\r\n',
-        u'\r\n' * (pager.height if pager is not None else term.height),
+        u'\r\n' * (pager.height if pager is not None else 0),
         pager.border() if pager is not None else u'',
         pager.refresh() if pager is not None else u'',))
 
@@ -179,7 +183,8 @@ def main():
     dirty = True
     handle = None
     if (0 == term.number_of_colors
-            or session.user.get('expert', False)):
+            or session.user.getboolean('expert', False)):
+        echo(redraw(None))
         dummy_pager(lcalls_txt.split('\n'))
         return
     while pager is None or not pager.quit:
