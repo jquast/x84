@@ -93,7 +93,7 @@ def show_scores(my_score):
     for row in score_txt:
         pager.append(spacer.join(
             [col if not ismine(col)
-            else term.bold_blue(col) for col in row]
+            else term.blue_reverse(col) for col in row]
             + [empty_slot] * (columns - len(row))))
     # append additional empty slot rows
     while len(pager.content) < pager.visible_height:
