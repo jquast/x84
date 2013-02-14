@@ -220,17 +220,16 @@ class ConnectTelnet (threading.Thread):
         self._try_ttype()
         if not self.client.active:
             return
+
         # this will set TERM to vt100 or sun if --still-- undetected,
         # this will set .rows, .columns if not LINES and COLUMNS
         self._try_naws()
         if not self.client.active:
             return
 
-        self._try_xtitle()
-        if not self.client.active:
-            return
-        # disable line-wrapping http://www.termsys.demon.co.uk/vtansi.htm
-        self.client.send_str(bytes(chr(27) + '[7l'))
+        #self._try_xtitle()
+        #if not self.client.active:
+        #    return
 
     def run(self):
         """
@@ -333,7 +332,7 @@ class ConnectTelnet (threading.Thread):
         # http://www.xfree86.org/4.5.0/ctlseqs.html#VT100%20Mode
         logger = logging.getLogger()
         logger.debug('report-xterm-title')
-        self.client.send_str('\x1b[21t')
+        self.client.send_str(chr(27) + '[21t')
         self.client.socket_send()  # push
         # response is '\x1b]lbash\x1b\\'
         response_pattern = re.compile(''.join((
@@ -356,7 +355,7 @@ class ConnectTelnet (threading.Thread):
         self.client.env['_xtitle'] = match.group(1).decode(
                 'utf8', 'replace')
         logger.info('window title: %s', self.client.env['_xtitle'])
-        self.client.send_str('\x1b[20t')
+        self.client.send_str(chr(27) + '[20t')
         self.client.socket_send()  # push
         # response is '\x1b]Lbash\x1b\\'
         response_pattern = re.compile(''.join((
