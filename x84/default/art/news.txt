@@ -1,3 +1,14 @@
+This is the default news for x/84 bbs,
+
+or, the news for telnet://1984.ws
+
+
+
+
+.. so we might as well look at test data
+
+
+
 
 UTF-8 encoded sample plain-text file
 ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
@@ -226,6 +237,9 @@ Box drawing alignment tests: █
 ▓▓██ ┊  ┆ ╎ ╏  ┇ ┋ ▎
 ▓▓██ ┊  ┆ ╎ ╏  ┇ ┋ ▏
 
-I put this normal line here
-
-for edit testing
+Some Emoji:
+HAMSTER FACE, PENGUIN, STRAWBERRY,
+🐹, 🐧, 🍓.
+Unicode: U+1F439 (U+D83D U+DC39), UTF-8: F0 9F 90 B9
+Unicode: U+1F427 (U+D83D U+DC27), UTF-8: F0 9F 90 A7
+Unicode: U+1F353 (U+D83C U+DF53), UTF-8: F0 9F 8D 93
