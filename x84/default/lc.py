@@ -183,7 +183,7 @@ def main():
     dirty = True
     handle = None
     if (0 == term.number_of_colors
-            or session.user.getboolean('expert', False)):
+            or session.user.get('expert', False)):
         echo(redraw(None))
         dummy_pager(lcalls_txt.split('\n'))
         return
