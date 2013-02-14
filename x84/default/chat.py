@@ -38,9 +38,9 @@ def process(mesg):
             del NICKS[handle]
         return show_part(handle, sid, tgt_channel, args)
     elif cmd == 'say':
-        return show_say(handle, args)
+        return show_say(handle, tgt_channel, args)
     elif cmd == 'act':
-        return show_act(handle, args)
+        return show_act(handle, tgt_channel, args)
     else:
         return u'unhandled: %r' % (mesg,)
     return None
@@ -52,7 +52,10 @@ def show_act(handle, mesg):
     return u''.join((
         time.strftime('%H:%M'), u' * ',
         (term.bold_green(handle) if handle != session.handle
-            else term.green(handle)), u' ',
+            else term.green(handle)),
+        (u':%s' % (tgt_channel,)
+            if 'sysop' in session.user.groups
+            else u''), u' ',
         mesg,))
 
 
@@ -115,7 +118,7 @@ def show_nicks(handles):
         u'user%s: ' % (u's' if len(handles) > 1 else u''),
         u', '.join(handles) + u'\n',))
 
-def show_say(handle, mesg):
+def show_say(handle, tgt_channel, mesg):
     from x84.bbs import getsession, getterminal, get_user
     session, term = getsession(), getterminal()
     return u''.join((
@@ -126,6 +129,9 @@ def show_say(handle, mesg):
             else u''),
         (handle if handle != session.handle
             else term.bold(handle)),
+        (u':%s' % (tgt_channel,)
+            if 'sysop' in session.user.groups
+            else u''),
         term.bold_black(u'>'), u' ',
         mesg,))
 
