@@ -12,14 +12,14 @@ def main(ttyfile=u'', peek=False):
     session, term = getsession(), getterminal()
     if 'sysop' in session.user.groups:
         folder = os.path.dirname(ttyfile) or session._ttyrec_folder
-        se = ScrollingEditor(term.width - 15, term.height - 3, 13)
+        se = ScrollingEditor(term.width - 18, term.height - 3, 9)
         se.content = os.path.basename(ttyfile)
-        se.enable_scrolling=True
-        se.highlight = term.blue_reverse
+        se.enable_scrolling = True
+        se.colors['highlight'] = term.blue_reverse
         files = Ansi(u', '.join([fn
             for fn in os.listdir(session._ttyrec_folder)
             if fn.endswith('.ttyrec')])).wrap(term.width)
-        echo(u'\r\n' * min(3, term.height-len(files.splitlines())))
+        echo(u'\r\n\r\n')
         echo(files)
         echo(u'\r\n\r\n')
         echo(term.move(term.height, 1))
