@@ -14,10 +14,6 @@ import sys
 import os
 import io
 
-import x84.bbs.userbase
-import x84.bbs.cp437
-import x84.bbs.ini
-
 SESSION = None
 logger = logging.getLogger()
 
@@ -56,6 +52,7 @@ class Session(object):
             sid: session id by engine: origin of telnet connection (ip:port),
             env: dict of environment variables, such as 'TERM', 'USER'.
         """
+        from x84.bbs import ini
         # pylint: disable=W0603
         #        Using the global statement
         global SESSION
@@ -68,12 +65,13 @@ class Session(object):
         self.encoding = encoding
         self.lock = threading.Lock()
         self._user = None
-        self._script_stack = [(x84.bbs.ini.CFG.get('matrix', 'script'),)]
-        self._tap_input = x84.bbs.ini.CFG.getboolean('session', 'tap_input')
-        self._tap_output = x84.bbs.ini.CFG.getboolean('session', 'tap_output')
-        self._ttyrec_folder = x84.bbs.ini.CFG.get('system', 'ttyrecpath')
-        self._record_tty = x84.bbs.ini.CFG.getboolean('session', 'record_tty')
+        self._script_stack = [(ini.CFG.get('matrix', 'script'),)]
+        self._tap_input = ini.CFG.getboolean('session', 'tap_input')
+        self._tap_output = ini.CFG.getboolean('session', 'tap_output')
+        self._ttyrec_folder = ini.CFG.get('system', 'ttyrecpath')
+        self._record_tty = ini.CFG.getboolean('session', 'record_tty')
         self._show_traceback = ini.CFG.getboolean('system', 'show_traceback')
+        self._script_path = ini.CFG.get('system', 'scriptpath')
         self._script_module = None
         self._fp_ttyrec = None
         self._ttyrec_fname = None
@@ -151,9 +149,10 @@ class Session(object):
         """
         User record of session.
         """
+        from x84.bbs.userbase import User
         if self._user is not None:
             return self._user
-        return x84.bbs.userbase.User()
+        return User()
 
     @user.setter
     def user(self, value):
@@ -280,6 +279,7 @@ class Session(object):
 
         Has side effect of updating ttyrec file when recording.
         """
+        from x84.bbs.cp437 import CP437
         logger = logging.getLogger()
         if 0 == len(ucs):
             return
@@ -296,8 +296,8 @@ class Session(object):
             # http://lkml.indiana.edu/hypermail/linux/kernel/0602.2/0868.html
             # regardless, remove them using str.translate()
             text = ucs.encode(encoding, 'replace')
-            ucs = u''.join([(unichr(x84.bbs.cp437.CP437.index(glyph))
-                             if glyph in x84.bbs.cp437.CP437
+            ucs = u''.join([(unichr(CP437.index(glyph))
+                             if glyph in CP437
                              and not glyph in self.TRIM_CP437
                              else unicode(
                                  text[idx].translate(None, self.TRIM_CP437),
@@ -532,6 +532,7 @@ class Session(object):
         Execute the main() callable of script identified by 'script_name', with
         optional *args.
         """
+        from x84.bbs.exception import ScriptError
         logger = logging.getLogger()
         self._script_stack.append((script_name,) + args)
         logger.info('RUN %s%s', script_name,
@@ -543,13 +544,12 @@ class Session(object):
             """
             if self._script_module is None:
                 # load default/__init__.py as 'default',
-                script_path = x84.bbs.ini.CFG.get('system', 'scriptpath')
-                base_script = os.path.basename(script_path)
-                lookup = imp.find_module(script_name, [script_path])
+                base_script = os.path.basename(self._script_path)
+                lookup = imp.find_module(script_name, [self._script_path])
                 # pylint: disable=W0142
                 #        Used * or ** magic
                 self._script_module = imp.load_module(base_script, *lookup)
-                self._script_module.__path__ = script_path
+                self._script_module.__path__ = self._script_path
             return self._script_module
         # pylint: disable=W0142
         #        Used * or ** magic
@@ -557,11 +557,9 @@ class Session(object):
         lookup = imp.find_module(script_name, [script_module.__path__])
         script = imp.load_module(script_name, *lookup)
         if not hasattr(script, 'main'):
-            raise x84.bbs.exception.ScriptError(
-                "%s: main() not found." % (script_name,))
+            raise ScriptError("%s: main() not found." % (script_name,))
         if not callable(script.main):
-            raise x84.bbs.exception.ScriptError(
-                "%s: main not callable." % (script_name,))
+            raise ScriptError("%s: main not callable." % (script_name,))
         value = script.main(*args)
         toss = self._script_stack.pop()
         logger.info('%s <== %s', value, toss)
