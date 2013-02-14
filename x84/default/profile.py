@@ -321,7 +321,7 @@ def lborder(lightbar, user):
     sel = lightbar.selection[0]
     val = u''
     if sel == 'c':
-        val = session.encoding if is_self else u'x'
+        val = session.encoding if is_self else user.get('charset', u'x')
     elif sel == 't':
         val = session.env.get('TERM', 'unknown') if is_self else u'x'
     elif sel == 'h':
@@ -353,4 +353,3 @@ def lborder(lightbar, user):
                 val[:lightbar.visible_width - 4],
                 u' -',))),
             ))
-
