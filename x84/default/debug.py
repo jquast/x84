@@ -6,8 +6,8 @@ def main():
     return nothing()
 
     # but this is a great way to make data manipulations,
-    # exampled here is importing of an old sqlite3 userbase record,
-    # as well as a .csv export of a mystic recordbase.
+    # exampled here is importing of a .csv import of
+    # a mystic recordbase.
     #return merge_mystic()
 
 def nothing():
