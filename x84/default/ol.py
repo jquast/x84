@@ -36,7 +36,7 @@ class FetchUpdates(threading.Thread):
         logger = logging.getLogger()
         usernm = ini.CFG.get('bbs-scene', 'user')
         passwd = ini.CFG.get('bbs-scene', 'pass')
-        logger.info('fetching %r ..', self.url)
+        logger.debug('fetching %r ..', self.url)
         stime = time.time()
         req = requests.get(self.url, auth=(usernm, passwd))
         if 200 != req.status_code:
@@ -92,10 +92,10 @@ def chk_thread(thread):
                 udb[key] = value
                 nlc += 1
         if nlc:
-            logger.info('%d new entries', nlc)
+            logger.debug('%d new entries', nlc)
             session.buffer_event('oneliner_update', True)
         else:
-            logger.info('no new bbs-scene.org entries')
+            logger.debug('no new bbs-scene.org entries')
         return True
 
 
