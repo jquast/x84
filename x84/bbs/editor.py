@@ -6,6 +6,7 @@ from x84.bbs.ansiwin import AnsiWindow
 
 PC_KEYSET = {'refresh': [unichr(12), ],
              'backspace': [unichr(8), unichr(127), ],
+             'backword': [unichr(23), ],
              'enter': [u'\r', ],
              'exit': [unichr(27), ], }
 
@@ -370,6 +371,8 @@ class ScrollingEditor(AnsiWindow):
             return self.refresh()
         elif keystroke in self.keyset['backspace']:
             return self.backspace()
+        elif keystroke in self.keyset['backword']:
+            return self.backword()
         elif keystroke in self.keyset['enter']:
             self._carriage_returned = True
             return u''
@@ -444,6 +447,30 @@ class ScrollingEditor(AnsiWindow):
             prnt + self.glyphs.get('erase', u' ') * erase_len,
             term.normal,
             self.fixate(),))
+
+    def backword(self):
+        """
+        Remove word from end of content buffer, scroll as necessary.
+        """
+        from x84.bbs.output import Ansi
+        if 0 == len(self.content):
+            return u''
+        rstr = u''
+        idx = self.content.rfind(' ')
+        if idx == -1:
+            idx = 0
+        toss = self.content[idx:]
+        self.content = self.content[:idx]
+        if self.is_scrolled:
+            while self._horiz_pos < (self.visible_width - self.scroll_amt):
+                # shift left,
+                self._horiz_shift -= self.scroll_amt
+                self._horiz_pos += self.scroll_amt
+                rstr += self.refresh()
+        rstr += self.fixate(-1)
+        rstr += ' \b'
+        self._horiz_pos -= (len(Ansi(toss)))
+        return rstr
 
     def backspace(self):
         """
