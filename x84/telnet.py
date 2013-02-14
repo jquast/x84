@@ -686,6 +686,7 @@ class TelnetClient(object):
                 self.request_env()
             self._note_local_option(NEW_ENVIRON, True)
         elif option == XDISPLOC:
+            # if they want to send it, go ahead.
             if self.check_remote_option(XDISPLOC):
                 self._note_remote_option(XDISPLOC, True)
                 self._iac_do(XDISPLOC)
