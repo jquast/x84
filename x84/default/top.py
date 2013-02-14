@@ -68,10 +68,10 @@ def main(handle=None):
     logger = logging.getLogger()
     # 1. determine & assign user record,
     if handle in (None, u'', 'anonymous',):
-        logger.warn('anonymous login by %s.', session.sid)
+        logger.info('anonymous login by %s.', session.sid)
         session.user = User(u'anonymous')
     else:
-        logger.info('%r logged in.', handle)
+        logger.debug('%r logged in.', handle)
         session.user = get_user(handle)
 
     # 2. update call records
