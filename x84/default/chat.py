@@ -200,6 +200,7 @@ def main(channel=None, caller=None):
                 and not 'sysop' in session.user.groups
                 else u'PRiVAtE ChANNEl',) if CHANNEL is not None else (
                         u'WAitiNG fOR ChAt')
+        pager.move_end()
         return u''.join((
             u''.join((u'\r\n', term.clear_eol,
                 u'\r\n', term.clear_eol,
