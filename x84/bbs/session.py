@@ -577,7 +577,7 @@ class Session(object):
         """
         assert self.is_recording
         self._ttyrec_write(u''.join((
-            self.term.normal, u'\r\n\r\n',
+            self.terminal.normal, u'\r\n\r\n',
             u'\r\n'.join([u'%s: %s' % (key, val)
             for (key, val) in sorted(self.info().items())]),
             u'\r\n')))
