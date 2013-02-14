@@ -57,8 +57,11 @@ def main(ttyfile=u'', peek=False):
     with term.fullscreen():
         d.run()
         echo(u'\r\n\r\n')
-        echo(u'PRESS ANY kEY.')
-        getch()
+        echo(u'PRESS ' + term.green_underline('bREAk.'))
+        while getch() != unichr(3):
+            pass
     if not session.is_recording and resume_rec:
         session._record_tty = True
         session.start_recording()
+    echo(term.move(term.height, 0))
+    echo(u'\r\n')
