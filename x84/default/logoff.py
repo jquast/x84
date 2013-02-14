@@ -95,6 +95,11 @@ def main():
             refresh_prompt(prompt_msg)
         inp = getch(1)
         if inp in (u'g', u'G', term.KEY_EXIT, unichr(27), unichr(3),):
+            if 0 != len(session.env.get('_xtitle', u'')):
+                echo(u''.join((
+                    unichr(27),
+                    u']2;%s' % (session.env.get('_xtitle'),),
+                    unichr(7))))
             echo(goodbye_msg)
             getch(2)
             disconnect()

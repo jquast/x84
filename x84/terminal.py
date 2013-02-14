@@ -141,8 +141,9 @@ class ConnectTelnet (threading.Thread):
     Accept new Telnet Connection and negotiate options.
     """
     TIME_NEGOTIATE = 1.00
-    TIME_WAIT = 2.35
-    TIME_POLL = 0.05
+    TIME_WAIT_SILENT = 0.60 # wait 60ms after silence
+    TIME_WAIT_STAGE = 1.90  # wait 190ms foreach negotiation
+    TIME_POLL = 0.0625
     TTYPE_UNDETECTED = 'unknown'
     WINSIZE_TRICK = (
         ('vt100', ('\x1b[6n'), re.compile(chr(27) + r"\[(\d+);(\d+)R")),
@@ -224,6 +225,10 @@ class ConnectTelnet (threading.Thread):
         self._try_naws()
         if not self.client.active:
             return
+
+        self._try_xtitle()
+        if not self.client.active:
+            return
         # disable line-wrapping http://www.termsys.demon.co.uk/vtansi.htm
         self.client.send_str(bytes(chr(27) + '[7l'))
 
@@ -248,9 +253,9 @@ class ConnectTelnet (threading.Thread):
     def _timeleft(self, st_time):
         """
         Returns True when difference of current time and st_time is below
-        TIME_WAIT.
+        TIME_WAIT_STAGE.
         """
-        return bool(time.time() - st_time < self.TIME_WAIT)
+        return bool(time.time() - st_time < self.TIME_WAIT_STAGE)
 
     def _set_socket_opts(self):
         """
@@ -315,6 +320,42 @@ class ConnectTelnet (threading.Thread):
         logger.debug('failed: negotiate about window size')
         #self._try_cornerquery()
 
+    def _try_xtitle(self):
+        """
+        request xterm title and store as _xtitle 'env' variable,
+        this is restored on goodbye/logoff..
+        """
+        # P s = 2 1 -> Report xterm window's title. Result is OSC l label ST
+        # http://invisible-island.net/xterm/ctlseqs/ctlseqs.html#VT100%20Mode
+        # http://www.xfree86.org/4.5.0/ctlseqs.html#VT100%20Mode
+        logger = logging.getLogger()
+        logger.debug('report-xterm-title')
+        self.client.send_str('\x1b[21t')
+        self.client.socket_send()  # push
+        # response is '\x1b]lbash\x1b\\'
+        response_pattern = re.compile(''.join((
+            re.escape(chr(27)),
+            r"\]l(.*)",
+            re.escape(chr(27)),
+            re.escape('\\'),)))
+        st_time = time.time()
+        while (self.client.idle() < self.TIME_WAIT_SILENT
+               and self._timeleft(st_time)
+               and self.client.active):
+            time.sleep(self.TIME_POLL)
+        if not self.client.active:
+            return
+        inp = self.client.get_input()
+        print repr(inp), 'x'*10
+        match = response_pattern.search(inp)
+        if match:
+            self.client.env['_xtitle'] = match.group(1).decode(
+                    'utf8', 'replace')
+            logger.info('window title: %s', self.client.env['_xtitle'])
+            return
+        logger.debug('failed: xterm-title')
+
+
     def _try_cornerquery(self):
         """
         This is akin to X11's 'xresize', move the cursor to the corner of the
@@ -335,7 +376,7 @@ class ConnectTelnet (threading.Thread):
             self.client.send_str(query_seq)
             self.client.socket_send()  # push
             st_time = time.time()
-            while (self.client.idle() < self.TIME_WAIT
+            while (self.client.idle() < self.TIME_WAIT_SILENT
                    and self._timeleft(st_time)
                    and self.client.active):
                 time.sleep(self.TIME_POLL)
