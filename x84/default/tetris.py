@@ -30,92 +30,76 @@ def show_scores(my_score):
     from x84.bbs import DBProxy, Pager, getterminal
     from x84.bbs import getch, echo, getsession, ini
     session, term = getsession(), getterminal()
-    scores = sorted(
-            [ (_score, _level, _handle.decode('utf8'))
-                for (_handle, (_score, _level, _lines))
-                    in DBProxy('tetris').items()],
-            reverse=True)
-    if not len(scores):
+    allscores = DBProxy('tetris').items()
+    if 0 == len(allscores):
         return
-    handle_len = ini.CFG.getint('nua', 'max_user')
-    score_len = 10
-    score_fmt = u'%-' + str(score_len) + 's %-2s %' + str(handle_len) + 's'
-
     # line up over tetris game, but logo & 'made by jojo' in view
     # -- since we have so much screen width, columize the scores,
-    # looks like the math brings it out to 2 or 3 columns.
-    height = 11
-    width = 73
-    yloc = 10
-    xloc = 3
+    # the math brings it out to 2 columns, but fmt is adjustable
+    pager_title = term.blue_reverse_underline('- hiGh SCOREs -')
+    len_handle = ini.CFG.getint('nua', 'max_user')
+    score_fmt = u'%s %s %s %s'
+    len_pos = 2
+    len_score = 10
+    len_level = 3
+    height, width = 11, 73
+    yloc, xloc = 10, 3
     pager = Pager(height=height, width=width, yloc=yloc, xloc=xloc)
     pager.xpadding = 1
     pager.glyphs['left-vert'] = u''
     pager.glyphs['right-vert'] = u''
     pager.colors['border'] = term.blue_reverse
     pager.alignment = 'center'
-    def ismine(col):
-        return col.split() == [str(my_score[0]), str(my_score[1]),
-                session.user.handle]
-    column_len = len(score_fmt % (u'', u'', u'',))
-    columns = pager.visible_width / column_len
-    def split_seq(seq, p):
-        # http://code.activestate.com/recipes/425397-split-a-list-into-roughly-equal-sized-pieces/#c3
-        newseq = []
-        n = len(seq) / p    # min items per subsequence
-        r = len(seq) % p    # remaindered items
-        b,e = 0, n + min(1, r)  # first split
-        for i in range(p):
-            newseq.append(seq[b:e])
-            r = max(0, r-1)  # use up remainders
-            b,e = e, e + n + min(1, r)  # min(1,r) is always 0 or 1
-        return newseq
-
-    # do not columnize until we have at least that many records !
-    if len(scores) > columns:
-        score_txt = zip(*split_seq(
-            [score_fmt % record for record in scores], columns))
-    else:
-        columns = len(scores)
-        score_txt = [[score_fmt % record for record in scores]]
-
-    spacer = u' ' * ((pager.visible_width - (column_len * columns))/columns)
-    pager.append(spacer.join([score_fmt % (
-        term.bold_blue_underline('SCORE'.ljust(score_len)),
-        term.bold_blue_underline('lV')+ u' ',
-        term.bold_blue_underline('hANdlE'.rjust(handle_len),))] * columns))
-    empty_slot = u''.join((
-        term.bold_black('.'.ljust(score_len + 1)),
-        term.bold_black('.'.ljust(3)),
-        term.bold_black('.'.rjust(handle_len))))
-    # display scores, bold our in blue, if any,
-    # fill additional columns with '.'
-    for row in score_txt:
-        pager.append(spacer.join(
-            [col if not ismine(col)
-            else term.blue_reverse(col) for col in row]
-            + [empty_slot] * (columns - len(row))))
+    # pre-fesh pager border before fetch
+    echo(pager.border() + pager.title(pager_title))
+    highscores = sorted(
+            [(_score, _level, _handle.decode('utf8'))
+                for (_handle, (_score, _level, _lines))
+                in allscores],
+            reverse=True)
+    pager.append(score_fmt % (
+        term.bold_blue_underline('No'.ljust(len_pos)),
+        term.bold_blue_underline('SCORE'.ljust(len_score)),
+        term.bold_blue_underline('lVl'.ljust(len_level)),
+        term.bold_blue_underline('hANdlE'.rjust(len_handle),)))
+    for pos, (_score, _level, _handle) in enumerate(highscores):
+        if _handle == session.user.handle:
+            pager.append(score_fmt % (
+                term.blue_reverse(str(pos + 1).ljust(len_pos)),
+                term.blue_reverse(str(_score).ljust(len_score)),
+                term.blue_reverse(str(_level).ljust(len_level)),
+                term.blue_reverse(str(_handle).rjust(len_handle)),))
+        else:
+            pager.append(score_fmt % (
+                term.bold_blue(str(pos + 1).ljust(len_pos)),
+                term.blue(str(_score).ljust(len_score)),
+                term.blue(str(_level).ljust(len_level)),
+                str(_handle).rjust(len_handle),))
     # append additional empty slot rows
     while len(pager.content) < pager.visible_height:
-        pager.append(spacer.join([empty_slot] * columns))
+        pos+=1
+        pager.append(score_fmt % (
+                term.bold_blue(str(pos + 1).ljust(len_pos)),
+                term.bold_black(u'.'.ljust(len_score)),
+                term.bold_black(u'.'.ljust(len_level)),
+                term.bold_black(u'.'.rjust(len_handle)),))
 
-    dirty = True
-    while True:
-        inp = getch(1)
-        if inp in ('q', 'Q'):
-            break
-        dirty = True if session.poll_event('refresh') else dirty
+    dirty = 2 # 2=do not refresh border & title
+    while not pager.quit:
+        # 1=full refresh
+        dirty = 1 if session.poll_event('refresh') else dirty
         if dirty:
             echo(u''.join((
-                pager.border(),
-                pager.title(term.blue_reverse_underline('- hiGh SCOREs -')),
                 term.normal,
+                ((pager.border() + pager.title(pager_title))
+                    if dirty != 2 else u''),
                 pager.refresh(),
                 pager.footer(u''.join((
                     term.underline_blue('q'),
                     term.bold_blue('uit')))),
                 )))
-            dirty = False
+            dirty = 0
+        echo(pager.process_keystroke(getch(1)))
 
 
 def play():
@@ -523,9 +507,7 @@ def play():
         # hidepiece()
         if key is not None:
             if key in (u'q', u'Q'):
-                return 0,0,0
-            elif key in (u'S',):
-                show_scores ((score, level, lines))
+                return (0,0,0)
             elif key in (term.KEY_LEFT, u'h',):
                 xpos, ypos, r, m = movepiece(xpos - 1, ypos, r)
             elif key in (term.KEY_RIGHT, u'l',):
