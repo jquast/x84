@@ -98,7 +98,7 @@ def process_keystroke(lightbar, inp, user):
             inp in (u's', u'S',) or (inp == term.KEY_ENTER and
                 lightbar is not None and
                 lightbar.selection[0] == u's')):
-        sysop = not 'sysop' in session.user.groups
+        sysop = not 'sysop' in user.groups
         echo(u"\r\n\r\n%s SYSOP ACCESS? [yn]" % (
             'ENAblE' if sysop else 'diSAblE',))
         while True:
@@ -106,7 +106,9 @@ def process_keystroke(lightbar, inp, user):
             if str(ch).lower() == 'y':
                 if sysop:
                     user.groups.add('sysop')
-                    user.save()
+                else:
+                    user.groups.remove('sysop')
+                user.save()
                 break
             elif str(ch).lower() == 'n':
                 break
