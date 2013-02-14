@@ -148,7 +148,8 @@ def lc_retrieve():
     color the last callers to the system, and 'nicknames' is simply a list
     of last callers (for lightbar selection key).
     """
-    from x84.bbs import list_users, get_user, ini, timeago
+    from x84.bbs import list_users, get_user, ini, timeago, getterminal
+    term = getterminal()
     import time
     udb = dict()
     for handle in list_users():
@@ -160,7 +161,9 @@ def lc_retrieve():
     nicks = []
     print '1'
     for ((tm_lc, handle), (nc, origin)) in (reversed(sorted(udb.items()))):
-        rstr += handle.ljust(padd_handle)
+        is_sysop = 'sysop' in get_user(handle).groups
+        rstr += (u'@' if is_sysop else u''
+                )+(handle.ljust(padd_handle - (2 if is_sysop else 1)))
         rstr += origin.ljust(padd_origin)
         rstr += timeago(time.time() - tm_lc)
         rstr += u'\n'
@@ -182,6 +185,7 @@ def main():
         return
     while pager is None or not pager.quit:
         if dirty or pager is None or session.poll_event('refresh'):
+            lcallers, lcalls_txt = lc_retrieve()
             pager = get_pager(lcallers, lcalls_txt)
             echo(redraw(pager))
             echo(refresh_opts(pager, handle))
