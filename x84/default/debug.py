@@ -16,8 +16,11 @@ def nothing():
     getch(3)
 
 def merge_mystic():
-    from x84.bbs import ini, echo, getch, User
+    from x84.bbs import ini, echo, getch, User, get_user, find_user
     import os
+    # you must modify this variable to WRITE changes,
+    # this csv format; 'user:pass:origin:email\n',
+    # in iso8859-1 encoding.
     WRITE = False
     inp_file = os.path.join(
             ini.CFG.get('system', 'datapath'),
@@ -36,10 +39,13 @@ def merge_mystic():
             '%d ' % (len(_password)),
             '%s ' % (_location),
             '%s ' % (_email),)))
-        user = User(handle)
-        user.location = _location
-        user.email = _email
-        user.password = _password
+        if find_user(handle) is None:
+            user = User(handle)
+            user.location = _location
+            user.email = _email
+            user.password = _password
+        else:
+            user = get_user(handle)
         user.groups.add('old-school')
         if WRITE:
             user.save()
