@@ -372,7 +372,6 @@ class ConnectTelnet (threading.Thread):
         if not self.client.active:
             return
         inp = self.client.get_input()
-        print repr(inp), 'z'*100
         match = response_pattern.search(inp)
         if not match:
             logger.debug('failed: xterm-icon')
