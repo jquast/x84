@@ -537,7 +537,7 @@ class Session(object):
         from x84.bbs.exception import ScriptError
         logger = logging.getLogger()
         self._script_stack.append((script_name,) + args)
-        logger.info('RUN %s%s', script_name,
+        logger.info('run %s%s', script_name,
                     '%r' % (args,) if 0 != len(args) else '')
 
         def _load_script_module():
@@ -564,7 +564,7 @@ class Session(object):
             raise ScriptError("%s: main not callable." % (script_name,))
         value = script.main(*args)
         toss = self._script_stack.pop()
-        logger.info('%s <== %s', value, toss)
+        logger.info('%r <== %s', value, toss[0])
         return value
 
     def close(self):
