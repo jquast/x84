@@ -531,8 +531,8 @@ class Session(object):
 
     def runscript(self, script_name, *args):
         """
-        Execute the main() callable of script identified by 'script_name', with
-        optional *args.
+        Execute the main() callable of script identified by
+        *script_name*, with optional \*args.
         """
         from x84.bbs.exception import ScriptError
         logger = logging.getLogger()
