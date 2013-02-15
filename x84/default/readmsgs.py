@@ -12,6 +12,7 @@ def main(tags=None):
     from x84.bbs import list_msgs, timeago, DBProxy, Ansi, get_msg, Lightbar
     from x84.bbs import ini, Pager
     import datetime
+    import math
     session, term = getsession(), getterminal()
     echo(banner())
     public_idx = list_msgs()
@@ -170,35 +171,46 @@ def main(tags=None):
             msgs.append((idx, u'%s %s: %s' % (
                 author.ljust(len_author),
                 timeago(tm_ago).rjust(len_ago),
-                subj.ljust(len_subject)[:len_subject],)))
+                subj[:len_subject],)))
         msgs.sort()
+
+        # going for robocop look ? this matches the style of my wyse
+        # 320 amber brown ..
+        echo(u'\r\n' + u'// REAdiNG MSGS ..'.center(term.width).rstrip())
+        echo(u'\r\n' * (term.height - 1))
         msg_selector = Lightbar(
-            height=min(term.height / 3, len(msgs) + 2),
+            height=term.height / 3,
             width=len_preview,
-            yloc=2,
-            xloc=min(0, (term.width / 2) - (len_preview / 2)))
-        echo(u'\r\n' * msg_selector.height)
-        msg_selector.xpadding = 0
-        msg_selector.ypadding = 0
+            yloc=2, xloc=1)
+#        msg_selector.xpadding = 2
         msg_selector.colors['border'] = term.bold_yellow
-        msg_selector.glyphs['top-horiz'] = u''
-        msg_selector.glyphs['bot-horiz'] = u''
-        msg_selector.glyphs['right-vert'] = u'|'
+#        msg_selector.glyphs['bot-horiz'] = u'-'
+#        msg_selector.glyphs['right-vert'] = u'|'
         msg_selector.colors['highlight'] = term.yellow_reverse
-        echo(msg_selector.border())
-        msg_selector.update([u'%s %*d %s' % (
+        msg_selector.update([(_idx, u'%s %*d %s' % (
             u'U' if not _idx in already_read else u' ',
-            len_idx, _idx, _txt,) for (_idx, _txt) in msgs])
+            len_idx, _idx, _txt,)) for (_idx, _txt) in msgs])
         echo(msg_selector.refresh())
-        reader_height = (term.height / 3) * 2
-        reader_width = min(term.width - 1, 80)
+        reader_height = (term.height - msg_selector.height - 2)
+        reader_indent = (msg_selector.xloc + 4)
+        reader_width = min(term.width - 1, min(term.width - reader_indent, 80))
         msg_reader = Pager(
             height=reader_height,
             width=reader_width,
             yloc=term.height - reader_height,
-            xloc=min(0, (term.width / 2) - (reader_width / 2)))
+            xloc=term.width - reader_width)
         msg_reader.colors['border'] = term.yellow
-        msg_reader.glyphs['left-vert'] = u''
-        echo(msg_reader.border())
+#        msg_reader.glyphs['left-vert'] = u''
+#        msg_reader.glyphs['top-horiz'] = u' - '
+#        msg_reader.glyphs['right-vert'] = u'|'
+#        msg_reader.glyphs['bot-horiz'] = u'-'
+        key, asc = msg_selector.selection
+        echo(msg_reader.border() + msg_selector.border())
+        if key is not None:
+            echo(msg_reader.update(get_msg(key).body))
+        echo(msg_selector.title(u'- %d MESSAGE%s%s -' % (
+            len(msgs), term.bold('s') if 1 != len(msgs) else u'',
+            (u', ' + term.bold(u'%d NEW' % (new,))) if new else u'',)))
         getch()
+        echo(term.move(term.height, 0))
         return
