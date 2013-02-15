@@ -64,6 +64,7 @@ class Msg(object):
         """
         return self._ctime
 
+    @property
     def stime(self):
         """
         M.stime() --> datetime
