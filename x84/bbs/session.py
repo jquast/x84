@@ -15,7 +15,6 @@ import os
 import io
 
 SESSION = None
-logger = logging.getLogger()
 
 
 def getsession():
@@ -135,7 +134,8 @@ class Session(object):
                 or '_xtitle' in self.env))
             self._activity = value
             if set_title:
-                self.write(u''.join((unichr(27), u']2;%s' % (value,), unichr(7))))
+                self.write(u''.join((
+                    unichr(27), u']2;%s' % (value,), unichr(7))))
 
     @property
     def handle(self):
@@ -266,9 +266,9 @@ class Session(object):
                         terrs.append(subln)
                 terrs.extend(traceback.format_exception_only(e_type, e_value))
                 for etxt in terrs:
-                        logger.error(etxt.rstrip())
-                        if self._show_traceback:
-                            self.write(etxt.rstrip() + u'\r\n')
+                    logger.error(etxt.rstrip())
+                    if self._show_traceback:
+                        self.write(etxt.rstrip() + u'\r\n')
             error_recovery()
         logger.info('end of script stack.')
         self.close()
@@ -333,6 +333,9 @@ class Session(object):
         return flushed
 
     def info(self):
+        """
+        Returns dictionary of key, value pairs of session paramters.
+        """
         return dict((
             ('TERM', self.env.get('TERM', u'unknown')),
             ('LINES', self.terminal.height,),
@@ -532,7 +535,7 @@ class Session(object):
     def runscript(self, script_name, *args):
         """
         Execute the main() callable of script identified by
-        *script_name*, with optional \*args.
+        *script_name*, with optional args.
         """
         from x84.bbs.exception import ScriptError
         logger = logging.getLogger()

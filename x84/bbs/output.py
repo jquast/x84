@@ -17,8 +17,9 @@ ANSI_WONTMOVE = re.compile(r'\033\[[sm]')
 
 class AnsiWrapper(textwrap.TextWrapper):
     def _wrap_chunks(self, chunks):
-        """_wrap_chunks(chunks : [string]) -> [string]
-        Ansi string safe, sortof.
+        """
+        ANSI-string safe varient of wrap_chunks,
+        exception of movement sequences.
         """
         lines = []
         if self.width <= 0:
@@ -35,23 +36,25 @@ class AnsiWrapper(textwrap.TextWrapper):
             if self.drop_whitespace and chunks[-1].strip() == '' and lines:
                 del chunks[-1]
             while chunks:
-                l = len(Ansi(chunks[-1]))
-                if cur_len + l <= width:
+                chunk_len = len(Ansi(chunks[-1]))
+                if cur_len + chunk_len <= width:
                     cur_line.append(chunks.pop())
-                    cur_len += l
+                    cur_len += chunk_len
                 else:
                     break
             if chunks and len(Ansi(chunks[-1])) > width:
                 self._handle_long_word(chunks, cur_line, cur_len, width)
-            if self.drop_whitespace and cur_line and cur_line[-1].strip() == '':
+            if (self.drop_whitespace
+                    and cur_line
+                    and cur_line[-1].strip() == ''):
                 del cur_line[-1]
             if cur_line:
                 lines.append(indent + u''.join(cur_line))
         return lines
+AnsiWrapper.__doc__ = textwrap.TextWrapper.__doc__
 
 def ansiwrap(ucs, width=70, **kwargs):
-        """
-        Wrap a single paragraph of Unicode Ansi sequences,
+        """Wrap a single paragraph of Unicode Ansi sequences,
         returning a list of wrapped lines.
         """
         return AnsiWrapper(width=width, **kwargs).wrap(ucs)

@@ -3,7 +3,6 @@ Left/Right lightbar choice selector for x/84, https://github.com/jquast/x84
 """
 from __future__ import division
 import math
-import logging
 
 from x84.bbs.ansiwin import AnsiWindow
 

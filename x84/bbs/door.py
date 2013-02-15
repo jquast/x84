@@ -10,16 +10,6 @@ import pty
 import sys
 import os
 
-import x84.bbs.exception
-import x84.bbs.session
-import x84.bbs.output
-import x84.bbs.cp437
-import x84.bbs.ini
-
-# pylint: disable=C0103
-#        Invalid name "logger" for type constant (should match
-logger = logging.getLogger()
-
 
 class Door(object):
     """
@@ -45,17 +35,18 @@ class Door(object):
         env_path is None, the .ini 'env_path' value of section [door] is used.
         When env_home is None, $HOME of the main process is used.
         """
+        from x84.bbs import getsession, ini
         # pylint: disable=R0913
         #        Too many arguments (7/5)
         self.cmd = cmd
         self.args = (self.cmd,) + args
         self.env_lang = env_lang
         if env_term is None:
-            self.env_term = x84.bbs.session.getsession().env.get('TERM')
+            self.env_term = getsession().env.get('TERM')
         else:
             self.env_term = env_term
         if env_path is None:
-            self.env_path = x84.bbs.ini.CFG.get('door', 'path')
+            self.env_path = ini.CFG.get('door', 'path')
         else:
             self.env_path = env_path
         if env_home is None:
@@ -69,14 +60,15 @@ class Door(object):
         calls execvpe() while the parent process pipes telnet session
         IPC data to and from the slave pty until child process exits.
         """
+        from x84.bbs import getsession, getterminal
+        session, term = getsession(), getterminal()
+        logger = logging.getLogger()
         try:
             pid, self.master_fd = pty.fork()
         except OSError, err:
             logger.error('OSError in pty.fork(): %s', err)
             return
 
-        session = x84.bbs.session.getsession()
-        term = x84.bbs.session.getterminal()
         # subprocess
         if pid == pty.CHILD:
             sys.stdout.flush()
@@ -133,9 +125,11 @@ class Door(object):
         Poll input and outpout of ptys,
         """
         import codecs
-        term = x84.bbs.session.getterminal()
-        session = x84.bbs.session.getsession()
+        from x84.bbs import getsession, getterminal, echo
+        from x84.bbs.cp437 import CP437
+        session, term = getsession(), getterminal()
         utf8_decoder = codecs.getincrementaldecoder('utf8')()
+        logger = logging.getLogger()
         while True:
             # block up to self.time_opoll for screen output
             rlist = (self.master_fd,)
@@ -149,19 +143,23 @@ class Door(object):
                 # output to terminal as utf8, unless we specify decode_cp437
                 # for special dos-emulated doors such as lord.
                 if self.decode_cp437:
-                    x84.bbs.output.echo(u''.join(
-                        (x84.bbs.cp437.CP437[ord(ch)] for ch in data)))
+                    echo(u''.join(
+                        (CP437[ord(ch)] for ch in data)))
                 else:
                     decoded = list()
-                    def is_final():
+                    def ready_master_fd():
+                        """
+                        returns True if bytes waiting on master fd, meaning
+                        this utf8 byte must really be the last for a while.
+                        """
                         return (self.master_fd in
-                                select.select([self.master_fd,], (), (), 0))
+                                select.select([self.master_fd,], (), (), 0)[0])
                     for num, byte in enumerate(data):
-                        final=(num+1) == len(data) and is_final()
+                        final = (num + 1) == len(data) and not ready_master_fd()
                         ucs = utf8_decoder.decode(byte, final)
                         if ucs is not None:
                             decoded.append(ucs)
-                    x84.bbs.output.echo(u''.join(decoded))
+                    echo(u''.join(decoded))
 
 
 

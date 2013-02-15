@@ -59,6 +59,8 @@ def digestpw_internal(password, salt=None):
     # pylint: disable=W0612
     #        Unused variable 'loop_cnt'
     for loop_cnt in range(0, 100000):
+        # pylint: disable=E1101
+        #         Module 'hashlib' has no 'sha256'
         digest = hashlib.sha256(digest).hexdigest()
     return salt, digest
 
@@ -76,6 +78,8 @@ def digestpw_init(password_digest):
     """
     Set which password digest routine to use
     """
+    # pylint: disable=W0603
+    #         Using the global statement
     global digestpw
     if password_digest == 'bcrypt':
         digestpw = digestpw_bcrypt
@@ -256,7 +260,7 @@ class User(object):
         else:
             attrs = adb[self.handle]
             if not key in attrs:
-                logger.debug('%r GET %r: default; attr unset.', self.handle, key)
+                logger.debug('%r GET %r: default', self.handle, key)
                 val = default
             else:
                 logger.debug('%r GET %r%s.' % (

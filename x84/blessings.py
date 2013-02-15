@@ -6,7 +6,6 @@ https://github.com/erikrose/blessings
 import curses.has_key
 import contextlib
 import platform
-import logging
 import termios
 import struct
 import fcntl
@@ -378,7 +377,7 @@ class Terminal(object):
         """
         decoded = list()
         for num, byte in enumerate(text):
-            final=(num+1) == len(text)
+            final = (num + 1) == len(text)
             ucs = decoder.decode(byte, final)
             if ucs is not None:
                 decoded.append(ucs)

@@ -30,6 +30,7 @@ class LineEditor(object):
         self._quit = False
         self._carriage_returned = False
         self.colors = dict()
+        self.keyset = PC_KEYSET
         self.init_keystrokes()
         self.init_theme()
 
@@ -47,7 +48,6 @@ class LineEditor(object):
         """
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
-        self.keyset = PC_KEYSET
         self.keyset['refresh'].append(term.KEY_REFRESH)
         self.keyset['backspace'].append(term.KEY_BACKSPACE)
         self.keyset['enter'].append(term.KEY_ENTER)
@@ -131,7 +131,7 @@ class LineEditor(object):
         elif keystroke in self.keyset['exit']:
             self._quit = True
         elif type(keystroke) is int:
-            None
+            return u''
         elif (ord(keystroke) >= ord(' ') and
                 (len(self.content) < self.width or self.width == 0)):
             self.content += keystroke
@@ -184,6 +184,7 @@ class ScrollingEditor(AnsiWindow):
         self._bell = False
         self._trim_char = '$ '
         self.content = u''
+        self.keyset = PC_KEYSET
         height = 3  # TODO: 2 of 3 for top and bottom border
         # (optionaly displayed .. is this best x/y coord?
         #   once working, lets set default as borderless!)
@@ -356,7 +357,6 @@ class ScrollingEditor(AnsiWindow):
         """
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
-        self.keyset = PC_KEYSET
         self.keyset['refresh'].append(term.KEY_REFRESH)
         self.keyset['backspace'].append(term.KEY_BACKSPACE)
         self.keyset['enter'].append(term.KEY_ENTER)
@@ -388,9 +388,9 @@ class ScrollingEditor(AnsiWindow):
         Reads input until the ENTER or ESCAPE key is pressed (Blocking).
         Allows backspacing. Returns unicode text, or None when cancelled.
         """
-        from x84.bbs.session import getsession, getterminal
+        from x84.bbs.session import getsession
         from x84.bbs.output import echo
-        session, term = getsession(), getterminal()
+        session = getsession()
         echo(self.refresh())
         self._quit = False
         self._carriage_returned = False
