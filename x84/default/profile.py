@@ -128,6 +128,21 @@ def process_keystroke(lightbar, inp, user):
             elif str(ch).lower() == 'n':
                 break
         return True
+    elif inp in (u'p',) or (inp == term.KEY_ENTER and
+                           lightbar is not None and
+                           lightbar.selection[0] == u'p'):
+        from x84.default.nua import set_password
+        set_password(user)
+        echo(u"\r\n\r\nSEt PASSWORd ? [yn]")
+        while True:
+            ch = getch()
+            if str(ch).lower() == u'y':
+                user.save()
+                break
+            elif str(ch).lower() == u'n':
+                break
+        return True
+
     elif inp in (u'.',) or (inp == term.KEY_ENTER and
                            lightbar is not None and
                            lightbar.selection[0] == u'.'):
@@ -232,6 +247,8 @@ def dummy_pager(user):
                                term.bold(str(term.width)),),
             '(l)%-20s - %s' % (u'OCAtiON',
                                term.bold(user.location),),
+            '(p)%-20s - %s' % (u'ASSWORd',
+                               term.bold_black(u'******'),),
             '(e)%-20s - %s' % (u'-MAil AddRESS',
                                term.bold(user.email),),
             '(s)%-20s - %s' % (u'YSOP ACCESS',
@@ -274,6 +291,7 @@ def refresh(lightbar):
                      (u'h', u'h.EiGht',),
                      (u'w', u'W.idth',),
                      (u'l', u'l.OCAtiON',),
+                     (u'p', u'p.ASSWORd',),
                      (u'e', u'E.MAil',),
                      (u's', u'S.YSOP ACCESS',),
                      (u'm', u'M.ESG',),
