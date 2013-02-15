@@ -68,13 +68,13 @@ def show_scores(my_score):
                 term.blue_reverse(str(pos + 1).ljust(len_pos)),
                 term.blue_reverse(str(_score).ljust(len_score)),
                 term.blue_reverse(str(_level).ljust(len_level)),
-                term.blue_reverse(str(_handle).rjust(len_handle)),))
+                term.blue_reverse(_handle.rjust(len_handle)),))
         else:
             pager.append(score_fmt % (
                 term.bold_blue(str(pos + 1).ljust(len_pos)),
                 term.blue(str(_score).ljust(len_score)),
                 term.blue(str(_level).ljust(len_level)),
-                str(_handle).rjust(len_handle),))
+                _handle.rjust(len_handle),))
     # append additional empty slot rows
     while len(pager.content) < pager.visible_height:
         pos+=1
