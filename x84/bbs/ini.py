@@ -188,8 +188,10 @@ def init_log_ini():
     cfg_log.set('formatter_default', 'format',
                 '%(asctime)s %(levelname)s '
                 '%(filename)11s:%(lineno)-3s '
-                '- %(message)s')
+                '%(message)s')
+
     cfg_log.set('formatter_default', 'class', 'logging.Formatter')
+    cfg_log.set('formatter_default', 'datefmt', '%a-%m-%d %I:%M%p')
 
     cfg_log.add_section('handlers')
     cfg_log.set('handlers', 'keys', 'console, rotate_daily')
