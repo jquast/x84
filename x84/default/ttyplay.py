@@ -33,15 +33,19 @@ def main(ttyfile=u'', peek=False):
     # .. we could look for and write various information headers..
     # .. esp. at EOF, about session.user.handle & connect_time & etc.
     data = open(ttyfile, 'rb').read(64)
-    size_pattern = re.compile(r'\[8;\(\d+\);\(\d+\)t')
+    size_pattern = re.compile(r'\[8;(\d+);\(\d+)t')
     match = size_pattern.match(data)
     if match:
         echo(u'\r\n\r\nheight, width: %s, %s' % match.groups())
     args=tuple()
     if peek:
         args += ('-p',)
+    elif 'sysop' in session.user.groups:
+        echo("\r\nPRESS '%s' tO PEEk (2)\b\b" % (
+            (term.green_underline,)))
+        if getch(2) in (u'p', u'P'):
+            peek = True
     args += (ttyfile,)
-    print args
     d = Door(TTYPLAY, args=args)
     session.activity = u'playing tty recording'
     resume_rec = session._record_tty and session.is_recording
