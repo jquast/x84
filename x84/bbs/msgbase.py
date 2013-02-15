@@ -71,6 +71,7 @@ class Msg(object):
 
         Datetime message was saved to database
         """
+        return self._stime
 
     def __init__(self, recipient=None, subject=u'', body=u''):
         from x84.bbs.session import getsession
