@@ -5,7 +5,7 @@ from x84.bbs import getterminal, ScrollingEditor, getsession
 from x84.bbs import getch, echo, Lightbar, Ansi, Selector
 
 import StringIO
-import xmodem
+#import xmodem
 import time
 
 SAVEKEY = None
