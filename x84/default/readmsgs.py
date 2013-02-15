@@ -14,10 +14,11 @@ def main(tags=None):
     import datetime
     session, term = getsession(), getterminal()
     echo(banner())
+    public_idx = list_msgs()
     if tags is None:
-        tags = set('public')
+        tags = set(['public'])
+        # also throw in user groups
         tags.update(session.user.groups)
-    public_idx = list_msgs(tags)
 
     # this boolean allows sysop to remove filter using /nofilter
     filter_private = True
@@ -28,16 +29,25 @@ def main(tags=None):
         #
         echo(u"\r\n\r\nENtER SEARCh TAG(s), COMMA-dEliMitEd. ")
         echo(u"OR '/list'\r\n : ")
-        sel_tags = ', '.join(tags)
-        inp_tags = LineEditor(30, sel_tags).read()
-        if inp_tags is None or 0 == len(inp_tags):
+        width = term.width - 6
+        sel_tags = u', '.join(tags)
+        while len(Ansi(sel_tags)) >= (width - 8):
+            tags = tags[:-1]
+            sel_tags = u', '.join(tags)
+        inp_tags = LineEditor(width, sel_tags).read()
+        if (inp_tags is None or 0 == len(inp_tags)
+                or inp_tags.strip().lower() == '/quit'):
             break
         elif inp_tags.strip().lower() == '/list':
             # list all available tags, and number of messages
             echo(u'\r\n\r\nTags: \r\n')
-            echo(Ansi(u', '.join(([u'%s(%d)' % (_key, len(_value),)
-                for (_key, _value) in sorted(tagdb.items())]))
-                ).wrap(term.width))
+            all_tags = sorted(tagdb.items())
+            if 0 == len(all_tags):
+                echo(u'None !'.center(term.width / 2))
+            else:
+                echo(Ansi(u', '.join(([u'%s(%d)' % (_key, len(_value),)
+                    for (_key, _value) in all_tags]))
+                    ).wrap(term.width - 2))
             continue
         elif (inp_tags.strip().lower() == '/nofilter'
                 and 'sysop' in session.user.groups):
@@ -48,10 +58,10 @@ def main(tags=None):
         # search input as valid tag(s)
         tags = set([inp.strip().lower() for inp in inp_tags.split(',')])
         err = False
-        for tag in tags[:]:
+        for tag in tags.copy():
             if not tag in tagdb:
                 tags.remove(tag)
-                echo(u'\r\nTag %s not found.\r\n' % (tag,))
+                echo(u'\r\nTag %s not found.' % (tag,))
                 err = True
         if err:
             # try again
@@ -72,10 +82,12 @@ def main(tags=None):
         addressed_to = 0
         addressed_grp = 0
         filtered = 0
+        private = 0
         new = 0
         already_read = session.user.get('readmsgs', set())
-        for msg_id in msgs_idx[:]:
+        for msg_id in msgs_idx.copy():
             if not msg_id in public_idx:
+                private += 1
                 msg = get_msg(msg_id)
                 if msg.recipient == session.user.handle:
                     addressed_to += 1
@@ -94,8 +106,7 @@ def main(tags=None):
                         # denied to read this message
                         if filter_private:
                             msgs_idx.remove(msg_id)
-                        filtered +=1
-                        continue
+                            filtered +=1
                 if msg_id not in already_read:
                     new += 1
                 msg = get_msg(msg_id)
@@ -107,18 +118,18 @@ def main(tags=None):
         echo(u'\r\n\r\n')
         echo(u', '.join((
             ('%s addressed to you' % (
-                term.bold_yellow(str(addressed_to))
-                if addressed_to else u'',)),
+                term.bold_yellow(str(addressed_to)),)
+                if addressed_to else u''),
             ('%s addressed by group' % (
-                term.bold_yellow(str(addressed_grp))
-                if addressed_grp else u'',)),
+                term.bold_yellow(str(addressed_grp)),)
+                if addressed_grp else u''),
             ('%s filtered' % (
-                term.bold_yellow(str(filtered))
-                if filtered else u'',)),
-            ('%s new' % (term.bold_yellow(str(new,))
-                if new else u'',)),
-            )))
-        echo(u'  REAd [%s]ll %d messages %s [a%s] ?\b\b' % (
+                term.bold_yellow(str(filtered)),)
+                if filtered else u''),
+            ('%s new' % (term.bold_yellow(str(new,)),)
+                if new else u''),
+            )) + u'.')
+        echo(u'\r\n  REAd [%s]ll %d messages %s [a%s] ?\b\b' % (
                 term.yellow_underline(u'a'), len(msgs_idx),
                 (u'or ONlY %d [%s]EW ' % (
                     new, term.yellow_underline(u'n'),) if new else u''),
