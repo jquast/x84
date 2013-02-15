@@ -139,8 +139,10 @@ def main(tags=None):
                 term.bold_yellow(str(filtered)),))
         if new > 0:
             txt_out.append ('%s new' % (term.bold_yellow(str(new,)),))
-        if 0 != len(out):
-            echo(u'\r\n' + u', '.join(out) + u'.')
+        if 0 != len(txt_out):
+            echo(u'\r\n')
+            echo(Ansi(u', '.join(txt_out) + u'.')
+                    .wrap(term.width -2))
         echo(u'\r\n  REAd [%s]ll %d messages %s [a%s] ?\b\b' % (
                 term.yellow_underline(u'a'), len(msgs_idx),
                 (u'or ONlY %d [%s]EW ' % (
