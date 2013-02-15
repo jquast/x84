@@ -18,19 +18,21 @@ BADGE256 = (
 
 
 def display_intro():
-    from x84.bbs import getsession, getterminal, showcp437, echo
+    from x84.bbs import getsession, getterminal, showcp437, echo, Ansi
     import os
     session, term = getsession(), getterminal()
     # display random artwork ..
     artfile = os.path.join(os.path.dirname(__file__), 'art',
             '*.ans' if term.number_of_colors != 0 else '*.asc')
     echo(u'\r\n\r\n')
-    for line in (showcp437(artfile)):
+    for line in showcp437(artfile):
         echo(line)
     if term.number_of_colors == 256:
         echo(u''.join((
             term.normal, '\r\n\r\n',
-            BADGE256, u'\r\n')))
+            BADGE256, u'\r\n',
+            u'\r\n')))
+    echo(u'! to change encoding\r\n')
 
 
 def get_ynbar():
@@ -94,41 +96,55 @@ def main(handle=None):
             session.encoding, fun))
 
     # 4. impress with art, prompt for quick login (goto 'main'),
-    display_intro()
+    dirty = True
     if session.user.get('expert', False):
-        echo(u'\r\n QUiCk lOGiN? [yn]')
         while True:
-            yn = getch(1)
-            if yn in (u'y', u'Y'):
-                goto('main')
-            elif yn in (u'n', u'N'):
-                break
             if session.poll_event('refresh'):
-                echo(u'\r\n QUiCk lOGiN? [yn]')
+                dirty = True
+            if dirty:
+                display_intro()
+                echo(u'\r\n QUiCk lOGiN [yn] ?\b\b')
+            inp = getch(1)
+            if inp is None:
+                dirty = False
+            elif inp in (u'y', u'Y'):
+                goto('main')
+            elif inp in (u'n', u'N'):
+                break
+            elif inp in (u'!',):
+                gosub('charset')
+            else:
+                dirty = False
     else:
         ynbar = get_ynbar()
-        echo(redraw_quicklogin(ynbar))
         while not ynbar.selected:
-            inp = getch(1)
-            if inp is not None:
-                echo(ynbar.process_keystroke(inp))
             if session.poll_event('refresh'):
+                dirty = True
+            if dirty:
                 # redraw yes/no
                 swp = ynbar.selection
                 ynbar = get_ynbar()
                 ynbar.selection = swp
                 display_intro()
                 echo(redraw_quicklogin(ynbar))
-            if ynbar.quit:
-                goto('main')
+            inp = getch(1)
+            if inp is None:
+                dirty = False
+            elif inp in (u'!',):
+                gosub('charset')
+            else:
+                echo(ynbar.process_keystroke(inp))
+                if ynbar.quit:
+                    goto('main')
+                dirty = False
         if ynbar.selection == ynbar.left:
             goto('main')
 
-    # 5. check for new msgs,
-    # gosub('chkmsgs')
-
-    # 6. last callers
+    # 5. last callers
     gosub('lc')
+
+    # 6. check for new msgs,
+    gosub('readmsgs')
 
     # 7. news
     gosub('news')
