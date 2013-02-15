@@ -1,3 +1,4 @@
+====
 x/84
 ====
 
@@ -16,7 +17,7 @@ Portability is as equal to python, and has been tested on Raspberry Pi, Android,
 Telnet to host address 1984.ws_ to preview the default board.
 
 Install
-=======
+```````
 
 1. Install python_ 2.6 or 2.7
 
@@ -35,7 +36,7 @@ Install
 ``pip install --upgrade x84``
 
 Getting Started
-===============
+```````````````
 
 1. Launch the *x84.engine* python module:
 
@@ -53,12 +54,14 @@ Assuming a *bsd telnet* client,
 
 (argument ``-L`` indicates utf-8 capabilities with *BINARY* 8-bit input).
 
-*Customizing your board*
+Customizing your board
+``````````````````````
 
 See default_README.rst_ for documentation of the distributed default telnet bbs. Files ``~/.x84/default.ini`` and ``~/.x84/logging.ini`` were created on first launch. System-wide files of the same name can be deployed to ``/etc/x84/`` for privilege-separated launch.
 
 x84 Usage
-=========
+`````````
+
 ``x84`` is a wrapper for launching ``python -m x84.engine``
 
 Which takes optional command line arguments,
@@ -68,7 +71,7 @@ Which takes optional command line arguments,
 ``--logger=`` alternate logging configuration filepath
 
 Compatible Clients
-==================
+``````````````````
 
 Any UTF-8 client is compatible. For Apple systems, *Andale Mono* works wonderfully. When using BSD telnet, use command line argument ``-L`` to enable *BINARY* 8-bit mode for utf-8 input.
 
@@ -86,7 +89,7 @@ Examples of these include PuTTy, SyncTerm, mtel, netrunner, linux/bsd console + 
 Some non-DOS terminal emulators may require installing a fontset, such as *Terminus_* to provide CP437 art.
 
 Binding to port 23
-==================
+``````````````````
 
 X/84 does not require privileged access, and its basic configuration binds to port 6023. Multi-user systems do not typically allow non-root users to bind to port 23. Alternatively, you can always use port forwarding on a NAT firewall.
 
@@ -107,7 +110,7 @@ X/84 does not require privileged access, and its basic configuration binds to po
 ``sudo socat -d -d -lmlocal2 TCP4-LISTEN:23,bind=192.168.1.11,su=nobody,fork,reuseaddr TCP4:127.0.0.1:6023``
 
 Developer Environment
-=====================
+`````````````````````
 
 For developing from git, simply clone and execute the ./x84/bin/dev-setup python script with the target interpreter, specifying a ``virtual env`` folder. Source the ``*virtual env*/bin/activate`` file so that subsequent *pip* commands affect only that specific environment. Target environment for x/84 is currently python 2.7.
 
@@ -124,7 +127,7 @@ For developing from git, simply clone and execute the ./x84/bin/dev-setup python
 ``./x84/bin/x84-dev``
 
 Other BBS Software
-==================
+``````````````````
 
 Listed here is software known in the "bbs-scene" as still being actively used.
 
@@ -137,7 +140,7 @@ Listed here is software known in the "bbs-scene" as still being actively used.
   Many more systems can be found on WikiPedia https://en.wikipedia.org/wiki/List_of_BBS_software
 
 Support
-=======
+```````
 
 An irc channel, *#prsv* on efnet, is available for development discussion.
 
@@ -156,9 +159,9 @@ An irc channel, *#prsv* on efnet, is available for development discussion.
 .. _nethack: http://nethack.org/
 .. _enthral: http://enthralbbs.com/
 .. _synchronet: http://www.synchro.net/
-.. _daydream: da
+.. _daydream: http://daydream.iwn.fi/info.html
+.. _privbind: http://sourceforge.net/projects/privbind/
 .. _mystic: http://mysticbbs.com/
-.. _Python: http://www.python.org/
 .. _ACiD: https://en.wikipedia.org/wiki/ACiD_Productions
 .. _Terminus: http://terminus-font.sourceforge.net/
 .. _socat: http://www.dest-unreach.org/socat/
