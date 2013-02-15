@@ -1,6 +1,9 @@
 """ msg reader for x/84, https://github.com/jquast/x84 """
 # this boolean allows sysop to remove filter using /nofilter
 FILTER_PRIVATE = True
+ALREADY_READ = set()
+READING = False # set true when keystrokes are sent to msg_reader
+
 
 def msg_filter(msgs):
     """
@@ -23,7 +26,6 @@ def msg_filter(msgs):
     public = 0
     new = set()
     echo(u' Processing ' + term.reverse_yellow('..'))
-    already_read = session.user.get('readmsgs', set())
     for msg_id in msgs.copy():
         if msg_id in public_msgs:
             # can always ready msgs tagged with 'public'
@@ -50,7 +52,7 @@ def msg_filter(msgs):
                     msgs.remove(msg_id)
                     filtered +=1
                     continue
-        if msg_id not in already_read:
+        if msg_id not in ALREADY_READ:
             new.add(msg_id)
 
     if 0 == len(msgs):
@@ -81,12 +83,13 @@ def msg_filter(msgs):
     return msgs, new
 
 
-
 def banner():
     from x84.bbs import getterminal
     term = getterminal()
     return u''.join((u'\r\n\r\n',
-        u'... MSG REAdER'.center(term.width),))
+        term.yellow(u'... '.center(term.width).rstrip()),
+        term.bold_yellow(' MSG R'),
+        term.yellow('EAdER'),))
 
 def get_tags(tags):
     from x84.bbs import DBProxy, echo, getterminal, getsession, Ansi, LineEditor
@@ -136,9 +139,10 @@ def get_tags(tags):
 
 def main(tags=None):
     from x84.bbs import getsession, getterminal, echo, getch
-    from x84.bbs import list_msgs, timeago, Lightbar
+    from x84.bbs import list_msgs, Lightbar
     session, term = getsession(), getterminal()
     echo(banner())
+    global ALREADY_READ # track unread messages
     if tags is None:
         tags = set(['public'])
         # also throw in user groups
@@ -152,6 +156,7 @@ def main(tags=None):
             break
 
         # filter messages public/private/group-tag
+        ALREADY_READ = session.user.get('readmsgs', set())
         msgs, new = msg_filter(all_msgs)
         if 0 == len(msgs) and 0 == len(new):
             break
@@ -161,7 +166,7 @@ def main(tags=None):
                 term.yellow_underline(u'a'),
                 len(msgs), (
                     u' or %d [%s]EW\a ' % (
-                        new, term.yellow_underline(u'n'),)
+                        len(new), term.yellow_underline(u'n'),)
                     if new else u''),
                 u'n' if new else u'',))
         while True:
@@ -169,76 +174,145 @@ def main(tags=None):
             if inp in (u'q', 'Q', unichr(27)):
                 return
             elif inp in (u'n', u'N') and len(new):
-                read_messages(new)
+                msgs = new
+                break
             elif inp in (u'a', u'A'):
-                read_messages(msgs)
+                msgs = msgs
+                break
 
-def read_messages(msgs):
-    from x84.bbs import timeago, get_msg, Lightbar, getterminal, echo
-    from x84.bbs import ini, Pager
-    term = getterminal()
-    import datetime
+        # read target messages
+        read_messages(msgs, new)
+
+
+def read_messages(msgs, new):
+    from x84.bbs import timeago, get_msg, getterminal, echo
+    from x84.bbs import ini, Pager, getsession
+    session, term = getsession(), getterminal()
 
     # build header
     len_idx = max([len('%d' % (_idx,)) for _idx in msgs])
     len_author = ini.CFG.getint('nua', 'max_user')
-    len_subject = ini.CFG.getint('msg', 'max_subject')
     len_ago = 6
-    len_preview = len(u'%s %s: %s' % (
-            u''.ljust(len_author),
-            u''.rjust(len_ago),
-            u''.ljust(len_subject),))
-    msgs = list()
-    for idx in msgs:
-        msg = get_msg(idx)
-        author, subj = msg.author, msg.subject
-        tm_ago = (datetime.datetime.now() - msg.stime).total_seconds()
-        msgs.append((idx, u'%s %s: %s' % (
-            author.ljust(len_author),
-            timeago(tm_ago).rjust(len_ago),
-            subj[:len_subject],)))
-    msgs.sort()
+    len_subject = ini.CFG.getint('msg', 'max_subject')
+    len_preview = len_idx + len_author + len_ago + len_subject + 4
 
-    # going for robocop look ? this matches the style of my wyse
-    # 320 amber brown ..
-    echo(u'\r\n' + u'// REAdiNG MSGS ..'.center(term.width).rstrip())
-    echo(u'\r\n' * (term.height - 1))
-    msg_selector = Lightbar(
-        height=term.height / 3,
-        width=len_preview,
-        yloc=2, xloc=1)
-    msg_selector.colors['border'] = term.bold_yellow
-    msg_selector.glyphs['top-horiz'] = u''
-    msg_selector.glyphs['left-vert'] = u''
-    msg_selector.colors['highlight'] = term.yellow_reverse
-    already_read = session.user.get('readmsgs', set())
-    msg_selector.update([(_idx, u'%s %*d %s' % (
-        u'U' if not _idx in already_read else u' ',
-        len_idx, _idx, _txt,)) for (_idx, _txt) in msgs])
-    echo(msg_selector.refresh())
-    reader_height = (term.height - msg_selector.height - 2)
-    reader_indent = (msg_selector.xloc + 4)
-    reader_width = min(term.width - 1, min(term.width - reader_indent, 80))
-    msg_reader = Pager(
-        height=reader_height,
-        width=reader_width,
-        yloc=term.height - reader_height,
-        xloc=term.width - reader_width)
-    msg_reader.colors['border'] = term.yellow
-#        msg_reader.glyphs['left-vert'] = u''
-#        msg_reader.glyphs['top-horiz'] = u' - '
-#        msg_reader.glyphs['right-vert'] = u'|'
-#        msg_reader.glyphs['bot-horiz'] = u'-'
-    key, asc = msg_selector.selection
-    echo(msg_reader.border() + msg_selector.border())
-    if key is not None:
-        echo(msg_reader.update(get_msg(key).body))
-    echo(msg_selector.title(u'- %d MESSAGE%s%s -' % (
-        len(msgs), term.bold('s') if 1 != len(msgs) else u'',
-        (u', ' + term.bold(u'%d NEW' % (new,))) if new else u'',)))
-    getch()
+    def get_header(msgs_idx):
+        from x84.bbs import get_msg
+        import datetime
+        msg_list = list()
+        for idx in msgs_idx:
+            msg = get_msg(idx)
+            author, subj = msg.author, msg.subject
+            tm_ago = (datetime.datetime.now() - msg.stime).total_seconds()
+            msg_list.append((idx, u'%s %s %s %s: %s' % (
+                u'U' if not idx in ALREADY_READ else u' ',
+                str(idx).rjust(len_idx),
+                author.ljust(len_author),
+                timeago(tm_ago).rjust(len_ago),
+                subj[:len_subject],)))
+
+        msg_list.sort()
+        return msg_list
+
+    def get_selector(msgs_idx):
+        from x84.bbs import Lightbar
+        msg_selector = Lightbar(
+            height=term.height / 3,
+            width=len_preview,
+            yloc=2, xloc=1)
+        msg_selector.colors['border'] = term.bold_yellow
+        msg_selector.glyphs['bot-horiz'] = u''
+        msg_selector.glyphs['left-vert'] = u''
+        msg_selector.colors['highlight'] = term.yellow_reverse
+        msg_selector.update(msgs_idx)
+
+    def get_reader(msg):
+        reader_height = (term.height - (term.height / 3) - 2)
+        reader_indent = 5
+        reader_width = min(term.width - 1, min(term.width - reader_indent, 80))
+        msg_reader = Pager(
+            height=reader_height,
+            width=reader_width,
+            yloc=term.height - reader_height,
+            xloc=term.width - reader_width)
+        msg_reader.colors['border'] = term.yellow
+        msg_reader.glyphs['top-horiz'] = u''
+        msg_reader.glyphs['right-vert'] = u''
+        msg_reader.update(format_msg(msg))
+
+    def format_msg(reader, idx):
+        msg = get_msg(idx)
+        sent = msg.stime.isoformat(sep=u' ')
+        return u'\r\n'.join((
+            (u''.join((
+                term.bold_yellow(u'%s'.ljust(len_author)),
+                u' ' * (reader.visible_width - len_author - len(sent)),
+                term.yellow(sent),))),
+            (Ansi(
+                term.yellow('tAGS: ')
+                + (u'%s ' % (term.bold_yellow(','),)).join(msg.tags),)
+                .wrap(reader.visible_width)),
+            (term.yellow_underline(
+                (u'SUbj: %s' % (msg.subject,)).ljust(reader.visible_width)
+                )),
+            (u''), (msg.body),))
+
+
+    def get_selector_title(mbox, new):
+        return u''.join((
+                term.yellow(u'-['),
+                term.bold_yellow(str(len(mbox))),
+                term.bold(u' MSG%s' % (
+                    u's' if 1 != len(mbox) else u'',)),
+                (u', ' + term.yellow_reverse(u'%d NEW' % (new,))
+                    if len(new) else u'',),
+                term.yellow(u']-'),))
+
+    def get_selector_footer():
+        return u''.join((
+            term.yellow(u'-- '),
+            u'/'.join((
+                term.yellow_underline('UP'),
+                term.yellow_underline('dOWN'),
+                term.yellow_underline('ENtER'),
+                term.yellow_underline('q'), u'Uit',)),
+            term.yellow(u' --'),))
+
+    def get_reader_footer():
+        return u''.join((
+            term.yellow(u'-- '),
+            u'/'.join((
+                term.yellow_underline('PGUP'),
+                term.yellow_underline('dOWN'),
+                term.yellow_underline('r') + u'EPlY',
+                term.yellow_underline('+-') + u'tAG',
+                term.yellow_underline('q') + u'Uit',)),
+            term.yellow(u' --'),))
+
+    def refresh(reader, selector, mbox, msg):
+        return u''.join((u'\r\n\r\n',
+            term.clear_eol,
+            u'// REAdiNG MSGS ..'.center(term.width).rstrip()
+            (u'\r\n' + term.clear_eol) * (term.height - 1),
+            reader.border(),
+            selector.border(),
+            selector.title(get_selector_title(mbox, new)),
+            selector.footer(get_selector_footer()) if not READING else u'',
+            selector.refresh(),
+            reader.footer(get_reader_footer()) if READING else u'',
+            reader.refresh(),
+            ))
+
+    mailbox = get_header(msgs)
+    msg_selector = get_selector(mailbox)
+    msg_idx = msg_selector.selection[0]
+    msg_reader = get_reader(msg_idx)
+    dirty = True
+    while not msg_selector.quit:
+        if session.poll_event('refresh'):
+            dirty = True
+        if dirty:
+            echo(refresh(msg_selector, msg_reader, mailbox, new))
+            # going for robocop look ? this matches the style of my wyse
     echo(term.move(term.height, 0))
     return
-
-def read_messages(msgs):
-    pass
