@@ -96,8 +96,8 @@ def main(handle=None):
             session.encoding, fun))
 
     # 4. impress with art, prompt for quick login (goto 'main'),
-    dirty = True
     if session.user.get('expert', False):
+        dirty = True
         while True:
             if session.poll_event('refresh'):
                 dirty = True
@@ -117,6 +117,7 @@ def main(handle=None):
                 dirty = False
     else:
         ynbar = get_ynbar()
+        dirty = True
         while not ynbar.selected:
             if session.poll_event('refresh'):
                 dirty = True
@@ -127,16 +128,17 @@ def main(handle=None):
                 ynbar.selection = swp
                 display_intro()
                 echo(redraw_quicklogin(ynbar))
+            dirty = False
             inp = getch(1)
             if inp is None:
-                dirty = False
+                continue
             elif inp in (u'!',):
                 gosub('charset')
+                dirty = True
             else:
                 echo(ynbar.process_keystroke(inp))
                 if ynbar.quit:
                     goto('main')
-                dirty = False
         if ynbar.selection == ynbar.left:
             goto('main')
 
