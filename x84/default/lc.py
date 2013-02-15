@@ -51,10 +51,9 @@ def dummy_pager(last_callers):
                 return
             if inp in (u'v', u'V') or 'sysop' in session.user.groups and (
                     inp in (u'e', u'E')):
-                echo(u'\r\n')
+                echo(u'\r\n\r\n')
                 echo(msg_prompt_handle)
                 handle = LineEditor(ini.CFG.getint('nua', 'max_user')).read()
-                echo (u'\r\n\r\n')
                 usrlist = list_users()
                 if handle is None or 0 == len(handle.strip()):
                     continue
