@@ -32,8 +32,9 @@ def init(lookup_bbs, lookup_log):
         print('Saving %s\n' % (filepath,))
         cfg.write(open(filepath, 'wb'))
 
-    # we exploit our last argument as, what we presume to be within a folder
-    # writable by our process -- engine.py specifys as ~/.x84/somefile.ini
+    # exploit last argument, presumed to be within a folder
+    # writable by our process, and where the ini is wanted
+    # -- engine.py specifys a default of: ~/.x84/somefile.ini
     loaded = False
     cfg_logfile = lookup_log[-1]
     for cfg_logfile in lookup_log:
@@ -205,13 +206,6 @@ def init_log_ini():
     cfg_log.set('handler_info_file', 'formatter', 'default')
     cfg_log.set('handler_info_file', 'args', '("%s", "w")' % (
         os.path.join(os.path.expanduser('~/.x84'), 'info.log'),))
-
-#    cfg_log.add_section('handler_debug_file')
-#    cfg_log.set('handler_debug_file', 'class', 'logging.FileHandler')
-#    cfg_log.set('handler_debug_file', 'level', 'debug')
-#    cfg_log.set('handler_debug_file', 'formatter', 'default')
-#    cfg_log.set('handler_debug_file', 'args', '("%s", "w")' % (
-#        os.path.join(os.path.expanduser('~/.x84'), 'debug.log'),))
 
     cfg_log.add_section('loggers')
     cfg_log.set('loggers', 'keys', 'root, sqlitedict')
