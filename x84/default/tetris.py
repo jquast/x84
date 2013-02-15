@@ -436,8 +436,8 @@ def play():
             col = 0
             for c in line:
                 try:
-                    if (y + row) >= 0 and c:
-                        if (field[y + row][x + col]
+                    if c:
+                        if ((y+row) >= 0 and field[y + row][x + col]
                                 or (x + col) < 0 or (x + col) > 9):
                             return 0
                 except IndexError:
