@@ -17,8 +17,7 @@ CMDS_BASIC = (('e', 'dit'),
 CMDS_ADVANCED = (('c', 'OPY'),
                  ('p', 'AStE'),
                  ('k', 'ill'),
-                 ('q', 'UOtE'),
-                 ('x', 'MOdEM'), )
+                 ('q', 'UOtE'),)
 # x-modem send/recv untested. seems xmodem over telnet clients are far and few
 # between for non-windows users.
 
@@ -73,28 +72,28 @@ def process_keystroke(inp, lightbar):
     """
     Process editor command, like 's'ave or '/c'opy ..
     """
-    def xgetch(size, timeout=1):
-        """
-        Retrieve next character from xmodem
-        """
-        nrecv = 0
-        buf = list()
-        st_time = time.time()
-        while size > nrecv:
-            timeleft = timeout - (time.time() - st_time)
-            inp = getch(timeleft)
-            if inp is None:
-                break
-            buf.append(inp)
-            size += len(inp)
-            assert 1 == len(inp)
+    #def xgetch(size, timeout=1):
+    #    """
+    #    Retrieve next character from xmodem
+    #    """
+    #    nrecv = 0
+    #    buf = list()
+    #    st_time = time.time()
+    #    while size > nrecv:
+    #        timeleft = timeout - (time.time() - st_time)
+    #        inp = getch(timeleft)
+    #        if inp is None:
+    #            break
+    #        buf.append(inp)
+    #        size += len(inp)
+    #        assert 1 == len(inp)
 
-    def xputch(data, timeout=1):
-        """
-        Put next character to xmodem
-        """
-        echo(data)
-        return len(data)
+    #def xputch(data, timeout=1):
+    #    """
+    #    Put next character to xmodem
+    #    """
+    #    echo(data)
+    #    return len(data)
 
     # return True if full screen refresh needed
     session, term = getsession(), getterminal()
@@ -105,7 +104,6 @@ def process_keystroke(inp, lightbar):
         'paste': (u'/p', u'/P'),
         'kill': (u'/k', u'/K'),
         'quote': (u'/q', u'/Q'),
-        'xmodem': (u'/x', u'/X'),
         'yes': (u'y', u'Y'),
         'no': (u'n', u'N'),
     }
@@ -135,42 +133,42 @@ def process_keystroke(inp, lightbar):
         if lightbar.visible_bottom > len(lightbar.content):
             lightbar.refresh_row(lightbar.visible_bottom + 1)
         return True
-    if inp in keys['xmodem']:
-        echo(statusline(
-            lightbar, edit=False, msg=u'- X/MOdEM -',
-            cmds=term.yellow(u'  SENd OR RECEiVE?')))
-        sr = Selector(yloc=lightbar.yloc + lightbar.height - 1,
-                      xloc=term.width - 38, width=12,
-                      left=u' UPlOad ', right=u' dOWNlOAd ')
-        sr.colors['selected'] = term.reverse_blue
-        sr.keyset['left'].extend((u's', u'S', u'u', u'U'))
-        sr.keyset['right'].extend((u'r', u'R', u'd', u'D'))
-        echo(sr.refresh())
-        while True:
-            inp2 = getch()
-            echo(sr.process_keystroke(inp2))
-            if sr.selected and sr.selection == sr.left:
-                buf = StringIO.StringIO()
-                modem = xmodem.XMODEM(xgetch, xputch)
-                echo('\r\ngo ahead?')
-                session.enable_keycodes = False
-                modem.recv(buf, timeout=10)
-                session.enable_keycodes = True
-                echo('i got this...\r\n')
-                echo(buf.getvalue())
-                echo('\r\n')
-                getch()
-                break
-            if sr.selected and sr.selection == sr.right:
-                buf = StringIO.StringIO(get_lbcontent(lightbar))
-                modem = xmodem.XMODEM(xgetch, xputch)
-                session.enable_keycodes = False
-                modem.send(buf, timeout=10)
-                session.enable_keycodes = True
-                echo('\r\ndid it work? lol..')
-                getch()
-                break
-        return True
+    #if inp in keys['xmodem']:
+    #    echo(statusline(
+    #        lightbar, edit=False, msg=u'- X/MOdEM -',
+    #        cmds=term.yellow(u'  SENd OR RECEiVE?')))
+    #    sr = Selector(yloc=lightbar.yloc + lightbar.height - 1,
+    #                  xloc=term.width - 38, width=12,
+    #                  left=u' UPlOad ', right=u' dOWNlOAd ')
+    #    sr.colors['selected'] = term.reverse_blue
+    #    sr.keyset['left'].extend((u's', u'S', u'u', u'U'))
+    #    sr.keyset['right'].extend((u'r', u'R', u'd', u'D'))
+    #    echo(sr.refresh())
+    #    while True:
+    #        inp2 = getch()
+    #        echo(sr.process_keystroke(inp2))
+    #        if sr.selected and sr.selection == sr.left:
+    #            buf = StringIO.StringIO()
+    #            modem = xmodem.XMODEM(xgetch, xputch)
+    #            echo('\r\ngo ahead?')
+    #            session.enable_keycodes = False
+    #            modem.recv(buf, timeout=10)
+    #            session.enable_keycodes = True
+    #            echo('i got this...\r\n')
+    #            echo(buf.getvalue())
+    #            echo('\r\n')
+    #            getch()
+    #            break
+    #        if sr.selected and sr.selection == sr.right:
+    #            buf = StringIO.StringIO(get_lbcontent(lightbar))
+    #            modem = xmodem.XMODEM(xgetch, xputch)
+    #            session.enable_keycodes = False
+    #            modem.send(buf, timeout=10)
+    #            session.enable_keycodes = True
+    #            echo('\r\ndid it work? lol..')
+    #            getch()
+    #            break
+    #    return True
 
     # abort / save.. confirm !
     if inp in keys['abort'] or inp in keys['save']:
