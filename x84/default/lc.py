@@ -98,7 +98,7 @@ def refresh_opts(pager, handle):
         )))
 
 
-def get_pager(lcallers, lcalls):
+def get_lightbar(lcallers, lcalls):
     from x84.bbs import getterminal, Lightbar
     term = getterminal()
     assert term.height >= 10 and term.width >= 50
@@ -178,29 +178,30 @@ def main():
     from x84.bbs import getsession, getterminal, echo, getch, gosub
     session, term = getsession(), getterminal()
     lcallers, lcalls_txt = lc_retrieve()
-    pager = None
+    lbr = None
     dirty = True
     handle = None
+
     if (0 == term.number_of_colors
             or session.user.get('expert', False)):
         echo(redraw(None))
-        dummy_pager(lcalls_txt.split('\n'))
-        return
-    while pager is None or not pager.quit:
-        if dirty or pager is None or session.poll_event('refresh'):
+        return dummy_pager(lcalls_txt.split('\n'))
+
+    while lbr is None or not lbr.quit:
+        if dirty or lbr is None or session.poll_event('refresh'):
             session.activity = u'Viewing last callers'
             lcallers, lcalls_txt = lc_retrieve()
-            pos = pager.position if pager is not None else 0
-            pager = get_pager(lcallers, lcalls_txt)
+            pos = lbr.position if lbr is not None else 0
+            lbr = get_lightbar(lcallers, lcalls_txt)
             if pos:
-                pager.position = pos
-            echo(redraw(pager))
-            echo(refresh_opts(pager, handle))
-        sel = pager.selection[0]
+                lbr.position = pos
+            echo(redraw(lbr))
+            echo(refresh_opts(lbr, handle))
+        sel = lbr.selection[0]
         if sel != handle or dirty:
             handle = sel
-            echo(refresh_opts(pager, handle))
-            echo(pager.pos(pager.yloc + (pager.height - 1)))
+            echo(refresh_opts(lbr, handle))
+            echo(lbr.pos(lbr.yloc + (lbr.height - 1)))
             dirty = False
             continue
         inp = getch(1)
@@ -212,4 +213,4 @@ def main():
                 gosub('profile', handle)
                 dirty = True
             else:
-                echo(pager.process_keystroke(inp))
+                echo(lbr.process_keystroke(inp))
