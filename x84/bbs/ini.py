@@ -206,12 +206,12 @@ def init_log_ini():
     cfg_log.set('handler_info_file', 'args', '("%s", "w")' % (
         os.path.join(os.path.expanduser('~/.x84'), 'info.log'),))
 
-    cfg_log.add_section('handler_debug_file')
-    cfg_log.set('handler_debug_file', 'class', 'logging.FileHandler')
-    cfg_log.set('handler_debug_file', 'level', 'debug')
-    cfg_log.set('handler_debug_file', 'formatter', 'default')
-    cfg_log.set('handler_debug_file', 'args', '("%s", "w")' % (
-        os.path.join(os.path.expanduser('~/.x84'), 'debug.log'),))
+#    cfg_log.add_section('handler_debug_file')
+#    cfg_log.set('handler_debug_file', 'class', 'logging.FileHandler')
+#    cfg_log.set('handler_debug_file', 'level', 'debug')
+#    cfg_log.set('handler_debug_file', 'formatter', 'default')
+#    cfg_log.set('handler_debug_file', 'args', '("%s", "w")' % (
+#        os.path.join(os.path.expanduser('~/.x84'), 'debug.log'),))
 
     cfg_log.add_section('loggers')
     cfg_log.set('loggers', 'keys', 'root, sqlitedict')
