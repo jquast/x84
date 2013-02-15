@@ -152,38 +152,53 @@ def main(tags=None):
                 break
             elif inp in (u'a', u'A'):
                 break
-        echo(u'\r\n' * term.height)
-        msg_selector = Lightbar(
-            height=int(term.height * .2),
-            width=min(term.width, 130),
-            yloc=0,
-            xloc=0)
-        msg_reader = Pager(
-            height=int(term.height * .8),
-            width=min(term.width, 130),
-            yloc=term.height - int(term.height * .8),
-            xloc=0)
 
         # build header
         len_idx = max([len('%d' % (_idx,)) for _idx in msgs_idx])
         len_author = ini.CFG.getint('nua', 'max_user')
         len_subject = ini.CFG.getint('msg', 'max_subject')
-        header = list()
+        len_ago = 6
+        len_preview = len(u'%s %s: %s' % (
+                u''.ljust(len_author),
+                u''.rjust(len_ago),
+                u''.ljust(len_subject),))
+        msgs = list()
         for idx in msgs_idx:
             msg = get_msg(idx)
             author, subj = msg.author, msg.subject
             tm_ago = (datetime.datetime.now() - msg.stime).total_seconds()
-            header.append((idx, u'%s %s: %s' % (
+            msgs.append((idx, u'%s %s: %s' % (
                 author.ljust(len_author),
-                timeago(tm_ago).rjust(7),
+                timeago(tm_ago).rjust(len_ago),
                 subj.ljust(len_subject)[:len_subject],)))
-        echo(u'\r\n'.join([u'%s %*d %s' % (
-            (term.bold_yellow(u'U') if not _idx in already_read
-                else u' '),
-            len_idx, _idx,
-            (_txt if not _idx in already_read
-                else term.bold(_txt)),)
-            for (_idx, _txt) in header]))
-        echo(u'\r\n\r\n')
+        msgs.sort()
+        msg_selector = Lightbar(
+            height=min(term.height / 3, len(msgs) + 2),
+            width=len_preview,
+            yloc=2,
+            xloc=min(0, (term.width / 2) - (len_preview / 2)))
+        echo(u'\r\n' * msg_selector.height)
+        msg_selector.xpadding = 0
+        msg_selector.ypadding = 0
+        msg_selector.colors['border'] = term.bold_yellow
+        msg_selector.glyphs['top-horiz'] = u''
+        msg_selector.glyphs['bot-horiz'] = u''
+        msg_selector.glyphs['right-vert'] = u'|'
+        msg_selector.colors['highlight'] = term.yellow_reverse
+        echo(msg_selector.border())
+        msg_selector.update([u'%s %*d %s' % (
+            u'U' if not _idx in already_read else u' ',
+            len_idx, _idx, _txt,) for (_idx, _txt) in msgs])
+        echo(msg_selector.refresh())
+        reader_height = (term.height / 3) * 2
+        reader_width = min(term.width - 1, 80)
+        msg_reader = Pager(
+            height=reader_height,
+            width=reader_width,
+            yloc=term.height - reader_height,
+            xloc=min(0, (term.width / 2) - (reader_width / 2)))
+        msg_reader.colors['border'] = term.yellow
+        msg_reader.glyphs['left-vert'] = u''
+        echo(msg_reader.border())
         getch()
         return
