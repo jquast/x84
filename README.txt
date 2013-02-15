@@ -23,36 +23,36 @@ Install
 
 2. Install pip_
 
-3. Ensure pip is up-to-date,
+3. Ensure pip is up-to-date::
 
-``pip install --upgrade pip``
+     pip install --upgrade pip
 
-4. Install x/84
+4. Install x/84::
 
-``pip install x84``
+     pip install x84
 
-5. Upgrading
+5. Upgrading::
 
-``pip install --upgrade x84``
+     pip install --upgrade x84
 
 Getting Started
 ```````````````
 
-1. Launch the *x84.engine* python module:
+1. Launch the *x84.engine* python module::
 
-``x84``
+     x84
 
-failing that, try more directly:
+   If the ``*x84`` helper script fails, try using the
+   python interpreter used by ``pip``::
 
-``python -m x84.engine``
+     python2.7 -m x84.engine
 
-2. Telnet to 127.0.0.1 6023:
 
-Assuming a *bsd telnet* client,
+2. Telnet to 127.0.0.1 6023, Assuming a *bsd telnet* client::
 
-``telnet -L localhost 6023``
+     telnet -L localhost 6023
 
-(argument ``-L`` indicates utf-8 capabilities with *BINARY* 8-bit input).
+   argument *-L* indicates *BINARY* 8-bit input.
 
 Customizing your board
 ``````````````````````
@@ -66,9 +66,9 @@ x84 Usage
 
 Which takes optional command line arguments,
 
-``--config=`` alternate bbs configuration filepath
+   ``--config=`` alternate bbs configuration filepath
 
-``--logger=`` alternate logging configuration filepath
+   ``--logger=`` alternate logging configuration filepath
 
 Compatible Clients
 ``````````````````
@@ -93,41 +93,41 @@ Binding to port 23
 
 X/84 does not require privileged access, and its basic configuration binds to port 6023. Multi-user systems do not typically allow non-root users to bind to port 23. Alternatively, you can always use port forwarding on a NAT firewall.
 
-**Linux** using privbind_, run the BBS as user 'bbs', group 'adm'.
+**Linux** using privbind_, run the BBS as user 'bbs', group 'adm'::
 
-``sudo privbind -u bbs -g adm x84``
+  sudo privbind -u bbs -g adm x84
 
-**Solaris** 10, grant net_privaddr privilege to user 'bbs'.
+**Solaris** 10, grant net_privaddr privilege to user 'bbs'::
 
-``usermod -K defaultpriv=basic,net_privaddr bbs``
+  usermod -K defaultpriv=basic,net_privaddr bbs
 
-**BSD**, redirection using pf(4).
+**BSD**, redirection using pf(4)::
 
-``pass in on egress inet from any to any port telnet rdr-to 192.168.1.11 port 6023``
+  pass in on egress inet from any to any port telnet rdr-to 192.168.1.11 port 6023
 
-**Other**, Usingirect socat_, listen on 192.168.1.11 and for each connection, fork as 'nobody', and pipe the connection to 127.0.0.1 port 6023. This has the disadvantage that x84 is unable to identify the originating IP.
+**Other**, Usingirect socat_, listen on 192.168.1.11 and for each connection, fork as 'nobody', and pipe the connection to 127.0.0.1 port 6023. This has the disadvantage that x84 is unable to identify the originating IP::
 
-``sudo socat -d -d -lmlocal2 TCP4-LISTEN:23,bind=192.168.1.11,su=nobody,fork,reuseaddr TCP4:127.0.0.1:6023``
+  sudo socat -d -d -lmlocal2 TCP4-LISTEN:23,bind=192.168.1.11,su=nobody,fork,reuseaddr TCP4:127.0.0.1:6023
 
 Developer Environment
 `````````````````````
 
 For developing from git, simply clone and execute the ./x84/bin/dev-setup python script with the target interpreter, specifying a ``virtual env`` folder. Source the ``*virtual env*/bin/activate`` file so that subsequent *pip* commands affect only that specific environment. Target environment for x/84 is currently python 2.7.
 
-1. Clone the github repository,
+1. Clone the github repository::
 
-``git clone 'https://github.com/jquast/x84.git'``
+     git clone 'https://github.com/jquast/x84.git'``
 
-2. Use ``dev-setup.py`` to create a target virtualenv (virtualenv provided):
+2. Use ``dev-setup.py`` to create a target virtualenv (virtualenv provided)::
 
-``python2.7 ./x84/bin/dev-setup.py ./x84-ENV26``
+     python2.7 ./x84/bin/dev-setup.py ./x84-ENV26
 
-3. Launch x/84 using virtualenv:
+3. Launch x/84 using virtualenv::
 
-``./x84/bin/x84-dev``
+     ./x84/bin/x84-dev
 
-Other BBS Software
-``````````````````
+Other Telnet BBS Systems
+````````````````````````
 
 Listed here is software known in the "bbs-scene" as still being actively used.
 
@@ -137,7 +137,7 @@ Listed here is software known in the "bbs-scene" as still being actively used.
 * mystic_: Pascal, closed source.
 * citadel_: Ancient history.
 
-  Many more systems can be found on WikiPedia https://en.wikipedia.org/wiki/List_of_BBS_software
+Many more systems can be found on WikiPedia List_of_BBS_software_
 
 Support
 ```````
@@ -168,3 +168,4 @@ An irc channel, *#prsv* on efnet, is available for development discussion.
 .. _default_README.rst: https://github.com/jquast/x84/blob/master/x84/default/README.rst
 .. _Sauce: https://github.com/tehmaze/sauce
 .. _citadel: https://en.wikipedia.org/wiki/Citadel_%28software%29
+.. _List_of_BBS_software: https://en.wikipedia.org/wiki/List_of_BBS_software
