@@ -1,24 +1,22 @@
 x/84
 ====
 
-**x/84 is a python telnet server for modern UTF-8 terminals**.
+**A python Telnet server for modern UTF-8 and classic network virtual terminals**.
 
-x/84 supplies a scripting engine for developing **MUD** or **BBS** engines, dgamelaunch_-style servers with CLI telnet interfaces, or communication interfaces for packet radio networks.
+x/84 supplies a scripting engine for developing **MUD** or **BBS** engines.  Technologies used in x/84 are derived from miniboa_ (Apache 2.0 Licensed) for telnet, blessings_ (MIT Licensed) for terminal capabilities, and sqlitedict_ (Public Domain) for persistent data. Recordings of sessions are stored in ttyplay_-compatible format files.
 
-Technologies used in x/84 are derived from miniboa_ (Apache 2.0 Licensed) for telnet, `blessings`_ (MIT Licensed) for terminal capabilities, and sqlitedict_ (Public Domain) for database. Recordings of sessions are stored in ttyplay_-compatible format files.
+Asynchronous inter-process communication between sessions is provided through an event queuing framework, for scripting of 'shared' experiences. Several examples of these are provided, such as *chat.py*. The default board provides several activities.
 
-Asynchronous inter-process communication between sessions is provided through a simple event queueing framework, allowing  user scripting of 'shared' experiences between unix processes using the multiprocessing_ module. Several examples of these are provided, such as ``chat.py``.
+A Posix operating system is required. Alternative implementations of python may work. Blowfish encryption of user account passwords is recommended, but requires a C compiler to install the dependent module, *py-bcrypt*. Otherwise, a best-effort sha256 hash is implemented by default.
 
-Only python is required, but **requires a posix** operating system. Alternative implementations of python may also work. Blowfish encryption of user account passwords is recommended, but not required, for low cpu systems, but requires a C compiler to install the dependent module, py-bcrypt. Otherwise, a slow best-effort sha256 hash is implemented by default. x/84 is meant to be highly portable, and has been used on Raspberry Pi, Android, Mac, OpenBSD, etc.
+Portability is as equal to python, and has been tested on Raspberry Pi, Android, Mac, OpenBSD, Solaris, etc.
 
-**ANSI Art**, (such as you would find on the ACiD "dark domains" DVD) is translated for reasonably accurate reproductions for both UTF-8 and IBM CP437 terminals. This allows classic DOS art to be used on modern terminals such as Terminal.app, or classic emulating terminals such as SyncTerm. Sauce records are also transcribed.
+**ANSI Art**, such as found on ACiD_ *dark domains* DVD, is translated for reasonably accurate reproductions for both UTF-8 and IBM CP437 terminals. This allows classic DOS art to be used on modern terminals such as Terminal.app, or classic emulating terminals such as syncterm_. Artwork with Sauce_ records are also supported.
 
-Telnet to address **1984.ws** to preview the default board.
+Telnet to host address 1984.ws_ to preview the default board.
 
 Install
 =======
-
-**X/84 has not yet been released to pypi**. This process simulates the basic pip installation procedure, ('pip install x84') using the github repository as a source. Pre-requisite modules must be installed manually.
 
 1. Install python_ 2.6 or 2.7
 
@@ -28,67 +26,64 @@ Install
 
 ``pip install --upgrade pip``
 
-4. Install python dependencies (xmodem, requests, sqllite, etc.)
+4. Install x/84
 
-``pip install `wget -O /dev/stdout 'https://raw.github.com/jquast/x84/master/requirements.txt'|xargs echo```
+``pip install x84``
 
-5. **Optionally**, Install bcrypt (requires gcc, python-dev):
+5. Upgrading
 
-``pip install py-bcrypt``
-
-6. Install x/84
-
-``pip install git+https://github.com/jquast/x84.git``
-
-If 'https' is not a supported scheme, try git+**http**:// instead.
-
-7. Upgrading
-
-``pip install --upgrade git+https://github.com/jquast/x84.git``
-
+``pip install --upgrade x84``
 
 Getting Started
 ===============
 
-1. Launch the x84.engine python module:
+1. Launch the *x84.engine* python module:
 
 ``x84``
 
+failing that, try more directly:
+
+``python -m x84.engine``
+
 2. Telnet to 127.0.0.1 6023:
+
+Assuming a *bsd telnet* client,
 
 ``telnet -L localhost 6023``
 
-Customizing your board
-======================
+(argument ``-L`` indicates utf-8 capabilities with *BINARY* 8-bit input).
 
-See default_README.rst_ for documentation of the distributed default telnet bbs.
+*Customizing your board*
+
+See default_README.rst_ for documentation of the distributed default telnet bbs. Files ``~/.x84/default.ini`` and ``~/.x84/logging.ini`` were created on first launch. System-wide files of the same name can be deployed to ``/etc/x84/`` for privilege-separated launch.
 
 x84 Usage
 =========
-'x84' is a wrapper for,
-
-``python -m x84.engine``
+``x84`` is a wrapper for launching ``python -m x84.engine``
 
 Which takes optional command line arguments,
 
 ``--config=`` alternate bbs configuration filepath
+
 ``--logger=`` alternate logging configuration filepath
 
 Compatible Clients
 ==================
 
-Any UTF-8 client is compatible. For Apple systems, 'Andale Mono' works flawlessly. When using BSD telnet, use command line argument -L to enable BINARY mode for utf-8.
+Any UTF-8 client is compatible. For Apple systems, *Andale Mono* works wonderfully. When using BSD telnet, use command line argument ``-L`` to enable *BINARY* 8-bit mode for utf-8 input.
 
 Other utf-8 terminals:
 
-* PuTTy: Under preference item Window -> Translation, option 'Remote character set', change 'iso8859-1' to 'UTF-8'.
-* iTerm: Menu item iTerm -> Preferences, section Profiles, select 'Text' tab, chose 'Andale Mono' font. Use 'telnet -L'.
-* Terminal.app: Menu item Terminal -> Preferences, chose profile 'Pro', (Font Andale Mono), enable 'use bright colors for bold text'. Use 'telnet -L'.
-* uxterm or other utf-8 rxvt and xterm variants. classic rxvt, xterm, dtterm. Use 'telent -L'.
+* PuTTy: Under preference item *Window -> Translation*, option *Remote character set*, change *iso8859-1* to *UTF-8*.
+* iTerm: Menu item *iTerm -> Preferences*, section *Profiles*, select tab *Text*, chose *Andale Mono* font.
+* Terminal.app: Menu item *Terminal -> Preferences*, chose profile *Pro*, select Font *Andale Mono*, and enable *use bright colors for bold text*.
+* uxterm or other utf-8 rxvt and xterm variants: urxvt, dtterm.
 
 Other than UTF-8, only IBM CP437 encoding is supported. Any 8-bit telnet client with CP437 font is supported.
 
-Examples of these include PuTTy, SyncTerm, mtel, netrunner, linux/bsd console + bsd telnet. Some non-DOS terminal emulators may require installing a fontset, such as *Terminus* to provide CP437 art.
+Examples of these include PuTTy, SyncTerm, mtel, netrunner, linux/bsd console + bsd telnet.
+
+Some non-DOS terminal emulators may require installing a fontset, such as *Terminus_* to provide CP437 art.
 
 Binding to port 23
 ==================
@@ -114,13 +109,13 @@ X/84 does not require privileged access, and its basic configuration binds to po
 Developer Environment
 =====================
 
-For developing from git, simply clone and execute the ./x84/bin/dev-setup python script with the target interpreter (2.6, 2.7) and specify a 'virtual env' folder. Simply source the 'virtual env'/bin/activate file so that subsequent pip commands affect only that specific environment. Target environment for x/84 is currently python 2.7.
+For developing from git, simply clone and execute the ./x84/bin/dev-setup python script with the target interpreter, specifying a ``virtual env`` folder. Source the ``*virtual env*/bin/activate`` file so that subsequent *pip* commands affect only that specific environment. Target environment for x/84 is currently python 2.7.
 
 1. Clone the github repository,
 
 ``git clone 'https://github.com/jquast/x84.git'``
 
-2. Use dev-setup.py_ to create a target virtualenv_:
+2. Use ``dev-setup.py`` to create a target virtualenv (virtualenv provided):
 
 ``python2.7 ./x84/bin/dev-setup.py ./x84-ENV26``
 
@@ -131,20 +126,23 @@ For developing from git, simply clone and execute the ./x84/bin/dev-setup python
 Other BBS Software
 ==================
 
-* enthral_: C++ open source, still in slow development
-* synchronet_: C formerly commercial, now open source. Sortof like wildcat.
-* daydream_: C open source. 10+ years out of maitenance.
-* mystic_: Pascal, closed source. Sortof like Renegade.
+Listed here is software known in the "bbs-scene" as still being actively used.
 
-  Many more archiac systems you can't acquire or run any longer:
-  
-* https://en.wikipedia.org/wiki/List_of_BBS_software
+* enthral_: C++ open source.
+* synchronet_: C formerly commercial, now open source.
+* daydream_: C open source.
+* mystic_: Pascal, closed source.
+* citadel_: Ancient history.
+
+  Many more systems can be found on WikiPedia https://en.wikipedia.org/wiki/List_of_BBS_software
 
 Support
 =======
 
-An irc channel, '#prsv' on efnet, is available for development discussion.
+An irc channel, *#prsv* on efnet, is available for development discussion.
 
+.. _1984.ws: telnet://1984.ws
+.. _syncterm: http://syncterm.bbsdev.net/
 .. _python: https:/www.python.org/
 .. _dgamelaunch: http://nethackwiki.com/wiki/Dgamelaunch
 .. _miniboa: https://code.google.com/p/miniboa/
@@ -161,8 +159,9 @@ An irc channel, '#prsv' on efnet, is available for development discussion.
 .. _daydream: da
 .. _mystic: http://mysticbbs.com/
 .. _Python: http://www.python.org/
-.. _Terminus:
-.. _virtualenv:
-.. _dev-setup.py:
+.. _ACiD: https://en.wikipedia.org/wiki/ACiD_Productions
+.. _Terminus: http://terminus-font.sourceforge.net/
 .. _socat: http://www.dest-unreach.org/socat/
 .. _default_README.rst: https://github.com/jquast/x84/blob/master/x84/default/README.rst
+.._Sauce: https://github.com/tehmaze/sauce
+.._citadel: https://en.wikipedia.org/wiki/Citadel_%28software%29
