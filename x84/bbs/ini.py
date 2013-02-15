@@ -179,17 +179,15 @@ def init_log_ini():
     Returns ConfigParser instance of logger defaults
     """
     import ConfigParser
-    cfg_log = ConfigParser.SafeConfigParser()
+    cfg_log = ConfigParser.RawConfigParser()
     cfg_log.add_section('formatters')
     cfg_log.set('formatters', 'keys', 'default')
 
     cfg_log.add_section('formatter_default')
     # for multiprocessing/threads, use: %(processName)s %(threadName) !
     cfg_log.set('formatter_default', 'format',
-                '%(asctime)s %(levelname)s '
-                '%(filename)11s:%(lineno)-3s '
-                '%(message)s')
-
+                u'%(asctime)s %(levelname)s '
+                u'%(filename)11s %(lineno)-3s %(message)s')
     cfg_log.set('formatter_default', 'class', 'logging.Formatter')
     cfg_log.set('formatter_default', 'datefmt', '%a-%m-%d %I:%M%p')
 
@@ -203,12 +201,15 @@ def init_log_ini():
     cfg_log.set('handler_console', 'args', 'tuple()')
 
     cfg_log.add_section('handler_rotate_daily')
-    cfg_log.set('handler_info_file', 'class', 'logging.handlers.TimedRotatingFileHandler')
-    cfg_log.set('handler_info_file', 'level', 'INFO')
-    cfg_log.set('handler_info_file', 'formatter', 'default')
-    cfg_log.set('handler_info_file', 'args', '("%s", "w")' % (
-        os.path.join(os.path.expanduser('~/.x84'), 'daily.log',
-            'midnight', 1),))
+    cfg_log.set('handler_rotate_daily', 'class',
+                'logging.handlers.TimedRotatingFileHandler')
+    cfg_log.set('handler_rotate_daily', 'level', 'INFO')
+    cfg_log.set('handler_rotate_daily', 'suffix', '%Y%m%d')
+    cfg_log.set('handler_rotate_daily', 'encoding', 'utf8')
+    cfg_log.set('handler_rotate_daily', 'formatter', 'default')
+    daily_log = os.path.join(os.path.expanduser('~/.x84'), 'daily.log')
+    cfg_log.set('handler_rotate_daily', 'args',
+                '("' + daily_log + '", "midnight", 1, 60)')
 
     cfg_log.add_section('loggers')
     cfg_log.set('loggers', 'keys', 'root, sqlitedict')
