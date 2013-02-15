@@ -39,7 +39,7 @@ def msg_filter(msgs):
             # create private or intra-group messages.
             tag_matches_group = False
             for tag in msg.tags:
-                if tag in session.user.groups():
+                if tag in session.user.groups:
                     tag_matches_group = True
                     break
             if tag_matches_group:
@@ -174,7 +174,7 @@ def main(tags=None):
                 read_messages(msgs)
 
 def read_messages(msgs):
-    from x84.bbs import timeago, get_msg, Lightbar, getterminal
+    from x84.bbs import timeago, get_msg, Lightbar, getterminal, echo
     from x84.bbs import ini, Pager
     term = getterminal()
     import datetime
@@ -211,6 +211,7 @@ def read_messages(msgs):
     msg_selector.glyphs['top-horiz'] = u''
     msg_selector.glyphs['left-vert'] = u''
     msg_selector.colors['highlight'] = term.yellow_reverse
+    already_read = session.user.get('readmsgs', set())
     msg_selector.update([(_idx, u'%s %*d %s' % (
         u'U' if not _idx in already_read else u' ',
         len_idx, _idx, _txt,)) for (_idx, _txt) in msgs])
