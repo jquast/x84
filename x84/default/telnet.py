@@ -63,11 +63,13 @@ def main(host, port=None, encoding='cp437'):
         return
 
     swp = session.enable_keycodes
+    # disable keyboard translation .. so special accomidations are
+    # made with carriage_return to handle \r\n to just \r, for one.
     session.enable_keycodes = False
     inp = session.poll_event('input')
     echo(u'\r\nConnected to %s.' % (host,))
     session.activity = 'connected to %s' % (host,)
-
+    carriage_returned = False
     while True:
         try:
             unistring = (from_cp437(telnet_client.read_very_eager())
@@ -79,10 +81,15 @@ def main(host, port=None, encoding='cp437'):
                 telnet_client.close()
                 echo(u'\r\n' + term.clear_el + term.normal)
                 break
-            elif inp in ('\r', '\n'):
+            elif not carriage_returned and inp in (u'\r', u'\n'):
                 telnet_client.write('\r')
+                carriage_returned = True
+            elif carriage_returned and inp in (u'\n', unichr(0)):
+                carriage_returned = False
+                pass # allow repeated,
             elif inp is not None:
                 telnet_client.write(inp)
+                carriage_returned = False
         except:
             e_type, e_value, e_tb = sys.exc_info()
             echo(term.normal + u'\r\n')
