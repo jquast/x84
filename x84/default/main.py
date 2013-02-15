@@ -19,7 +19,7 @@ def refresh():
         echo(line)
     echo(u'\r\n\r\n')
     entries = (
-            ('b', 'bS liStER'),
+            ('b', 'bS NEXUS'),
             ('l', 'ASt CAllS'),
             ('o', 'NE liNERS'),
             ('w', "hO'S ONliNE"),
