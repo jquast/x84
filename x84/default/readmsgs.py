@@ -8,9 +8,10 @@ def banner():
         u'... MSG REAdER'.center(term.width),))
 
 def main(tags=None):
-    return
     from x84.bbs import getsession, getterminal, echo, LineEditor, getch
-    from x84.bbs import list_msgs
+    from x84.bbs import list_msgs, timeago, DBProxy, Ansi, get_msg, Lightbar
+    from x84.bbs import ini, Pager
+    import datetime
     session, term = getsession(), getterminal()
     echo(banner())
     if tags is None:
@@ -61,6 +62,7 @@ def main(tags=None):
         if 0 == len(msgs_idx):
             continue
 
+        echo(u' Processing ' + term.reverse_yellow('..'))
         # filter all matching messages, userland implementation
         # of private/public messaging by using the 'tags' database.
         # 'new', or unread messages are marked by idx matching
@@ -89,7 +91,7 @@ def main(tags=None):
                     if tag_matches_group:
                         addressed_grp += 1
                     else:
-                        # denied to read this message, unless sysop debug
+                        # denied to read this message
                         if filter_private:
                             msgs_idx.remove(msg_id)
                         filtered +=1
@@ -98,27 +100,29 @@ def main(tags=None):
                     new += 1
                 msg = get_msg(msg_id)
         if 0 == len(msgs_idx):
-            echo(u'\r\n\r\nNo messages (%d filtered).' % (filtered,))
+            echo(u'\r\n\r\nNo messages (%s filtered).' % (filtered,))
             continue
 
-        # Display statistics (#new, etc.) and accept 'a'll or only 'n'ew
+
         echo(u'\r\n\r\n')
         echo(u', '.join((
-            ('%d addressed to you' % (addressed_to)
-                if addressed_to else u''),
-            ('%d addressed by group' % (addressed_grp)
-                if addressed_grp else u''),
-            ('%d filtered' % (filtered,)
-                if filtered else u''),
-            ('%d new' % (new,)
-                if new else u''),
-            u'.',)))
-        echo(u''.join((u'\r\n\r\n',
-            u'  REAd [%s]ll %d messages %s [a%s] ?\b\b' % (
+            ('%s addressed to you' % (
+                term.bold_yellow(str(addressed_to))
+                if addressed_to else u'',)),
+            ('%s addressed by group' % (
+                term.bold_yellow(str(addressed_grp))
+                if addressed_grp else u'',)),
+            ('%s filtered' % (
+                term.bold_yellow(str(filtered))
+                if filtered else u'',)),
+            ('%s new' % (term.bold_yellow(str(new,))
+                if new else u'',)),
+            )))
+        echo(u'  REAd [%s]ll %d messages %s [a%s] ?\b\b' % (
                 term.yellow_underline(u'a'), len(msgs_idx),
                 (u'or ONlY %d [%s]EW ' % (
                     new, term.yellow_underline(u'n'),) if new else u''),
-                u'n' if new else u'',))))
+                u'n' if new else u'',))
         while True:
             inp = getch()
             if inp is None or inp in (u'q', u'Q', unichr(27)):
@@ -130,10 +134,29 @@ def main(tags=None):
                 break
         echo(u'\r\n' * term.height)
         msg_selector = Lightbar(
-            height=int(term.height * .2), width=min(term.width, 130),
-            yloc=0, xloc=0)
+            height=int(term.height * .2),
+            width=min(term.width, 130),
+            yloc=0,
+            xloc=0)
         msg_reader = Pager(
-            height=int(term.height * .8), width=min(term.width, 130),
-            yloc=term.height - int(term.height * .8), xloc=0)
+            height=int(term.height * .8),
+            width=min(term.width, 130),
+            yloc=term.height - int(term.height * .8),
+            xloc=0)
+
         # build header
-        msg_selector.update([idx
+        len_author = ini.CFG.getint('nua', 'max_user')
+        len_subject = ini.CFG.getint('msg', 'max_subject')
+        header = list()
+        for idx in msgs_idx:
+            msg = get_msg(idx)
+            author, subj = msg.author, msg.subject
+            tm_ago = (datetime.datetime.now() - msg.stime).total_seconds()
+            header.append((idx, u'%s %s %s' % (
+                author.rjust(len_author),
+                timeago(tm_ago).rjust(5),
+                subj.ljust(len_subject),)))
+        echo(u'\r\n'.join([u': '.join(h) for h in header]))
+        echo(u'\r\n\r\n')
+        getch()
+        return
