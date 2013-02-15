@@ -61,7 +61,8 @@ def main(tags=None):
         for tag in tags.copy():
             if not tag in tagdb:
                 tags.remove(tag)
-                echo(u'\r\nTag %s not found.' % (tag,))
+                echo(u"\r\nNO MESSAGES With tAG '%s' fOUNd." % (
+                    tag,))
                 err = True
         if err:
             # try again
@@ -83,52 +84,63 @@ def main(tags=None):
         addressed_grp = 0
         filtered = 0
         private = 0
+        public = 0
         new = 0
         already_read = session.user.get('readmsgs', set())
         for msg_id in msgs_idx.copy():
-            if not msg_id in public_idx:
+            if msg_id in public_idx:
+                # can always ready msgs tagged with 'public'
+                public += 1
+            else:
                 private += 1
-                msg = get_msg(msg_id)
-                if msg.recipient == session.user.handle:
-                    addressed_to += 1
-                else:
-                    # a system of my own, by creating groups with the same
-                    # as tagged messages, you create private or intra-group
-                    # messages.
-                    tag_matches_group = False
-                    for tag in msg.tags:
-                        if tag in session.user.groups():
-                            tag_matches_group = True
-                            break
-                    if tag_matches_group:
-                        addressed_grp += 1
-                    else:
-                        # denied to read this message
-                        if filter_private:
-                            msgs_idx.remove(msg_id)
-                            filtered +=1
-                if msg_id not in already_read:
-                    new += 1
-                msg = get_msg(msg_id)
+            msg = get_msg(msg_id)
+            if msg.recipient == session.user.handle:
+                addressed_to += 1
+            else:
+                # a system of my own, by creating groups
+                # with the same as tagged messages, you may
+                # create private or intra-group messages.
+                tag_matches_group = False
+                for tag in msg.tags:
+                    if tag in session.user.groups():
+                        tag_matches_group = True
+                        break
+                if tag_matches_group:
+                    addressed_grp += 1
+                elif msg_id not in public_idx:
+                    # denied to read this message
+                    if filter_private:
+                        msgs_idx.remove(msg_id)
+                        filtered +=1
+            if msg_id not in already_read:
+                new += 1
+            msg = get_msg(msg_id)
         if 0 == len(msgs_idx):
             echo(u'\r\n\r\nNo messages (%s filtered).' % (filtered,))
             continue
 
 
         echo(u'\r\n\r\n')
-        echo(u', '.join((
-            ('%s addressed to you' % (
-                term.bold_yellow(str(addressed_to)),)
-                if addressed_to else u''),
-            ('%s addressed by group' % (
-                term.bold_yellow(str(addressed_grp)),)
-                if addressed_grp else u''),
-            ('%s filtered' % (
-                term.bold_yellow(str(filtered)),)
-                if filtered else u''),
-            ('%s new' % (term.bold_yellow(str(new,)),)
-                if new else u''),
-            )) + u'.')
+        txt_out=list()
+        if addressed_to > 0:
+            txt_out.append ('%s addressed to you' % (
+                term.bold_yellow(str(addressed_to)),))
+        if addressed_grp > 0:
+            txt_out.append ('%s addressed by group' % (
+                term.bold_yellow(str(addressed_grp)),))
+        if filtered > 0:
+            txt_out.append ('%s filtered' % (
+                term.bold_yellow(str(filtered)),))
+        if public > 0:
+            txt_out.append ('%s private' % (
+                term.bold_yellow(str(filtered)),))
+        if private > 0:
+            txt_out.append ('%s private' % (
+                term.bold_yellow(str(filtered)),))
+        if new > 0:
+            txt_out.append ('%s new' % (term.bold_yellow(str(new,)),))
+        if 0 != len(out):
+            echo(u'\r\n' + u', '.join(out) + u'.')
         echo(u'\r\n  REAd [%s]ll %d messages %s [a%s] ?\b\b' % (
                 term.yellow_underline(u'a'), len(msgs_idx),
                 (u'or ONlY %d [%s]EW ' % (
@@ -156,6 +168,7 @@ def main(tags=None):
             xloc=0)
 
         # build header
+        len_idx = max([len('%d' % (_idx,)) for _idx in msgs_idx])
         len_author = ini.CFG.getint('nua', 'max_user')
         len_subject = ini.CFG.getint('msg', 'max_subject')
         header = list()
@@ -163,11 +176,17 @@ def main(tags=None):
             msg = get_msg(idx)
             author, subj = msg.author, msg.subject
             tm_ago = (datetime.datetime.now() - msg.stime).total_seconds()
-            header.append((idx, u'%s %s %s' % (
-                author.rjust(len_author),
-                timeago(tm_ago).rjust(5),
-                subj.ljust(len_subject),)))
-        echo(u'\r\n'.join([u': '.join(h) for h in header]))
+            header.append((idx, u'%s %s: %s' % (
+                author.ljust(len_author),
+                timeago(tm_ago).rjust(7),
+                subj.ljust(len_subject)[:len_subject],)))
+        echo(u'\r\n'.join([u'%s %*d %s' % (
+            (term.bold_yellow(u'U') if not _idx in already_read
+                else u' '),
+            len_idx, _idx,
+            (_txt if not _idx in already_read
+                else term.bold(_txt)),)
+            for (_idx, _txt) in header]))
         echo(u'\r\n\r\n')
         getch()
         return
