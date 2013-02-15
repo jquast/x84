@@ -273,7 +273,8 @@ def get_swinfo(entry, pager, active=True):
     elif entry and entry.strip().lower() == 'citadel':
         output += pager.update(
             "Ancient history.\r\n\r\n")
-        output += pager.title(u'- about ' + term.blue('Enthral') + u' -')    elif entry and entry.strip().lower() == 'mystic':
+        output += pager.title(u'- about ' + term.blue('Citadel') + u' -')
+    elif entry and entry.strip().lower() == 'mystic':
         output += pager.update(
             "Mystic BBS is a bulletin board system (BBS) software in "
             "the vein of other \"forum hack\" style software such as "
