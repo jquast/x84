@@ -163,5 +163,5 @@ An irc channel, *#prsv* on efnet, is available for development discussion.
 .. _Terminus: http://terminus-font.sourceforge.net/
 .. _socat: http://www.dest-unreach.org/socat/
 .. _default_README.rst: https://github.com/jquast/x84/blob/master/x84/default/README.rst
-.._Sauce: https://github.com/tehmaze/sauce
-.._citadel: https://en.wikipedia.org/wiki/Citadel_%28software%29
+.. _Sauce: https://github.com/tehmaze/sauce
+.. _citadel: https://en.wikipedia.org/wiki/Citadel_%28software%29
