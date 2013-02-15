@@ -33,7 +33,7 @@ def main(ttyfile=u'', peek=False):
     # .. we could look for and write various information headers..
     # .. esp. at EOF, about session.user.handle & connect_time & etc.
     data = open(ttyfile, 'rb').read(64)
-    size_pattern = re.compile(r'\[8;(\d+);\(\d+)t')
+    size_pattern = re.compile(r'\[8;(\d+);(\d+)t')
     match = size_pattern.match(data)
     if match:
         echo(u'\r\n\r\nheight, width: %s, %s' % match.groups())

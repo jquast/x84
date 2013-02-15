@@ -144,7 +144,9 @@ def get_bbslist(max_len=23):
             if not grp.lower().startswith('the'):
                 grp = grp.split()[0].title()
             else:
-                grp = grp.title()
+                grp = grp.title().split()[0]
+            if 'citadel' in grp.lower():
+                grp = 'Citadel'
             if not grp in by_group:
                 by_group[grp] = [(key, bbs)]
                 continue
@@ -268,7 +270,10 @@ def get_swinfo(entry, pager, active=True):
             "Author: Mercyful Fate\n"
             "IRC: #enthral on irc.bbs-scene.org\r\n")
         output += pager.title(u'- about ' + term.blue('Enthral') + u' -')
-    elif entry and entry.strip().lower() == 'mystic':
+    elif entry and entry.strip().lower() == 'citadel':
+        output += pager.update(
+            "Ancient history.\r\n\r\n")
+        output += pager.title(u'- about ' + term.blue('Enthral') + u' -')    elif entry and entry.strip().lower() == 'mystic':
         output += pager.update(
             "Mystic BBS is a bulletin board system (BBS) software in "
             "the vein of other \"forum hack\" style software such as "
