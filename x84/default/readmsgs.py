@@ -57,16 +57,11 @@ def main(tags=None):
 
         # search input as valid tag(s)
         tags = set([inp.strip().lower() for inp in inp_tags.split(',')])
-        err = False
         for tag in tags.copy():
             if not tag in tagdb:
                 tags.remove(tag)
                 echo(u"\r\nNO MESSAGES With tAG '%s' fOUNd." % (
                     tag,))
-                err = True
-        if err:
-            # try again
-            continue
 
         msgs_idx = list_msgs(tags)
         echo(u'\r\n\r\n%d messages.' % (len(msgs_idx),))
