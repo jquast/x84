@@ -80,71 +80,21 @@ class Msg(object):
         self.subject = subject
         self.body = body
 
-    # def tag(self, value):
-    #    self.tags.update ((value,))
-
     def save(self):
         """
-        Save message to database
+        Save message in 'Msgs' sqlite db, and record index in 'tags' db.
         """
         MSGDB.acquire()
-        nxt = max([int(key) for key in MSGDB.keys()] or [-1]) + 1
-        self.idx = nxt
+        msg_idx = max([int(key) for key in MSGDB.keys()] or [-1]) + 1
+        self.idx = msg_idx
         self._stime = datetime.datetime.now()
-        MSGDB[nxt] = self
+        MSGDB[msg_idx] = self
         MSGDB.release()
 
-#    def set(self, key, value):
-#        " set key, value of msg record "
-#        self.__setattr__(key, value)
-##    self.save ()
-#
-#    def delete(self, force=False, killer=None):
-#        " delete message from the database "
-#        if force and db.has_key(self.number):
-#            del db[self.number]
-#        else:
-#            if killer:
-#                self.set('deleted', killer)
-#            else:
-#                self.set('deleted', True)
-#
-#    def undelete(self):
-#        " un-delete a message from the database "
-#        if self.deleted:
-#            self.setmsg('deleted', False)
-#            return True
-#        return False
-#
-#
-#    def addtag(self, tag):
-#        " Add tag to message "
-#        if not tag in self.tags:
-#            self.tags.append (tag)
-#            self.save ()
-#            return True
-#
-#    def deltag(self, tag):
-#        " Remove tag from message "
-#        if tag in self.tags:
-#            self.tags.remove (tag)
-#            self.save ()
-#            return True
-#
-#    def readBy(self, handle):
-#        return (self.public and handle in self.read) \
-#        or (not self.public and self.recipient == handle and self.read)
-#
-#    def send(self):
-#        " Create a new message record in the database "
-#        self.sendtime = time.time()
-#        if self.public:
-#            self.read = []
-#        else:
-#            self.read = False
-#        if self.parent:
-#            replyto = getmsg(self.parent)
-#            if not self.number in replyto.threads:
-#                # append our index to thread in parent message
-#                replyto.set ('threads', replyto.threads + [self.number])
-#        self.save ()
+        TAGDB.acquire()
+        for tag in self.tags:
+            if not tag in TAGDB:
+                TAGDB[tag] = set([msg_idx])
+            else:
+                TAGDB[tag].add(msg_idx)
+        TAGDB.release()
