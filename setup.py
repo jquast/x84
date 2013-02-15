@@ -7,7 +7,7 @@ import os
 
 setup(name='x84',
       version='1.0.2',
-      description="UTF-8 Telnet server with default bbs",
+      description="utf-8 and cp437 telnet BBS",
       long_description=open(os.path.join(os.path.dirname(__file__),
           'README.txt')).read(),
       author='Jeff Quast',
