@@ -17,11 +17,13 @@ def main(tags=None):
         tags.update(session.user.groups)
     public_idx = list_msgs(tags)
 
-    # sysop can remove filter using /nofilter
+    # this boolean allows sysop to remove filter using /nofilter
     filter_private = True
 
     tagdb = DBProxy('tags')
     while True:
+        # Accept user input for a 'search tag', or /list command
+        #
         echo(u"\r\n\r\nENtER SEARCh TAG(s), COMMA-dEliMitEd. ")
         echo(u"OR '/list'\r\n : ")
         sel_tags = ', '.join(tags)
@@ -40,20 +42,30 @@ def main(tags=None):
             # disable filtering private messages
             filter_private = False
             continue
+
+        # search input as valid tag(s)
         tags = set([inp.strip().lower() for inp in inp_tags.split(',')])
-        err=False
+        err = False
         for tag in tags[:]:
             if not tag in tagdb:
                 tags.remove(tag)
                 echo(u'\r\nTag %s not found.\r\n' % (tag,))
-                err=True
+                err = True
         if err:
+            # try again
             continue
+
         msgs_idx = list_msgs(tags)
         echo(u'\r\n\r\n%d messages.' % (len(msgs_idx),))
         if 0 == len(msgs_idx):
             continue
 
+        # filter all matching messages, userland implementation
+        # of private/public messaging by using the 'tags' database.
+        # 'new', or unread messages are marked by idx matching
+        # session.user['readmsgs']. Finally, 'group' tagging, so that
+        # users of group 'impure' are allowed to read messages tagged
+        # by 'impure', regardless of recipient or 'public'.
         addressed_to = 0
         addressed_grp = 0
         filtered = 0
@@ -77,7 +89,8 @@ def main(tags=None):
                         addressed_grp += 1
                     else:
                         # denied to read this message
-                        msgs_idx.remove(msg_id)
+                        if filter_private:
+                            msgs_idx.remove(msg_id)
                         filtered +=1
                         continue
                 if msg_id not in already_read:
@@ -86,6 +99,8 @@ def main(tags=None):
         if 0 == len(msgs_idx):
             echo(u'\r\n\r\nNo messages (%d filtered).' % (filtered,))
             continue
+
+
         echo(u'\r\n\r\n')
         echo(u', '.join((
             ('%d addressed to you' % (addressed_to)
