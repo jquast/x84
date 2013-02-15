@@ -8,6 +8,7 @@ def banner():
         u'... MSG REAdER'.center(term.width),))
 
 def main(tags=None):
+    return
     from x84.bbs import getsession, getterminal, echo, LineEditor, getch
     from x84.bbs import list_msgs
     session, term = getsession(), getterminal()
@@ -88,7 +89,7 @@ def main(tags=None):
                     if tag_matches_group:
                         addressed_grp += 1
                     else:
-                        # denied to read this message
+                        # denied to read this message, unless sysop debug
                         if filter_private:
                             msgs_idx.remove(msg_id)
                         filtered +=1
@@ -100,17 +101,18 @@ def main(tags=None):
             echo(u'\r\n\r\nNo messages (%d filtered).' % (filtered,))
             continue
 
-
+        # Display statistics (#new, etc.) and accept 'a'll or only 'n'ew
         echo(u'\r\n\r\n')
         echo(u', '.join((
             ('%d addressed to you' % (addressed_to)
                 if addressed_to else u''),
             ('%d addressed by group' % (addressed_grp)
                 if addressed_grp else u''),
-            ('%d filtered' % (filtered)
+            ('%d filtered' % (filtered,)
                 if filtered else u''),
-            ('%d filtered' % (
-            ('%d new' % (new,) if new else u'')
+            ('%d new' % (new,)
+                if new else u''),
+            u'.',)))
         echo(u''.join((u'\r\n\r\n',
             u'  REAd [%s]ll %d messages %s [a%s] ?\b\b' % (
                 term.yellow_underline(u'a'), len(msgs_idx),
