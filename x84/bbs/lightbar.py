@@ -109,7 +109,7 @@ class Lightbar (AnsiWindow):
 
     def init_theme(self):
         """
-        Initialize colors['selected'] and colors['unselected'].
+        Initialize color['highlight'].
         """
         from x84.bbs.session import getterminal
         self.colors['highlight'] = getterminal().reverse_green
