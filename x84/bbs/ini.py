@@ -192,7 +192,7 @@ def init_log_ini():
     cfg_log.set('formatter_default', 'class', 'logging.Formatter')
 
     cfg_log.add_section('handlers')
-    cfg_log.set('handlers', 'keys', 'console, info_file')
+    cfg_log.set('handlers', 'keys', 'console, rotate_daily')
 
     cfg_log.add_section('handler_console')
     cfg_log.set('handler_console', 'class',
@@ -200,12 +200,13 @@ def init_log_ini():
     cfg_log.set('handler_console', 'formatter', 'default')
     cfg_log.set('handler_console', 'args', 'tuple()')
 
-    cfg_log.add_section('handler_info_file')
-    cfg_log.set('handler_info_file', 'class', 'logging.FileHandler')
+    cfg_log.add_section('handler_rotate_daily')
+    cfg_log.set('handler_info_file', 'class', 'logging.handlers.TimedRotatingFileHandler')
     cfg_log.set('handler_info_file', 'level', 'INFO')
     cfg_log.set('handler_info_file', 'formatter', 'default')
     cfg_log.set('handler_info_file', 'args', '("%s", "w")' % (
-        os.path.join(os.path.expanduser('~/.x84'), 'info.log'),))
+        os.path.join(os.path.expanduser('~/.x84'), 'daily.log',
+            'midnight', 1),))
 
     cfg_log.add_section('loggers')
     cfg_log.set('loggers', 'keys', 'root, sqlitedict')
@@ -213,13 +214,13 @@ def init_log_ini():
     cfg_log.add_section('logger_root')
     cfg_log.set('logger_root', 'level', 'INFO')
     cfg_log.set('logger_root', 'formatter', 'default')
-    cfg_log.set('logger_root', 'handlers', 'console,info_file')
+    cfg_log.set('logger_root', 'handlers', 'console, rotate_daily')
 
     # squelche sqlitedict's info on open, its rather long
     cfg_log.add_section('logger_sqlitedict')
     cfg_log.set('logger_sqlitedict', 'level', 'WARN')
     cfg_log.set('logger_sqlitedict', 'formatter', 'default')
-    cfg_log.set('logger_sqlitedict', 'handlers', 'console, info_file')
+    cfg_log.set('logger_sqlitedict', 'handlers', 'console, rotate_daily')
     cfg_log.set('logger_sqlitedict', 'qualname', 'sqlitedict')
     cfg_log.set('logger_sqlitedict', 'propagate', '0')
 
