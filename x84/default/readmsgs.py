@@ -304,10 +304,13 @@ def read_messages(msgs, new):
             reader.colors['border'] = term.bold_black
             selector.colors['border'] = term.bold_yellow
         title = get_selector_footer(mbox, new)
-        sel_padd_right = term.bold_yellow(u'-' + 
-                selector.glyphs['bot-horiz'] * (selector.visible_width - len(Ansi(title)) - 7)
+        sel_padd_right = term.bold_yellow(
+                u'-'
+                + selector.glyphs['bot-horiz'] * (
+                    selector.visible_width - len(Ansi(title)) - 7)
                 + u'-\u25a0-')
-        sel_padd_left = term.yellow(selector.glyphs['bot-horiz'] * 3)
+        sel_padd_left = term.yellow(
+                selector.glyphs['bot-horiz'] * 3)
         return u''.join((term.move(0, 0), term.clear, u'\r\n',
             u'// REAdiNG MSGS ..'.center(term.width).rstrip(),
             selector.refresh(),
@@ -319,7 +322,7 @@ def read_messages(msgs, new):
             reader.refresh(),
             ))
 
-    echo (u'\r\n' + term.clear_eol) * (term.height - 1)
+    echo ((u'\r\n' + term.clear_eol) * (term.height - 1))
     mailbox = get_header(msgs)
     dirty = True
     msg_selector = None
