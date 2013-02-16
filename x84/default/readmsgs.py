@@ -4,6 +4,15 @@ FILTER_PRIVATE = True
 ALREADY_READ = set()
 READING = False # set true when keystrokes are sent to msg_reader
 
+def mark_read(idx):
+    from x84.bbs import getsession
+    session = getsession()
+    global ALREADY_READ
+    ALREADY_READ = session.user['readmsgs']
+    marked = idx not in ALREADY_READ
+    ALREADY_READ.add(idx)
+    session.user['readmsgs'] = ALREADY_READ
+    return marked
 
 def msg_filter(msgs):
     """
@@ -69,11 +78,11 @@ def msg_filter(msgs):
             txt_out.append ('%s filtered' % (
                 term.bold_yellow(str(filtered)),))
         if public > 0:
-            txt_out.append ('%s private' % (
-                term.bold_yellow(str(filtered)),))
+            txt_out.append ('%s public' % (
+                term.bold_yellow(str(public)),))
         if private > 0:
             txt_out.append ('%s private' % (
-                term.bold_yellow(str(filtered)),))
+                term.bold_yellow(str(private)),))
         if len(new) > 0:
             txt_out.append ('%s new' % (
                 term.bold_yellow(str(len(new),)),))
@@ -126,13 +135,14 @@ def prompt_tags(tags):
             FILTER_PRIVATE = False
             continue
 
+        echo(u'\r\n')
         # search input as valid tag(s)
         tags = set([inp.strip().lower() for inp in inp_tags.split(',')])
         for tag in tags.copy():
             if not tag in tagdb:
                 tags.remove(tag)
                 echo(u"\r\nNO MESSAGES With tAG '%s' fOUNd." % (
-                    tag,))
+                    term.red(tag),))
         return tags
 
 
@@ -169,12 +179,13 @@ def main(tags=None):
             break
 
         # prompt read 'a'll, 'n'ew, or 'q'uit
-        echo(u'\r\n  REAd [%s]ll %d%s messages [qa%s] ?\b\b' % (
+        echo(u'\r\n  REAd [%s]ll %d%s message%s [qa%s] ?\b\b' % (
                 term.yellow_underline(u'a'),
                 len(msgs), (
                     u' or %d [%s]EW\a ' % (
                         len(new), term.yellow_underline(u'n'),)
                     if new else u''),
+                u's' if 1 != len(msgs) else u'',
                 u'n' if new else u'',))
         while True:
             inp = getch()
@@ -251,7 +262,6 @@ def read_messages(msgs, new):
 
     def format_msg(reader, idx):
         msg = get_msg(idx)
-        print msg.tags
         sent = msg.stime.isoformat(sep=' ')
         return u'\r\n'.join((
             (u''.join((
@@ -323,7 +333,6 @@ def read_messages(msgs, new):
             ))
 
     echo ((u'\r\n' + term.clear_eol) * (term.height - 1))
-    mailbox = get_header(msgs)
     dirty = True
     msg_selector = None
     msg_reader = None
@@ -334,33 +343,36 @@ def read_messages(msgs, new):
         if session.poll_event('refresh'):
             dirty = True
         if dirty:
+            mailbox = get_header(msgs)
             msg_selector = get_selector(mailbox, msg_selector)
             idx = msg_selector.selection[0]
             msg_reader = get_reader()
             msg_reader.update(format_msg(msg_reader, idx))
-            echo(refresh(msg_reader, msg_selector, mailbox, new))
+            echo(refresh(msg_reader, msg_selector, msgs, new))
             dirty = False
         inp = getch(1)
         if READING:
             echo(msg_reader.process_keystroke(inp))
-            # left or backspace moves UI
-            if inp in (term.KEY_LEFT, u'h', 'H', '\b', term.KEY_BACKSPACE):
+            # left, <, or backspace moves UI
+            if inp in (term.KEY_LEFT, u'<', u'h',
+                    '\b', term.KEY_BACKSPACE):
                 READING = False
                 dirty = True
         else:
             echo(msg_selector.process_keystroke(inp))
-            # spacebar/r marks as read, goes to next message
-            if inp in (u' ', 'r'):
-                if not idx in ALREADY_READ:
-                    session.user['readmsgs'].add(idx)
-                    ALREADY_READ.add(idx)
+            # spacebar marks as read, goes to next message
+            if inp in (u' ',):
+                dirty = mark_read(idx)
                 echo(msg_selector.move_down())
-                msg_selector = get_selector(mailbox, msg_selector)
                 idx = msg_selector.selection[0]
-
-            # return or right arrow key moves UI to pager
-            if inp in (u'\r', term.KEY_ENTER, u'l', 'L', term.KEY_RIGHT):
+            # right, >, or enter moves UI
+            if inp in (u'\r', term.KEY_ENTER, u'>',
+                    u'l', 'L', term.KEY_RIGHT):
+                mark_read(idx)
                 READING = True
                 dirty = True
+            elif msg_selector.moved:
+                idx = msg_selector.selection[0]
+
     echo(term.move(term.height, 0))
     return
