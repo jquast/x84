@@ -120,7 +120,7 @@ class Msg(object):
             db_tag[tag] = set([self.idx])
         db_tag.release()
 
-        logger.info(u"stored %s%smessage, addressed to '%s'.",
-                'new ' if new else u''
+        logger.info(u"saved %s%smessage, addressed to '%s'.",
+                'new ' if new else u'',
                 'public ' if 'public' in self.tags else u'',
                 self.recipient,)
