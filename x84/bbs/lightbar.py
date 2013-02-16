@@ -239,10 +239,18 @@ class Lightbar (AnsiWindow):
     @property
     def position(self):
         """
-        Returns tuple pair (row, page). 'row' being the listed index from
-        top of window, and 'page' being the number of items scrolled.
+        Tuple pair (row, page). 'row' is index from top of window,
+        and 'page' is number of page items scrolled.
         """
         return (self.vitem_idx, self.vitem_shift)
+
+    @position.setter
+    def position(self, pos_tuple):
+        # pylint: disable=C0111
+        #         Missing docstring
+        self.vitem_idx, self.vitem_shift = pos_tuple
+        self._chk_bounds()
+
 
     @property
     def visible_content(self):
@@ -263,13 +271,6 @@ class Lightbar (AnsiWindow):
             return len(self.content)
         else:
             return self.visible_height
-
-    @position.setter
-    def position(self, pos_tuple):
-        # pylint: disable=C0111
-        #         Missing docstring
-        self.vitem_idx, self.vitem_shift = pos_tuple
-        self._chk_bounds()
 
     @property
     def vitem_idx(self):
