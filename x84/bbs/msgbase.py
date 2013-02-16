@@ -98,5 +98,7 @@ class Msg(object):
             if not tag in TAGDB:
                 TAGDB[tag] = set([msg_idx])
             else:
-                TAGDB[tag].add(msg_idx)
+                msgs = TAGDB[tag]
+                msgs.add(msg_idx)
+                TAGDB[tag] = msgs
         TAGDB.release()
