@@ -191,7 +191,7 @@ def main():
         if dirty or lbr is None or session.poll_event('refresh'):
             session.activity = u'Viewing last callers'
             lcallers, lcalls_txt = lc_retrieve()
-            pos = lbr.position if lbr is not None else 0
+            pos = lbr.position if lbr is not None else (0, 0)
             lbr = get_lightbar(lcallers, lcalls_txt)
             if pos:
                 lbr.position = pos
