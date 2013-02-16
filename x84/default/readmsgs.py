@@ -266,23 +266,25 @@ def read_messages(msgs, new):
     def format_msg(reader, idx):
         msg = get_msg(idx)
         print repr(msg.tags), 'tags'
-        sent = msg.stime.isoformat(sep=' ')
+        sent = msg.stime.strftime('%A %b-%d %Y %H:%M:%S')
         return u'\r\n'.join((
             (u''.join((
-                term.bold_yellow((u'%s' % (msg.author,)).ljust(len_author)),
+                (u'%s' % (msg.author,)).rjust(len_author),
                 u' ' * (reader.visible_width - len_author - len(sent)),
-                term.yellow(sent),))),
+                sent,))),
             (Ansi(
                 term.yellow('tAGS: ')
                 + (u'%s ' % (term.bold(','),)).join((
-                    u''.join(([term.bold_red(_tag)
-                        if _tag in SEARCH_TAGS else term.yellow(_tag)
-                        for _tag in msg.tags])))))
-                .wrap(reader.visible_width, indent=u'      ')),
+                    [term.bold_red(_tag)
+                        if _tag in SEARCH_TAGS
+                        else term.yellow(_tag)
+                        for _tag in msg.tags]))).wrap(
+                            reader.visible_width,
+                            indent=u'      ')),
             (term.yellow_underline(
                 (u'SUbj: %s' % (msg.subject,)).ljust(reader.visible_width)
                 )),
-            (u''), (msg.body),))
+            u'', (msg.body),))
 
 
     def get_selector_footer(mbox, new):
@@ -296,22 +298,24 @@ def read_messages(msgs, new):
 
     def get_selector_title():
         return u''.join((
-            term.yellow(u'-- '),
-            u'/'.join((
-                term.yellow_underline(' ') + u':mark',
-                term.yellow_underline('ENtER') + ':read',
-                term.yellow_underline('q'), u'Uit',)),
-            term.yellow(u' --'),))
+            term.yellow(u'- '),
+            u' '.join((
+                term.yellow_underline(u'>') + u':read',
+                term.yellow_underline(u'up')
+                + u'/' + term.yellow_underline(u'down')
+                + u'/' + term.yellow_underline(u'spacebar'),
+                term.yellow_underline(u'q') + u':Uit',)),
+            term.yellow(u' -'),))
 
     def get_reader_footer():
         return u''.join((
-            term.yellow(u'-- '),
-            u'/'.join((
-                u'<' + term.yellow_underline('lEft'),
-                term.yellow_underline('r') + u'EPlY',
-                term.yellow_underline('+-') + u'tAG',
-                term.yellow_underline('q') + u'Uit',)),
-            term.yellow(u' --'),))
+            term.yellow(u'- '),
+            u' '.join((
+                term.yellow_underline(u'<') + u':back',
+                term.yellow_underline(u'r') + u':EPlY',
+                term.yellow_underline(u'+-') + u':tAG',
+                term.yellow_underline(u'q') + u':Uit',)),
+            term.yellow(u' -'),))
 
     def refresh(reader, selector, mbox, new):
         if READING:
@@ -327,7 +331,7 @@ def read_messages(msgs, new):
                 + selector.glyphs['bot-horiz'] * (
                     selector.visible_width - len(Ansi(title)) - 7)
                 + u'-\u25a0-')
-        sel_padd_left = term.yellow(
+        sel_padd_left = padd_attr(
                 selector.glyphs['bot-horiz'] * 3)
         return u''.join((term.move(0, 0), term.clear, u'\r\n',
             u'// REAdiNG MSGS ..'.center(term.width).rstrip(),
@@ -349,7 +353,7 @@ def read_messages(msgs, new):
     while (msg_selector is None and msg_reader is None
             ) or not (msg_selector.quit or msg_reader.quit):
         if session.poll_event('refresh'):
-            dirty = 1
+            dirty = dirty or 1
         if dirty:
             if dirty == 2:
                 mailbox = get_header(msgs)
