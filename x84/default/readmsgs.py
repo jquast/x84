@@ -108,8 +108,10 @@ def prompt_tags(tags):
     while True:
         # Accept user input for a 'search tag', or /list command
         #
-        echo(u"\r\n\r\nENtER SEARCh TAG(s), COMMA-dEliMitEd. ")
-        echo(u"OR '/list'\r\n : ")
+        echo(u"\r\n\r\nENtER SEARCh %s, COMMA-dEliMitEd. " % (
+            term.bold_red('TAG(s)'),))
+        echo(u"OR '/list', %s:quit\r\n : " % (
+            term.yellow_underline('Escape'),))
         width = term.width - 6
         sel_tags = u', '.join(tags)
         while len(Ansi(sel_tags)) >= (width - 8):
