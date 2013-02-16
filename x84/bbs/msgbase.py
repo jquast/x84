@@ -35,7 +35,7 @@ def list_tags():
     """
     Return set of available tags.
     """
-    return DBProxy(TAGDB).keys()
+    return [_tag.decode('utf8') for _tag in DBProxy(TAGDB).keys()]
 
 
 class Msg(object):
@@ -59,7 +59,6 @@ class Msg(object):
     messages replied to through the send() method.
     """
     idx = None
-    tags = set()
 
     @property
     def ctime(self):
@@ -87,6 +86,7 @@ class Msg(object):
         self.recipient = recipient
         self.subject = subject
         self.body = body
+        self.tags = set()
 
 
     def save(self):
