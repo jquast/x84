@@ -123,9 +123,18 @@ class LineEditor(object):
         if keystroke in self.keyset['refresh']:
             return self.refresh()
         elif keystroke in self.keyset['backspace']:
-            if len(self.content) > 0:
+            if len(self.content) != 0:
                 self.content = self.content[:-1]
                 return u'\b \b'
+        elif keystroke in self.keyset['backword']:
+            if len(self.content) != 0:
+                ridx = self.content.rstrip().rfind(' ') + 1
+                toss = len(self.content[ridx:])
+                self.content = self.content[:ridx]
+                return u''.join((
+                    u'\b' * toss,
+                    u' ' * toss,
+                    u'\b' * toss,))
         elif keystroke in self.keyset['enter']:
             self._carriage_returned = True
         elif keystroke in self.keyset['exit']:
@@ -413,15 +422,15 @@ class ScrollingEditor(AnsiWindow):
 
     def refresh(self):
         """
-        Return unicode sequence suitable for refreshing the entire line
-        and placing the cursor.
+        Return unicode sequence suitable for refreshing the entire
+        line and placing the cursor.
 
         A strange by-product; if scrolling was not previously enabled,
-        it is if wrapping must occur; this can happen if a non-scrolling
-        editor was provided a very large .content buffer, then later
-        .refresh()'d. -- essentially enabling infinate scrolling
+        it is if wrapping must occur; this can happen if a
+        non-scrolling editor was provided a very large .content
+        buffer, then later .refresh()'d. -- essentially enabling
+        infinate scrolling
         """
-        from x84.bbs import getterminal
         # reset position and detect new position
         self._horiz_lastshift = self._horiz_shift
         self._horiz_shift = 0
@@ -429,7 +438,8 @@ class ScrollingEditor(AnsiWindow):
         # pylint: disable=W0612
         #        Unused variable 'loop_cnt'
         for loop_cnt in range(len(self.content)):
-            if self._horiz_pos > (self.visible_width - self.scroll_amt):
+            if (self._horiz_pos >
+                    (self.visible_width - self.scroll_amt)):
                 self._horiz_shift += self.scroll_amt
                 self._horiz_pos -= self.scroll_amt
                 self.enable_scrolling = True
@@ -448,39 +458,26 @@ class ScrollingEditor(AnsiWindow):
 
     def backword(self):
         """
-        Remove word from end of content buffer, scroll as necessary.
+        Delete word behind cursor, using ' ' as boundary.
+        in readline this is unix-word-rubout (C-w).
         """
-        from x84.bbs.output import Ansi
         if 0 == len(self.content):
             return u''
-        rstr = u''
-        idx = self.content.rfind(' ')
-        if idx == -1:
-            idx = 0
-        toss = self.content[idx:]
-        print 'backword toss', toss
-        self.content = self.content[:idx]
-        if self.is_scrolled:
-            while self._horiz_pos < (self.visible_width - self.scroll_amt):
-                # shift left,
-                self._horiz_shift -= self.scroll_amt
-                self._horiz_pos += self.scroll_amt
-                rstr += self.refresh()
-        rstr += self.fixate(-1)
-        rstr += ' \b'
-        self._horiz_pos -= (len(Ansi(toss)))
-        return rstr
+        ridx = self.content.rstrip().rfind(' ') + 1
+        self.content = self.content[:ridx]
+        return self.refresh()
 
     def backspace(self):
         """
-        Remove character from end of content buffer, scroll as necessary.
+        Remove character from end of content buffer,
+        scroll as necessary.
         """
         if 0 == len(self.content):
             return u''
         rstr = u''
         self.content = self.content[:-1]
-        if self.is_scrolled:
-            if self._horiz_pos < (self.visible_width - self.scroll_amt):
+        if (self.is_scrolled and (self._horiz_pos
+                    < (self.visible_width - self.scroll_amt))):
                 # shift left,
                 self._horiz_shift -= self.scroll_amt
                 self._horiz_pos += self.scroll_amt
@@ -502,11 +499,13 @@ class ScrollingEditor(AnsiWindow):
 
     def add(self, u_chr):
         """
-        Returns output sequence necessary to add a character to content buffer.
-        An empty content buffer is returned if no data could be inserted.
-        sequences for re-displaying the full input line are returned when the
-        character addition caused the window to scroll horizontally.
-        Otherwise, the input is simply returned to be displayed ('local echo').
+        Returns output sequence necessary to add a character to
+        content buffer.  An empty content buffer is returned if
+        no data could be inserted. Sequences for re-displaying
+        the full input line are returned when the character
+        addition caused the window to scroll horizontally.
+        Otherwise, the input is simply returned to be displayed
+        ('local echo').
         """
         if self.eol:
             # cannot input, at end of line!
