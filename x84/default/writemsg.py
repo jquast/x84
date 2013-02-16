@@ -173,6 +173,7 @@ def get_abort():
                   width=20,
                   left=u'CONtiNUE', right=u'AbORt')
     blurb = u'CONtiNUE MESSAGE?'
+    echo(u'\r\n\r\n')
     echo(term.move(yn.yloc, yn.xloc - len(blurb)))
     echo(term.bold_yellow(blurb))
     selection = yn.read()

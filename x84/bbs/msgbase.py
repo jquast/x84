@@ -17,7 +17,7 @@ def get_msg(idx):
     """
     Return Msg record instance by index ``idx``.
     """
-    return DBProxy(MSGDB)[idx]
+    return DBProxy(MSGDB)['%d' % (idx,)]
 
 
 def list_msgs(tags=('public',)):
@@ -102,7 +102,7 @@ class Msg(object):
             self.idx = max([int(key) for key in db_msg.keys()] or [-1]) + 1
             new = True
         self._stime = datetime.datetime.now()
-        db_msg[self.idx] = self
+        db_msg['%d' % (self.idx,)] = self
         db_msg.release()
 
         # persist message idx to TAGDB
