@@ -160,7 +160,7 @@ class Session(object):
         #         Missing docstring
         self._user = value
         logger = logging.getLogger()
-        logger.info('user is %s.', value.handle)
+        logger.info("set user '%s'.", value.handle)
 
     @property
     def encoding(self):
@@ -542,8 +542,8 @@ class Session(object):
         from x84.bbs.exception import ScriptError
         logger = logging.getLogger()
         self._script_stack.append((script_name,) + args)
-        logger.info('run script %s%s.', script_name,
-                    '%r' % (args,) if 0 != len(args) else '')
+        logger.info("run script '%s'%s.", script_name,
+                    ', args %r' % (args,) if 0 != len(args) else '')
 
         def _load_script_module():
             """
@@ -569,7 +569,7 @@ class Session(object):
             raise ScriptError("%s: main not callable." % (script_name,))
         value = script.main(*args)
         toss = self._script_stack.pop()
-        logger.info('script %s returned %r.', toss[0], value)
+        logger.info("script '%s' returned %r.", toss[0], value)
         return value
 
     def close(self):
