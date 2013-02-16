@@ -88,6 +88,7 @@ def set_password(user):
     """
     from x84.bbs import getterminal, echo, ini, LineEditor
     term = getterminal()
+    HIDDEN =  u'x'
     prompt_password = u'password: '
     prompt_verify = u'   again: '
     msg_empty = u'ENtER A PASSWORd!'
@@ -98,7 +99,7 @@ def set_password(user):
     while True:
         echo(u'\r\n\r\n' + term.clear_eol + term.normal + prompt_password)
         le = LineEditor(width)
-        le.hidden = u'x'
+        le.hidden = HIDDEN
         password = le.read()
         if password == u'' or password is None:
             warning(msg_empty)
@@ -107,7 +108,7 @@ def set_password(user):
         else:
             echo(u'\r\n\r\n' + term.clear_eol + term.normal + prompt_verify)
             le = LineEditor(width)
-            le.hidden = 'x'
+            le.hidden = HIDDEN
             verify = le.read()
             if password != verify:
                 warning(msg_unmatched)
