@@ -265,7 +265,6 @@ def read_messages(msgs, new):
 
     def format_msg(reader, idx):
         msg = get_msg(idx)
-        print repr(msg.tags), 'tags'
         sent = msg.stime.strftime('%A %b-%d %Y %H:%M:%S')
         return u'\r\n'.join((
             (u''.join((
