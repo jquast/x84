@@ -1,27 +1,33 @@
 """
 msgbase package for x/84, https://github.com/jquast/x84
 """
+import logging
 import datetime
 from x84.bbs.dbproxy import DBProxy
 
-MSGDB = DBProxy('Msgs')
-TAGDB = DBProxy('tags')
+MSGDB = 'msgbase'
+TAGDB = 'tags'
+
+# pylint: disable=C0103
+#        Invalid name "logger" for type constant (should match
+logger = logging.getLogger()
 
 
 def get_msg(idx):
     """
-    Return Msg record by index
+    Return Msg record instance by index ``idx``.
     """
-    return MSGDB[idx]
+    return DBProxy(MSGDB)[idx]
 
 
 def list_msgs(tags=('public',)):
     """
-    Return set of Msg record indicies matching 1 or more ``tags``.
+    Return set of Msg keys matching 1 or more ``tags``.
     """
     msgs = set()
-    for tag in (_tag for _tag in tags if _tag in TAGDB):
-        msgs.update(TAGDB[tag])
+    db_tag = DBProxy(TAGDB)
+    for tag in (_tag for _tag in tags if _tag in db_tag):
+        msgs.update(db_tag[tag])
     return msgs
 
 
@@ -29,7 +35,7 @@ def list_tags():
     """
     Return set of available tags.
     """
-    return TAGDB.keys()
+    return DBProxy(TAGDB).keys()
 
 
 class Msg(object):
@@ -82,23 +88,40 @@ class Msg(object):
         self.subject = subject
         self.body = body
 
+
     def save(self):
         """
         Save message in 'Msgs' sqlite db, and record index in 'tags' db.
         """
-        MSGDB.acquire()
-        msg_idx = max([int(key) for key in MSGDB.keys()] or [-1]) + 1
-        self.idx = msg_idx
-        self._stime = datetime.datetime.now()
-        MSGDB[msg_idx] = self
-        MSGDB.release()
+        db_msg = DBProxy(MSGDB)
 
-        TAGDB.acquire()
-        for tag in self.tags:
-            if not tag in TAGDB:
-                TAGDB[tag] = set([msg_idx])
-            else:
-                msgs = TAGDB[tag]
-                msgs.add(msg_idx)
-                TAGDB[tag] = msgs
-        TAGDB.release()
+        new = False
+        # persist message record to MSGDB
+        db_msg.acquire()
+        if self.idx is None:
+            self.idx = max([int(key) for key in db_msg.keys()] or [-1]) + 1
+            new = True
+        self._stime = datetime.datetime.now()
+        db_msg[self.idx] = self
+        db_msg.release()
+
+        # persist message idx to TAGDB
+        db_tag = DBProxy(TAGDB)
+        db_tag.acquire()
+        for tag, msgs in db_tag.iteritems():
+            if tag in self.tags and not self.idx in msgs:
+                msgs.add(self.idx)
+                db_tag[tag] = msgs
+                logger.info(u"msg %s tagged '%s'", self.idx, tag,)
+            elif tag not in self.tags and self.idx in msgs:
+                msgs.remove(self.idx)
+                db_tag[tag] = msgs
+                logger.info(u"msg %s untagged '%s'", self.idx, tag,)
+        for tag in [_tag for _tag in self.tags if not _tag in db_tag]:
+            db_tag[tag] = set([self.idx])
+        db_tag.release()
+
+        logger.info(u"stored %s%smessage, addressed to '%s'.",
+                'new ' if new else u''
+                'public ' if 'public' in self.tags else u'',
+                self.recipient,)
