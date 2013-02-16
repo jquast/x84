@@ -422,7 +422,6 @@ class ScrollingEditor(AnsiWindow):
         .refresh()'d. -- essentially enabling infinate scrolling
         """
         from x84.bbs import getterminal
-        term = getterminal()
         # reset position and detect new position
         self._horiz_lastshift = self._horiz_shift
         self._horiz_shift = 0
@@ -445,7 +444,6 @@ class ScrollingEditor(AnsiWindow):
             self.pos(self.ypadding, self.xpadding),
             self.colors.get('highlight', u''),
             prnt + self.glyphs.get('erase', u' ') * erase_len,
-            term.normal,
             self.fixate(),))
 
     def backword(self):
@@ -460,6 +458,7 @@ class ScrollingEditor(AnsiWindow):
         if idx == -1:
             idx = 0
         toss = self.content[idx:]
+        print 'backword toss', toss
         self.content = self.content[:idx]
         if self.is_scrolled:
             while self._horiz_pos < (self.visible_width - self.scroll_amt):
