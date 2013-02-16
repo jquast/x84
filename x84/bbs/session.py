@@ -569,7 +569,8 @@ class Session(object):
             raise ScriptError("%s: main not callable." % (script_name,))
         value = script.main(*args)
         toss = self._script_stack.pop()
-        logger.info("script '%s' returned %r.", toss[0], value)
+        logger.info("script '%s' returned%s.", toss[0],
+                ' %r' % (value,) if value is not None else u'')
         return value
 
     def close(self):
