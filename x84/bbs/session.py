@@ -160,7 +160,7 @@ class Session(object):
         #         Missing docstring
         self._user = value
         logger = logging.getLogger()
-        logger.info('user = %r', value.handle)
+        logger.info('user is %s.', value.handle)
 
     @property
     def encoding(self):
@@ -175,7 +175,7 @@ class Session(object):
         #         Missing docstring
         if value != self._encoding:
             logger = logging.getLogger()
-            logger.info('encoding=%s', value)
+            logger.info('encoding is %s.', value)
             assert value in ('utf8', 'cp437')
             self._encoding = value
             self._decoder = codecs.getincrementaldecoder(value)()
@@ -252,7 +252,7 @@ class Session(object):
                 self._script_stack = [err[0] + tuple(err[1:])]
                 continue
             except Disconnected, err:
-                logger.info('User initiates disconnect.')
+                logger.info('User disconnect.')
                 self.close()
                 return None
             except Exception, err:
@@ -270,7 +270,7 @@ class Session(object):
                     if self._show_traceback:
                         self.write(etxt.rstrip() + u'\r\n')
             error_recovery()
-        logger.info('end of script stack.')
+        logger.info('End of script stack.')
         self.close()
         return None
 
@@ -358,6 +358,7 @@ class Session(object):
             'exception', 'global' AYT (are you there),
             'page', 'info-req', 'refresh', and 'input'.
         """
+        logger = logging.getLogger()
         # exceptions aren't buffered; they are thrown!
         if event == 'exception':
             # pylint: disable=E0702
@@ -377,9 +378,10 @@ class Session(object):
         if event == 'page' and self._script_stack[-1:][0][0] != 'chat':
             channel, sender = data
             if self.user.get('mesg', True) or sender == -1:
-                logger.info('paged by %s' % (sender,))
+                logger.info('page from %s.' % (sender,))
                 if not self.runscript('chat', channel, sender):
-                    logger.info('rejected page by %s' % (sender,))
+                    logger.info('rejected page from %s.' % (sender,))
+                # buffer refresh event for any asyncronous event UI's
                 self.buffer_event('refresh', 'page-return')
                 return True
 
@@ -540,7 +542,7 @@ class Session(object):
         from x84.bbs.exception import ScriptError
         logger = logging.getLogger()
         self._script_stack.append((script_name,) + args)
-        logger.info('run %s%s', script_name,
+        logger.info('run script %s%s.', script_name,
                     '%r' % (args,) if 0 != len(args) else '')
 
         def _load_script_module():
@@ -567,7 +569,7 @@ class Session(object):
             raise ScriptError("%s: main not callable." % (script_name,))
         value = script.main(*args)
         toss = self._script_stack.pop()
-        logger.info('%r <== %s', value, toss[0])
+        logger.info('script %s returned %r.', toss[0], value)
         return value
 
     def close(self):
@@ -619,7 +621,7 @@ class Session(object):
         self._fp_ttyrec = io.open(filename, 'wb+')
         self._ttyrec_sec = -1
         self._ttyrec_write_header()
-        logger.info('REC %s' % (filename,))
+        logger.info('recording %s.' % (filename,))
 
     def _ttyrec_write_header(self):
         """
