@@ -177,9 +177,12 @@ class Ansi(unicode):
         rows are seperated by NVT \\r\\n newlines
         """
         lines = []
-        for paragraph in self.splitlines():
-            map(lines.append,
-                    ansiwrap(paragraph, width, subsequent_indent=indent))
+        for line in self.splitlines():
+            if line.strip():
+                for wrapped in ansiwrap(line, width, subsequent_indent=indent):
+                    lines.append(wrapped)
+            else:
+                lines.append(u'')
         return '\r\n'.join(lines)
 
     def is_movement(self):
