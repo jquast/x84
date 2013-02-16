@@ -3,6 +3,7 @@
 FILTER_PRIVATE = True
 ALREADY_READ = set()
 READING = False # set true when keystrokes are sent to msg_reader
+SEARCH_TAGS = None
 
 def mark_read(idx):
     from x84.bbs import getsession
@@ -151,7 +152,8 @@ def main(tags=None):
     from x84.bbs import list_msgs
     session, term = getsession(), getterminal()
     echo(banner())
-    global ALREADY_READ # track unread messages
+    global ALREADY_READ
+    global SEARCH_TAGS
     if tags is None:
         tags = set(['public'])
         # also throw in user groups
@@ -159,12 +161,12 @@ def main(tags=None):
 
     while True:
         # prompt user for tags
-        tags = prompt_tags(tags)
-        if tags is None:
+        SEARCH_TAGS = prompt_tags(tags)
+        if SEARCH_TAGS is None or 0 == len(SEARCH_TAGS):
             break
 
         # retrieve all matching messages,
-        all_msgs = list_msgs(tags)
+        all_msgs = list_msgs(SEARCH_TAGS)
         echo(u'\r\n\r\n%d messages.' % (len(all_msgs),))
         if 0 == len(all_msgs):
             break
@@ -210,7 +212,7 @@ def read_messages(msgs, new):
     # build header
     len_idx = max([len('%d' % (_idx,)) for _idx in msgs])
     len_author = ini.CFG.getint('nua', 'max_user')
-    len_ago = 6
+    len_ago = 9
     len_subject = ini.CFG.getint('msg', 'max_subject')
     len_preview = len_idx + len_author + len_ago + len_subject + 4
 
@@ -225,7 +227,7 @@ def read_messages(msgs, new):
                 u'U' if not idx in ALREADY_READ else u' ',
                 str(idx).rjust(len_idx),
                 author.ljust(len_author),
-                timeago(tm_ago).rjust(len_ago),
+                (timeago(tm_ago) + ' ago').rjust(len_ago),
                 subj[:len_subject],)))
         msg_list.sort()
         return msg_list
@@ -234,7 +236,8 @@ def read_messages(msgs, new):
         from x84.bbs import Lightbar
         pos = prev_sel.position if prev_sel is not None else (0, 0)
         sel = Lightbar(
-            height=term.height / 3 if term.width < 140 else term.height - 2,
+            height=(term.height / 3
+                if term.width < 140 else term.height - 2),
             width=len_preview,
             yloc=2, xloc=0)
         sel.glyphs['top-horiz'] = u''
@@ -255,13 +258,14 @@ def read_messages(msgs, new):
             height=reader_height,
             width=reader_width,
             yloc=reader_ypos,
-            xloc=min(len_preview + 2, term.width - reader_width - 1))
+            xloc=min(len_preview + 2, term.width - reader_width))
         msg_reader.glyphs['top-horiz'] = u''
         msg_reader.glyphs['right-vert'] = u''
         return msg_reader
 
     def format_msg(reader, idx):
         msg = get_msg(idx)
+        print repr(msg.tags), 'tags'
         sent = msg.stime.isoformat(sep=' ')
         return u'\r\n'.join((
             (u''.join((
@@ -270,8 +274,11 @@ def read_messages(msgs, new):
                 term.yellow(sent),))),
             (Ansi(
                 term.yellow('tAGS: ')
-                + (u'%s ' % (term.bold_yellow(','),)).join(msg.tags),)
-                .wrap(reader.visible_width)),
+                + (u'%s ' % (term.bold(','),)).join((
+                    u''.join(([term.bold_red(_tag)
+                        if _tag in SEARCH_TAGS else term.yellow(_tag)
+                        for _tag in msg.tags])))))
+                .wrap(reader.visible_width, indent=u'      ')),
             (term.yellow_underline(
                 (u'SUbj: %s' % (msg.subject,)).ljust(reader.visible_width)
                 )),
@@ -281,7 +288,7 @@ def read_messages(msgs, new):
     def get_selector_footer(mbox, new):
         newmsg = (term.yellow(u' ]-[ ') +
                 term.yellow_reverse(str(len(new))) +
-                term.bold_yellow(u' NEW')) if len(new) else u''
+                term.bold_underline(u' NEW')) if len(new) else u''
         return u''.join((term.yellow(u'[ '),
                 term.bold_yellow(str(len(mbox))),
                 term.bold(u' MSG%s' % (u's' if 1 != len(mbox) else u'',)),
@@ -314,7 +321,8 @@ def read_messages(msgs, new):
             reader.colors['border'] = term.bold_black
             selector.colors['border'] = term.bold_yellow
         title = get_selector_footer(mbox, new)
-        sel_padd_right = term.bold_yellow(
+        padd_attr = term.bold_yellow if not READING else term.bold_black
+        sel_padd_right = padd_attr(
                 u'-'
                 + selector.glyphs['bot-horiz'] * (
                     selector.visible_width - len(Ansi(title)) - 7)
@@ -333,7 +341,7 @@ def read_messages(msgs, new):
             ))
 
     echo ((u'\r\n' + term.clear_eol) * (term.height - 1))
-    dirty = True
+    dirty = 2
     msg_selector = None
     msg_reader = None
     idx = None
@@ -341,15 +349,16 @@ def read_messages(msgs, new):
     while (msg_selector is None and msg_reader is None
             ) or not (msg_selector.quit or msg_reader.quit):
         if session.poll_event('refresh'):
-            dirty = True
+            dirty = 1
         if dirty:
-            mailbox = get_header(msgs)
+            if dirty == 2:
+                mailbox = get_header(msgs)
             msg_selector = get_selector(mailbox, msg_selector)
             idx = msg_selector.selection[0]
             msg_reader = get_reader()
             msg_reader.update(format_msg(msg_reader, idx))
             echo(refresh(msg_reader, msg_selector, msgs, new))
-            dirty = False
+            dirty = 0
         inp = getch(1)
         if READING:
             echo(msg_reader.process_keystroke(inp))
@@ -357,22 +366,20 @@ def read_messages(msgs, new):
             if inp in (term.KEY_LEFT, u'<', u'h',
                     '\b', term.KEY_BACKSPACE):
                 READING = False
-                dirty = True
+                dirty = 1
         else:
             echo(msg_selector.process_keystroke(inp))
             # spacebar marks as read, goes to next message
             if inp in (u' ',):
-                dirty = mark_read(idx)
+                dirty = 2 if mark_read(idx) else 0
                 echo(msg_selector.move_down())
                 idx = msg_selector.selection[0]
-            # right, >, or enter moves UI
+            # right, >, or enter marks message read, moves UI
             if inp in (u'\r', term.KEY_ENTER, u'>',
                     u'l', 'L', term.KEY_RIGHT):
-                mark_read(idx)
+                dirty = 2 if mark_read(idx) else 1
                 READING = True
-                dirty = True
             elif msg_selector.moved:
                 idx = msg_selector.selection[0]
-
-    echo(term.move(term.height, 0))
+    echo(term.move(term.height, 0) + u'\r\n')
     return
