@@ -94,14 +94,13 @@ class Msg(object):
         Save message in 'Msgs' sqlite db, and record index in 'tags' db.
         """
         db_msg = DBProxy(MSGDB)
-
-        new = False
+        new = self.idx is None or self._stime is None
         # persist message record to MSGDB
         db_msg.acquire()
-        if self.idx is None:
+        if new:
             self.idx = max([int(key) for key in db_msg.keys()] or [-1]) + 1
+            self._stime = datetime.datetime.now()
             new = True
-        self._stime = datetime.datetime.now()
         db_msg['%d' % (self.idx,)] = self
         db_msg.release()
 
