@@ -349,7 +349,8 @@ def main(save_key=u'draft'):
                 echo(term.normal + lneditor.erase_border())
                 del lightbar.content[lightbar.index]
                 lightbar.move_up()
-                set_lbcontent(lightbar, get_lbcontent(lightbar, soft_newline=u' '))
+                set_lbcontent(lightbar,
+                        get_lbcontent(lightbar, soft_newline=u' '))
                 lneditor = get_lneditor(lightbar)
                 dirty = True
             else:
