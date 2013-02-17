@@ -147,9 +147,11 @@ def get_body(msg):
     echo(term.move(yn.yloc, 0) + term.clear_eol)
     if selection != u'CONtiNUE':
         return False
-    gosub('editor', 'draft')
-    msg.body = session.user.get('draft', u'')
-    return True
+    if gosub('editor', 'draft'):
+        msg.body = session.user.get('draft', u'')
+        del session.user['draft']
+        return True
+    return False
 
 
 def get_send(msg):
