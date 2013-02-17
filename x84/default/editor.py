@@ -127,6 +127,8 @@ def main(save_key=u'draft'):
               'command': (unichr(27), term.KEY_ESCAPE),
               'kill': (u'K',),
               'join': (u'J',),
+              'rubout': (unichr(8), unichr(127),
+                  unichr(23), term.KEY_BACKSPACE,),
             }
 
     def merge():
@@ -139,20 +141,17 @@ def main(save_key=u'draft'):
         # merge line editor with pager window content
         swp = lightbar.selection
         lightbar.content[lightbar.index] = (swp[0], lneditor.content)
-        set_lbcontent(lightbar, get_lbcontent(lightbar))
-        return True
         prior_length = len(lightbar.content)
         prior_position = lightbar.position
+        set_lbcontent(lightbar, get_lbcontent(lightbar))
         if len(lightbar.content) - prior_length == 0:
             echo(lightbar.refresh_row(prior_position[0]))
             return False
-        #    print 'eq'
-        #print 'go', len(lightbar.content) - prior_length
         while len(lightbar.content) - prior_length > 0:
             # hidden move-down for each appended line
             lightbar.move_down()
             prior_length += 1
-        #    print 'down'
+        return True
 
     def statusline(lightbar):
         lightbar.colors['border'] = term.red if edit else term.yellow
@@ -250,16 +249,17 @@ def main(save_key=u'draft'):
                 # switched to command mode, merge our lines
                 echo(term.normal + lneditor.erase_border())
                 merge()
+                lightbar.colors['highlight'] = term.yellow_reverse
             else:
                 # switched to edit mode, instantiate new line editor
                 lneditor = get_lneditor(lightbar)
+                lightbar.colors['highlight'] = term.red_reverse
             dirty = True
 
         # edit mode, kill line
         elif not edit and inp in keyset['kill']:
             # when 'killing' a line, make accomidations to clear
             # bottom-most row, otherwise a ghosting effect occurs
-            print lightbar.content, lightbar.index
             del lightbar.content[lightbar.index]
             set_lbcontent(lightbar, get_lbcontent(lightbar))
             if lightbar.visible_bottom > len(lightbar.content):
@@ -296,28 +296,38 @@ def main(save_key=u'draft'):
 
         # edit mode
         elif edit and inp in movement:
-            dirty = merge()
+            merge()
             if inp in (u'\r', term.KEY_ENTER):
-                if lightbar.at_bottom:
-                    idx = max([_key for (_key, _ucs) in lightbar.content])
-                    lightbar.content.append((idx + 1, u''))
+                lightbar.content.insert(lightbar.index + 1,
+                        (lightbar.selection[0] + 1, u''))
                 inp = term.KEY_DOWN
             lightbar.process_keystroke(inp)
             if lightbar.moved:
                 echo(term.normal + lneditor.erase_border())
-                # erase old line editor border and instatiate another
-                if (lightbar._vitem_lastshift != lightbar.vitem_shift):
-                    dirty = True
-                else:
-                    # just redraw row of last selection
-                    echo(lightbar.refresh_row(lightbar._vitem_lastidx))
                 lneditor = get_lneditor(lightbar)
-                if not dirty:
-                    echo(redraw_lneditor(lightbar, lneditor))
+            dirty = True
+            #    # erase old line editor border and instatiate another
+            #    if (lightbar._vitem_lastshift != lightbar.vitem_shift):
+            #        dirty = True
+            #    else:
+            #        # just redraw row of last selection
+            #        echo(lightbar.refresh_row(lightbar._vitem_lastidx))
+            #    if not dirty:
+            #        echo(redraw_lneditor(lightbar, lneditor))
 
         # edit mode -- append character / backspace
         elif edit and inp is not None:
-            # edit mode, addch
-            echo(lneditor.process_keystroke(inp))
-            if lneditor.moved:
-                echo(statusline(lightbar))
+            if (inp in keyset['rubout']
+                    and len(lneditor.content) == 0
+                    and lightbar.index > 0):
+                echo(term.normal + lneditor.erase_border())
+                del lightbar.content[lightbar.index]
+                lightbar.move_up()
+                set_lbcontent(lightbar, get_lbcontent(lightbar))
+                lneditor = get_lneditor(lightbar)
+                dirty = True
+            else:
+                # edit mode, add/delete ch
+                echo(lneditor.process_keystroke(inp))
+                if lneditor.moved:
+                    echo(statusline(lightbar))
