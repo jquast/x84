@@ -5,8 +5,11 @@ READING = False
 SEARCH_TAGS = None
 
 def mark_read(idx):
+    """ Mark message ``idx`` as read. """
     from x84.bbs import getsession
     session = getsession()
+    # pylint: disable=W0603
+    #         Using the global statement
     global ALREADY_READ
     ALREADY_READ = session.user['readmsgs']
     if idx not in ALREADY_READ:
@@ -26,6 +29,9 @@ def msg_filter(msgs):
 
         returns (msgs), (new). new contains redundant msgs
     """
+    # pylint: disable=R0914,R0912
+    #         Too many local variables
+    #         Too many branches
     from x84.bbs import list_msgs, echo, getsession, getterminal, get_msg, Ansi
     session, term = getsession(), getterminal()
     public_msgs = list_msgs()
@@ -60,7 +66,7 @@ def msg_filter(msgs):
                 # denied to read this message
                 if FILTER_PRIVATE:
                     msgs.remove(msg_id)
-                    filtered +=1
+                    filtered += 1
                     continue
         if msg_id not in ALREADY_READ:
             new.add(msg_id)
@@ -93,6 +99,7 @@ def msg_filter(msgs):
     return msgs, new
 
 def banner():
+    """ Returns string suitable for displaying banner. """
     from x84.bbs import getterminal
     term = getterminal()
     return u''.join((u'\r\n\r\n',
@@ -101,7 +108,12 @@ def banner():
         term.yellow('EAdER'),))
 
 def prompt_tags(tags):
-    from x84.bbs import DBProxy, echo, getterminal, getsession, Ansi, LineEditor
+    """ Prompt for and return valid tags from TAGDB. """
+    # pylint: disable=R0914,W0603
+    #         Too many local variables
+    #         Using the global statement
+    from x84.bbs import DBProxy, echo, getterminal, getsession
+    from x84.bbs import Ansi, LineEditor
     session, term = getsession(), getterminal()
     tagdb = DBProxy('tags')
     global FILTER_PRIVATE
@@ -150,10 +162,13 @@ def prompt_tags(tags):
 
 
 def main(tags=None):
+    """ Main procedure. """
     from x84.bbs import getsession, getterminal, echo, getch
     from x84.bbs import list_msgs
     session, term = getsession(), getterminal()
     echo(banner())
+    # pylint: disable=W0603
+    #         Using the global statement
     global ALREADY_READ
     global SEARCH_TAGS
     if tags is None:
@@ -207,6 +222,13 @@ def main(tags=None):
 
 
 def read_messages(msgs, new):
+    """
+    Provide message reader UI given message list ``msgs``,
+    with new messages in list ``new``.
+    """
+    # pylint: disable=R0914,R0912
+    #         Too many local variables
+    #         Too many branches
     from x84.bbs import timeago, get_msg, getterminal, echo
     from x84.bbs import ini, Pager, getsession, getch, Ansi
     session, term = getsession(), getterminal()
@@ -219,6 +241,8 @@ def read_messages(msgs, new):
     len_preview = len_idx + len_author + len_ago + len_subject + 4
 
     def get_header(msgs_idx):
+        """ Return list of tuples, (idx, unicodestring), suitable for Lightbar.
+        """
         import datetime
         msg_list = list()
         for idx in msgs_idx:
@@ -234,7 +258,11 @@ def read_messages(msgs, new):
         msg_list.sort()
         return msg_list
 
-    def get_selector(msgs_idx, prev_sel=None):
+    def get_selector(mailbox, prev_sel=None):
+        """
+        Provide Lightbar UI element given message mailbox returned from
+        function get_header, and prev_sel as previously instantiated Lightbar.
+        """
         from x84.bbs import Lightbar
         pos = prev_sel.position if prev_sel is not None else (0, 0)
         sel = Lightbar(
@@ -245,11 +273,14 @@ def read_messages(msgs, new):
         sel.glyphs['top-horiz'] = u''
         sel.glyphs['left-vert'] = u''
         sel.colors['highlight'] = term.yellow_reverse
-        sel.update(msgs_idx)
+        sel.update(mailbox)
         sel.position = pos
         return sel
 
     def get_reader():
+        """
+        Provide Pager UI element for message reading.
+        """
         reader_height = (term.height - (term.height / 3) - 2)
         reader_indent = 5
         reader_width = min(term.width - 1, min(term.width - reader_indent, 80))
@@ -266,6 +297,7 @@ def read_messages(msgs, new):
         return msg_reader
 
     def format_msg(reader, idx):
+        """ Format message of index ``idx`` into Pager instance ``reader``. """
         msg = get_msg(idx)
         sent = msg.stime.strftime('%A %b-%d %Y %H:%M:%S')
         return u'\r\n'.join((
@@ -288,7 +320,10 @@ def read_messages(msgs, new):
             u'', (msg.body),))
 
 
-    def get_selector_footer(mbox, new):
+    def get_selector_title(mbox, new):
+        """
+        Returns unicode string suitable for displaying as title of mailbox.
+        """
         newmsg = (term.yellow(u' ]-[ ') +
                 term.yellow_reverse(str(len(new))) +
                 term.bold_underline(u' NEW')) if len(new) else u''
@@ -297,7 +332,10 @@ def read_messages(msgs, new):
                 term.bold(u' MSG%s' % (u's' if 1 != len(mbox) else u'',)),
                 newmsg, term.yellow(u' ]'),))
 
-    def get_selector_title():
+    def get_selector_footer():
+        """
+        Returns unicode string suitable for displaying as footer of mailbox.
+        """
         return u''.join((
             term.yellow(u'- '),
             u' '.join((
@@ -309,6 +347,9 @@ def read_messages(msgs, new):
             term.yellow(u' -'),))
 
     def get_reader_footer():
+        """
+        Returns unicode string suitable for displaying as footer of reader.
+        """
         return u''.join((
             term.yellow(u'- '),
             u' '.join((
@@ -319,13 +360,16 @@ def read_messages(msgs, new):
             term.yellow(u' -'),))
 
     def refresh(reader, selector, mbox, new):
+        """
+        Returns unicode string suitable for refreshing the screen.
+        """
         if READING:
             reader.colors['border'] = term.bold_yellow
             selector.colors['border'] = term.bold_black
         else:
             reader.colors['border'] = term.bold_black
             selector.colors['border'] = term.bold_yellow
-        title = get_selector_footer(mbox, new)
+        title = get_selector_title(mbox, new)
         padd_attr = term.bold_yellow if not READING else term.bold_black
         sel_padd_right = padd_attr(
                 u'-'
@@ -340,7 +384,7 @@ def read_messages(msgs, new):
             reader.border(),
             selector.border(),
             selector.title(sel_padd_left + title + sel_padd_right),
-            selector.footer(get_selector_title()) if not READING else u'',
+            selector.footer(get_selector_footer()) if not READING else u'',
             reader.footer(get_reader_footer()) if READING else u'',
             reader.refresh(),
             ))
@@ -350,6 +394,8 @@ def read_messages(msgs, new):
     msg_selector = None
     msg_reader = None
     idx = None
+    # pylint: disable=W0603
+    #         Using the global statement
     global READING
     while (msg_selector is None and msg_reader is None
             ) or not (msg_selector.quit or msg_reader.quit):

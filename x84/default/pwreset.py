@@ -1,6 +1,4 @@
-"""
-Password reset script for x/84, http://github.com/jquast/x84
-"""
+""" Password reset script for x/84, http://github.com/jquast/x84 """
 
 from x84.bbs import getsession, getterminal, list_users, echo, getch, ini
 from x84.bbs import LineEditor, get_user
@@ -14,6 +12,11 @@ from email.mime.text import MIMEText
 
 
 def main(handle):
+    """ Main procedure. """
+    # pylint: disable=R0914,R0915,R0911
+    #         Too many local variables
+    #         Too many statements
+    #         Too many return statements
     # by request from midget; a password reset form
     session, term = getsession(), getterminal()
     session.activity = 'resetting passwd for %s' % (handle,)
@@ -35,7 +38,7 @@ def main(handle):
     if not handle in list_users():
         echo(term.bold_red(msg_nfound))
         getch()
-        return
+        return False
 
     width = ini.CFG.getint('nua', 'max_email')
     email = None
@@ -44,12 +47,12 @@ def main(handle):
         tries += 1
         if tries > 5:
             logger.warn('%r email retries exceeded', handle)
-            return
+            return False
         echo(prompt_email % (handle,))
         try_email = LineEditor(width).read()
         if try_email is None or 0 == len(try_email):
             echo(term.normal + msg_cancelled)
-            return
+            return False
 
         # fetch user record email
         email = get_user(handle).email
@@ -74,37 +77,42 @@ def main(handle):
     msg['From'] = msg_mailfrom
     msg['To'] = email
     msg['Subject'] = msg_mailsubj
+    # pylint: disable=W0703
+    #         Catching too general exception Exception
+    err = None
     try:
         smtp = smtplib.SMTP(ini.CFG.get('system', 'mail_smtphost'))
         smtp.sendmail(msg_mailfrom, [email], msg.as_string())
         smtp.quit()
-    except Exception as exception:
-        logger.exception(exception)
-        echo('\r\n\r\n' + term.bold_red(str(exception)))
-    echo(msg_sent % (email,))
+    except Exception as err:
+        logger.exception(err)
+        echo('u\r\n\r\n' + term.bold_red(str(err)) + u'\r\n')
+        getch(2)
+        return False
 
+    echo(msg_sent % (email,))
     width = len(passkey)
     email = None
     tries = 0
     while True:
         tries += 1
         if tries > 5:
-            logger.warn('%r passkey retries exceeded', handle)
-            return
+            logger.warn("passkey retries exceeded for user '%s'", handle)
+            return False
 
         echo(term.normal + u'\r\n\r\n')
         echo(prompt_passkey)
         try_passkey = LineEditor(width).read()
         if try_passkey is None or 0 == len(try_passkey):
             echo(term.normal + msg_cancelled)
-            logger.warn('%r cancelled passkey', handle)
-            return
+            logger.warn("cancelled passkey for user '%s'", handle)
+            return False
 
         if passkey == try_passkey:
             echo(term.bold_green(msg_verified))
             break
-        logger.warn('%r failed passkey %r (try: %r)', handle,
-                    passkey, try_passkey)
+        logger.warn("failed passkey for user '%s': '%s', tried '%s')",
+                handle, passkey, try_passkey)
         echo(term.bold_red(msg_wrong))
 
     set_password(user)

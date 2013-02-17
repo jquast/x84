@@ -58,9 +58,9 @@ def heading(sessions):
     """
     Given an array of sessions, return string suitable for display heading.
     """
-    from x84.bbs import getsession, getterminal, ini
+    from x84.bbs import getterminal, ini
     slen = lambda sessions: len(u'%d' % (len(sessions),))
-    session, term = getsession(), getterminal()
+    term = getterminal()
     max_user = ini.CFG.getint('nua', 'max_user')
     return u'\r\n'.join((
         u'\r\n'.join([pline.center(term.width)
@@ -113,7 +113,7 @@ def get_node(sessions):
     except ValueError:
         echo(invalid)
         return (None, None)
-    for tgt_node, (sid, attrs) in get_nodes(sessions):
+    for tgt_node, (_sid, attrs) in get_nodes(sessions):
         if tgt_node == node:
             return (tgt_node, attrs)
     echo(invalid)
@@ -219,6 +219,10 @@ def sendmsg(sessions):
 
 def main():
     """ Main procedure. """
+    # pylint: disable=R0912,R0914,R0915
+    #         Too many branches
+    #         Too many local variables
+    #         Too many statements
     from x84.bbs import getsession, getterminal, getch, echo
     session, term = getsession(), getterminal()
     ayt_lastfresh = 0

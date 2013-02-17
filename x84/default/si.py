@@ -1,6 +1,10 @@
 """ System info for x/84 BBS, https://github.com/jquast/x84 """
 
 def main ():
+    """ Main procedure. """
+    # pylint: disable=R0914,W0141
+    #         Too many local variables
+    #         Used builtin function 'map'
     from x84.bbs import getsession, getterminal, Ansi, echo, getch, from_cp437
     from x84.engine import __url__ as url
     import platform
@@ -43,22 +47,23 @@ def main ():
             + [term.normal])
     art = from_cp437(open(artfile).read()) if os.path.exists(artfile) else u''
     otxt = list(art.splitlines())
-    for n, b in enumerate(body):
-        while n > len(otxt):
+    for num, line in enumerate(body):
+        while num > len(otxt):
             otxt += [u'',]
-        otxt[n] = otxt[n][:int(term.width/2.5)] + u' ' + b
+        otxt[num] = otxt[num][:int(term.width/2.5)] + u' ' + line
     width = max([len(Ansi(line)) for line in otxt])
     height = len(otxt)
-    numStars = int((term.width *term.height) *.002)
+    num_stars = int((term.width *term.height) *.002)
     stars = dict([(n, (random.choice('\\|/-'),
       float(random.choice(range(term.width))),
-      float(random.choice(range(term.height))))) for n in range(numStars)])
+      float(random.choice(range(term.height))))) for n in range(num_stars)])
     melting = {}
     plusStar = False
-    tm_out, tMIN, tMAX, tSTEP = 0.08, 0.01, 2.0, .01
+    tm_out, tm_min, tm_max, tm_step = 0.08, 0.01, 2.0, .01
     wind = (0.7, 0.1, 0.01, 0.01)
 
     def refresh ():
+        """ Refresh screen and return top-left (x, y) location. """
         echo(u'\r\n\r\n')
         if term.width < width:
             echo(u''.join((
@@ -80,26 +85,27 @@ def main ():
                 u'press any key...',)))
             getch ()
             return (None, None)
-        x = (term.width /2) -(width /2)
-        y = (term.height /2) -(height /2)
+        xloc = (term.width /2) -(width /2)
+        yloc = (term.height /2) -(height /2)
         echo(u''.join((
             term.normal,
             (u'\r\n' + term.clear_eol) * term.height,
-            u''.join([term.move(y + abs_y, x) + line
+            u''.join([term.move(yloc + abs_y, xloc) + line
                 for abs_y, line in enumerate(otxt)]),)))
-        return x, y
+        return xloc, yloc
 
     txt_x, txt_y = refresh ()
     if (txt_x, txt_y) == (None, None):
         return
 
-    def charAtPos(y, x, txt_y, txt_x):
-        return (u' ' if y-txt_y < 0 or y-txt_y >= height
-                or x-txt_x < 0 or x-txt_x >= len(otxt[y-txt_y])
-                else otxt[y-txt_y][x-txt_x])
+    def charAtPos(yloc, xloc, txt_y, txt_x):
+        """ Return art (y, x) for location """
+        return (u' ' if yloc-txt_y < 0 or yloc-txt_y >= height
+                or xloc-txt_x < 0 or xloc-txt_x >= len(otxt[yloc-txt_y])
+                else otxt[yloc-txt_y][xloc-txt_x])
 
-    def iterWind(xs, ys, xd, yd):
-        # an easterly wind
+    def iter_wind(xs, ys, xd, yd):
+        """ An easterly Wind """
         xs += xd; ys += yd
         if xs <= .5: xd = random.choice([0.01, 0.015, 0.02])
         elif xs >= 1: xd = random.choice([-0.01, -0.015, -0.02])
@@ -107,28 +113,30 @@ def main ():
         elif ys >= 0.1: yd = random.choice([-0.01, -0.015, -0.02])
         return xs, ys, xd, yd
 
-    def iterStar(c, x, y):
-        if c == '\\':
+    def iter_star(char, xloc, yloc):
+        """ Given char and current position, apply wind and return new
+        char and new position. """
+        if char == '\\':
             char = '|'
-        elif c == '|':
+        elif char == '|':
             char = '/'
-        elif c == '/':
+        elif char == '/':
             char = '-'
-        elif c == '-':
+        elif char == '-':
             char = '\\'
-        x += wind[0]
-        y += wind[1]
-        if x < 1 or x > term.width:
-            x = (1.0 if x > term.width
+        xloc += wind[0]
+        yloc += wind[1]
+        if xloc < 1 or xloc > term.width:
+            xloc = (1.0 if xloc > term.width
                     else float(term.width))
-            y = (float(random.choice
+            yloc = (float(random.choice
                 (range(term.height))))
-        if y < 1 or y > term.height:
-            y = (1.0 if y > term.height
+        if yloc < 1 or yloc > term.height:
+            yloc = (1.0 if yloc > term.height
                     else float(term.height))
-            x = (float(random.choice
+            xloc = (float(random.choice
                 (range(term.width))))
-        return char, x, y
+        return char, xloc, yloc
 
     def erase(s):
         if plusStar:
@@ -147,7 +155,7 @@ def main ():
               charAtPos(y, x, txt_y, txt_x),)))
             melted(y, x)
 
-    def drawStar (star, x, y):
+    def draw_star (star, x, y):
         ch = charAtPos(int(y), int(x), txt_y, txt_x)
         if ch != ' ':
             melting[(int(y), int(x))] = len(melt_colors)
@@ -157,11 +165,11 @@ def main ():
     with term.hidden_cursor():
         while txt_x is not None and txt_y is not None:
             if session.poll_event('refresh'):
-                numStars = int(numStars)
+                num_stars = int(num_stars)
                 stars = dict([(n, (random.choice('\\|/-'),
                   float(random.choice(range(term.width))),
                   float(random.choice(range(term.height)))))
-                  for n in range(numStars)])
+                  for n in range(num_stars)])
                 otxt = list(art.splitlines())
                 for n, b in enumerate(body):
                     while n > len(otxt):
@@ -171,25 +179,25 @@ def main ():
                 continue
             inp = getch(tm_out)
             if inp in (term.KEY_UP, 'k'):
-                if tm_out >= tMIN:
-                    tm_out -= tSTEP
+                if tm_out >= tm_min:
+                    tm_out -= tm_step
             elif inp in (term.KEY_DOWN, 'j'):
-                if tm_out <= tMAX:
-                    tm_out += tSTEP
+                if tm_out <= tm_max:
+                    tm_out += tm_step
             elif inp in (term.KEY_LEFT, 'h'):
-                if numStars > 2:
-                    numStars = int(numStars * .5)
+                if num_stars > 2:
+                    num_stars = int(num_stars * .5)
                     stars = dict([(n, (random.choice('\\|/-'),
                       float(random.choice(range(term.width))),
                       float(random.choice(range(term.height)))))
-                      for n in range(numStars)])
+                      for n in range(num_stars)])
             elif inp in (term.KEY_RIGHT, 'l'):
-                if numStars < (term.width * term.height) / 4:
-                    numStars = int(numStars * 1.5)
+                if num_stars < (term.width * term.height) / 4:
+                    num_stars = int(num_stars * 1.5)
                     stars = dict([(n, (random.choice('\\|/-'),
                       float(random.choice(range(term.width))),
                       float(random.choice(range(term.height)))))
-                      for n in range(numStars)])
+                      for n in range(num_stars)])
             elif inp in (u'*',) and not plusStar:
                 plusStar = True
             elif inp in (u'*',) and plusStar:
@@ -200,8 +208,8 @@ def main ():
                 echo(term.move(term.height, 0))
                 break
             melt ()
-            for starKey, starVal in stars.items():
-                erase (starKey)
-                stars[starKey] = iterStar(*starVal)
-                drawStar (*stars[starKey])
-            wind = iterWind(*wind)
+            for star_key, star_val in stars.items():
+                erase (star_key)
+                stars[star_key] = iter_star(*star_val)
+                draw_star (*stars[star_key])
+            wind = iter_wind(*wind)
