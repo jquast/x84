@@ -374,10 +374,11 @@ def read_messages(msgs, new):
                 dirty = 1
         else:
             echo(msg_selector.process_keystroke(inp))
+            idx = msg_selector.selection[0]
             # spacebar marks as read, goes to next message
             if inp in (u' ',):
-                dirty = 2 if mark_read(idx) else 0
-                echo(msg_selector.move_down())
+                dirty = 2 if mark_read(idx) else 1
+                msg_selector.move_down()
                 idx = msg_selector.selection[0]
             # right, >, or enter marks message read, moves UI
             if inp in (u'\r', term.KEY_ENTER, u'>',
@@ -385,6 +386,6 @@ def read_messages(msgs, new):
                 dirty = 2 if mark_read(idx) else 1
                 READING = True
             elif msg_selector.moved:
-                idx = msg_selector.selection[0]
+                dirty = 1
     echo(term.move(term.height, 0) + u'\r\n')
     return
