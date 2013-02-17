@@ -6,8 +6,7 @@ editor script for X/84, https://github.com/jquast/x84
 # There isn't any actual multi-line editor, just this script
 # that drives a LineEditor and a Lightbar.
 
-
-def get_lbcontent(lightbar):
+def get_lbcontent(lightbar, soft_newline=u'\n'):
     """
     Returns ucs string for content of Lightbar instance, ``lightbar``.
     """
@@ -23,7 +22,7 @@ def get_lbcontent(lightbar):
         else:
             lines[-1] = lines[-1].rstrip() + value[1]
     for lno, ucs in enumerate(lines):
-        wrapped = u'\n'.join(Ansi(ucs)
+        wrapped = soft_newline.join(Ansi(ucs)
                 .wrap(lightbar.visible_width).splitlines())
         lines[lno] = wrapped
     return u'\r\n'.join(lines)
@@ -42,15 +41,11 @@ def set_lbcontent(lightbar, ucs):
         lines.append(u'')
         ucs = ucs[len(u'\r\n'):]
     lines.extend(ucs.split(u'\r\n'))
-    #while ucs.endswith(u'\r\n'):
-    #    lines.append(u'')
-    #    ucs = ucs[:-len(u'\r\n')]
-    width = lightbar.visible_width
     content = list()
     row = 0
     for line in lines:
         joined = u' '.join(line.split('\n'))
-        wrapped = Ansi(joined).wrap(width).splitlines()
+        wrapped = Ansi(joined).wrap(lightbar.visible_width).splitlines()
         for linewrap in wrapped:
             content.append((row, linewrap))
             row += 1
@@ -345,14 +340,6 @@ def main(save_key=u'draft'):
                 echo(term.normal + lneditor.erase_border())
                 lneditor = get_lneditor(lightbar)
             dirty = True
-            #    # erase old line editor border and instatiate another
-            #    if (lightbar._vitem_lastshift != lightbar.vitem_shift):
-            #        dirty = True
-            #    else:
-            #        # just redraw row of last selection
-            #        echo(lightbar.refresh_row(lightbar._vitem_lastidx))
-            #    if not dirty:
-            #        echo(redraw_lneditor(lightbar, lneditor))
 
         # edit mode -- append character / backspace
         elif edit and inp is not None:
@@ -362,7 +349,7 @@ def main(save_key=u'draft'):
                 echo(term.normal + lneditor.erase_border())
                 del lightbar.content[lightbar.index]
                 lightbar.move_up()
-                set_lbcontent(lightbar, get_lbcontent(lightbar))
+                set_lbcontent(lightbar, get_lbcontent(lightbar, soft_newline=u' '))
                 lneditor = get_lneditor(lightbar)
                 dirty = True
             else:
