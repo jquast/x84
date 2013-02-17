@@ -197,9 +197,8 @@ def _loop(telnetd):
         for client, pipe, lock in terminals():
             # poll about and kick off idle users
             if client.idle() > timeout:
-                err = 'Timeout: %ds' % (client.idle())
+                err = 'timeout: %ds' % (client.idle())
                 pipe.send(('exception', Disconnected(err)))
-                unregister(client, pipe, lock)
                 continue
 
             # send input to subprocess,

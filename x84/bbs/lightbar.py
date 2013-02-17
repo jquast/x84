@@ -141,23 +141,24 @@ class Lightbar (AnsiWindow):
         self._selected = False
         self._vitem_lastidx = self.vitem_idx
         self._vitem_lastshift = self.vitem_shift
+        rstr = u''
         if key in self.keyset['home']:
-            return self.move_home()
+            rstr = self.move_home()
         elif key in self.keyset['end']:
-            return self.move_end()
+            rstr = self.move_end()
         elif key in self.keyset['pgup']:
-            return self.move_pageup()
+            rstr = self.move_pageup()
         elif key in self.keyset['pgdown']:
-            return self.move_pagedown()
+            rstr = self.move_pagedown()
         elif key in self.keyset['up']:
-            return self.move_up()
+            rstr = self.move_up()
         elif key in self.keyset['down']:
-            return self.move_down()
+            rstr = self.move_down()
         elif key in self.keyset['enter']:
             self.selected = True
         elif key in self.keyset['exit']:
             self._quit = True
-        return u''
+        return rstr
 
     def read(self):
         """

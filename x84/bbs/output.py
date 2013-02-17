@@ -16,6 +16,8 @@ ANSI_WILLMOVE = re.compile(r'\033\[[HJuABCDEF]')
 ANSI_WONTMOVE = re.compile(r'\033\[[sm]')
 
 class AnsiWrapper(textwrap.TextWrapper):
+    # pylint: disable=C0111
+    #         Missing docstring
     def _wrap_chunks(self, chunks):
         """
         ANSI-string safe varient of wrap_chunks,
@@ -54,10 +56,10 @@ class AnsiWrapper(textwrap.TextWrapper):
 AnsiWrapper.__doc__ = textwrap.TextWrapper.__doc__
 
 def ansiwrap(ucs, width=70, **kwargs):
-        """Wrap a single paragraph of Unicode Ansi sequences,
-        returning a list of wrapped lines.
-        """
-        return AnsiWrapper(width=width, **kwargs).wrap(ucs)
+    """Wrap a single paragraph of Unicode Ansi sequences,
+    returning a list of wrapped lines.
+    """
+    return AnsiWrapper(width=width, **kwargs).wrap(ucs)
 
 def echo(ucs):
     """

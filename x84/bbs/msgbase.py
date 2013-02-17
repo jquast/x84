@@ -58,6 +58,8 @@ class Msg(object):
     explicitly set, but children are automaticly populated into 'threads' of
     messages replied to through the send() method.
     """
+    # pylint: disable=R0902
+    #         Too many instance attributes
     idx = None
 
     @property
@@ -87,7 +89,9 @@ class Msg(object):
         self.subject = subject
         self.body = body
         self.tags = set()
-
+        # reply-to tracking
+        self.children = set()
+        self.parent = None
 
     def save(self):
         """

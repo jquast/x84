@@ -3,7 +3,6 @@
 """
 
 
-
 def warning(msg, cpsec=10.0, min_sec=3.0, split_loc=3):
     """
     Display a 2-tone warning to user with a dynamic pause
@@ -23,6 +22,8 @@ def set_handle(user):
     """
     Prompt for a user.handle, minumum length.
     """
+    #pylint: disable=R0914
+    #        Too many local variables
     from x84.bbs import getterminal, echo, ini, LineEditor, find_user
     import os  # os.path.sep not allowed in nicks
     import re
@@ -34,6 +35,9 @@ def set_handle(user):
     msg_invalid = u'IllEGAl USERNAME'
     width = ini.CFG.getint('nua', 'max_user')
     min_user = ini.CFG.getint('nua', 'min_user')
+    # pylint: disable=E1103
+    #         Instance of '_Chainmap' has no 'split' member
+    #         (but some types could not be inferred)
     invalid_nicks = ini.CFG.get('nua', 'invalid_handles').split()
     handle_validation = re.compile(ini.CFG.get('nua', 'handle_validation'))
     while True:
@@ -86,9 +90,11 @@ def set_password(user):
     """
     Prompt for user.password, minimum length.
     """
+    #pylint: disable=R0914
+    #        Too many local variables
     from x84.bbs import getterminal, echo, ini, LineEditor
     term = getterminal()
-    HIDDEN =  u'x'
+    hidden_ch = u'x'
     prompt_password = u'password: '
     prompt_verify = u'   again: '
     msg_empty = u'ENtER A PASSWORd!'
@@ -98,18 +104,18 @@ def set_password(user):
     min_pass = ini.CFG.getint('nua', 'min_pass')
     while True:
         echo(u'\r\n\r\n' + term.clear_eol + term.normal + prompt_password)
-        le = LineEditor(width)
-        le.hidden = HIDDEN
-        password = le.read()
+        led = LineEditor(width)
+        led.hidden = hidden_ch
+        password = led.read()
         if password == u'' or password is None:
             warning(msg_empty)
         elif len(password) < min_pass:
             warning(msg_tooshort % min_pass)
         else:
             echo(u'\r\n\r\n' + term.clear_eol + term.normal + prompt_verify)
-            le = LineEditor(width)
-            le.hidden = HIDDEN
-            verify = le.read()
+            led = LineEditor(width)
+            led.hidden = hidden_ch
+            verify = led.read()
             if password != verify:
                 warning(msg_unmatched)
                 continue
@@ -126,22 +132,23 @@ def prompt_ok():
     prompt_confirm = u'EVERYthiNG lOOk Ok ?'
     prompt_continue = u'YES (CONtiNUE)'
     prompt_chg = u'NO! (ChANGE)'
-
-    def prompt_ok_dumb(user):
+    def prompt_ok_dumb():
+        """ Dummy terminal prompt for confirm/cancel. """
         echo('\r\n\r\n%s\r\n' % (prompt_confirm,))
         echo('1 - %s\r\n' % (prompt_continue,))
         echo('2 - %s\r\n\r\n' % (prompt_chg,))
         echo('select (1, 2) --> ')
         while True:
-            ch = getch()
-            if ch == u'1':
+            inp = getch()
+            if inp == u'1':
                 return True
-            elif ch == u'2':
+            elif inp == u'2':
                 return False
     if session.env.get('TERM') == 'unknown':
         return prompt_ok_dumb()
     sel = Selector(yloc=term.height - 1, xloc=5,
-                   width=term.width - 10, left=prompt_continue, right=prompt_chg)
+                   width=term.width - 10,
+                   left=prompt_continue, right=prompt_chg)
     echo(term.normal)
     echo(term.move(term.height - 2, 0) + term.clear_eol)
     echo(prompt_confirm.center(term.width - 1) + '\r\n')
@@ -153,6 +160,9 @@ def prompt_ok():
 
 
 def main(handle=u''):
+    """ Main procedure. """
+    #pylint: disable=R0914
+    #        Too many local variables
     from x84.bbs import getsession, getterminal, echo, ini, User, goto
     from x84.bbs import showcp437
     session, term = getsession(), getterminal()
@@ -160,6 +170,9 @@ def main(handle=u''):
     session.activity = u'Applying for an account'
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'nua.asc')
     msg_header = u'NEW USER APPliCAtiON'
+    # pylint: disable=E1103
+    #         Instance of '_Chainmap' has no 'split' member
+    #         (but some types could not be inferred)
     newcmds = ini.CFG.get('matrix', 'newcmds').split()
     topscript = ini.CFG.get('matrix', 'topscript')
 

@@ -2,13 +2,11 @@
 Weather retriever for x/84 https://github.com/jquast/x84
 """
 from xml.etree import cElementTree as ET
-import StringIO
 import requests
-import time
-# TODO: weather.get('WeatherIcon') ascii art
 
 
 def disp_msg(msg):
+    """ Display unicode string ``msg`` in yellow. """
     from x84.bbs import getterminal, echo
     term = getterminal()
     echo(u''.join((u'\r\n\r\n',
@@ -17,6 +15,7 @@ def disp_msg(msg):
 
 
 def disp_notfound():
+    """ Display 'bad request -/- not found in red. """
     from x84.bbs import getsession, getterminal, echo, getch
     term = getterminal()
     echo(u''.join((u'\r\n\r\n',
@@ -28,7 +27,8 @@ def disp_notfound():
 
 
 def disp_found(num):
-    from x84.bbs import getsession, getterminal, echo, getch
+    """ Display 'N locations discovered' in yellow/white. """
+    from x84.bbs import getterminal, echo
     term = getterminal()
     echo(u''.join((u'\r',
         term.bold_white(u'%d' % (num,)),
@@ -37,13 +37,14 @@ def disp_found(num):
 
 
 def disp_search_help():
+    """ Display searchbar usage. """
     from x84.bbs import getterminal, echo
     term = getterminal()
     msg_enterzip = (
             term.yellow(u'ENtER US '),
             term.bold_yellow(u'POStAl COdE'),
             term.yellow(u', OR NEARESt '),
-            term.yellow(u'iNtERNAtiONAl CitY. '),
+            term.bold_yellow(u'iNtERNAtiONAl CitY. '),
             term.bold_yellow(u'('),
             term.underline_yellow('Escape'),
             term.bold_white(u':'),
@@ -53,12 +54,16 @@ def disp_search_help():
 
 
 def do_fetch(postal):
+    """
+    Given postal code, fetch and return xml root node of weather results.
+    """
+    from x84.bbs import echo, getch, getterminal
     import StringIO
+    term = getterminal()
     disp_msg('fEtChiNG')
     resp = requests.get(u'http://apple.accuweather.com'
             + u'/adcbin/apple/Apple_Weather_Data.asp',
             params=(('zipcode', postal),))
-    weather = dict()
     if resp is None:
         disp_notfound()
         return None
@@ -77,8 +82,11 @@ def do_fetch(postal):
 
 
 def do_search(search):
+    """
+    Given any arbitrary string, return list of possible matching locations.
+    """
     import StringIO
-    from x84.bbs import echo, getch, getterminal
+    from x84.bbs import echo, getch
     disp_msg('SEARChiNG')
     resp = requests.get(u'http://apple.accuweather.com'
             + u'/adcbin/apple/Apple_find_city.asp',
@@ -105,6 +113,10 @@ def do_search(search):
 
 
 def parse_weather(root):
+    """
+    Parse and return dictionary describing today's weather
+    from weather xml root node.
+    """
     weather = dict()
     # parse all current conditions from XML, value is cdata.
     for elem in root.find('CurrentConditions'):
@@ -116,6 +128,10 @@ def parse_weather(root):
 
 
 def parse_forecast(root):
+    """
+    Parse and return dictionary describing weather forecast
+    from weather xml root node.
+    """
     forecast = dict()
     for elem in root.find('Forecast'):
         if elem.tag == 'day':
@@ -127,6 +143,9 @@ def parse_forecast(root):
 
 
 def get_zipsearch(zipcode=u''):
+    """
+    Prompt user for zipcode or international city.
+    """
     from x84.bbs import getterminal, LineEditor, echo
     term = getterminal()
     echo(u''.join((u'\r\n\r\n',
@@ -137,6 +156,9 @@ def get_zipsearch(zipcode=u''):
 
 
 def chose_location_dummy(locations):
+    """
+    dummy pager for chosing a location
+    """
     from x84.bbs import getterminal, echo, getch, LineEditor
     term = getterminal()
     msg_enteridx = (
@@ -152,6 +174,7 @@ def chose_location_dummy(locations):
             term.reverse_yellow(':'),)
     max_nwidth = len('%d' % (len(locations) - 1,))
     def disp_entry(num, loc):
+        """ Display City, State.  """
         return u''.join((
             term.bold_yellow(u'['),
             u'%*d' % (max_nwidth, num),
@@ -187,6 +210,9 @@ def chose_location_dummy(locations):
 
 
 def chose_location_lightbar(locations):
+    """
+    Lightbar pager for chosing a location.
+    """
     from x84.bbs import getterminal, echo, Lightbar
     term = getterminal()
     fmt = u'%(city)s, %(state)s'
@@ -225,6 +251,9 @@ def chose_location_lightbar(locations):
 
 
 def chose_location(locations):
+    """
+    Prompt user to chose a location.
+    """
     from x84.bbs import getterminal, getsession, echo
     session, term = getsession(), getterminal()
     assert len(locations) > 0, (
@@ -241,6 +270,9 @@ def chose_location(locations):
 
 
 def location_prompt(location, msg='WEAthER'):
+    """
+    Prompt user to display weather or forecast.
+    """
     from x84.bbs import getterminal, echo, getch
     term = getterminal()
     echo(u''.join((u'\r\n\r\n',
@@ -259,9 +291,9 @@ def location_prompt(location, msg='WEAthER'):
             return True
 
 def disp_forecast(forecast):
+    """ Display weather forecast.  """
     from x84.bbs import getterminal, echo, Ansi, getch
     term = getterminal()
-    width = min(60, term.width *.8)
     lno = 1
     echo(u'\r\n')
     for key in sorted(forecast.keys()):
@@ -294,8 +326,7 @@ def disp_forecast(forecast):
                     term.bold_yellow_underline(fc.get('Real_Feel_Low', u'?')),)
         echo(u'\r\n')
         lno += 1
-        for line in Ansi(rstr).wrap(min(60, int(term.width * .8))
-                ).split('\r\n'):
+        for line in Ansi(rstr).wrap(term.width).splitlines():
             lno += 1
             echo(line + u'\r\n')
             if 0 == lno % (term.height - 1):
@@ -306,9 +337,9 @@ def disp_forecast(forecast):
 
 
 def disp_weather(weather):
-    from x84.bbs import getterminal, echo, Ansi, getch
+    """ Display today's weather. """
+    from x84.bbs import getterminal, echo, Ansi
     term = getterminal()
-    width = min(60, term.width * .8)
     rstr = u''.join((u'At ',
         term.yellow(u'%s%s' % (weather.get('City'),
             u', %s' % (weather['State'],) if ('State' in weather
@@ -337,6 +368,7 @@ def disp_weather(weather):
 
 
 def main():
+    """ Main routine. """
     from x84.bbs import getsession, getterminal, echo, getch
     session, term = getsession(), getterminal()
     session.activity = 'Weather'

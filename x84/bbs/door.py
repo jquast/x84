@@ -15,8 +15,7 @@ class Door(object):
     """
     Spawns a subprocess and pipes input and output over bbs session.
     """
-    # pylint: disable=R0902,R0903
-    #        Too many instance attributes (8/7)
+    # pylint: disable=R0903
     #        Too few public methods (1/2)
     time_ipoll = 0.05
     time_opoll = 0.05
@@ -24,14 +23,15 @@ class Door(object):
     timeout = 1984
     master_fd = None
     decode_cp437 = False
-    _TAP = False  # for debugging
 
     def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
                  env_term=None, env_path=None, env_home=None):
+        # pylint: disable=R0913
+        #        Too many arguments (7/5)
         """
         cmd, args = argv[0], argv[1:]
         lang, term, and env_path become LANG, TERM, and PATH environment
-        variables. when term is None, the session terminal type is used.  When
+        variables. When term is None, the session terminal type is used.  When
         env_path is None, the .ini 'env_path' value of section [door] is used.
         When env_home is None, $HOME of the main process is used.
         """
@@ -121,9 +121,18 @@ class Door(object):
         return res
 
     def _loop(self):
+        # pylint: disable=R0914
+        #         Too many local variables (21/15)
         """
         Poll input and outpout of ptys,
         """
+        def masterfd_isready():
+            """
+            returns True if bytes waiting on master fd, meaning
+            this utf8 byte must really be the last for a while.
+            """
+            return (self.master_fd in
+                    select.select([self.master_fd,], (), (), 0)[0])
         import codecs
         from x84.bbs import getsession, getterminal, echo
         from x84.bbs.cp437 import CP437
@@ -138,8 +147,6 @@ class Door(object):
                 data = os.read(self.master_fd, self.blocksize)
                 if 0 == len(data):
                     break
-                if self._TAP:
-                    logger.debug('<-- %r', data)
                 # output to terminal as utf8, unless we specify decode_cp437
                 # for special dos-emulated doors such as lord.
                 if self.decode_cp437:
@@ -147,39 +154,28 @@ class Door(object):
                         (CP437[ord(ch)] for ch in data)))
                 else:
                     decoded = list()
-                    def ready_master_fd():
-                        """
-                        returns True if bytes waiting on master fd, meaning
-                        this utf8 byte must really be the last for a while.
-                        """
-                        return (self.master_fd in
-                                select.select([self.master_fd,], (), (), 0)[0])
                     for num, byte in enumerate(data):
-                        final = (num + 1) == len(data) and not ready_master_fd()
+                        final = ((num + 1) == len(data)
+                                and not masterfd_isready())
                         ucs = utf8_decoder.decode(byte, final)
                         if ucs is not None:
                             decoded.append(ucs)
                     echo(u''.join(decoded))
 
-
-
             # block up to self.time_ipoll for keyboard input
             event, data = session.read_events(
                 ('refresh', 'input',), self.time_ipoll)
-            if event == 'refresh':
-                if data[0] == 'resize':
-                    logger.debug('send TIOCSWINSZ: %dx%d',
-                                 term.width, term.height)
-                    fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ,
-                                struct.pack('HHHH', term.height, term.width,
-                                            0, 0))
+
+            if event == 'refresh' and data[0] == 'refresh':
+                logger.debug('send TIOCSWINSZ: %dx%d',
+                        term.width, term.height)
+                fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ,
+                        struct.pack('HHHH', term.height, term.width, 0, 0))
             elif event == 'input':
                 # hmm.. what to send, depending on TERM? interesting ..
                 n_written = os.write(self.master_fd, data)
                 if n_written == 0:
                     logger.warn('fight 0-byte write; exit, right?')
-                elif self._TAP:
-                    logger.debug('--> %r' % (data[:n_written],))
                 if n_written != len(data):
                     # we wrote none or some of our keyboard input, but not all.
                     # re-buffer remaining bytes back into session for next poll

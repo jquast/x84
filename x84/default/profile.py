@@ -151,7 +151,7 @@ def process_keystroke(lightbar, inp, user):
         for line in Ansi(about_dot_plan).wrap(
                 term.width / 3).splitlines():
             echo(line.center(term.width).rstrip() + u'\r\n')
-        echo('\r\n\r\nPRESS ANY kEY ...')
+        echo(u'\r\n\r\nPRESS ANY kEY ...')
         getch()
         if is_self:
             gosub('editor', '.plan')
@@ -299,7 +299,7 @@ def refresh(lightbar):
                      (u'x', u'X.PERt MOdE',),
                      (u'q', u'Q.Uit',)))
     echo(u'\r\n\r\n')
-    echo(u'art request...'.center(term.width))
+    echo(u'art ?!?'.center(term.width))
     echo(u'\r\n\r\n')
     echo(term.bold_blue_underline(u'// '))
     echo(u'\r\n' * lightbar.height)

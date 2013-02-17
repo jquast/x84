@@ -530,6 +530,8 @@ class TelnetClient(object):
         """
         Process a DO command option received by DE.
         """
+        # pylint: disable=R0912
+        #         TelnetClient._handle_do: Too many branches (13/12)
         # if any pending WILL options were send, they have been received
         self._note_reply_pending(option, False)
         if option == ECHO:
@@ -702,6 +704,8 @@ class TelnetClient(object):
         """
         Process a WONT command option received by DE.
         """
+        # pylint: disable=R0912
+        #         TelnetClient._handle_wont: Too many branches (13/12)
         self._note_reply_pending(option, False)
         if option == ECHO:
             if self.check_remote_option(ECHO) in (True, UNKNOWN):

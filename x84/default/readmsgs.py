@@ -1,8 +1,7 @@
-""" msg reader for x/84, https://github.com/jquast/x84 """
-# this boolean allows sysop to remove filter using /nofilter
+""" message reader for x/84, https://github.com/jquast/x84 """
 FILTER_PRIVATE = True
 ALREADY_READ = set()
-READING = False # set true when keystrokes are sent to msg_reader
+READING = False
 SEARCH_TAGS = None
 
 def mark_read(idx):
@@ -10,19 +9,20 @@ def mark_read(idx):
     session = getsession()
     global ALREADY_READ
     ALREADY_READ = session.user['readmsgs']
-    marked = idx not in ALREADY_READ
-    ALREADY_READ.add(idx)
-    session.user['readmsgs'] = ALREADY_READ
-    return marked
+    if idx not in ALREADY_READ:
+        ALREADY_READ.add(idx)
+        session.user['readmsgs'] = ALREADY_READ
+        return True
+    return False
 
 def msg_filter(msgs):
     """
         filter all matching messages. userland implementation
         of private/public messaging by using the 'tags' database.
         'new', or unread messages are marked by idx matching
-        session.user['readmsgs']. Finally, 'group' tagging, so that
-        users of group 'impure' are allowed to read messages tagged
-        by 'impure', regardless of recipient or 'public'.
+        session.user['readmsgs'] when read. Finally, implement 'group'
+        tagging, so that users of group 'impure' are allowed to read
+        messages tagged by 'impure', regardless of recipient or 'public'.
 
         returns (msgs), (new). new contains redundant msgs
     """

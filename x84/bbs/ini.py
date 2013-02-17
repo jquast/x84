@@ -7,6 +7,10 @@ import os.path
 
 CFG = None
 
+# pylint: disable=R0915,R0912,W0603
+#         Too many statements
+#         Too many branches
+#         Using the global statement
 
 def init(lookup_bbs, lookup_log):
     """
@@ -17,8 +21,6 @@ def init(lookup_bbs, lookup_log):
     If none our found, defaults are initialized, and the last item of each
     tuple is created.
     """
-    # pylint: disable=R0912
-    #        Too many branches (14/12)
     import ConfigParser
     root = logging.getLogger()
 
@@ -81,8 +83,6 @@ def init(lookup_bbs, lookup_log):
         except IOError, err:
             root.error('%s', err)
 
-    # pylint: disable=W0603
-    #        Using the global statement
     global CFG
     CFG = cfg_bbs
 
@@ -92,9 +92,6 @@ def init_bbs_ini():
     Returns ConfigParser instance of bbs system defaults
     """
     import ConfigParser
-    # used to construct default e-mail
-    # pylint: disable=R0915
-    #         Too many statements (51/50)
     import getpass
     import socket
     cfg_bbs = ConfigParser.SafeConfigParser()

@@ -1,4 +1,7 @@
+""" Debug example script for x/84, https://github.com/jquast/x84 """
+
 def main():
+    """ Main procedure. """
     # by default, nothing is done.
     from x84.bbs import getsession
     assert 'sysop' in getsession().user.groups
@@ -11,17 +14,20 @@ def main():
     #return merge_mystic()
 
 def nothing():
+    """ Do nothing. """
     from x84.bbs import echo, getch
     echo(u'Nothing to do.')
     getch(3)
 
 def merge_mystic():
+    """ Example script to merge csv records into userbase. """
+    # pylint: disable=R0914
+    #         Too many local variables
     from x84.bbs import ini, echo, getch, User, get_user, find_user
     import os
-    # you must modify this variable to WRITE changes,
-    # this csv format; 'user:pass:origin:email\n',
-    # in iso8859-1 encoding.
-    WRITE = False
+    # you must modify variable ``do_write`` to commit changes,
+    # csv format; 'user:pass:origin:email\n', in iso8859-1 encoding.
+    do_write = False
     inp_file = os.path.join(
             ini.CFG.get('system', 'datapath'),
             'mystic_dat.csv')
@@ -39,7 +45,7 @@ def merge_mystic():
             '%d ' % (len(_password)),
             '%s ' % (_location),
             '%s ' % (_email),)))
-	match = find_user(handle)
+        match = find_user(handle)
         if match is None:
             user = User(handle)
             user.location = _location
@@ -48,7 +54,7 @@ def merge_mystic():
         else:
             user = get_user(match)
         user.groups.add('old-school')
-        if WRITE:
+        if do_write:
             user.save()
     echo('\r\n\r\n%d lines processed.' % (lno,))
     getch()

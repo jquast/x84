@@ -7,15 +7,7 @@
     user = my@email-addr.ess
     pass = my-plaintext-password
 """
-import xml.etree.ElementTree
 import threading
-import requests
-import logging
-import time
-import os
-
-from x84.bbs import ini, echo, getch, getsession, getterminal, Ansi, DBProxy
-from x84.bbs import Pager, timeago, Selector, from_cp437, LineEditor
 
 # bbs-scene.org API is 50-character limit max
 MAX_INPUT = 50
@@ -29,10 +21,16 @@ WAIT_FETCH = 5
 
 
 class FetchUpdates(threading.Thread):
+    """ Fetch bbs-scene.org oneliners as a background thread. """
     url = 'http://bbs-scene.org/api/onelinerz?limit=%d' % (XML_HISTORY,)
     content = list()
 
     def run(self):
+        import logging
+        import time
+        import requests
+        import xml.etree.ElementTree
+        from x84.bbs import ini
         logger = logging.getLogger()
         usernm = ini.CFG.get('bbs-scene', 'user')
         passwd = ini.CFG.get('bbs-scene', 'pass')
@@ -64,8 +62,11 @@ class FetchUpdates(threading.Thread):
 
 
 def wait_for(thread):
-    # for dummy or small terminals, wait until a request
-    # thread has gotten content before continuing, *up to t WAIT_FETCH seconds
+    """
+    for dummy or small terminals, wait until a request thread has
+    gotten content before continuing, *up to t WAIT_FETCH seconds.
+    """
+    from x84.bbs import echo, getch
     if thread.is_alive():
         echo(u"\r\n\r\nfetching bbs-scene.org oneliners .. "
              "(%s)s\b\b%s" % (' ' * 2, '\b' * 2,))
@@ -73,14 +74,19 @@ def wait_for(thread):
             echo(u'%2d%s' % (WAIT_FETCH - num - 1, '\b' * 2,))
             if not thread.is_alive():
                 return
-            thread.join(1)
+            thread.join(1) # block 1 second on thread
             if getch(0) == u'q':
-                return
+                return     # allow cancel using 'q'
 
 
 def chk_thread(thread):
-    # check if bbs-scene.org thread finished, if so, farm
-    # its data and send updates if there is one,
+    """
+    check if bbs-scene.org thread finished, if so, farm
+    its data and send updates via event 'oneliner_update' if there
+    are any.
+    """
+    from x84.bbs import getsession, DBProxy
+    import logging
     logger = logging.getLogger()
     session = getsession()
     if thread is not None and not thread.is_alive():
@@ -100,7 +106,11 @@ def chk_thread(thread):
 
 
 def add_oneline(msg):
+    """
+    Add a oneliner to the local database.
+    """
     import time
+    from x84.bbs import getsession, DBProxy, ini
     session = getsession()
     udb = DBProxy('oneliner')
     udb.acquire()
@@ -116,6 +126,9 @@ def add_oneline(msg):
 
 
 def get_oltxt():
+    """ Return unicode terminal string of oneliners. """
+    import time
+    from x84.bbs import getterminal, DBProxy, timeago, Ansi
     term = getterminal()
     colors = (term.bold_white, term.bold_green, term.bold_blue)
     hist = [(int(k), v) for (k, v) in DBProxy('oneliner').iteritems()]
@@ -138,6 +151,8 @@ def get_oltxt():
 
 
 def get_selector(selection=u'No'):
+    """ Return yes/no selector """
+    from x84.bbs import getterminal, Selector
     term = getterminal()
     selector = Selector(
         yloc=term.height - 1, xloc=(term.width / 2) - 25,
@@ -150,6 +165,8 @@ def get_selector(selection=u'No'):
 
 
 def get_pager():
+    """ Returns pager window for oneliners content. """
+    from x84.bbs import getterminal, Pager
     term = getterminal()
     xloc = max(3, (term.width / 2) - 50)
     width = min(term.width - 6, 100)
@@ -159,6 +176,9 @@ def get_pager():
 
 
 def banner():
+    """ Return banner """
+    from x84.bbs import getterminal, Ansi, from_cp437
+    import os
     term = getterminal()
     output = u''
     output += u'\r\n\r\n'
@@ -176,6 +196,8 @@ def banner():
 
 
 def redraw(pager, selector):
+    """ Redraw pager and selector """
+    from x84.bbs import getsession, getterminal
     session, term = getsession(), getterminal()
     session.flush_event('oneliner_update')
     pager.update(u'\n'.join(get_oltxt()))
@@ -193,6 +215,8 @@ def redraw(pager, selector):
 
 
 def dummy_pager():
+    """ Display oneliners for dummy terminals and prompt to saysomething """
+    from x84.bbs import getterminal, Ansi, echo, getch
     term = getterminal()
     tail = term.height - 4
     indent = 3
@@ -204,21 +228,24 @@ def dummy_pager():
     echo((u'\r\n' + term.normal).join(buf[tail * -1:]))
     echo(prompt_ole)
     while True:
-        ch = getch()
-        if ch in (u'n', u'N', u'q', term.KEY_EXIT):
+        inp = getch()
+        if inp in (u'n', u'N', u'q', term.KEY_EXIT):
             break
-        if ch in (u'y', u'Y'):
+        if inp in (u'y', u'Y'):
             return saysomething(dumb=True)
     return
 
 
 def saysomething(dumb=True):
+    """
+    Prompt user to post oneliner, also prompt user to post
+    to bbs-scene.org if configured, returning background Thread.
+    """
+    import time
+    from x84.bbs import getsession, getterminal, echo, LineEditor, ini
     session, term = getsession(), getterminal()
-    prompt_api = u'MAkE AN ASS Of YOURSElf ON bbS-SCENE.ORG?!'
     prompt_say = u'SAY WhAt ?! '
     # heard_msg = u'YOUR MESSAGE hAS bEEN VOiCEd.'
-    heard_api = u'YOUR MESSAGE hAS bEEN brOAdCAStEd.'
-    logger = logging.getLogger()
 
     yloc = term.height - 3
     xloc = max(0, ((term.width / 2) - (MAX_INPUT / 2)))
@@ -241,16 +268,34 @@ def saysomething(dumb=True):
     if not ini.CFG.has_section('bbs-scene'):
         add_oneline(oneliner.strip())
         return None
+    return post_bbs_scene(oneliner, dumb)
+
+def post_bbs_scene(oneliner, dumb=True):
+    """
+    Prompt for posting to bbs-scene.org oneliners API,
+    returning thread if posting occured.
+    """
+    #pylint: disable=R0914
+    #        Too many local variables
+    import logging
+    import xml.etree.ElementTree
+    import requests
+    from x84.bbs import echo, getch, getterminal, getsession, ini
+    logger = logging.getLogger()
+    session, term = getsession(), getterminal()
+    prompt_api = u'MAkE AN ASS Of YOURSElf ON bbS-SCENE.ORG?!'
+    heard_api = u'YOUR MESSAGE hAS bEEN brOAdCAStEd.'
+    yloc = term.height - 3
     if dumb:
         # post to bbs-scene.org ?
         echo('\r\n\r\n' + term.bold_blue(prompt_api) + u' [yn]')
-        ch = getch(1)
-        while ch not in (u'y', u'Y', u'n', u'N'):
-            ch = getch()
-        if ch in (u'n', u'N'):
+        inp = getch(1)
+        while inp not in (u'y', u'Y', u'n', u'N'):
+            inp = getch()
+        if inp in (u'n', u'N'):
             #  no? then just post locally
             add_oneline(oneliner.strip())
-            return
+            return None
     else:
         # fancy prompt, 'post to bbs-scene.org?'
         sel = get_selector()
@@ -280,13 +325,14 @@ def saysomething(dumb=True):
     if (req.status_code != 200 or
             (xml.etree.ElementTree.XML(req.content)
                 .find('success').text != 'true')):
-        echo(u'\r\n\r\n%srequest failed,\r\n', term.clear_eol)
+        echo(u'\r\n\r\n%srequest failed,\r\n' %(term.clear_eol,))
         echo(u'%r' % (req.content,))
-        echo(u'\r\n\r\n%s(code : %s).\r\n', term.clear_eol, req.status_code)
-        echo(u'\r\n%sPress any key ..', term.clear_eol)
+        echo(u'\r\n\r\n%s(code: %s).\r\n' % (
+            term.clear_eol, req.status_code,))
+        echo(u'\r\n%sPress any key ..' % (term.clear_eol,))
         logger.warn('bbs-scene.org api request failed')
         getch()
-        return
+        return None
     logger.info('bbs-scene.org api (%d): %r/%r', req.status_code,
                 session.user.handle, oneliner.strip())
     thread = FetchUpdates()
@@ -303,6 +349,10 @@ def saysomething(dumb=True):
 
 
 def main():
+    """ Main procedure. """
+    #pylint: disable=R0912
+    #        Too many branches
+    from x84.bbs import getsession, getterminal, ini, echo, getch
     session, term = getsession(), getterminal()
     pager, selector = get_pager(), get_selector()
 

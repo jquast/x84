@@ -35,9 +35,10 @@ class Session(object):
     """
     A BBS Session engine, started by .run().
     """
-    # pylint: disable=R0902,R0904
-    #        Too many instance attributes (29/7)
-    #        Too many public methods (25/20)
+    # pylint: disable=R0902,R0904,R0913
+    #        Too many instance attributes
+    #        Too many public methods
+    #        Too many arguments
     TRIM_CP437 = bytes(chr(14) + chr(15))
     _encoding = None
     _decoder = None
@@ -205,6 +206,36 @@ class Session(object):
         #        Method could be a function
         return os.getpid()
 
+    def __error_recovery(self):
+        """
+        jojo's invention; recover from a general exception by using
+        a script stack, and resuming last good script.
+        """
+        logger = logging.getLogger()
+        if 0 != len(self._script_stack):
+            # recover from exception
+            fault = self._script_stack.pop()
+            oper = 'RESUME' if len(self._script_stack) else 'STOP'
+            stop = bool(0 == len(self._script_stack))
+            msg = (u'%s %safter general exception in %s.' % (
+                oper, (self._script_stack[-1][0] + u' ')
+                if len(self._script_stack) else u' ', fault[0],))
+            logger.info(msg)
+            self.write(u'\r\n\r\n')
+            if stop:
+                self.write(self.terminal.red_reverse('stop'))
+            else:
+                self.write(self.terminal.bold_green('continue'))
+                self.write(u' ' + self.terminal.bold_cyan(
+                    self._script_stack[-1][0]))
+            self.write(u' after general exception in %s\r\n' % (
+                self.terminal.bold_cyan(fault[0]),))
+            # give time for exception to write down pipe before
+            # continuing or exiting, esp. exiting, otherwise
+            # STOP message is not often fully received
+            time.sleep(2)
+
+
     def run(self):
         """
         Begin main execution flow.
@@ -213,35 +244,6 @@ class Session(object):
         """
         from x84.bbs.exception import Goto, Disconnected
         logger = logging.getLogger()
-
-        def error_recovery():
-            """
-            jojo's invention; recover from a general exception by using
-            a script stack, and resuming last good script.
-            """
-            if 0 != len(self._script_stack):
-                # recover from exception
-                fault = self._script_stack.pop()
-                oper = 'RESUME' if len(self._script_stack) else 'STOP'
-                stop = bool(0 == len(self._script_stack))
-                msg = (u'%s %safter general exception in %s.' % (
-                    oper, (self._script_stack[-1][0] + u' ')
-                    if len(self._script_stack) else u' ', fault[0],))
-                logger.info(msg)
-                self.write(u'\r\n\r\n')
-                if stop:
-                    self.write(self.terminal.red_reverse('stop'))
-                else:
-                    self.write(self.terminal.bold_green('continue'))
-                    self.write(u' ' + self.terminal.bold_cyan(
-                        self._script_stack[-1][0]))
-                self.write(u' after general exception in %s\r\n' % (
-                    self.terminal.bold_cyan(fault[0]),))
-                # give time for exception to write down pipe before
-                # continuing or exiting, esp. exiting, otherwise
-                # STOP message is not often fully received
-                time.sleep(2)
-
         while len(self._script_stack):
             logger.debug('script_stack: %r', self._script_stack)
             try:
@@ -252,7 +254,7 @@ class Session(object):
                 self._script_stack = [err[0] + tuple(err[1:])]
                 continue
             except Disconnected, err:
-                logger.info('User disconnect.')
+                logger.info('Disconnected: %s', err)
                 self.close()
                 return None
             except Exception, err:
@@ -269,7 +271,7 @@ class Session(object):
                     logger.error(etxt.rstrip())
                     if self._show_traceback:
                         self.write(etxt.rstrip() + u'\r\n')
-            error_recovery()
+            self.__error_recovery()
         logger.info('End of script stack.')
         self.close()
         return None

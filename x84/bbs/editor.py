@@ -376,21 +376,24 @@ class ScrollingEditor(AnsiWindow):
         Process the keystroke received by read method and take action.
         """
         self._quit = False
+        rstr = u''
         if keystroke in self.keyset['refresh']:
-            return self.refresh()
+            rstr = self.refresh()
         elif keystroke in self.keyset['backspace']:
-            return self.backspace()
+            rstr = self.backspace()
         elif keystroke in self.keyset['backword']:
-            return self.backword()
+            rstr = self.backword()
         elif keystroke in self.keyset['enter']:
             self._carriage_returned = True
-            return u''
+            rstr = u''
         elif keystroke in self.keyset['exit']:
             self._quit = True
-            return u''
+            rstr = u''
         elif type(keystroke) is int:
-            return u''
-        return self.add(keystroke)
+            rstr = u''
+        else:
+            rstr = self.add(keystroke)
+        return rstr
 
     def read(self):
         """
@@ -478,10 +481,10 @@ class ScrollingEditor(AnsiWindow):
         self.content = self.content[:-1]
         if (self.is_scrolled and (self._horiz_pos
                     < (self.visible_width - self.scroll_amt))):
-                # shift left,
-                self._horiz_shift -= self.scroll_amt
-                self._horiz_pos += self.scroll_amt
-                rstr += self.refresh()
+            # shift left,
+            self._horiz_shift -= self.scroll_amt
+            self._horiz_pos += self.scroll_amt
+            rstr += self.refresh()
         rstr += self.fixate(-1)
         rstr += ' \b'
         self._horiz_pos -= 1

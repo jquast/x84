@@ -102,7 +102,7 @@ def main():
             echo(unichr(27) + u'[23;0t')
             echo(goodbye_msg)
             getch(1.5)
-            disconnect('logoff by user.')
+            disconnect('logoff.')
         elif inp in (u'n', u'N', term.KEY_DOWN, term.KEY_NPAGE,):
             idx = refresh_automsg(idx + 1)
             refresh_prompt(prompt_msg)

@@ -26,6 +26,7 @@ import sauce
 
 
 def fancy_blue(char, blurb=u''):
+    """ Diplay '(char)blurb' in fancy blue. """
     from x84.bbs import getterminal
     term = getterminal()
     return u''.join((
@@ -36,6 +37,7 @@ def fancy_blue(char, blurb=u''):
 
 
 def fancy_green(char, blurb=u''):
+    """ Diplay '(char)blurb' in fancy green. """
     from x84.bbs import getterminal
     term = getterminal()
     return u''.join((
@@ -46,10 +48,12 @@ def fancy_green(char, blurb=u''):
 
 
 class FetchUpdates(threading.Thread):
+    """ Fetch bbs-scene.org bbs list as thread. """
     url = 'http://bbs-scene.org/api/bbslist.php'
     content = list()
 
     def run(self):
+        """ Begin fetch, results are stored in self.content """
         from x84.bbs import ini
         logger = logging.getLogger()
         usernm = ini.CFG.get('bbs-scene', 'user')
@@ -99,8 +103,7 @@ def chk_thread(thread):
     'dirty' if thread completed and new entries were found, 'None' if thread
     completed and no no entries were discovered.
     """
-    from x84.bbs import getsession, getterminal, DBProxy
-    session, term = getsession(), getterminal()
+    from x84.bbs import getsession, DBProxy
     if thread is None or thread.is_alive():
         return False
 
@@ -133,11 +136,14 @@ def get_bbslist(max_len=23):
     """
     Returns tuple, (bbs_key, display_string), grouped by bbs software !
     """
-    from x84.bbs import getsession, getterminal, DBProxy
-    session, term = getsession(), getterminal()
+    from x84.bbs import getsession, DBProxy
+    session = getsession()
     session.flush_event('bbslist_update')
 
     def get_bysoftware():
+        """
+        Group bbs list by software
+        """
         by_group = dict()
         for (key, bbs) in DBProxy('bbslist').iteritems():
             grp = bbs['software']
@@ -147,6 +153,10 @@ def get_bbslist(max_len=23):
                 grp = grp.title().split()[0]
             if 'citadel' in grp.lower():
                 grp = 'Citadel'
+            elif 'mystic' in grp.lower():
+                grp = 'Mystic'
+            elif 'synchronet' in grp.lower():
+                grp = 'Synchronet'
             if not grp in by_group:
                 by_group[grp] = [(key, bbs)]
                 continue
@@ -154,7 +164,9 @@ def get_bbslist(max_len=23):
         return by_group.items()
 
     output = list()
-    for idx, (bbs_sw, bbs_keys) in enumerate(sorted(get_bysoftware())):
+    # pylint: disable=W0612
+    #         Unused variable 'idx'
+    for _idx, (bbs_sw, bbs_keys) in enumerate(sorted(get_bysoftware())):
         soft_line = bbs_sw.rjust(max_len)[:max_len]
         output.append((None, soft_line))
         for key, bbs in sorted(bbs_keys):
@@ -177,9 +189,9 @@ def view_ansi(key):
         passwd = ini.CFG.get('bbs-scene', 'pass')
         req = requests.get(ansiurl, auth=(usernm, passwd))
         if req.status_code != 200:
-            echo(u'request failed,\r\n')
+            echo(u'\r\n\r\nrequest failed,\r\n')
             echo(u'%r' % (req.content,))
-            echo(u'\r\n\r\n(code : %s).\r\n', req.status_code)
+            echo(u'\r\n\r\n(code : %s).\r\n' % (req.status_code,))
             echo(u'\r\nPress any key ..')
             logger.warn('ansiurl request failed: %s' % (ansiurl,))
             getch()
@@ -196,24 +208,30 @@ def view_ansi(key):
     getch()
 
 
+def calc_rating(ratings, outof=4):
+    """ Given set of ratings, return ucs of '***' star rating. """
+    if 0 == len(ratings):
+        return u'-'
+    total = sum([_rating for (_handle, _rating) in ratings])
+    stars = int(math.floor((total / len(ratings))))
+    return u'%*s' % (outof, u'*' * stars)
+
+
 def get_bbsinfo(key, active=True):
     """
     given a bbs key, fetch detailed information for use in pager
     """
+    #pylint: disable=R0914
+    #        Too many local variables.
     from x84.bbs import getterminal, DBProxy, timeago
-    term = getterminal()
-    bbs = DBProxy('bbslist')[key]
-
-    def calc_rating(ratings, outof=4):
-        if 0 == len(ratings):
-            return u'-'
-        total = sum([_rating for (_handle, _rating) in ratings])
-        stars = int(math.floor((total / len(ratings))))
-        return u'%*s' % (outof, u'*' * stars)
-
     rstr = u''
+    term = getterminal()
     highlight = term.bold_blue if active else term.blue
     lowlight = term.bold_black
+    bbs = DBProxy('bbslist')[key]
+    epoch = time.mktime(time.strptime(bbs['timestamp'], '%Y-%m-%d %H:%M:%S'))
+    ratings = DBProxy('bbslist', 'ratings')[key]
+    comments = DBProxy('bbslist', 'comments')[key]
     rstr += (lowlight('bbSNAME')
              + highlight(u': ')
              + bbs['bbsname']
@@ -230,12 +248,10 @@ def get_bbsinfo(key, active=True):
     rstr += (lowlight('SOftWARE')
              + highlight(': ')
              + bbs['software'] + '\r\n')
-    epoch = time.mktime(time.strptime(bbs['timestamp'], '%Y-%m-%d %H:%M:%S'))
     rstr += (lowlight('tiMEStAMP')
              + highlight(':')
              + lowlight(timeago(time.time() - epoch))
              + ' ago\r\n')
-    ratings = DBProxy('bbslist', 'ratings')[key]
     rstr += (lowlight('RAtiNG') + highlight(': ')
              + '%s (%2.2f of %d)\r\n' % (
                  highlight(calc_rating(ratings)),
@@ -243,7 +259,6 @@ def get_bbsinfo(key, active=True):
                  sum([_rating for (_handle, _rating) in ratings])
                  / len(ratings), len(ratings)))
     rstr += u'\r\n' + bbs['notes']
-    comments = DBProxy('bbslist', 'comments')[key]
     for handle, comment in comments:
         rstr += '\r\n\r\n' + lowlight(handle)
         rstr += highlight(': ')
@@ -251,7 +266,7 @@ def get_bbsinfo(key, active=True):
     return rstr
 
 
-def get_swinfo(entry, pager, active=True):
+def get_swinfo(entry, pager):
     """
     given a normalized bbs software name,
     fetch a description paragraph for use in pager
@@ -331,24 +346,23 @@ def get_swinfo(entry, pager, active=True):
 
 
 def get_ui(position=None):
+    """
+    Returns user interface (lightbar, pager).
+    Optional argument position is tuple position of prior lightbar instance.
+    """
     from x84.bbs import getterminal, Lightbar, Pager
     term = getterminal()
-    banner_height = 7
     assert term.height > 10 and term.width >= 40
-    height = max(10, term.height - banner_height)
-    width = max(40, int(term.width * .98))
-    yloc = term.height - height
     # +-+ +----+
     # |lb |pager
     # +-+ +----+
-    spacer = 0
-    lb_width = int(width * .3)
-    pg_width = width - (lb_width)
-    lb_xloc = (term.width / 2) - (width / 2)
-    pg_xloc = lb_xloc + lb_width + spacer
-    pg_width = term.width - pg_xloc
-    lightbar = Lightbar(height, lb_width, yloc, lb_xloc)
-    pager = Pager(height, pg_width, yloc, pg_xloc)
+    height = term.height - 7
+    lb_width = int(term.width * .3)
+    pg_width = term.width - (lb_width)
+    lb_xloc = (term.width / 2) - (term.width / 2)
+    pg_xloc = lb_xloc + lb_width
+    lightbar = Lightbar(height, lb_width, (term.height - height), lb_xloc)
+    pager = Pager(height, pg_width, (term.height - height), pg_xloc)
     pager.ypadding = 2
     pager.xpadding = 2
     lightbar.update(get_bbslist(max_len=lightbar.visible_width))
@@ -361,6 +375,7 @@ def get_ui(position=None):
 
 
 def banner():
+    """ Display banner/art. """
     from x84.bbs import getterminal
     term = getterminal()
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'bbslist.asc')
@@ -372,6 +387,9 @@ def banner():
 
 
 def redraw_pager(pager, selection, active=True):
+    """
+    Display bbs information in pager window for given selection.
+    """
     from x84.bbs import getterminal, DBProxy
     term = getterminal()
     output = u''
@@ -381,7 +399,7 @@ def redraw_pager(pager, selection, active=True):
     pager.move_home()
     key, entry = selection
     if key is None:
-        output += get_swinfo((entry or u'?').strip(), pager, active)
+        output += get_swinfo((entry or u'?').strip(), pager)
         output += pager.footer(u'-'
                 + fancy_green('a', 'dd') + u' -')
     else:
@@ -410,6 +428,9 @@ def redraw_pager(pager, selection, active=True):
 
 
 def redraw_lightbar(lightbar, active=True):
+    """
+    Display bbs listing in lightbar.
+    """
     from x84.bbs import getterminal
     term = getterminal()
     lightbar.colors['border'] = term.bold_green if active else term.bold_black
@@ -436,21 +457,67 @@ def redraw_lightbar(lightbar, active=True):
 
 
 def redraw(pager, lightbar, leftright):
+    """
+    Redraw pager and lightbar.
+    """
     return (redraw_pager(pager,
                          selection=lightbar.selection,
                          active=(leftright == 1))
             + redraw_lightbar(lightbar, active=(leftright == 0)))
 
 
-def dummy_pager():
-    from x84.bbs import getterminal, echo, getch, Ansi, LineEditor, DBProxy
+def more(cont=False):
+    """
+    Returns True if user 'q'uit; otherwise False
+    when prompting is complete (moar/next/whatever)
+    """
+    from x84.bbs import echo, getch, Ansi, getterminal, LineEditor, DBProxy
+    prompt_key = u'\r\n\r\nENtER BBS iD: '
+    msg_badkey = u'\r\n\r\nbbS id iNVAliD!'
     term = getterminal()
+    prompt = u', '.join(fancy_blue(char, blurb)
+                        for char, blurb in
+                        (('i', 'NfO',),
+                         ('a', 'dd',),
+                         ('c', 'OMMENt',),
+                         ('r', 'AtE',),
+                         ('t', 'ElNEt',),
+                         ('v', 'ANSi'),
+                         ('q', 'Uit',)))
+    if cont:
+        prompt += u', ' + fancy_blue(' ', 'more')
+    prompt += u': '
+    while True:
+        echo('\r\n' + Ansi(prompt).wrap(term.width - (term.width / 3)))
+        inp = getch()
+        if inp in (u'q', 'Q'):
+            return True
+        elif inp is not None and type(inp) is not int:
+            if cont and inp == u' ':
+                echo('\r\n\r\n')
+                return False
+            if inp.lower() in u'acrtviACRTVI':
+                # these keystrokes require a bbs key argument,
+                # prompt the user for one
+                echo(prompt_key)
+                key = LineEditor(5).read()
+                if (key is None or 0 == len(key.strip())
+                        or not key in DBProxy('bbslist')):
+                    echo(msg_badkey)
+                    continue
+                process_keystroke(inp, key)
+
+def dummy_pager():
+    """
+    Provide interface without pager/lightbar.
+    """
+    #pylint: disable=R0912
+    #        Too many branches
+    from x84.bbs import getterminal, echo, getch, Ansi
+    term = getterminal()
+    msg_header = u'// bbS liSt'
     hindent = 2
     vindent = 5
-    prompt_key = u'\r\n\r\nENtER BBS iD: '
-    # prompt_pak = u'\r\n\r\nPRESS ANY kEY ..'
-    msg_badkey = u'\r\n\r\nbbS id iNVAliD!'
-    msg_header = u'// bbS liSt'
     nlines = 0
     bbslist = get_bbslist()
     echo(u'\r\n' + msg_header.center(term.width).rstrip() + '\r\n\r\n')
@@ -464,44 +531,6 @@ def dummy_pager():
             elif inp in (u'a', 'A'):
                 process_keystroke(inp)
                 break
-
-    def more(cont=False):
-        """
-        Returns True if user 'q'uit; otherwise False
-        when prompting is complete (moar/next/whatever)
-        """
-        prompt = u', '.join(fancy_blue(char, blurb)
-                            for char, blurb in
-                            (('i', 'NfO',),
-                             ('a', 'dd',),
-                             ('c', 'OMMENt',),
-                             ('r', 'AtE',),
-                             ('t', 'ElNEt',),
-                             ('v', 'ANSi'),
-                             ('q', 'Uit',)))
-        if cont:
-            prompt += u', ' + fancy_blue(' ', 'more')
-        prompt += u': '
-        while True:
-            echo('\r\n' + Ansi(prompt).wrap(term.width - (term.width / 3)))
-            inp = getch()
-            if inp in (u'q', 'Q'):
-                return True
-            elif inp is not None and type(inp) is not int:
-                if cont and inp == u' ':
-                    echo('\r\n\r\n')
-                    return False
-                if inp.lower() in u'acrtviACRTVI':
-                    # these keystrokes require a bbs key argument,
-                    # prompt the user for one
-                    echo(prompt_key)
-                    key = LineEditor(5).read()
-                    if (key is None or 0 == len(key.strip())
-                            or not key in DBProxy('bbslist')):
-                        echo(msg_badkey)
-                        continue
-                    process_keystroke(inp, key)
-
     while True:
         for (key, line) in bbslist:
             if key is None:  # bbs software
@@ -525,6 +554,12 @@ def dummy_pager():
 
 
 def add_bbs():
+    """
+    Prompt user for details and to add bbs to list.
+    """
+    #pylint: disable=R0914,R0915
+    #        Too many local variables
+    #        Too many statements
     from x84.bbs import getsession, getterminal, echo, LineEditor, DBProxy, ini
     from x84.bbs import getch
     session, term = getsession(), getterminal()
@@ -534,20 +569,20 @@ def add_bbs():
     saved_msg = u'\r\n\r\nSAVED AS RECORd id %s.'
     logger = logging.getLogger()
     bbs = dict()
-    for key in DB_KEYS:
-        if key == 'timestamp':
+    for bkey in DB_KEYS:
+        if bkey == 'timestamp':
             value = time.strftime('%Y-%m-%d %H:%M:%S')
-            bbs[key] = value
+            bbs[bkey] = value
             continue
-        elif key == 'ansi':
+        elif bkey == 'ansi':
             # todo: upload ansi with xmodem .. lol !?
             value = u''
             continue
-        splice = len(key) - (len(key) / 3)
+        splice = len(bkey) - (len(bkey) / 3)
         prefix = (u'\r\n\r\n  '
-                  + (term.bold_red('* ') if key in XML_REQNOTNULL else u'')
-                  + term.bold_blue(key[:splice])
-                  + term.bold_black(key[splice:])
+                  + (term.bold_red('* ') if bkey in XML_REQNOTNULL else u'')
+                  + term.bold_blue(bkey[:splice])
+                  + term.bold_black(bkey[splice:])
                   + term.bold_white(': '))
         led = LineEditor(40)  # !?
         led.highlight = term.green_reverse
@@ -556,17 +591,17 @@ def add_bbs():
             value = led.read()
             if value is not None and (value.strip().lower() == 'quit'):
                 return
-            if key in XML_REQNOTNULL:
+            if bkey in XML_REQNOTNULL:
                 if value is None or 0 == len(value.strip()):
                     echo(term.bold_red(empty_msg))
                     echo(u'\r\n' + cancel_msg)
                     continue
-            if key in ('port') and value is None or 0 == len(value):
+            if bkey in ('port') and value is None or 0 == len(value):
                 value = '23'
             # TODO: telnet connect test, of course !
-            bbs[key] = value
+            bbs[bkey] = value
             break
-    key = max([int(key) for key in DBProxy('bbslist').keys()] or [0]) + 1
+    key = max([int(_key) for _key in DBProxy('bbslist').keys()] or [0]) + 1
     DBProxy('bbslist')[key] = bbs
     DBProxy('bbslist', 'comments')[key] = list()
     DBProxy('bbslist', 'ratings')[key] = list()
@@ -588,9 +623,9 @@ def add_bbs():
                 }
         req = requests.post(posturl, auth=(usernm, passwd), data=data)
         if req.status_code != 200:
-            echo(u'request failed,\r\n')
+            echo(u'\r\n\r\nrequest failed,\r\n')
             echo(u'%r' % (req.content,))
-            echo(u'\r\n\r\n(code : %s).\r\n', req.status_code)
+            echo(u'\r\n\r\n(code : %s).\r\n' %(req.status_code,))
             echo(u'\r\nPress any key ..')
             logger.warn('bbs post failed: %s' % (posturl,))
             getch()
@@ -605,6 +640,7 @@ def add_bbs():
 
 
 def process_keystroke(inp, key=None):
+    """ Process general keystroke and call routines.  """
     from x84.bbs import getsession, DBProxy, gosub, echo
     session = getsession()
     if inp is None:
@@ -633,6 +669,9 @@ def process_keystroke(inp, key=None):
 
 
 def add_comment(key):
+    """ Prompt user to add a comment about a bbs. """
+    #pylint: disable=R0914
+    #        Too many local variables.
     from x84.bbs import getsession, getterminal, echo, DBProxy, LineEditor
     from x84.bbs import getch
     session, term = getsession(), getterminal()
@@ -643,26 +682,30 @@ def add_comment(key):
     comment = LineEditor(max(10, term.width - len(prompt_comment) - 5)).read()
     if comment is None or 0 == len(comment.strip()):
         return
-    entry = (session.handle, comment)
+    new_entry = (session.handle, comment)
     comments = DBProxy('bbslist', 'comments')
     comments.acquire()
     existing = comments[key]
-    if session.handle in (nick for (nick, cmt) in comments[key]):
+    if session.handle in (_nick for (_nick, _cmt) in comments[key]):
+        # change existing comment,
         echo(prompt_chg)
         if getch() not in (u'y', u'Y'):
             comments.release()
             return
         # re-define list without existing entry, + new entry
-        comments[key] = [(_nick, cmt) for (_nick, cmd) in existing
-                         if session.handle != _nick] + [entry]
+        comments[key] = [(_enick, _ecmt) for (_enick, _ecmt) in existing
+                         if session.handle != _enick] + [new_entry]
         comments.release()
         return
     # re-define as existing list + new entry
-    comments[key] = existing + [entry]
+    comments[key] = existing + [new_entry]
     comments.release()
 
 
 def rate_bbs(key):
+    """ Prompt user to rate a bbs. """
+    #pylint: disable=R0914
+    #        Too many local variables
     from x84.bbs import getsession, getterminal, echo, LineEditor, DBProxy
     from x84.bbs import getch
     session, term = getsession(), getterminal()
@@ -691,7 +734,7 @@ def rate_bbs(key):
             ratings.release()
             return
         # re-define list without existing entry, + new entry
-        ratings[key] = [(__handle, _rating)
+        ratings[key] = [(__handle, __rating)
                         for (__handle, __rating) in ratings[key]
                         if session.handle != __handle] + [entry]
         ratings.release()
@@ -702,6 +745,11 @@ def rate_bbs(key):
 
 
 def main():
+    """ Main procedure. """
+    #pylint: disable=R0914,R0912,R0915
+    #        Too many local variables
+    #        Too many branches
+    #        Too many statements
     from x84.bbs import getsession, getterminal, echo, ini, getch, gosub
     from x84.bbs import DBProxy
     session, term = getsession(), getterminal()

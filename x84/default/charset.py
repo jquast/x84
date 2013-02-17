@@ -28,6 +28,9 @@ def get_selector(selection):
 
 
 def main():
+    """ Main procedure. """
+    #pylint: disable=R0912
+    #        Too many branches
     from x84.bbs import getsession, getterminal, echo, getch, Ansi, from_cp437
     session, term = getsession(), getterminal()
     session.activity = u'Selecting chracter set'
@@ -58,7 +61,9 @@ def main():
 
     art = (from_cp437(open(artfile).read()).splitlines()
             if os.path.exists(artfile) else [u''])
+
     def refresh(sel):
+        """ Refresh art and yes/no prompt, ``sel``. """
         session.flush_event('refresh')
         session.encoding = selector.selection
         if sel.selection == 'utf8':

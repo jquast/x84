@@ -7,11 +7,12 @@ import time
 POLL_KEY = 0.05 # blocking ;; how often to poll keyboard
 POLL_OUT = 0.25 # seconds elapsed before screen update, prevents flood
 
-
 CHANNEL = None
 NICKS = dict()
+EXIT = False
 
 def show_help():
+    """ return string suitable for response to /help. """
     return u'\n'.join((
         u'   /join #channel',
         u'   /act mesg',
@@ -21,32 +22,40 @@ def show_help():
         u'   /whois handle',))
 
 def process(mesg):
+    """
+    Process a command recieved by event system. and return string
+    suitable for displaying in chat window.
+    """
     from x84.bbs import getsession
     session = getsession()
     sid, tgt_channel, (handle, cmd, args) = mesg
-    global CHANNEL, NICKS
+    ucs = u''
+    # pylint: disable=W0602
+    # Using global for 'NICKS' but no assignment is done
+    global NICKS
     if (CHANNEL != tgt_channel and 'sysop' not in session.user.groups):
-        return
+        ucs = u''
     elif cmd == 'join':
         if handle not in NICKS:
             NICKS[handle] = sid
-            return show_join(handle, sid, tgt_channel)
+            ucs = show_join(handle, sid, tgt_channel)
     elif handle not in NICKS:
         NICKS[handle] = sid
     elif cmd == 'part':
         if handle in NICKS:
             del NICKS[handle]
-        return show_part(handle, sid, tgt_channel, args)
+        ucs = show_part(handle, sid, tgt_channel, args)
     elif cmd == 'say':
-        return show_say(handle, tgt_channel, args)
+        ucs = show_say(handle, tgt_channel, args)
     elif cmd == 'act':
-        return show_act(handle, tgt_channel, args)
+        ucs = show_act(handle, tgt_channel, args)
     else:
-        return u'unhandled: %r' % (mesg,)
-    return None
+        ucs = u'unhandled: %r' % (mesg,)
+    return ucs
 
 
-def show_act(handle, mesg):
+def show_act(handle, tgt_channel, mesg):
+    """ return terminal sequence for /act performed by handle. """
     from x84.bbs import getsession, getterminal
     session, term = getsession(), getterminal()
     return u''.join((
@@ -60,6 +69,7 @@ def show_act(handle, mesg):
 
 
 def show_join(handle, sid, chan):
+    """ return terminal sequence for /join performed by handle. """
     from x84.bbs import getsession, getterminal
     session, term = getsession(), getterminal()
     return u''.join((
@@ -74,6 +84,7 @@ def show_join(handle, sid, chan):
 
 
 def show_part(handle, sid, chan, reason):
+    """ return terminal sequence for /part performed by handle. """
     from x84.bbs import getsession, getterminal
     session, term = getsession(), getterminal()
     return u''.join((
@@ -88,6 +99,7 @@ def show_part(handle, sid, chan, reason):
         u' (%s)' % (reason,) if reason and 0 != len(reason) else u'',))
 
 def show_whois(attrs):
+    """ return terminal sequence for /whois result. """
     from x84.bbs import getsession, getterminal, timeago
     session, term = getsession(), getterminal()
     return u''.join((
@@ -109,6 +121,7 @@ def show_whois(attrs):
         ))
 
 def show_nicks(handles):
+    """ return terminal sequence for /users result. """
     from x84.bbs import getterminal
     term = getterminal()
     return u''.join((
@@ -119,6 +132,7 @@ def show_nicks(handles):
         u', '.join(handles) + u'\n',))
 
 def show_say(handle, tgt_channel, mesg):
+    """ return terminal sequence for /say performed by handle. """
     from x84.bbs import getsession, getterminal, get_user
     session, term = getsession(), getterminal()
     return u''.join((
@@ -136,6 +150,7 @@ def show_say(handle, tgt_channel, mesg):
         mesg,))
 
 def get_inputbar(pager):
+    """ Return ScrollingEditor for use as inputbar. """
     from x84.bbs import getterminal, ScrollingEditor
     term = getterminal()
     width = pager.visible_width - 2
@@ -148,6 +163,7 @@ def get_inputbar(pager):
     return ibar
 
 def get_pager(pager=None):
+    """ Return Pager for use as chat window. """
     from x84.bbs import getterminal, Pager
     term = getterminal()
     height = (term.height - 4)
@@ -167,11 +183,15 @@ def get_pager(pager=None):
 
 
 def main(channel=None, caller=None):
+    """ Main procedure. """
+    # pylint: disable=R0914,R0912,W0603
+    #         Too many local variables
+    #         Too many branches
+    #         Using the global statement
     from x84.bbs import getsession, getterminal, getch, echo
     session, term = getsession(), getterminal()
-    global CHANNEL, EXIT, NICKS
+    global CHANNEL, NICKS
     CHANNEL = '#partyline' if channel is None else channel
-    EXIT = False
     NICKS = dict()
 
     # sysop repy_to is -1 to force user, otherwise prompt
@@ -188,13 +208,14 @@ def main(channel=None, caller=None):
             term.bold(u']'),
             )))
         while True:
-            ch = getch()
-            if str(ch).lower() == 'y':
+            inp = getch()
+            if inp in (u'y', u'Y'):
                 break
-            elif str(ch).lower() == 'n':
+            elif inp in (u'n', u'N'):
                 return False
 
     def refresh(pager, ipb, init=False):
+        """ Returns terminal sequence suitable for refreshing screen. """
         session.activity = 'Chatting in %s' % (
                 CHANNEL if not CHANNEL.startswith('#')
                 and not 'sysop' in session.user.groups
@@ -217,8 +238,11 @@ def main(channel=None, caller=None):
             ipb.refresh(),))
 
     def cmd(pager, msg):
+        """ Process command recieved and display result in chat window. """
         cmd, args = msg.split()[0], msg.split()[1:]
-        global CHANNEL, NICKS
+        # pylint: disable=W0603
+        #         Using the global statement
+        global CHANNEL, NICKS, EXIT
         if cmd.lower() == '/help':
             pager.append(show_help())
             return True
@@ -239,7 +263,6 @@ def main(channel=None, caller=None):
             return True
         elif cmd.lower() == '/quit':
             part_chan('quit')
-            global EXIT
             EXIT = True
         elif cmd.lower() == '/users':
             pager.append(show_nicks(NICKS.keys()))
@@ -249,31 +272,38 @@ def main(channel=None, caller=None):
         return False
 
     def broadcast_cc(payload):
+        """ Broadcast chat even, carbon copy ourselves. """
         session.send_event('global', ('chat', payload))
         session.buffer_event('global', ('chat', payload))
 
     def join_chan():
+        """ Bradcast chat even for /join. """
         payload = (session.sid, CHANNEL, (session.user.handle, 'join', None))
         broadcast_cc(payload)
 
     def say(mesg):
+        """ Signal chat event for /say. """
         payload = (session.sid, CHANNEL, (session.user.handle, 'say', mesg))
         broadcast_cc(payload)
 
     def act(mesg):
+        """ Signal chat event for /act. """
         payload = (session.sid, CHANNEL, (session.user.handle, 'act', mesg))
         broadcast_cc(payload)
 
     def part_chan(reason):
+        """ Signal chat event for /part. """
         payload = (session.sid, CHANNEL, (session.user.handle, 'part', reason))
         broadcast_cc(payload)
 
     def whois(handle):
+        """ Perform /whois request for ``handle``. """
         if not handle in NICKS:
             return
         session.send_event('route', (NICKS[handle], 'info-req', session.sid,))
 
     def whois_response(attrs):
+        """ Display /whois response for given ``attrs``. """
         return show_whois(attrs)
 
     pager = get_pager(None)  # output window
@@ -306,8 +336,8 @@ def main(channel=None, caller=None):
         # poll for whois response
         data = session.poll_event('info-ack')
         if data is not None:
-            sid, attrs = data
-            echo(pager.append(whois_response(attrs)))
+            # session id, attributes = data
+            echo(pager.append(whois_response(data[1])))
             dirty = None if dirty is None else time.time()
 
         # process keystroke as input, or, failing that,

@@ -13,6 +13,7 @@ import os
 
 
 def denied(msg):
+    """ Display denied message, pause for input for 1s. """
     from x84.bbs import getterminal, echo, getch
     term = getterminal()
     echo(u'\r\n' + term.bold_red(msg))
@@ -26,6 +27,9 @@ def get_username(handle=u''):
     (default=no). A unicode handle of non-zero length is returned when the
     login handle matches a userbase record.
     """
+    # pylint: disable=R0914,R0911
+    #         Too many local variables
+    #         Too many return statements
     from x84.bbs import getterminal, ini, echo, LineEditor, gosub, goto
     from x84.bbs import find_user, getch
     term = getterminal()
@@ -33,13 +37,16 @@ def get_username(handle=u''):
     apply_msg = u'\r\n\r\n  --> Create new account? [ynq]   <--' + '\b' * 5
     allow_apply = ini.CFG.getboolean('nua', 'allow_apply')
     enable_anonymous = ini.CFG.getboolean('matrix', 'enable_anonymous')
+    # pylint: disable=E1103
+    #         Instance of '_Chainmap' has no 'split' member
+    #         (but some types could not be inferred)
     newcmds = ini.CFG.get('matrix', 'newcmds').split()
+    byecmds = ini.CFG.get('matrix', 'byecmds').split()
     topscript = ini.CFG.get('matrix', 'topscript')
     denied_msg = u'\r\n\r\nfiRSt, YOU MUSt AbANdON YOUR libERtIES.'
     badanon_msg = u"\r\n  " + term.bright_red + u"'%s' login denied."
     max_user = ini.CFG.getint('nua', 'max_user')
     nuascript = ini.CFG.get('nua', 'script')
-    byecmds = ini.CFG.get('matrix', 'byecmds').split()
 
     echo(prompt_user)
     handle = LineEditor(max_user, handle).read()
@@ -78,6 +85,7 @@ def get_username(handle=u''):
 
 
 def try_reset(user):
+    """ Prompt for password reset. """
     from x84.bbs import echo, getch, gosub
     prompt_reset = u'RESEt PASSWORD (bY E-MAil)? [yn]'
     echo(prompt_reset)
