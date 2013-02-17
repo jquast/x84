@@ -8,17 +8,20 @@ editor script for X/84, https://github.com/jquast/x84
 
 
 def get_lbcontent(lightbar):
+    """
+    Returns ucs string for content of Lightbar instance, ``lightbar``.
+    """
     from x84.bbs import Ansi
     # a custom 'soft newline' versus 'hard newline' is implemented,
     # '\n' == 'soft', '\r\n' == 'hard'
     lines = list()
-    for lno, (key, ucs) in enumerate(lightbar.content):
+    for lno, value in enumerate(lightbar.content):
         if lno == 0 or (
                 lines[-1][-2:] == u'\r\n' or
                 lines[-1][-1:] != u'\n'):
-            lines.append(ucs)
+            lines.append(value[1])
         else:
-            lines[-1] = lines[-1].rstrip() + ucs
+            lines[-1] = lines[-1].rstrip() + value[1]
     for lno, ucs in enumerate(lines):
         wrapped = u'\n'.join(Ansi(ucs)
                 .wrap(lightbar.visible_width).splitlines())
@@ -27,6 +30,10 @@ def get_lbcontent(lightbar):
 
 
 def set_lbcontent(lightbar, ucs):
+    """
+    Sets content of Lightbar instance, ``lightbar`` for given
+    Unicode string, ``ucs``.
+    """
     from x84.bbs import Ansi
     # a custom 'soft newline' versus 'hard newline' is implemented,
     # '\n' == 'soft', '\r\n' == 'hard'
@@ -41,7 +48,7 @@ def set_lbcontent(lightbar, ucs):
     width = lightbar.visible_width
     content = list()
     row = 0
-    for lno, line in enumerate(lines):
+    for line in lines:
         joined = u' '.join(line.split('\n'))
         wrapped = Ansi(joined).wrap(width).splitlines()
         for linewrap in wrapped:
@@ -56,6 +63,7 @@ def set_lbcontent(lightbar, ucs):
 
 
 def yes_no(lightbar, msg, prompt_msg='are you sure?'):
+    """ Prompt user for yes/no, returns True for yes, False for no. """
     from x84.bbs import Selector, echo, getch, getterminal
     term = getterminal()
     keyset = {
@@ -66,26 +74,30 @@ def yes_no(lightbar, msg, prompt_msg='are you sure?'):
         lightbar.border(),
         lightbar.pos(lightbar.height, lightbar.xpadding),
         msg, u' ', prompt_msg,)))
-    yn = Selector(yloc=lightbar.yloc + lightbar.height - 1,
+    sel = Selector(yloc=lightbar.yloc + lightbar.height - 1,
                   xloc=term.width - 28, width=12,
                   left='Yes', right='No')
-    yn.colors['selected'] = term.reverse_red
-    yn.keyset['left'].extend(keyset['yes'])
-    yn.keyset['right'].extend(keyset['no'])
-    echo(yn.refresh())
+    sel.colors['selected'] = term.reverse_red
+    sel.keyset['left'].extend(keyset['yes'])
+    sel.keyset['right'].extend(keyset['no'])
+    echo(sel.refresh())
     while True:
         inp = getch()
-        echo(yn.process_keystroke(inp))
-        if((yn.selected and yn.selection == yn.left)
+        echo(sel.process_keystroke(inp))
+        if((sel.selected and sel.selection == sel.left)
                 or inp in keyset['yes']):
             # selected 'yes',
             return True
-        elif((yn.selected or yn.quit)
+        elif((sel.selected or sel.quit)
                 or inp in keyset['no']):
             # selected 'no'
             return False
 
 def get_lightbar(ucs):
+    """
+    Returns lightbar instance with content of given
+    Unicode string, ``ucs``.
+    """
     from x84.bbs import getterminal, Lightbar
     term = getterminal()
     width = min(80, max(term.width, 40))
@@ -99,6 +111,10 @@ def get_lightbar(ucs):
     return lightbar
 
 def get_lneditor(lightbar):
+    """
+    Returns ScrollingEditor instance positioned at location of current
+    selection in Lightbar instance, ``lightbar``.
+    """
     from x84.bbs import getterminal, ScrollingEditor
     term = getterminal()
     width = min(80, max(term.width, 40))
@@ -111,12 +127,16 @@ def get_lneditor(lightbar):
     lneditor.glyphs['top-horiz'] = u''
     lneditor.colors['highlight'] = term.red_reverse
     lneditor.colors['border'] = term.bold_red
-    (key, ucs) = lightbar.selection
-    lneditor.update(ucs)
+    lneditor.update(lightbar.selection[1])
     return lneditor
 
 
 def main(save_key=u'draft'):
+    """ Main procedure. """
+    # pylint: disable=R0914,R0912,R0915
+    #         Too many local variables
+    #         Too many branches
+    #         Too many statements
     from x84.bbs import getsession, getterminal, echo, getch
     session, term = getsession(), getterminal()
 
@@ -154,6 +174,9 @@ def main(save_key=u'draft'):
         return True
 
     def statusline(lightbar):
+        """
+        Display status line and command help on ``lightbar`` borders
+        """
         lightbar.colors['border'] = term.red if edit else term.yellow
         return u''.join((
             lightbar.border(),
@@ -185,6 +208,9 @@ def main(save_key=u'draft'):
 
 
     def redraw_lneditor(lightbar, lneditor):
+        """
+        Return ucs suitable for refreshing line editor.
+        """
         return ''.join((
             term.normal,
             statusline(lightbar),
@@ -193,18 +219,29 @@ def main(save_key=u'draft'):
 
 
     def get_ui(ucs, lightbar=None):
-        lb = get_lightbar(ucs)
-        lb.position = lightbar.position if lightbar is not None else (0, 0)
-        le = get_lneditor(lb)
-        return lb, le
+        """
+        Returns Lightbar and ScrollingEditor instance.
+        """
+        lbr = get_lightbar(ucs)
+        lbr.position = (lightbar.position
+                if lightbar is not None else (0, 0))
+        lne = get_lneditor(lbr)
+        return lbr, lne
 
     def banner():
+        """
+        Returns string suitable clearing screen
+        """
         return u''.join((
             term.move(0, 0),
             term.normal,
             term.clear))
 
     def redraw(lightbar, lneditor):
+        """
+        Returns ucs suitable for redrawing Lightbar
+        and ScrollingEditor UI elements.
+        """
         return u''.join((
             term.normal,
             redraw_lightbar(lightbar),
@@ -212,17 +249,19 @@ def main(save_key=u'draft'):
             ))
 
     def redraw_lightbar(lightbar):
+        """ Returns ucs suitable for redrawing Lightbar. """
         return u''.join((
             statusline(lightbar),
             lightbar.refresh(),))
 
     def resize(lightbar):
+        """ Resize Lightbar. """
         if edit:
             # always re-merge current line on resize,
             merge()
-        lb, le = get_ui(get_lbcontent(lightbar), lightbar)
-        echo(redraw(lb, le))
-        return lb, le
+        lbr, lne = get_ui(get_lbcontent(lightbar), lightbar)
+        echo(redraw(lbr, lne))
+        return lbr, lne
 
     ucs = session.user.get(save_key, u'')
     lightbar, lneditor = get_ui(ucs, None)
@@ -273,7 +312,7 @@ def main(save_key=u'draft'):
             idx = lightbar.index
             lightbar.content[idx] = (idx,
                     ' '.join((
-                        lightbar.content[idx][1],
+                        lightbar.content[idx][1].rstrip(),
                         lightbar.content[idx + 1][1],)))
             del lightbar.content[idx + 1]
             set_lbcontent(lightbar, get_lbcontent(lightbar))

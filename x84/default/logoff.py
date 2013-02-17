@@ -1,21 +1,21 @@
 """ logoff script with 'automsg' for x/84, https://github.com/jquast/x84 """
 
 def main():
+    """ Main procedure. """
     from x84.bbs import DBProxy, getsession, getterminal, echo
     from x84.bbs import ini, LineEditor, timeago, Ansi, showcp437
     from x84.bbs import disconnect, getch
     import time, os
     session, term = getsession(), getterminal()
     session.activity = 'logging off'
-    db = DBProxy('automsg')
     handle = session.handle if (
             session.handle is not None
             ) else 'anonymous'
     max_user = ini.CFG.getint('nua', 'max_user')
     prompt_msg = u'[spnG]: ' if session.user.get('expert', False) else (
-                u'%s:AY SOMEthiNG %s:REViOUS %s:EXt %s:Et thE fUCk Off !\b' % (
-                    term.bold_blue_underline(u's'), term.blue_underline(u'p'),
-                    term.blue_underline(u'n'), term.red_underline(u'Escape/g'),))
+            u'%s:AY SOMEthiNG %s:REViOUS %s:EXt %s:Et thE fUCk Off !\b' % (
+                term.bold_blue_underline(u's'), term.blue_underline(u'p'),
+                term.blue_underline(u'n'), term.red_underline(u'Escape/g'),))
     prompt_say = u''.join((term.bold_blue(handle),
         term.blue(u' SAYS WhAt'), term.bold(': '),))
     boards = (('1984.ws', 'x/84 dEfAUlt bOARd', 'dingo',),
@@ -45,19 +45,20 @@ def main():
             u'-- !  thANk YOU fOR YOUR CONtRibUtiON, bROthER  ! --')
     write_msg = term.red_reverse(
             u'bURNiNG tO ROM, PlEASE WAiT ...')
-    newDb = ((time.time() - 1984,
+    db_firstrecord = ((time.time() - 1984,
         u'B. b.', u'bEhAVE YOURSElVES ...'),)
     automsg_len = 40
     artfile = os.path.join(os.path.dirname(__file__), 'art', '1984.asc')
 
     def refresh_prompt(msg):
-        """Refresh automsg prompt using string msg"""
+        """ Refresh automsg prompt using string msg. """
         echo(u''.join((u'\r\n\r\n', term.clear_eol, msg)))
 
     def refresh_automsg(idx):
-        """Refresh automsg database, display automsg of idx, return idx"""
+        """ Refresh automsg database, display automsg of idx, return idx. """
         session.flush_event('automsg')
-        automsgs = sorted(db.values()) if len(db) else newDb
+        autodb = DBProxy('automsg')
+        automsgs = sorted(autodb.values()) if len(autodb) else db_firstrecord
         dblen = len(automsgs)
         idx = dblen - 1 if idx < 0 else 0 if idx > dblen - 1 else idx
         tm_ago, handle, msg = automsgs[idx]
@@ -115,10 +116,11 @@ def main():
             msg = LineEditor(width=automsg_len).read()
             if msg is not None and msg.strip():
                 echo(u''.join((u'\r\n\r\n', write_msg,)))
-                db.acquire()
-                idx = max([int(ixx) for ixx in db.keys()] or [-1]) + 1
-                db[idx] = (time.time(), handle, msg.strip())
-                db.release()
+                autodb = DBProxy('automsg')
+                autodb.acquire()
+                idx = max([int(ixx) for ixx in autodb.keys()] or [-1]) + 1
+                autodb[idx] = (time.time(), handle, msg.strip())
+                autodb.release()
                 session.send_event('global', ('automsg', True,))
                 refresh_automsg(idx)
                 echo(u''.join((u'\r\n\r\n', commit_msg,)))

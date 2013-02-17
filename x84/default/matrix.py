@@ -50,7 +50,8 @@ def get_username(handle=u''):
 
     echo(prompt_user)
     handle = LineEditor(max_user, handle).read()
-    if handle is None or 0 == len(handle):
+    if handle is None or 0 == len(handle.strip()):
+        echo(u'\r\n')
         return u''
     elif handle.lower() in newcmds:
         if allow_apply:
@@ -144,7 +145,15 @@ def main():
     session, term = getsession(), getterminal()
     session.activity = u'Logging in'
     handle = (session.env.get('USER', '').decode('iso8859-1', 'replace'))
-    anon_allowed_msg = u"'anonymous' login enabled.\r\n"
+    anon_allowed_msg = u"'%s' login enabled.\r\n" % (
+            term.bold_cyan('anonymous',))
+    # pylint: disable=E1103
+    #         Instance of '_Chainmap' has no 'split' member
+    #         (but some types could not be inferred)
+    newcmds = ini.CFG.get('matrix', 'newcmds').split()
+    apply_msg = u"'%s' to create new account.\r\n" % (
+            term.bold_cyan(newcmds[0]),)
+    allow_apply = ini.CFG.getboolean('nua', 'allow_apply')
     enable_anonymous = ini.CFG.getboolean('matrix', 'enable_anonymous')
     enable_pwreset = ini.CFG.getboolean('matrix', 'enable_pwreset')
     bbsname = ini.CFG.get('system', 'bbsname')
@@ -170,6 +179,7 @@ def main():
         term.cyan_underline(session.encoding),
         u'\r\n\r\n',
         anon_allowed_msg if enable_anonymous else u'',
+        apply_msg if allow_apply else u'',
         )))
     # http://www.termsys.demon.co.uk/vtansi.htm
     # disable line-wrapping

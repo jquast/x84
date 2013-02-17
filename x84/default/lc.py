@@ -3,6 +3,7 @@
 # or 'e'diting a user when executed by sysop -- gosub('profile', user)
 
 def pak():
+    """ Press any key prompt. """
     from x84.bbs import echo, getch
     msg_pak = u'PRESS ANY kEY'
     echo(u'\r\n%s ... ' % (msg_pak,))
@@ -11,6 +12,7 @@ def pak():
 
 
 def view_plan(handle):
+    """ Display .plan file for handle. """
     from x84.bbs import getterminal, echo, Ansi, get_user
     term = getterminal()
     echo(u'\r\n\r\n')
@@ -20,6 +22,9 @@ def view_plan(handle):
 
 
 def dummy_pager(last_callers):
+    """ Dummy pager for displaying last callers """
+    # pylint: disable=R0914
+    #         Too many local variables
     from x84.bbs import getterminal, getsession, echo, getch, ini
     from x84.bbs import LineEditor, Ansi, list_users, get_user, gosub
     session, term = getsession(), getterminal()
@@ -37,7 +42,7 @@ def dummy_pager(last_callers):
     redraw()
     echo(u'\r\n\r\n')
     nonstop = False
-    row=10
+    row = 10 # after-art,
     for txt in last_callers:
         echo(Ansi(txt).ljust(term.width / 2).center(term.width))
         echo(u'\r\n')
@@ -79,6 +84,7 @@ def dummy_pager(last_callers):
     pak()
 
 def refresh_opts(pager, handle):
+    """ Refresh pager border with command keys available. """
     from x84.bbs import getsession, getterminal, get_user, find_user
     session, term = getsession(), getterminal()
     if not handle or not find_user(handle):
@@ -99,6 +105,11 @@ def refresh_opts(pager, handle):
 
 
 def get_lightbar(lcallers, lcalls):
+    """
+    Return UI element for browsing last callers, given ``lcallers`` as
+    a list of handles, and parallel array ``lcalls`` as unicode string
+    to display for last call of each handle.
+    """
     from x84.bbs import getterminal, Lightbar
     term = getterminal()
     assert term.height >= 10 and term.width >= 50
@@ -117,6 +128,7 @@ def get_lightbar(lcallers, lcalls):
     return pager
 
 def get_art(fname):
+    """ Return ansi art center-aligned. """
     from x84.bbs import getterminal
     term = getterminal()
     buf = list()
@@ -128,6 +140,7 @@ def get_art(fname):
     return [line.center(width) for line in buf]
 
 def redraw(pager=None):
+    """ Returns unicode sequence suitable for redrawing screen. """
     from x84.bbs import getterminal
     import os
     term = getterminal()
@@ -153,6 +166,8 @@ def lc_retrieve():
     color the last callers to the system, and 'nicknames' is simply a list
     of last callers (for lightbar selection key).
     """
+    # pylint: disable=R0914
+    #         Too many local variables
     from x84.bbs import list_users, get_user, ini, timeago
     import time
     udb = dict()
@@ -163,7 +178,7 @@ def lc_retrieve():
     padd_origin = (ini.CFG.getint('nua', 'max_location') + 2)
     rstr = u''
     nicks = []
-    for ((tm_lc, handle), (nc, origin)) in (reversed(sorted(udb.items()))):
+    for ((tm_lc, handle), (_nc, origin)) in (reversed(sorted(udb.items()))):
         is_sysop = 'sysop' in get_user(handle).groups
         rstr += (u'@' if is_sysop else u''
                 )+(handle.ljust(padd_handle - (2 if is_sysop else 1)))
@@ -175,6 +190,7 @@ def lc_retrieve():
 
 
 def main():
+    """ Main procedure. """
     from x84.bbs import getsession, getterminal, echo, getch, gosub
     session, term = getsession(), getterminal()
     lcallers, lcalls_txt = lc_retrieve()
