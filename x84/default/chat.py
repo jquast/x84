@@ -338,3 +338,4 @@ def main(channel=None, caller=None):
         if dirty is not None and time.time() - dirty > POLL_OUT:
             echo(refresh(pager, readline))
             dirty = None
+    echo(u''.join((term.move(term.height, 0), term.normal)))
