@@ -9,7 +9,6 @@ import re
 
 TERMINALS = list()
 
-
 def init_term(pipe, env):
     """
     curses is initialized using the value of 'TERM' of dictionary env,
@@ -89,16 +88,17 @@ def terminals():
     return TERMINALS[:]
 
 
-def start_process(pipe, sid, env):
+def start_process(pipe, sid, env, binary=False):
     """
     A multiprocessing.Process target. Arguments:
         pipe: multiprocessing.Pipe
         sid: string describing session source (fe. IP address & Port)
         env: dictionary of client environment variables (requires 'TERM')
+        binary: If client accepts BINARY, assume utf8 session encoding.
     """
     import x84.bbs.ini
     import x84.bbs.session
-
+    cp437_ttypes = ('unknown', 'ansi', 'ansi-bbs', 'vt100',)
     # root handler has dangerously forked file descriptors.
     # replace with ipc 'logger' events so that only the main
     # process is responsible for logging.
@@ -108,8 +108,10 @@ def start_process(pipe, sid, env):
     term = init_term(pipe, env)
 
     encoding = x84.bbs.ini.CFG.get('session', 'default_encoding')
-    if env.get('TERM', 'unknown') in ('unknown', 'ansi', 'ansi-bbs'):
+    if env.get('TERM', 'unknown') in cp437_ttypes:
         encoding = 'cp437'
+    elif binary:
+        encoding = 'utf8'
     # spawn and begin a new session
     session = x84.bbs.session.Session(term, pipe, sid, env, encoding)
     # copy ptr to session instance to logger, so nicks can be
@@ -172,9 +174,13 @@ class ConnectTelnet (threading.Thread):
             logger.debug('session aborted; socket was closed.')
             return
         import multiprocessing
+        from x84.telnet import BINARY
+        is_binary = (self.client.check_local_option(BINARY)
+                and self.client.check_remote_option(BINARY))
         parent_conn, child_conn = multiprocessing.Pipe()
         lock = threading.Lock()
-        child_args = (child_conn, self.client.addrport(), self.client.env,)
+        child_args = (child_conn, self.client.addrport(),
+                self.client.env, is_binary)
         logger.debug('starting session')
         proc = multiprocessing.Process(
             target=start_process, args=child_args)
@@ -197,9 +203,12 @@ class ConnectTelnet (threading.Thread):
         self.client.request_will_echo()
         self.client.request_will_sga()
         self.client.request_do_sga()
-
+        # add DO & WILL BINARY, for utf8 input/output.
+        self.client.request_do_binary()
+        self.client.request_will_binary()
         if not self.client.active:
             return
+
         # wait for some bytes to be received, and if we get any bytes,
         # at least make sure to get some more, and then -- wait a bit!
         logger.debug('pausing for negotiation')
@@ -227,6 +236,8 @@ class ConnectTelnet (threading.Thread):
         if not self.client.active:
             return
 
+        # this is totally useless, but informitive debugging information for
+        # unknown unix clients ..
         #self._try_xtitle()
         #if not self.client.active:
         #    return

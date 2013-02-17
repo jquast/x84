@@ -296,6 +296,21 @@ class TelnetClient(object):
         self._iac_will(ECHO)
         self._note_reply_pending(ECHO, True)
 
+    def request_will_binary(self):
+        """
+        Tell the DE that we would like to use binary 8-bit (utf8).
+        """
+        self._iac_will(BINARY)
+        self._note_reply_pending(BINARY, True)
+
+    def request_do_binary(self):
+        """
+        Tell the DE that we would like them to input binary 8-bit (utf8).
+        """
+        self._iac_do(BINARY)
+        self._note_reply_pending(BINARY, True)
+
+
     def request_do_sga(self):
         """
         Request to Negotiate SGA.  See ...
@@ -389,7 +404,7 @@ class TelnetClient(object):
             # connection cannot proceed without input from the other end),
             # the process must transmit the TELNET Go Ahead (GA) command.
             if (not self.input_ready()
-                    and self._check_local_option(SGA) in (False, UNKNOWN)):
+                    and self.check_local_option(SGA) in (False, UNKNOWN)):
                 sent += send(bytes(''.join((IAC, GA))))
         return sent
 
@@ -536,17 +551,17 @@ class TelnetClient(object):
         self._note_reply_pending(option, False)
         if option == ECHO:
             # DE requests us to echo their input
-            if self._check_local_option(ECHO) is not True:
+            if self.check_local_option(ECHO) is not True:
                 self._note_local_option(ECHO, True)
                 self._iac_will(ECHO)
         elif option == BINARY:
             # DE requests to recv BINARY
-            if self._check_local_option(BINARY) is not True:
+            if self.check_local_option(BINARY) is not True:
                 self._note_local_option(BINARY, True)
                 self._iac_will(BINARY)
         elif option == SGA:
             # DE wants us to supress go-ahead
-            if self._check_local_option(SGA) is not True:
+            if self.check_local_option(SGA) is not True:
                 self._note_local_option(SGA, True)
                 # always send DO SGA after WILL SGA, requesting the DE
                 # also supress their go-ahead. this order seems to be the
@@ -556,24 +571,24 @@ class TelnetClient(object):
         elif option == LINEMODE:
             # DE wants to do linemode editing
             # denied
-            if self._check_local_option(option) is not False:
+            if self.check_local_option(option) is not False:
                 self._note_local_option(option, False)
                 self._iac_wont(LINEMODE)
         elif option == ENCRYPT:
             # DE is willing to receive encrypted data
             # denied
-            if self._check_local_option(option) is not False:
+            if self.check_local_option(option) is not False:
                 self._note_local_option(option, False)
                 # let DE know we refuse to send encrypted data.
                 self._iac_wont(ENCRYPT)
         elif option == STATUS:
             # DE wants to know if we support STATUS,
-            if self._check_local_option(option) is not True:
+            if self.check_local_option(option) is not True:
                 self._note_local_option(option, True)
                 self._iac_will(STATUS)
                 self.send_status()
         else:
-            if self._check_local_option(option) is UNKNOWN:
+            if self.check_local_option(option) is UNKNOWN:
                 self._note_local_option(option, False)
                 logger.warn('%s: unhandled do: %s.',
                             self.addrport(), name_option(option))
@@ -613,18 +628,18 @@ class TelnetClient(object):
         self._note_reply_pending(option, False)
         if option == ECHO:
             # client demands we do not echo
-            if self._check_local_option(ECHO) is not False:
+            if self.check_local_option(ECHO) is not False:
                 self._note_local_option(ECHO, False)
                 self._iac_wont(ECHO)  # agree
         elif option == BINARY:
             # client demands no binary mode
-            if self._check_local_option(BINARY) is not False:
+            if self.check_local_option(BINARY) is not False:
                 self._note_local_option(BINARY, False)
                 self._iac_wont(BINARY)
         elif option == SGA:
             # DE demands that we start or continue transmitting
             # GAs (go-aheads) when transmitting data.
-            if self._check_local_option(SGA) is not False:
+            if self.check_local_option(SGA) is not False:
                 self._note_local_option(SGA, False)
                 self._iac_wont(SGA)
         elif option == LINEMODE:
@@ -860,7 +875,7 @@ class TelnetClient(object):
     ## Sometimes verbiage is tricky.  I use 'note' rather than 'set' here
     ## because (to me) set infers something happened.
     #@debug_option
-    def _check_local_option(self, option):
+    def check_local_option(self, option):
         """
         Test the status of local negotiated Telnet options.
         """
