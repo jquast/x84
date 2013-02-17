@@ -5,17 +5,16 @@ POLL_KEY = 0.05 # blocking ;; how often to poll keyboard
 POLL_INF = 2.00 # seconds elapsed until re-ask clients for more details
 POLL_AYT = 4.00 # seconds elapsed until global 'are you there?' is checked,
 POLL_OUT = 0.30 # seconds elapsed before screen updates
-# slen: returns terminal width of ascii representation of #sessions
-slen = lambda sessions: len(u'%d' % (len(sessions),))
 
 def request_info(sid):
-    # send individual info-req messages
+    """ Send info-req event to target session id ``sid``. """
     from x84.bbs import getsession
     session = getsession()
     session.send_event('route', (sid, 'info-req', session.sid,))
 
 
 def banner():
+    """ Returns string suitable for displaying banner """
     from x84.bbs import getterminal
     term = getterminal()
     return u''.join((
@@ -26,8 +25,13 @@ def banner():
         term.bold_green(" whO'S ONliNE"),))
 
 
-def update(sessions):
+def describe(sessions):
+    """
+    Returns unicode string suitable for describing the activity of
+    session id's of array ``sessions``.
+    """
     from x84.bbs import getsession, getterminal, ini
+    slen = lambda sessions: len(u'%d' % (len(sessions),))
     session, term = getsession(), getterminal()
     max_user = ini.CFG.getint('nua', 'max_user')
     return u'\r\n'.join(([u''.join((
@@ -42,15 +46,20 @@ def update(sessions):
             term.bold_green((attrs.get('activity', u''))
                 if attrs.get('sid') != session.sid else
                 term.bold_black(session.activity)),
-            )) for node, (sid, attrs) in get_nodes(sessions)]))
+            )) for node, (_sid, attrs) in get_nodes(sessions)]))
 
 
 def get_nodes(sessions):
+    """ Given an array of sessions, assign an arbitrary 'node' number """
     return enumerate(sorted(sessions.items()))
 
 
 def heading(sessions):
+    """
+    Given an array of sessions, return string suitable for display heading.
+    """
     from x84.bbs import getsession, getterminal, ini
+    slen = lambda sessions: len(u'%d' % (len(sessions),))
     session, term = getsession(), getterminal()
     max_user = ini.CFG.getint('nua', 'max_user')
     return u'\r\n'.join((
@@ -64,6 +73,9 @@ def heading(sessions):
             'activity',))),))
 
 def prompt():
+    """
+    Return string suitable for displaying prompt and available commands.
+    """
     from x84.bbs import getsession, getterminal, Ansi
     session, term = getsession(), getterminal()
     decorate = lambda key, desc: u''.join((
@@ -88,6 +100,7 @@ def prompt():
 
 
 def get_node(sessions):
+    """ Prompt user for session node, Returns node & session attributes. """
     from x84.bbs import ini, LineEditor, echo
     max_user = ini.CFG.getint('nua', 'max_user')
     invalid = u'\r\ninvalid.'
@@ -108,6 +121,8 @@ def get_node(sessions):
 
 
 def edit(sessions):
+    """ Prompt for node and gosub profile.py script for user of target session.
+    """
     from x84.bbs import gosub
     (node, tgt_session) = get_node(sessions)
     if node is not None:
@@ -116,6 +131,8 @@ def edit(sessions):
 
 
 def playback(sessions):
+    """ Prompt for node and gosub ttyplay script for ttyrec of target session.
+    """
     from x84.bbs import gosub
     (node, tgt_session) = get_node(sessions)
     if node is not None:
@@ -124,6 +141,10 @@ def playback(sessions):
 
 
 def watch(sessions):
+    """
+    Prompt for node and gosub ttyplay script for ttyrec of target session,
+    with 'peek' boolean set to True.
+    """
     from x84.bbs import gosub
     (node, tgt_session) = get_node(sessions)
     if node is not None:
@@ -132,6 +153,10 @@ def watch(sessions):
 
 
 def chat(sessions):
+    """
+    Prompt for node and page target session for chat.
+    Sysop will send session id of -1, indicating the chat is forced.
+    """
     from x84.bbs import gosub, getsession
     session = getsession()
     (node, tgt_session) = get_node(sessions)
@@ -147,6 +172,9 @@ def chat(sessions):
 
 
 def view(sessions):
+    """
+    Prompt for node and view session details of target session.
+    """
     from x84.bbs import echo, getterminal
     term = getterminal()
     (node, tgt_session) = get_node(sessions)
@@ -164,6 +192,9 @@ def view(sessions):
 
 
 def disconnect(sessions):
+    """
+    Prompt for node and disconnect target session.
+    """
     from x84.bbs import getsession
     session = getsession()
     (node, tgt_session) = get_node(sessions)
@@ -172,24 +203,27 @@ def disconnect(sessions):
         return True
 
 
-
 def sendmsg(sessions):
+    """
+    Prompt for node and gosub 'writemsg' with recipient set to target user.
+    """
     from x84.bbs import gosub, Msg
     (node, tgt_session) = get_node(sessions)
     if node is not None:
         msg = Msg()
-        msg.recipient = tgt_session.user.handle
+        msg.recipient = tgt_session['handle']
         msg.tags.add('private')
         gosub('writemsg', msg)
         return True
 
 
 def main():
+    """ Main procedure. """
     from x84.bbs import getsession, getterminal, getch, echo
     session, term = getsession(), getterminal()
     ayt_lastfresh = 0
-    def broadcast_AYT(last_update):
-        # broadcast are-you-there
+    def broadcast_ayt(last_update):
+        """ Globally boradcast 'are-you-there' request. """
         if time.time() - last_update > POLL_AYT:
             session.send_event('global', ('AYT', session.sid,))
             last_update = time.time()
@@ -199,7 +233,7 @@ def main():
     dirty = time.time()
     cur_row = 0
     while True:
-        ayt_lastfresh = broadcast_AYT(ayt_lastfresh)
+        ayt_lastfresh = broadcast_ayt(ayt_lastfresh)
         inp = getch(POLL_KEY)
         if session.poll_event('refresh') or (
                 inp in (u' ', term.KEY_REFRESH, unichr(12))):
@@ -278,7 +312,7 @@ def main():
 
         if dirty is not None and time.time() - dirty > POLL_OUT:
             session.activity = u"Who's Online"
-            otxt = update(sessions)
+            otxt = describe(sessions)
             olen = len(otxt.splitlines())
             if 0 == cur_row or (cur_row + olen) >= term.height:
                 otxt_b = banner()
