@@ -30,7 +30,14 @@ def set_lbcontent(lightbar, ucs):
     from x84.bbs import Ansi
     # a custom 'soft newline' versus 'hard newline' is implemented,
     # '\n' == 'soft', '\r\n' == 'hard'
-    lines = ucs.split(u'\r\n')
+    lines = list()
+    while ucs.startswith(u'\r\n'):
+        lines.append(u'')
+        ucs = ucs[len(u'\r\n'):]
+    lines.extend(ucs.split(u'\r\n'))
+    #while ucs.endswith(u'\r\n'):
+    #    lines.append(u'')
+    #    ucs = ucs[:-len(u'\r\n')]
     width = lightbar.visible_width
     content = list()
     row = 0
@@ -39,6 +46,9 @@ def set_lbcontent(lightbar, ucs):
         wrapped = Ansi(joined).wrap(width).splitlines()
         for linewrap in wrapped:
             content.append((row, linewrap))
+            row += 1
+        if 0 == len(wrapped):
+            content.append((row, u''))
             row += 1
     if 0 == len(content):
         content.append((0, u''))
@@ -84,8 +94,7 @@ def get_lightbar(ucs):
     xloc = max(0, (term.width / 2) - (width / 2))
     lightbar = Lightbar(height, width, yloc, xloc)
     lightbar.glyphs['left-vert'] = lightbar.glyphs['right-vert'] = u''
-    lightbar.colors['border'] = term.blue
-    lightbar.colors['highlight'] = term.blue_reverse
+    lightbar.colors['highlight'] = term.yellow_reverse
     set_lbcontent(lightbar, ucs)
     return lightbar
 
@@ -100,8 +109,8 @@ def get_lneditor(lightbar):
     lneditor.max_length = 65534
     lneditor.glyphs['bot-horiz'] = u''
     lneditor.glyphs['top-horiz'] = u''
-    lneditor.colors['highlight'] = term.green_reverse
-    lneditor.colors['border'] = term.bold_green
+    lneditor.colors['highlight'] = term.red_reverse
+    lneditor.colors['border'] = term.bold_red
     (key, ucs) = lightbar.selection
     lneditor.update(ucs)
     return lneditor
@@ -130,26 +139,27 @@ def main(save_key=u'draft'):
         # merge line editor with pager window content
         swp = lightbar.selection
         lightbar.content[lightbar.index] = (swp[0], lneditor.content)
+        set_lbcontent(lightbar, get_lbcontent(lightbar))
+        return True
         prior_length = len(lightbar.content)
         prior_position = lightbar.position
-        set_lbcontent(lightbar, get_lbcontent(lightbar))
         if len(lightbar.content) - prior_length == 0:
             echo(lightbar.refresh_row(prior_position[0]))
-            print 'eq'
             return False
-        print 'go', len(lightbar.content) - prior_length
+        #    print 'eq'
+        #print 'go', len(lightbar.content) - prior_length
         while len(lightbar.content) - prior_length > 0:
             # hidden move-down for each appended line
             lightbar.move_down()
             prior_length += 1
-            print 'down'
-        return True
+        #    print 'down'
 
-    def statusline(lightbar, edit):
+    def statusline(lightbar):
+        lightbar.colors['border'] = term.red if edit else term.yellow
         return u''.join((
             lightbar.border(),
             lightbar.pos(lightbar.height, lightbar.xpadding),
-            (u'-[ EditiNG liNE %d ]-' % (lightbar.index,) if edit else
+            (u'-[ EditiNG liNE %d ]-' % (lightbar.index + 1,) if edit else
                 u'- liNE %d/%d %d%% -' % (
                     lightbar.index + 1,
                     len(lightbar.content), int((float(lightbar.index + 1)
@@ -177,7 +187,8 @@ def main(save_key=u'draft'):
 
     def redraw_lneditor(lightbar, lneditor):
         return ''.join((
-            statusline(lightbar, edit=True),
+            term.normal,
+            statusline(lightbar),
             lneditor.border(),
             lneditor.refresh()))
 
@@ -196,12 +207,15 @@ def main(save_key=u'draft'):
 
     def redraw(lightbar, lneditor):
         return u''.join((
+            term.normal,
             redraw_lightbar(lightbar),
             redraw_lneditor(lightbar, lneditor) if edit else u'',
             ))
 
     def redraw_lightbar(lightbar):
-        return statusline(lightbar, edit) + lightbar.refresh()
+        return u''.join((
+            statusline(lightbar),
+            lightbar.refresh(),))
 
     def resize(lightbar):
         if edit:
@@ -234,7 +248,7 @@ def main(save_key=u'draft'):
             edit = not edit  # toggle
             if not edit:
                 # switched to command mode, merge our lines
-                #echo(lneditor.erase_border())
+                echo(term.normal + lneditor.erase_border())
                 merge()
             else:
                 # switched to edit mode, instantiate new line editor
@@ -242,7 +256,7 @@ def main(save_key=u'draft'):
             dirty = True
 
         # edit mode, kill line
-        if not edit and inp in keyset['kill']:
+        elif not edit and inp in keyset['kill']:
             # when 'killing' a line, make accomidations to clear
             # bottom-most row, otherwise a ghosting effect occurs
             print lightbar.content, lightbar.index
@@ -254,16 +268,16 @@ def main(save_key=u'draft'):
                 dirty = True
 
         # edit mode, join line
-        if not edit and inp in keyset['join']:
+        elif (not edit and inp in keyset['join']
+                and lightbar.index + 1 < len(lightbar.content)):
             idx = lightbar.index
-            if idx + 1 < len(lightbar.content):
-                lightbar.content[idx] = (idx,
-                        ' '.join((
-                            lightbar.content[idx][1],
-                            lightbar.content[idx + 1][1],)))
-                del lightbar.content[idx + 1]
-                edit = True
-                dirty = True
+            lightbar.content[idx] = (idx,
+                    ' '.join((
+                        lightbar.content[idx][1],
+                        lightbar.content[idx + 1][1],)))
+            del lightbar.content[idx + 1]
+            set_lbcontent(lightbar, get_lbcontent(lightbar))
+            dirty = True
 
 
         # command mode, basic cmds & movement
@@ -280,42 +294,30 @@ def main(save_key=u'draft'):
             else:
                 echo(lightbar.process_keystroke(inp))
 
-        # edit mode -- movement
+        # edit mode
         elif edit and inp in movement:
-            print 'pos3a', lightbar.position
-            # for any movement, re-merge editline
-            # and refresh if insertion occurs
-            if merge():
-                echo(lightbar.refresh())
+            dirty = merge()
             if inp in (u'\r', term.KEY_ENTER):
+                if lightbar.at_bottom:
+                    idx = max([_key for (_key, _ucs) in lightbar.content])
+                    lightbar.content.append((idx + 1, u''))
                 inp = term.KEY_DOWN
-            if inp == term.KEY_DOWN and lightbar.at_bottom:
-                # insert new line
-                nxt = max([_key for (_key, _ucs) in lightbar.content])
-                lightbar.content.append((nxt + 1, u''))
-            print 'pos3b', lightbar.position
             lightbar.process_keystroke(inp)
-            print 'pos3c', lightbar.position
             if lightbar.moved:
-                # refresh last selected lightbar row (our newly
-                # realized input, correctly aligned), and erase
-                # line editor border. Then, instantiate and
-                # refresh a new line editor
-                if (lightbar._vitem_lastshift != lightbar.vitem_shift):
-                    # redraw full pager first, because we shifted pages,
-                    echo(lightbar.refresh())
-                else:
-                    # just redraw last selection
-                    echo(lightbar.refresh_row(lightbar._vitem_lastidx))
+                echo(term.normal + lneditor.erase_border())
                 # erase old line editor border and instatiate another
-                echo(lneditor.erase_border())
+                if (lightbar._vitem_lastshift != lightbar.vitem_shift):
+                    dirty = True
+                else:
+                    # just redraw row of last selection
+                    echo(lightbar.refresh_row(lightbar._vitem_lastidx))
                 lneditor = get_lneditor(lightbar)
-                echo(redraw_lneditor(lightbar, lneditor))
-            print 'pos5', lightbar.position
+                if not dirty:
+                    echo(redraw_lneditor(lightbar, lneditor))
 
         # edit mode -- append character / backspace
         elif edit and inp is not None:
             # edit mode, addch
             echo(lneditor.process_keystroke(inp))
             if lneditor.moved:
-                echo(statusline(lightbar, edit))
+                echo(statusline(lightbar))
