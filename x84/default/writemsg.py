@@ -52,9 +52,11 @@ def get_recipient(msg):
             yn = Selector(yloc=term.height - 1,
                           xloc=term.width - 22,
                           width=20, left=u'YES', right=u'NO')
-            echo(term.move(yn.yloc, yn.xloc - len(blurb))
-                 + term.clear_eol)
-            echo(term.bold_yellow(blurb))
+            echo(u''.join((
+                u'\r\n',
+                term.move(yn.yloc, yn.xloc - len(blurb)),
+                term.clear_eol,
+                term.bold_yellow(blurb))))
             selection = yn.read()
             echo(term.move(yn.yloc, 0) + term.clear_eol)
             if selection == u'YES':
@@ -67,9 +69,11 @@ def get_recipient(msg):
         yn = Selector(yloc=term.height - 1,
                       xloc=term.width - 22,
                       width=20, left=u'YES', right=u'NO')
-        echo(term.move(yn.yloc, yn.xloc - len(blurb))
-             + term.clear_eol)
-        echo(term.bold_yellow(blurb))
+        echo(u''.join((
+            u'\r\n',
+            term.move(yn.yloc, yn.xloc - len(blurb)),
+            term.clear_eol,
+            term.bold_yellow(blurb))))
         selection = yn.read()
         echo(term.move(yn.yloc, 0) + term.clear_eol)
         if selection == u'YES':
