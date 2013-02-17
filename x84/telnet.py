@@ -310,7 +310,6 @@ class TelnetClient(object):
         self._iac_do(BINARY)
         self._note_reply_pending(BINARY, True)
 
-
     def request_do_sga(self):
         """
         Request to Negotiate SGA.  See ...
@@ -586,7 +585,7 @@ class TelnetClient(object):
             if self.check_local_option(option) is not True:
                 self._note_local_option(option, True)
                 self._iac_will(STATUS)
-                self.send_status()
+                self._send_status()
         else:
             if self.check_local_option(option) is UNKNOWN:
                 self._note_local_option(option, False)
@@ -594,7 +593,7 @@ class TelnetClient(object):
                             self.addrport(), name_option(option))
                 self._iac_wont(option)
 
-    def send_status(self):
+    def _send_status(self):
         """
         Process a DO STATUS sub-negotiation received by DE. (rfc859)
         """
@@ -781,7 +780,7 @@ class TelnetClient(object):
         elif (NAWS,) == (buf[0],):
             self._sb_naws(buf)
         elif (STATUS, SEND) == (buf[0], buf[1]):
-            self.send_status()
+            self._send_status()
         else:
             logger.error('unsupported subnegotiation, %s: %r',
                          name_option(buf[0]), buf,)
