@@ -4,6 +4,9 @@
 
 
 def refresh():
+    """ Refresh main menu. """
+    # pylint: disable=R0914
+    #         Too many local variables
     from x84.bbs import getsession, getterminal, echo, Ansi, showcp437
     import os
     session, term = getsession(), getterminal()
@@ -56,8 +59,11 @@ def refresh():
 
 
 def main():
-    from x84.bbs import getsession, getterminal, getch, goto, gosub
-    session, term = getsession(), getterminal()
+    """ Main procedure. """
+    # pylint: disable=R0912
+    #         Too many branches
+    from x84.bbs import getsession, getch, goto, gosub
+    session = getsession()
 
     inp = -1
     dirty = True

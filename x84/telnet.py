@@ -197,8 +197,9 @@ class TelnetClient(object):
     """
     Represents a remote Telnet Client, instantiated from TelnetServer.
     """
-    # pylint: disable=R0902
-    #         Too many instance attributes (15/7)
+    # pylint: disable=R0902,R0904
+    #         Too many instance attributes
+    #         Too many public methods
     BLOCKSIZE_RECV = 64
     SB_MAXLEN = 65534  # maximum length of subnegotiation string, allow
                        # a fairly large one for NEW_ENVIRON negotiation

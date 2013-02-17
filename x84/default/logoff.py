@@ -2,6 +2,8 @@
 
 def main():
     """ Main procedure. """
+    # pylint: disable=R0914
+    #         Too many local variables
     from x84.bbs import DBProxy, getsession, getterminal, echo
     from x84.bbs import ini, LineEditor, timeago, Ansi, showcp437
     from x84.bbs import disconnect, getch

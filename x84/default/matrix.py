@@ -100,6 +100,11 @@ def try_reset(user):
 
 
 def try_pass(user):
+    """
+    Prompt for password and authenticate, if succesfull, goto topscript.
+    """
+    # pylint: disable=R0914
+    #         Too many local variables
     from x84.bbs import getsession, getterminal, ini, LineEditor, echo, goto
     session, term = getsession(), getterminal()
     prompt_pass = u'\r\n\r\n  pass: '
@@ -111,12 +116,14 @@ def try_pass(user):
     # prompt for password, disable input tap during, mask input with 'x',
     # and authenticate against user record, performing a script change to
     # topscript if sucessful.
+    # pylint: disable=W0212
+    #         Access to a protected member _tap_input of a client class
     echo(prompt_pass)
     chk = session._tap_input  # <-- save
     session._tap_input = False
-    le = LineEditor(max_pass)
-    le.hidden = u'x'
-    password = le.read()
+    lne = LineEditor(max_pass)
+    lne.hidden = u'x'
+    password = lne.read()
     session._tap_input = chk  # restore -->
     if password is not None and 0 != len(password):
         echo(status_auth)
@@ -138,6 +145,9 @@ def uname():
 
 
 def main():
+    """ Main procedure. """
+    # pylint: disable=R0914,R0911
+    #         Too many local variables
     import logging
     from x84.bbs import getsession, getterminal, ini, echo, get_user, goto
     from x84.engine import __url__ as url
@@ -189,7 +199,7 @@ def main():
     echo(unichr(27) + u'[22;0t')
 
     # prompt for username & password
-    for n in range(0, max_tries):
+    for _num in range(0, max_tries):
         handle = get_username(handle)
         if handle != u'':
             session.activity = u'Logging in'
