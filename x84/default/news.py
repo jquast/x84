@@ -1,14 +1,16 @@
-"""
-'sysop news' script for x/84, https://github.com/jquast/x84
-"""
+""" news script for x/84, https://github.com/jquast/x84 """
 NEWS_ART = None
 NEWSAGE = 0
 NEWS = None
 
 def dummy_pager(news_txt):
+    """
+    Given news_txt as unicode string, display using a dummy pager.
+    """
     from x84.bbs import getterminal, echo, getch
     term = getterminal()
-    prompt_msg = u'\r\n[c]ontinue, [s]top, [n]on-stop  ?\b\b'
+    prompt_msg = u'\r\n[%s]ontinue, [%s]top, [%s]on-stop  ?\b\b' % (
+            term.bold_blue('c'), term.bold_blue('s'), term.bold_blue('n'),)
     nonstop = False
     echo(redraw(None))
     for row in range(len(news_txt)):
@@ -27,6 +29,9 @@ def dummy_pager(news_txt):
 
 
 def get_pager(news_txt, position=None):
+    """
+    Return Pager instance with content ``news_txt``.
+    """
     from x84.bbs import getterminal, Pager
     term = getterminal()
     width = min(130, (term.width - 2))
@@ -44,8 +49,11 @@ def get_pager(news_txt, position=None):
 
 
 def redraw(pager):
+    """ Returns string suitable for refreshing screen. """
     from x84.bbs import getterminal
     import os
+    # pylint: disable=W0603
+    #         Using the global statement
     global NEWS_ART  # in-memory cache
     term = getterminal()
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'news.asc')
@@ -71,12 +79,15 @@ def redraw(pager):
 
 
 def main():
-    from x84.bbs import getsession, getterminal, echo, getch
+    """ Main procedure. """
+    from x84.bbs import getsession, echo, getch
     import codecs
     import time
     import os
+    # pylint: disable=W0603
+    #         Using the global statement
     global NEWS, NEWSAGE  # in-memory cache
-    session, term = getsession(), getterminal()
+    session = getsession()
     session.activity = 'Reading news'
     newsfile = os.path.join(os.path.dirname(__file__), 'art', 'news.txt')
     if not os.path.exists(newsfile):
@@ -94,8 +105,8 @@ def main():
     dirty = True
     while True:
         if dirty:
-            pos = pager.position if pager is not None else None
-            pager = get_pager(NEWS, pos)
+            pager = get_pager(NEWS,
+                    pager.position if pager is not None else None)
             echo(redraw(pager))
             dirty = False
         if session.poll_event('refresh'):
