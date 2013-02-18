@@ -1,5 +1,0 @@
-API: bbs
-========
-
-.. automodule:: x84.bbs
-   :members:
