@@ -283,7 +283,7 @@ class User(object):
         uadb.acquire()
         attrs = uadb[self.handle]
         if key in attrs:
-            attrs.__detitem__(key)
+            attrs.__delitem__(key)
             uadb[self.handle] = attrs
         uadb.release()
         logger.info("del attr %r for user '%s'.", key, self.handle)
