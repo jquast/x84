@@ -103,7 +103,7 @@ def do_search(search):
     else:
         xml_stream = StringIO.StringIO(resp.content)
         locations = list([dict(elem.attrib.items())
-            for event, elem in ET.iterparse(xml_stream)
+            for _event, elem in ET.iterparse(xml_stream)
             if elem.tag == 'location'])
         if 0 == len(locations):
             disp_notfound()
@@ -185,13 +185,13 @@ def chose_location_dummy(locations):
     lno = 3
     for num, loc in enumerate(locations):
         echo(disp_entry(num, loc))
-        lno+=1
+        lno += 1
         if lno != 0 and (0 == lno % (term.height)):
             echo(term.yellow_reverse('--MORE--'))
             if getch() is None:
                 break
             echo(u'\r\n')
-            lno+=1
+            lno += 1
     idx = u''
     while True:
         echo(u'\r\n' + u''.join(msg_enteridx))
@@ -199,14 +199,14 @@ def chose_location_dummy(locations):
         if idx is None or len(idx) == 0:
             return None
         try:
-            idx = int(idx)
+            int_idx = int(idx)
         except ValueError as err:
             echo(term.bold_red(u'\r\n%s' % (err,)))
             continue
-        if idx < 0 or idx > len(locations) - 1:
+        if int_idx < 0 or int_idx > len(locations) - 1:
             echo(term.bold_red(u'\r\nValue out of range'))
             continue
-        return locations[idx]
+        return locations[int_idx]
 
 
 def chose_location_lightbar(locations):
@@ -284,10 +284,10 @@ def location_prompt(location, msg='WEAthER'):
         term.bold_yellow(u']'),
         u': '),))
     while True:
-        yn = getch()
-        if yn is None or yn in (u'n', u'N', 'q', 'Q', term.KEY_EXIT):
+        inp = getch()
+        if inp is None or inp in (u'n', u'N', 'q', 'Q', term.KEY_EXIT):
             return False
-        if yn in (u'y', u'Y', u' ', term.KEY_ENTER):
+        if inp in (u'y', u'Y', u' ', term.KEY_ENTER):
             return True
 
 def disp_forecast(forecast):
@@ -297,33 +297,35 @@ def disp_forecast(forecast):
     lno = 1
     echo(u'\r\n')
     for key in sorted(forecast.keys()):
-        fc = forecast[key]
+        fcast = forecast[key]
         rstr = u''.join((
-            term.bold_yellow_underline(fc['DayCode']),
+            term.bold_yellow_underline(fcast['DayCode']),
             u', ',
-            term.yellow('/'.join(fc['ObsDate'].split('/',3)[0:2])),
+            term.yellow('/'.join(fcast['ObsDate'].split('/',3)[0:2])),
             term.bold(u': '),
         u'%s. ' % (
                 term.yellow_underline(
-                    fc.get('TXT_Long', fc.get('TXT_Short', u''))),),
+                    fcast.get('TXT_Long', fcast.get('TXT_Short', u''))),),
         u'hiGH Of %s, lOW Of %s. ' % (
-                fc.get('High_Temperature'),
-                fc.get('Low_Temperature'),),))
-        if 0 != len(fc.get('WindDirection', u'')):
+                fcast.get('High_Temperature'),
+                fcast.get('Low_Temperature'),),))
+        if 0 != len(fcast.get('WindDirection', u'')):
             rstr += 'WiNdS %s ' % (
-                    term.bold_yellow(fc.get('WindDirection')),)
-        if 0 != len(fc.get('WindSpeed', u'')):
+                    term.bold_yellow(fcast.get('WindDirection')),)
+        if 0 != len(fcast.get('WindSpeed', u'')):
             rstr += u'At %sMPh, ' % (
-                    term.bold_yellow(fc.get('WindSpeed')),)
-        if 0 != len(fc.get('WindGust', u'')):
+                    term.bold_yellow(fcast.get('WindSpeed')),)
+        if 0 != len(fcast.get('WindGust', u'')):
             rstr += u'GUStS Of %sMPh. ' % (
-                    term.bold_yellow(fc.get('WindGust')),)
-            if 0 != len(fc.get('Real_Feel_High', u'')):
+                    term.bold_yellow(fcast.get('WindGust')),)
+            if 0 != len(fcast.get('Real_Feel_High', u'')):
                 rstr += u'PROdUCiNG '
-        if 0 != len(fc.get('Real_Feel_High', u'')):
+        if 0 != len(fcast.get('Real_Feel_High', u'')):
             rstr += u'A WiNdCHill Of %s/%s HiGh/lOW. ' % (
-                    term.bold_yellow_underline(fc.get('Real_Feel_High')),
-                    term.bold_yellow_underline(fc.get('Real_Feel_Low', u'?')),)
+                    term.bold_yellow_underline(
+                        fcast.get('Real_Feel_High')),
+                    term.bold_yellow_underline(
+                        fcast.get('Real_Feel_Low', u'?')),)
         echo(u'\r\n')
         lno += 1
         for line in Ansi(rstr).wrap(term.width).splitlines():
@@ -414,10 +416,10 @@ def main():
             term.bold_yellow(u']'),
             u': '),))
         while True:
-            yn = getch()
-            if yn is None or yn in (u'n', u'N', 'q', 'Q', term.KEY_EXIT):
+            inp = getch()
+            if inp is None or inp in (u'n', u'N', 'q', 'Q', term.KEY_EXIT):
                 break
-            if yn in (u'y', u'Y', u' ', term.KEY_ENTER):
+            if inp in (u'y', u'Y', u' ', term.KEY_ENTER):
                 session.user['location'] = location
                 break
 

@@ -6,7 +6,6 @@ import traceback
 import threading
 import logging
 import struct
-import codecs
 import math
 import time
 import imp
@@ -174,6 +173,7 @@ class Session(object):
     def encoding(self, value):
         # pylint: disable=C0111
         #         Missing docstring
+        import codecs
         if value != self._encoding:
             logger = logging.getLogger()
             logger.info('encoding is %s.', value)
@@ -218,8 +218,10 @@ class Session(object):
             oper = 'RESUME' if len(self._script_stack) else 'STOP'
             stop = bool(0 == len(self._script_stack))
             msg = (u'%s %safter general exception in %s.' % (
-                oper, (self._script_stack[-1][0] + u' ')
-                if len(self._script_stack) else u' ', fault[0],))
+                oper, (
+                    (self._script_stack[-1][0] + u' ')
+                    if len(self._script_stack) else u' '),
+                fault[0],))
             logger.info(msg)
             self.write(u'\r\n\r\n')
             if stop:
@@ -326,7 +328,7 @@ class Session(object):
         logger = logging.getLogger()
         flushed = list()
         while True:
-            data = self.read_event(event, timeout=-1)
+            data = self.read_event(event, -1)
             if data is None:
                 if 0 != len(flushed):
                     logger.debug('flushed from %s: %r', event, flushed)

@@ -206,12 +206,13 @@ def redraw(pager, selector):
     pager.glyphs['left-vert'] = u' '
     pager.glyphs['right-vert'] = u' '
     prompt_ole = u'SAY somethiNG ?!'
-    output = u''
-    output += pager.refresh() + pager.border()
-    output += term.move(selector.yloc - 2, selector.xloc)
-    output += term.bold_green(prompt_ole.center(selector.width).rstrip())
-    output += term.clear_eol + selector.refresh()
-    return output
+    return u''.join((
+        pager.refresh(),
+        pager.border(),
+        term.move(selector.yloc - 2, selector.xloc),
+        term.bold_green(prompt_ole.center(selector.width).rstrip()),
+        term.clear_eol,
+        selector.refresh(),))
 
 
 def dummy_pager():

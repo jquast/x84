@@ -597,7 +597,7 @@ def add_bbs():
                     echo(u'\r\n' + cancel_msg)
                     continue
             if bkey in ('port') and value is None or 0 == len(value):
-                value = '23'
+                value = u'23'
             # TODO: telnet connect test, of course !
             bbs[bkey] = value
             break
@@ -777,9 +777,10 @@ def main():
             echo(u'\r\n' * lightbar.height)
             dirty = True
         t_val = chk_thread(thread)
-        if t_val != False:
+        if t_val:
             thread = None
-            dirty = True if t_val == 'dirty' else dirty
+            if t_val == 'dirty':
+                dirty = True
         if session.poll_event('bbslist_update'):
             dirty = True
 
@@ -789,7 +790,7 @@ def main():
                 # provide dumb terminal with hotkey prompt
                 if thread is not None:
                     wait_for(thread)
-                if chk_thread(thread) != False:
+                if chk_thread(thread):
                     thread = None
                 return dummy_pager()
             else:

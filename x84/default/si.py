@@ -2,9 +2,10 @@
 
 def main ():
     """ Main procedure. """
-    # pylint: disable=R0914,W0141
+    # pylint: disable=R0914,W0141,R0912
     #         Too many local variables
     #         Used builtin function 'map'
+    #         Too many branches
     from x84.bbs import getsession, getterminal, Ansi, echo, getch, from_cp437
     from x84.engine import __url__ as url
     import platform
@@ -14,7 +15,7 @@ def main ():
     session, term = getsession(), getterminal()
     session.activity = 'System Info'
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'plant.ans',)
-    system, node, release, version, machine, processor = platform.uname()
+    system, _node, release, _version, machine, _processor = platform.uname()
     body = [u'AUthORS:',
             u'Johannes Lundberg',
             u'Jeffrey Quast',
@@ -58,7 +59,7 @@ def main ():
       float(random.choice(range(term.width))),
       float(random.choice(range(term.height))))) for n in range(num_stars)])
     melting = {}
-    plusStar = False
+    show_star = False
     tm_out, tm_min, tm_max, tm_step = 0.08, 0.01, 2.0, .01
     wind = (0.7, 0.1, 0.01, 0.01)
 
@@ -98,20 +99,25 @@ def main ():
     if (txt_x, txt_y) == (None, None):
         return
 
-    def charAtPos(yloc, xloc, txt_y, txt_x):
+    def char_at_pos(yloc, xloc, txt_y, txt_x):
         """ Return art (y, x) for location """
         return (u' ' if yloc-txt_y < 0 or yloc-txt_y >= height
                 or xloc-txt_x < 0 or xloc-txt_x >= len(otxt[yloc-txt_y])
                 else otxt[yloc-txt_y][xloc-txt_x])
 
-    def iter_wind(xs, ys, xd, yd):
+    def iter_wind(xslope, yslope, xdir, ydir):
         """ An easterly Wind """
-        xs += xd; ys += yd
-        if xs <= .5: xd = random.choice([0.01, 0.015, 0.02])
-        elif xs >= 1: xd = random.choice([-0.01, -0.015, -0.02])
-        if ys <= -0.1: yd = random.choice([0.01, 0.015, 0.02, 0.02])
-        elif ys >= 0.1: yd = random.choice([-0.01, -0.015, -0.02])
-        return xs, ys, xd, yd
+        xslope += xdir
+        yslope += ydir
+        if xslope <= 0.5:
+            xdir = random.choice([0.01, 0.015, 0.02])
+        elif xslope >= 1:
+            xdir = random.choice([-0.01, -0.015, -0.02])
+        if yslope <= -0.1:
+            ydir = random.choice([0.01, 0.015, 0.02, 0.02])
+        elif yslope >= 0.1:
+            ydir = random.choice([-0.01, -0.015, -0.02])
+        return xslope, yslope, xdir, ydir
 
     def iter_star(char, xloc, yloc):
         """ Given char and current position, apply wind and return new
@@ -138,29 +144,32 @@ def main ():
                 (range(term.width))))
         return char, xloc, yloc
 
-    def erase(s):
-        if plusStar:
-            char, x, y = stars[s]
-            echo (''.join((term.move(int(y), int(x)), term.normal,
-              charAtPos(int(y), int(x), txt_y, txt_x),)))
-
-    def melted(y, x):
-        melting[(y,x)] -= 1
-        if 0 == melting[(y,x)]:
-            del melting[(y,x)]
+    def erase(star_idx):
+        """ erase old star before moving .. """
+        if show_star:
+            _char, xloc, yloc = stars[star_idx]
+            echo (''.join((term.move(int(yloc), int(xloc)), term.normal,
+              char_at_pos(int(yloc), int(xloc), txt_y, txt_x),)))
 
     def melt():
-        for (y, x), phase in melting.items():
-            echo (''.join((term.move(y, x), melt_colors[phase-1],
-              charAtPos(y, x, txt_y, txt_x),)))
-            melted(y, x)
+        """ Iterate through all stars and phase through melt sequence. """
+        def melted(yloc, xloc):
+            """ shift melt, delete if dissapeared. """
+            melting[(yloc, xloc)] -= 1
+            if 0 == melting[(yloc, xloc)]:
+                del melting[(yloc, xloc)]
+        for (yloc, xloc), phase in melting.items():
+            echo (''.join((term.move(yloc, xloc), melt_colors[phase-1],
+              char_at_pos(yloc, xloc, txt_y, txt_x),)))
+            melted(yloc, xloc)
 
-    def draw_star (star, x, y):
-        ch = charAtPos(int(y), int(x), txt_y, txt_x)
-        if ch != ' ':
-            melting[(int(y), int(x))] = len(melt_colors)
-        if plusStar:
-            echo (term.move(int(y), int(x)) + melt_colors[-1] + star)
+    def draw_star (star, xloc, yloc):
+        """ draw star a (x, y) location """
+        char = char_at_pos(int(yloc), int(xloc), txt_y, txt_x)
+        if char != ' ':
+            melting[(int(yloc), int(xloc))] = len(melt_colors)
+        if show_star:
+            echo (term.move(int(yloc), int(xloc)) + melt_colors[-1] + star)
 
     with term.hidden_cursor():
         while txt_x is not None and txt_y is not None:
@@ -171,10 +180,10 @@ def main ():
                   float(random.choice(range(term.height)))))
                   for n in range(num_stars)])
                 otxt = list(art.splitlines())
-                for n, b in enumerate(body):
-                    while n > len(otxt):
+                for num, line in enumerate(body):
+                    while num > len(otxt):
                         otxt += [u'',]
-                    otxt[n] = otxt[n][:int(term.width/2.5)] + u' ' + b
+                    otxt[num] = otxt[num][:int(term.width/2.5)] + u' ' + line
                 txt_x, txt_y = refresh()
                 continue
             inp = getch(tm_out)
@@ -198,18 +207,22 @@ def main ():
                       float(random.choice(range(term.width))),
                       float(random.choice(range(term.height)))))
                       for n in range(num_stars)])
-            elif inp in (u'*',) and not plusStar:
-                plusStar = True
-            elif inp in (u'*',) and plusStar:
+            elif inp in (u'*',) and not show_star:
+                show_star = True
+            elif inp in (u'*',) and show_star:
                 for star in stars:
-                    erase (star)
-                plusStar = False
+                    erase(star)
+                show_star = False
             elif inp is not None:
                 echo(term.move(term.height, 0))
                 break
             melt ()
             for star_key, star_val in stars.items():
-                erase (star_key)
+                erase(star_key)
+                # pylint: disable=W0142
+                #         Used * or ** magic
                 stars[star_key] = iter_star(*star_val)
                 draw_star (*stars[star_key])
+            # pylint: disable=W0142
+            #         Used * or ** magic
             wind = iter_wind(*wind)

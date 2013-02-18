@@ -264,7 +264,7 @@ def dummy_pager(user):
             '(q)Uit', ]
     echo(term.normal + u'\r\n\r\n')
     lines = Ansi('\n'.join(menu)).wrap(term.width).splitlines()
-    xpos = max(1, (term.width / 2) - (40 / 2))
+    xpos = max(1, int(term.width / 2) - (40 / 2))
     for row, line in enumerate(lines):
         if row and (0 == row % (term.height - 2)):
             echo(term.reverse(u'\r\n-- More --'))
@@ -374,7 +374,7 @@ def lborder(lightbar, user):
     elif sel == 'e':
         val = user.email
     elif sel == 'm':
-        val = 'y' if user.get('mesg', True) else 'n'
+        val = u'y' if user.get('mesg', True) else 'n'
     elif sel == '.':
         plan = user.get('.plan', False)
         val = u'%d bytes' % (len(plan),) if plan else u''

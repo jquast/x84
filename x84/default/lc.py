@@ -135,7 +135,7 @@ def get_art(fname):
     width = 0
     for line in open(fname):
         art_line = line.rstrip()[:term.width - 1]
-        width = len(art_line) if len(art_line) > width else width
+        width = max(len(art_line), width)
         buf.append(art_line)
     return [line.center(width) for line in buf]
 

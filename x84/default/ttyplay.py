@@ -1,17 +1,23 @@
 """ ttyplay door for x/84, https://github.com/jquast/x84 """
 
 def main(ttyfile=u'', peek=False):
+    """ Main procedure. """
+    # pylint: disable=R0914,R0915
+    #         Too many local variables
+    #         Too many statements
     from x84.bbs import getsession, getterminal, echo, getch
     from x84.bbs import Door, ini, Lightbar
     import os, re
-    TTYPLAY = ini.CFG.get('ttyplay', 'exe')
-    if not os.path.exists(TTYPLAY):
-        echo(u'\r\n%s NOt iNStAllEd.\r\n' % (TTYPLAY,))
+    ttyplay_exe = ini.CFG.get('ttyplay', 'exe')
+    if not os.path.exists(ttyplay_exe):
+        echo(u'\r\n%s NOt iNStAllEd.\r\n' % (ttyplay_exe,))
         getch()
         return
 
     session, term = getsession(), getterminal()
     if 'sysop' in session.user.groups and ttyfile == u'':
+        # pylint: disable=W0212
+        #         Access to a protected member _ttyrec_folder of a client class
         folder = os.path.dirname(ttyfile) or session._ttyrec_folder
         files = sorted([fn for fn in os.listdir(session._ttyrec_folder)
                 if fn.endswith('.ttyrec')])
@@ -37,7 +43,7 @@ def main(ttyfile=u'', peek=False):
     match = size_pattern.match(data)
     if match:
         echo(u'\r\n\r\nheight, width: %s, %s' % match.groups())
-    args=tuple()
+    args = tuple()
     if peek:
         args += ('-p',)
     elif 'sysop' in session.user.groups:
@@ -46,8 +52,10 @@ def main(ttyfile=u'', peek=False):
         if getch(2) in (u'p', u'P'):
             peek = True
     args += (ttyfile,)
-    d = Door(TTYPLAY, args=args)
+    door = Door(ttyplay_exe, args=args)
     session.activity = u'playing tty recording'
+    # pylint: disable=W0212
+    #         Access to a protected member _record_tty of a client class
     resume_rec = session._record_tty and session.is_recording
     if resume_rec:
         session.stop_recording()
@@ -59,7 +67,7 @@ def main(ttyfile=u'', peek=False):
         term.red_reverse(u'StOP'),))
     getch()
     with term.fullscreen():
-        d.run()
+        door.run()
         echo(u'\r\n\r\n')
         echo(u'PRESS ' + term.green_underline('q') + u'.')
         while not getch() in (u'q', u'Q'):

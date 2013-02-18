@@ -62,7 +62,11 @@ def main():
         autodb = DBProxy('automsg')
         automsgs = sorted(autodb.values()) if len(autodb) else db_firstrecord
         dblen = len(automsgs)
-        idx = dblen - 1 if idx < 0 else 0 if idx > dblen - 1 else idx
+        # bounds check
+        if idx < 0:
+            idx = dblen - 1
+        elif idx > dblen - 1:
+            idx = 0
         tm_ago, handle, msg = automsgs[idx]
         asc_ago = u'%s ago' % (timeago(time.time() - tm_ago))
         disp = (u''.join(('\r\n\r\n',

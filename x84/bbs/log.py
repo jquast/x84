@@ -12,6 +12,7 @@ class ColoredConsoleHandler(logging.StreamHandler):
     """
 
     def __init__(self):
+        """ Constructor class, initializes blessings Terminal. """
         self.term = Terminal(stream=sys.stderr)
         logging.StreamHandler.__init__(self)
 

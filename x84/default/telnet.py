@@ -2,7 +2,8 @@
 telnet client for X/84 BBS, https://github.com/jquast/x84/
 """
 KEY_POLL = 0.015
-
+IS = chr(0)
+SEND = chr(1)
 
 
 def main(host, port=None, encoding='cp437'):
@@ -10,19 +11,21 @@ def main(host, port=None, encoding='cp437'):
     Call script with argument host and optional argument port to connect to a
     telnet server. ctrl-^ to disconnect.
     """
+    # pylint: disable=R0914,R0912,R0915
+    #         Too many local variables
+    #         Too many branches
+    #         Too many statements
     import telnetlib
     import struct
-    import sys
     from x84.bbs import getsession, getterminal, echo, getch, from_cp437
     assert encoding in ('utf8', 'cp437')
     session, term = getsession(), getterminal()
     session.activity = 'connecting to %s' % (host,)
     port = int(port) if port is not None else 23
     telnet_client = telnetlib.Telnet()
-    IS = chr(0)
-    SEND = chr(1)
 
     def callback_cmdopt(socket, cmd, opt):
+        """ Callback for telnetlib.Telnet.set_option_negotiation_callback. """
         if cmd == telnetlib.WILL:
             if opt in (telnetlib.ECHO, telnetlib.SGA):
                 socket.sendall(telnetlib.IAC + telnetlib.DO + opt)
@@ -53,11 +56,12 @@ def main(host, port=None, encoding='cp437'):
     if not session.user.get('expert', False):
         getch(3)
     echo(u'\r\nTrying %s:%s... ' % (host, port,))
+    # pylint: disable=W0703
+    #         Catching too general exception Exception
     try:
         telnet_client.open(host, port)
-    except:
-        e_type, e_value, e_tb = sys.exc_info()
-        echo(term.bold_red('\r\n%s: %s\r\n' % (e_type, e_value,)))
+    except Exception as err:
+        echo(term.bold_red('\r\n%s\r\n' % (err,)))
         echo(u'\r\n press any key ..')
         getch()
         return
@@ -86,14 +90,12 @@ def main(host, port=None, encoding='cp437'):
                 carriage_returned = True
             elif carriage_returned and inp in (u'\n', unichr(0)):
                 carriage_returned = False
-                pass # allow repeated,
             elif inp is not None:
                 telnet_client.write(inp)
                 carriage_returned = False
-        except:
-            e_type, e_value, e_tb = sys.exc_info()
-            echo(term.normal + u'\r\n')
-            echo(term.bold_red('%s: %s\r\n' % (e_type, e_value,)))
+        except Exception as err:
+            echo(term.bold_red('%s\r\n%s\r\n' % (
+                term.normal, err,)))
             break
         inp = getch(timeout=KEY_POLL)
     echo(u'\r\nConnection closed.\r\n')

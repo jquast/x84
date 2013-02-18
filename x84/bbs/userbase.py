@@ -55,9 +55,7 @@ def digestpw_internal(password, salt=None):
     if not salt:
         salt = base64.b64encode(os.urandom(32))
     digest = salt + password
-    # pylint: disable=W0612
-    #        Unused variable 'loop_cnt'
-    for loop_cnt in range(0, 100000):
+    for _count in range(0, 100000):
         # pylint: disable=E1101
         #         Module 'hashlib' has no 'sha256'
         digest = hashlib.sha256(digest).hexdigest()

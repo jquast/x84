@@ -1,13 +1,7 @@
 """
 Database proxy helper for X/84.
 """
-import logging
 import time
-
-
-# pylint: disable=C0103
-#        Invalid name "logger" for type constant (should match
-logger = logging.getLogger()
 
 
 class DBProxy(object):

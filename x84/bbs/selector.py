@@ -1,9 +1,6 @@
 """
 Left/Right lightbar choice selector for x/84, https://github.com/jquast/x84
 """
-from __future__ import division
-import math
-
 from x84.bbs.ansiwin import AnsiWindow
 
 VI_KEYSET = {
@@ -36,7 +33,7 @@ class Selector(AnsiWindow):
         self._moved = False
         self._quit = False
         self._selected = False
-        AnsiWindow.__init__(self, height=1, width=width, yloc=yloc, xloc=xloc)
+        AnsiWindow.__init__(self, 1, width, yloc, xloc) # height is 1
         self.init_theme()
         self.keyset = VI_KEYSET
         self.init_keystrokes()
@@ -162,6 +159,7 @@ class Selector(AnsiWindow):
         """
         Return terminal sequence suitable for re-drawing left/right menubar.
         """
+        import math
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
         attr_l = (self.colors.get('selected', u'')
@@ -172,9 +170,9 @@ class Selector(AnsiWindow):
                 else self.colors.get('unselected'))
         return u''.join((
             self.pos(0, 0), term.normal, attr_l,
-            self.left.center(int(math.ceil(self.width / 2))),
+            self.left.center(int(math.ceil(float(self.width) / 2))),
             term.normal, attr_r,
-            self.right.center(int(math.floor(self.width / 2))),
+            self.right.center(int(math.floor(float(self.width) / 2))),
             term.normal,))
 
     def move_right(self):

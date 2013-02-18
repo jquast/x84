@@ -10,6 +10,7 @@ class IPCLogHandler(logging.Handler):
     solution that seems overlooked in documentation or exisiting code, try it!
     """
     def __init__(self, pipe):
+        """ Constructor method, requires multiprocessing.Pipe """
         logging.Handler.__init__(self)
         self.pipe = pipe
         self.session = None

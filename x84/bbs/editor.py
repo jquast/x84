@@ -438,9 +438,7 @@ class ScrollingEditor(AnsiWindow):
         self._horiz_lastshift = self._horiz_shift
         self._horiz_shift = 0
         self._horiz_pos = 0
-        # pylint: disable=W0612
-        #        Unused variable 'loop_cnt'
-        for loop_cnt in range(len(self.content)):
+        for _count in range(len(self.content)):
             if (self._horiz_pos >
                     (self.visible_width - self.scroll_amt)):
                 self._horiz_shift += self.scroll_amt
