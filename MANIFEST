@@ -46,7 +46,6 @@ x84/default/profile.py
 x84/default/pwreset.py
 x84/default/readmsgs.py
 x84/default/si.py
-x84/default/speedhack.py
 x84/default/telnet.py
 x84/default/tetris.ans
 x84/default/tetris.py
