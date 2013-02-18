@@ -322,7 +322,7 @@ def main(save_key=u'draft'):
                 dirty = True
             elif inp in (u's', u'S'):
                 if yes_no(lightbar, u'- SAVE -'):
-                    session.user[save_key] = get_lbcontent(lightbar)
+                    session.user[save_key] = get_lbcontent(lightbar, u'X')
                     return True
                 dirty = True
             else:
@@ -349,8 +349,7 @@ def main(save_key=u'draft'):
                 echo(term.normal + lneditor.erase_border())
                 del lightbar.content[lightbar.index]
                 lightbar.move_up()
-                set_lbcontent(lightbar,
-                        get_lbcontent(lightbar, soft_newline=u' '))
+                set_lbcontent(lightbar, get_lbcontent(lightbar))
                 lneditor = get_lneditor(lightbar)
                 dirty = True
             else:
