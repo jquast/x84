@@ -2,33 +2,42 @@
 Write public or private posts for x/84, https://github.com/jquast/x84/
 """
 
-
-def refresh(msg, level=0):
-    """ Refresh screen, level indicates up to which step """
-    from x84.bbs import getterminal, echo
-    term = getterminal()
+def banner():
+    from x84.bbs import echo, getterminal
+    term = getterminal
     echo(u'\r\n\r\n')
     echo(term.bold_black(u'art needed ../'.center(term.width).rstrip()))
     echo(u'\r\n\r\n')
+
+def refresh(msg):
+    """ Refresh screen, level indicates up to which step """
+    from x84.bbs import getterminal, getsession, echo
+    session, term = getsession(), getterminal()
+    session.activity = 'Constructing a %s message' % (
+            u'public' if u'public' in msg.tags else u'private',)
     echo(u'    AUthOR: ' + term.bold_blue(msg.author) + u'\r\n\r\n')
-    if level > 0:
-        echo(u'   RECiPiENt: ')
-        echo(term.bold_blue(msg.recipient if msg.recipient is not None
-                            else u'<(None)=All users>' + u'\r\n\r\n'))
-    if level > 1:
-        echo(u'     SUBjECt: ')
-        echo(term.bold_blue(msg.subject) + u'\r\n\r\n')
-    if level > 2:
-        echo(u'        tAGS: ')
-        echo(term.clear_eol + term.bold_blue(u', '.join(msg.tags))
-             + u'\r\n\r\n')
-    if level > 3:
-        echo(u'     bOdY: ' + u'\r\n\r\n')
-        echo(u'\r\n'.join(msg.body.splitlines()) + u'\r\n\r\n')
+    echo(u'   RECiPiENt: ')
+    echo(term.blue(msg.recipient
+        if msg.recipient is not None
+        else u'<(None)=All users>'))
+    echo(u'\r\n\r\n')
+    echo(u'     SUBjECt: ')
+    echo(term.blue(msg.subject))
+    echo(u'\r\n\r\n')
+    echo(u'        tAGS: ')
+    echo(term.blue(u', '.join(msg.tags)))
+    echo(u'\r\n\r\n')
+    echo(term.underline(u'        bOdY: '.ljust(term.width - 1)) + u'\r\n')
+    body = msg.body.splitlines()
+    echo(term.blue(u'\r\n'.join(body)) + u'\r\n')
+    echo(term.underline(u''.ljust(term.width - 1)))
+    echo(u'\r\n\r\n')
+    session.activity = 'Constructing a %s message' % (
+            u'public' if u'public' in msg.tags else u'private',)
     return
 
 
-def get_recipient(msg):
+def prompt_recipient(msg):
     """ Prompt for recipient of message. """
     # pylint: disable=R0914
     #         Too many local variables
@@ -36,9 +45,11 @@ def get_recipient(msg):
     from x84.bbs import Selector
     import difflib
     term = getterminal()
-    echo(term.clear_eol + term.bold_black(
-        u"ENtER hANdlE, OR 'None'. Escape to exit")
-        + u'\r\n\r\n')
+    echo (u"ENtER %s, OR '%s' tO AddRESS All. %s to exit" % (
+        term.bold_blue(u'hANdlE'),
+        term.bold_blue(u'None'),
+        term.bold_blue_underline('Escape'),))
+    echo(u'\r\n\r\n')
     max_user = ini.CFG.getint('nua', 'max_user')
     lne = LineEditor(max_user, msg.recipient or u'None')
     lne.highlight = term.blue_reverse
@@ -85,7 +96,7 @@ def get_recipient(msg):
             return True
 
 
-def get_subject(msg):
+def prompt_subject(msg):
     """ Prompt for subject of message. """
     from x84.bbs import getterminal, LineEditor, echo, ini
     term = getterminal()
@@ -100,8 +111,67 @@ def get_subject(msg):
     return True
 
 
-def get_public(msg):
-    """ Prompt for 'public' tag of message. """
+def prompt_tags(msg):
+    """ Prompt for and return tags wished for message. """
+    # pylint: disable=R0914,W0603
+    #         Too many local variables
+    #         Using the global statement
+    from x84.bbs import DBProxy, echo, getterminal, getsession
+    from x84.bbs import Ansi, LineEditor
+    session, term = getsession(), getterminal()
+    tagdb = DBProxy('tags')
+    msg_onlymods = (u"\r\nONlY MEMbERS Of thE '%s' OR '%s' "
+            "GROUP MAY CREAtE NEW tAGS." % (
+                term.bold_blue('sysop'), term.bold_blue('moderator'),))
+    msg_invalidtag = u"\r\n'%s' is not a valid tag."
+    prompt_tags1 = u"\r\n\r\nENtER %s, COMMA-dEliMitEd. " % (
+            term.bold_red('TAG(s)'),)
+    prompt_tags2 = u"OR '/list', %s:quit\r\n : " % (
+            term.bold_blue_underline('Escape'),)
+    global FILTER_PRIVATE
+    while True:
+        # Accept user input for multiple 'tag's, or /list command
+        echo(prompt_tags1)
+        echo(prompt_tags2)
+        width = term.width - 6
+        sel_tags = u', '.join(msg.tags)
+        inp_tags = LineEditor(width, sel_tags).read()
+        if (inp_tags is None or 0 == len(inp_tags)
+                or inp_tags.strip().lower() == '/quit'):
+            return False
+        elif inp_tags.strip().lower() == '/list':
+            # list all available tags, and number of messages
+            echo(u'\r\n\r\nTags: \r\n')
+            all_tags = sorted(tagdb.items())
+            if 0 == len(all_tags):
+                echo(u'None !'.center(term.width / 2))
+            else:
+                echo(Ansi(u', '.join(([u'%s(%d)' % (_key, len(_value),)
+                    for (_key, _value) in all_tags]))
+                    ).wrap(term.width - 2))
+            continue
+
+        echo(u'\r\n')
+        # search input as valid tag(s)
+        tags = set([inp.strip().lower() for inp in inp_tags.split(',')])
+        err = False
+        for tag in tags.copy():
+            if not tag in tagdb and not (
+                    'sysop' in session.user.groups or
+                    'moderator' in session.user.groups):
+                tags.remove(tag)
+                echo(msg_invalidtag % (term.bold_red(tag),))
+                err = True
+        if err:
+            echo(msg_onlymods)
+            continue
+        msg.tags = tags
+        return True
+
+
+def prompt_public(msg):
+    """ Prompt for/enforce 'public' tag of message for unaddressed messages.
+    """
     from x84.bbs import getterminal, echo, Selector
     term = getterminal()
     if msg.recipient is None:
@@ -138,7 +208,7 @@ def get_public(msg):
         return False
 
 
-def get_body(msg):
+def prompt_body(msg):
     """ Prompt for 'body' of message, executing 'editor' script. """
     from x84.bbs import echo, Selector, getterminal, getsession, gosub
     term = getterminal()
@@ -157,11 +227,11 @@ def get_body(msg):
     if gosub('editor', 'draft'):
         msg.body = session.user.get('draft', u'')
         del session.user['draft']
-        return True
+        return 0 != len(msg.body.strip())
     return False
 
 
-def get_send():
+def prompt_send():
     """ Prompt for continue/cancel """
     from x84.bbs import echo, Selector, getterminal
     term = getterminal()
@@ -179,7 +249,7 @@ def get_send():
     return True
 
 
-def get_abort():
+def prompt_abort():
     """ Prompt for continue/abort """
     from x84.bbs import echo, Selector, getterminal
     term = getterminal()
@@ -200,32 +270,26 @@ def get_abort():
 
 def main(msg=None):
     """ Main procedure. """
-    from x84.bbs import getsession, Msg
+    from x84.bbs import Msg, getsession
     session = getsession()
-    msg = Msg() if msg is None else msg
-
+    if msg is None:
+        msg = Msg()
+        msg.tags = ('public',)
     while True:
-        session.activity = 'Writing a msg'
+        session.activity = 'Constructing a %s message' % (
+                u'public' if u'public' in msg.tags else u'private',)
+        if not prompt_recipient(msg):
+            break
+        if not prompt_subject(msg):
+            break
+        if not prompt_tags(msg):
+            break
+        if not prompt_public(msg):
+            break
+        if not prompt_body(msg):
+            break
         refresh(msg)
-        if not get_recipient(msg):
-            if get_abort():
-                return False
-            continue
-        refresh(msg, 1)
-        if not get_subject(msg):
-            if get_abort():
-                return False
-            continue
-        refresh(msg, 2)
-        if not get_public(msg):
-            if get_abort():
-                return False
-            continue
-        refresh(msg, 3)
-        if not get_body(msg):
-            continue
-        refresh(msg, 4)
-        if not get_send():
-            continue
+        if not prompt_send():
+            break
         msg.save()
         return True
