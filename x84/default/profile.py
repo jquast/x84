@@ -36,14 +36,15 @@ def process_keystroke(lightbar, inp, user):
         if lightbar.moved:
             return False
     assert is_self or 'sysop' in session.user.groups
-    if is_self:
-        if inp in (u'c', u'C') or (inp == term.KEY_ENTER and
+    if is_self and (
+        inp in (u'c', u'C') or (inp == term.KEY_ENTER and
                                    lightbar is not None and
-                                   lightbar.selection[0] == u'c'):
+                                   lightbar.selection[0] == u'c')):
             gosub('charset')
-        elif inp in (u't', u'T') or (inp == term.KEY_ENTER and
+    elif is_self and (
+        inp in (u't', u'T') or (inp == term.KEY_ENTER and
                                      lightbar is not None and
-                                     lightbar.selection[0] == u't'):
+                                     lightbar.selection[0] == u't')):
             echo(term.move(term.height - 1, 0))
             echo(ABOUT_TERM + u'\r\n')
             echo(u'\r\ntERMiNAl tYPE: ')
@@ -56,9 +57,10 @@ def process_keystroke(lightbar, inp, user):
                     break
                 elif inp2 in (u'n', u'N'):
                     break
-        elif inp in (u'w', u'W') or (inp == term.KEY_ENTER and
+    elif is_self and (
+        inp in (u'w', u'W') or (inp == term.KEY_ENTER and
                                      lightbar is not None and
-                                     lightbar.selection[0] == u'w'):
+                                     lightbar.selection[0] == u'w')):
             echo(u'\r\ntERMiNAl Width: ')
             width = LineEditor(3, str(term.width)).read()
             try:
@@ -77,9 +79,10 @@ def process_keystroke(lightbar, inp, user):
                     break
                 elif inp2 in (u'n', u'N'):
                     break
-        elif inp in (u'h', u'H') or (inp == term.KEY_ENTER and
-                                     lightbar is not None and
-                                     lightbar.selection[0] == u'h'):
+    elif is_self and (
+            inp in (u'h', u'H') or (inp == term.KEY_ENTER and
+                lightbar is not None and
+                lightbar.selection[0] == u'h')):
             echo(u'\r\ntERMiNAl hEiGht: ')
             height = LineEditor(3, str(term.height)).read()
             try:
@@ -98,10 +101,10 @@ def process_keystroke(lightbar, inp, user):
                     break
                 elif inp2 in (u'n', u'N'):
                     break
-    elif 'sysop' in session.user.groups and (
-            inp in (u'd', u'D',) or (inp == term.KEY_ENTER and
-                lightbar is not None and
-                lightbar.selection[0] == u'd')):
+    elif ('sysop' in session.user.groups and (
+                inp in (u'd', u'D',) or (inp == term.KEY_ENTER and
+                    lightbar is not None and
+                    lightbar.selection[0] == u'd'))):
         echo(u"\r\n\r\ndElEtE %s ? [yn]" % (user.handle,))
         while True:
             inp2 = getch()
@@ -214,7 +217,7 @@ def process_keystroke(lightbar, inp, user):
         echo(u"\r\n\r\n%s EXPERt MOdE? [yn]" % (
             'ENAblE' if expert else 'DiSAblE',))
         while True:
-            inp = getch()
+            inp2 = getch()
             if inp2 in (u'y', u'Y'):
                 user['expert'] = expert
                 break
