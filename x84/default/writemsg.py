@@ -4,32 +4,30 @@ Write public or private posts for x/84, https://github.com/jquast/x84/
 
 def banner():
     from x84.bbs import echo, getterminal
-    term = getterminal
+    term = getterminal()
     echo(u'\r\n\r\n')
     echo(term.bold_black(u'art needed ../'.center(term.width).rstrip()))
     echo(u'\r\n\r\n')
 
-def refresh(msg):
+def display_msg(msg):
     """ Refresh screen, level indicates up to which step """
     from x84.bbs import getterminal, getsession, echo
     session, term = getsession(), getterminal()
-    session.activity = 'Constructing a %s message' % (
-            u'public' if u'public' in msg.tags else u'private',)
-    echo(u'    AUthOR: ' + term.bold_blue(msg.author) + u'\r\n\r\n')
+    body = msg.body.splitlines()
+    echo(u'    AUthOR: ' + term.bold_yellow(msg.author) + u'\r\n\r\n')
     echo(u'   RECiPiENt: ')
-    echo(term.blue(msg.recipient
+    echo(term.yellow(msg.recipient
         if msg.recipient is not None
         else u'<(None)=All users>'))
     echo(u'\r\n\r\n')
     echo(u'     SUBjECt: ')
-    echo(term.blue(msg.subject))
+    echo(term.yellow(msg.subject))
     echo(u'\r\n\r\n')
     echo(u'        tAGS: ')
-    echo(term.blue(u', '.join(msg.tags)))
+    echo(term.yellow(u', '.join(msg.tags)))
     echo(u'\r\n\r\n')
     echo(term.underline(u'        bOdY: '.ljust(term.width - 1)) + u'\r\n')
-    body = msg.body.splitlines()
-    echo(term.blue(u'\r\n'.join(body)) + u'\r\n')
+    echo(term.yellow(u'\r\n'.join(body)) + u'\r\n')
     echo(term.underline(u''.ljust(term.width - 1)))
     echo(u'\r\n\r\n')
     session.activity = 'Constructing a %s message' % (
@@ -46,13 +44,13 @@ def prompt_recipient(msg):
     import difflib
     term = getterminal()
     echo (u"ENtER %s, OR '%s' tO AddRESS All. %s to exit" % (
-        term.bold_blue(u'hANdlE'),
-        term.bold_blue(u'None'),
-        term.bold_blue_underline('Escape'),))
+        term.bold_yellow(u'hANdlE'),
+        term.bold_yellow(u'None'),
+        term.bold_yellow_underline('Escape'),))
     echo(u'\r\n\r\n')
     max_user = ini.CFG.getint('nua', 'max_user')
     lne = LineEditor(max_user, msg.recipient or u'None')
-    lne.highlight = term.blue_reverse
+    lne.highlight = term.yellow_reverse
     echo(term.clear_eol + u'   RECiPiENt: ')
     recipient = lne.read()
     if recipient is None or lne.quit:
@@ -102,8 +100,8 @@ def prompt_subject(msg):
     term = getterminal()
     max_subject = int(ini.CFG.getint('msg', 'max_subject'))
     lne = LineEditor(max_subject, msg.subject)
-    lne.highlight = term.blue_reverse
-    echo(term.clear_eol + u'     SUBjECt: ')
+    lne.highlight = term.yellow_reverse
+    echo(u'\r\n     SUBjECt: ')
     subject = lne.read()
     if subject is None or 0 == len(subject):
         return False
@@ -122,12 +120,12 @@ def prompt_tags(msg):
     tagdb = DBProxy('tags')
     msg_onlymods = (u"\r\nONlY MEMbERS Of thE '%s' OR '%s' "
             "GROUP MAY CREAtE NEW tAGS." % (
-                term.bold_blue('sysop'), term.bold_blue('moderator'),))
+                term.bold_yellow('sysop'), term.bold_blue('moderator'),))
     msg_invalidtag = u"\r\n'%s' is not a valid tag."
     prompt_tags1 = u"\r\n\r\nENtER %s, COMMA-dEliMitEd. " % (
             term.bold_red('TAG(s)'),)
     prompt_tags2 = u"OR '/list', %s:quit\r\n : " % (
-            term.bold_blue_underline('Escape'),)
+            term.bold_yellow_underline('Escape'),)
     global FILTER_PRIVATE
     while True:
         # Accept user input for multiple 'tag's, or /list command
@@ -174,7 +172,12 @@ def prompt_public(msg):
     """
     from x84.bbs import getterminal, echo, Selector
     term = getterminal()
-    if msg.recipient is None:
+
+    if msg.recipient is None and 'public' in msg.tags:
+        # msg is addressed to None, and is tagged as 'public',
+        return True
+    elif msg.recipient is None:
+        # msg is addressed to nobody, force tag as 'public' or cancel,
         blurb = u"POStS AddRESSEd tO 'None' MUSt bE PUbliC!"
         inp = Selector(yloc=term.height - 1,
                       xloc=term.width - 22,
@@ -189,6 +192,7 @@ def prompt_public(msg):
             return True
         return False
     else:
+        # not specified; you don't want this msg public? confirm,
         inp = Selector(yloc=term.height - 1,
                       xloc=term.width - 22,
                       width=20,
@@ -275,6 +279,7 @@ def main(msg=None):
     if msg is None:
         msg = Msg()
         msg.tags = ('public',)
+    banner()
     while True:
         session.activity = 'Constructing a %s message' % (
                 u'public' if u'public' in msg.tags else u'private',)
@@ -288,8 +293,9 @@ def main(msg=None):
             break
         if not prompt_body(msg):
             break
-        refresh(msg)
+        display_msg(msg)
         if not prompt_send():
             break
         msg.save()
         return True
+    return False
