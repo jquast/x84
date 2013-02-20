@@ -7,6 +7,7 @@ import curses.has_key
 import contextlib
 import platform
 import termios
+import logging
 import struct
 import fcntl
 import sys
@@ -70,7 +71,7 @@ class Terminal(object):
         self.stream = stream
         self.rows = rows
         self.columns = columns
-        curses.setupterm(kind, stream.fileno())
+        curses.setupterm(kind, 0)
 
         # curses capability names are inherited (for comparison)
         for attr in (a for a in dir(curses) if a.startswith('KEY_')):
@@ -375,10 +376,15 @@ class Terminal(object):
         If data is a bytestring, it is converted to unicode using incremental
         decoder, a result from codecs.getincrementaldecoder(encoding).
         """
+        logger = logging.getLogger()
         decoded = list()
         for num, byte in enumerate(text):
-            final = (num + 1) == len(text)
-            ucs = decoder.decode(byte, final)
+            final = False #(num + 1) == len(text)
+            try:
+                ucs = decoder.decode(byte, final)
+            except UnicodeDecodeError as err:
+                logger.warn(err)
+                ucs = None
             if ucs is not None:
                 decoded.append(ucs)
         data = u''.join(decoded)
