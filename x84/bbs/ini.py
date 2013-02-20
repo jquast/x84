@@ -108,6 +108,10 @@ def init_bbs_ini():
     cfg_bbs.set('system', 'ttyrecpath',
                 os.path.join(os.path.expanduser('~/.x84'), 'ttyrecordings'))
     cfg_bbs.set('system', 'timeout', '1984')
+    # for very slow systems, you may need to increase IPC timeout for acquiring
+    # locks and sending input to sub-processes -- this can happen when the
+    # system is under very heavy load -- like pasting wikipedia into the editor
+    cfg_bbs.set('system', 'timeout_ipc', '1')
     cfg_bbs.set('system', 'password_digest', 'internal')
     cfg_bbs.set('system', 'mail_addr',
                 '%s@%s' % (getpass.getuser(), socket.gethostname()))
