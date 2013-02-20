@@ -34,7 +34,6 @@ def get_lbcontent(lightbar):
     # a custom 'soft newline' versus 'hard newline' is implemented,
     # '\n' == 'soft', '\r\n' == 'hard'
     lines = list()
-    print 'get startswith', repr(lightbar.content)
     for lno, (_row, ucs) in enumerate(lightbar.content):
         # first line always appends as-is, otherwise if the previous line
         # matched a hardwrap, or did not match softwrap, then append as-is.
@@ -42,16 +41,13 @@ def get_lbcontent(lightbar):
         # '\r\n')
         if lno == 0 or (
                 is_hardwrapped(lines[-1]) or not is_softwrapped(lines[-1])):
-            print 'append', repr(ucs), 'to', repr(lines[-1]) if lines else None
             lines.append(ucs)
         else:
             # otherwise the most recently appended line must end with
             # SOFTWRAP, strip that softwrap and re-assign value to a
             # whitespace-joined value by current line value.
-            print 'join', repr(ucs.lstrip()), 'to', repr(lines[-1].rstrip())
             lines[-1] = WHITESPACE.join((lines[-1].rstrip(), ucs.lstrip(),))
     retval = u''.join(lines)
-    print 'get returns', repr(retval)
     return retval
 
 
@@ -66,30 +62,23 @@ def set_lbcontent(lightbar, ucs):
     content = dict()
     lno = 0
     lines = ucs.split(HARDWRAP)
-    print 'set startswith', repr(lines)
     for idx, ucs_line in enumerate(lines):
         if idx == len(lines) - 1 and 0 == len(ucs_line):
-            print 'skip last empty'
             continue
         ucs_joined = WHITESPACE.join(ucs_line.split(SOFTWRAP))
         ucs_wrapped = Ansi(ucs_joined).wrap(
                 lightbar.visible_width).splitlines()
         for inner_lno, inner_line in enumerate(ucs_wrapped):
-            print 'lw', repr(inner_line)
             content[lno] = u''.join((inner_line,
                 SOFTWRAP if inner_lno != len(ucs_wrapped) - 1 else u''))
             lno += 1
         if 0 == len(ucs_wrapped):
-            print 'lno', lno, '=hardwrap'
             content[lno] = HARDWRAP
             lno += 1
         else:
             content[lno - 1] += HARDWRAP
-            print 'lno', lno, 'became', repr(content[lno -1])
     if 0 == len(content):
-        print 'init'
         content[0] = HARDWRAP
-    print 'set sets', repr(content)
     lightbar.update(sorted(content.items()))
 
 
@@ -194,12 +183,10 @@ def main(save_key=u'draft'):
         # merge line editor with pager window content. strange thing, we
         # edit u'\r\n' to become u'\r\nHello world.', and move newlines to
         # the right-most sideu, u'Hello world.\r\n'. This is just hackwork.
-        print '-index', lightbar.index, lightbar.content[lightbar.index]
         lightbar.content[lightbar.index] = [
                 lightbar.selection[0],
                 softwrap_join(wrap_rstrip(lneditor.content))
                 + HARDWRAP]
-        print '+index', lightbar.index, lightbar.content[lightbar.index]
         prior_length = len(lightbar.content)
         prior_position = lightbar.position
         set_lbcontent(lightbar, get_lbcontent(lightbar))
@@ -377,9 +364,7 @@ def main(save_key=u'draft'):
 
         # edit mode
         elif edit and inp in movement:
-            print 'merge,'
             merge()
-            print 'merge complete.'
             if inp in (u'\r', term.KEY_ENTER):
                 lightbar.content.insert(lightbar.index + 1,
                         [lightbar.selection[0] + 1, HARDWRAP])
@@ -389,7 +374,6 @@ def main(save_key=u'draft'):
                 echo(term.normal + lneditor.erase_border())
                 lneditor = get_lneditor(lightbar)
             dirty = True
-            print 'edit movement complete'
 
         # edit mode -- append character / backspace
         elif edit and inp is not None:
