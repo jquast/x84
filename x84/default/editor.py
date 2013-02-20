@@ -378,7 +378,7 @@ def main(save_key=u'draft'):
         # edit mode -- append character / backspace
         elif edit and inp is not None:
             if (inp in keyset['rubout']
-                    and len(lneditor.printable) == 0
+                    and len(lneditor.content) == 0
                     and lightbar.index > 0):
                 # erase past margin,
                 echo(term.normal + lneditor.erase_border())
