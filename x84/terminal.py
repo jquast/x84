@@ -73,7 +73,8 @@ def unregister(client, inp_queue, out_queue, lock):
     logger = logging.getLogger()
     try:
         flush_queue(out_queue)
-        flush_queue(inp_queue)
+        out_queue.close()
+        inp_queue.close()
     except (EOFError, IOError) as exception:
         logger.exception(exception)
     client.deactivate()
