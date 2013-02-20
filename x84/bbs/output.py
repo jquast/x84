@@ -168,7 +168,7 @@ class Ansi(unicode):
                 + u' ' * (max(0, int(math.ceil(split)))))
     center.__doc__ = unicode.center.__doc__
 
-    def wrap(self, width, indent=u' '):
+    def wrap(self, width, indent=u''):
         """
         A.wrap(width) --> unicode
 
