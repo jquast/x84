@@ -104,8 +104,8 @@ def _loop(telnetd):
         Returns list of tuples (fileno, client) of telnet
         clients that have been deactivated
         """
-        return [(fno, clt) for (fno, clt) in
-                telnetd.clients.items() if not clt.active]
+        return [(fd, client) for (fd, client) in
+                telnetd.clients.items() if not client.active]
 
     def lookup(client):
         """
@@ -156,9 +156,9 @@ def _loop(telnetd):
                     # client.sock.fileno() can raised 'bad file descriptor',
                     # so, to remove it from the recv_list, reverse match by
                     # instance saved with its FD as a key for telnetd.clients!
-                    for o_fd, clt in telnetd.clients.items():
-                        if client == clt and o_fd in recv_list:
-                            recv_list.remove(o_fd)
+                    for _fd, _client in telnetd.clients.items():
+                        if client == _client and _fd in recv_list:
+                            recv_list.remove(_fd)
                             break
                     inp_queue.send(('exception', Disconnected(err),))
                     unregister(client, inp_queue, out_queue, lock)
@@ -332,6 +332,10 @@ def _loop(telnetd):
             except socket.error:
                 pass
             client.sock.close()
+            # signal the sub-process to close.
+            for _client, _iqueue, _oqueue, _lock in terminals():
+                if client == _client:
+                    _iqueue.send(('exception', Disconnected('deactivated')))
             del telnetd.clients[fileno]
 
         # poll for: new connections,
@@ -350,9 +354,7 @@ def _loop(telnetd):
         ready_read = list()
         try:
             ready_read.extend(
-                    select.select(
-                        client_fds + session_fds, [], [], 0.1)
-                    [0])
+                    select.select(client_fds + session_fds, [], [], 0.1)[0])
         except select.error as err:
             logger.exception(err)
 
