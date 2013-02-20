@@ -30,7 +30,7 @@ def find_user(handle):
     Given handle, discover and return matching database key case insensitively.
     The returned value may not be equal to the argument, or None if not found.
     """
-    for key in DBProxy('userbase').iterkeys():
+    for key in DBProxy('userbase').keys():
         if handle.lower() == key.decode('utf8').lower():
             return key
 
@@ -436,7 +436,7 @@ class User(object):
             if not self.handle in group.members:
                 group.add(self.handle)
                 group.save()
-        for gname, group in gdb.iteritems():
+        for gname, group in gdb.items():
             if gname not in self._groups and self.handle in group.members:
                 group.remove(self.handle)
                 group.save()
