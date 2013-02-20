@@ -260,7 +260,7 @@ class TelnetClient(object):
         Flag client for disconnection.
         """
         if not self.active:
-            logger.error('%s: already deactivated', self.addrport())
+            logger.debug('%s: already deactivated', self.addrport())
             return
         logger.debug('%s: deactivated', self.addrport())
         self.active = False
@@ -493,7 +493,7 @@ class TelnetClient(object):
             self._sb_decoder()
         elif cmd == IP:
             self.deactivate()
-            logger.warn('Interrupt Process (IP); closing.')
+            logger.warn('%s Interrupt Process (IP); closing.', self.addrport())
         elif cmd == AO:
             flushed = len(self.recv_buffer)
             self.recv_buffer = array.array('c')
