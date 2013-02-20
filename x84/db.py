@@ -1,15 +1,8 @@
 """
 Database request handler for x/84 http://github.com/jquast/x84
 """
-import x84.bbs.exception
-import x84.bbs.ini
 import threading
-import logging
 import os
-import sqlitedict
-# pylint: disable=C0103
-#        Invalid name "logger" for type constant
-logger = logging.getLogger(__name__)
 
 FILELOCK = threading.Lock()
 
@@ -18,20 +11,21 @@ class DBHandler(threading.Thread):
     """
     This handler receives a "database command", in the form of a dictionary
     method name and its arguments, and the return value is sent to the session
-    pipe with the same 'event' name.
+    queue with the same 'event' name.
     """
 
     # pylint: disable=R0902
     #        Too many instance attributes (8/7)
-    def __init__(self, pipe, event, data):
+    def __init__(self, queue, event, data):
         """ Arguments:
-              pipe: parent end of multiprocessing.Pipe()
+              inp_queue: parent input end of multiprocessing.Queue()
               event: database schema in form of string 'db-schema' or
                   'db=schema'. When '-' is used, the result is returned as a
                   single transfer. When '=', an iterable is yielded and the
-                  data is transfered via the IPC pipe as a stream.
+                  data is transfered via the IPC Queue as a stream.
         """
-        self.pipe = pipe
+        import x84.bbs.ini
+        self.queue = queue
         self.event = event
         assert event[2] in ('-', '='), ('event name must match db[-=]event')
         self.iterable = event[2] == '='
@@ -48,9 +42,11 @@ class DBHandler(threading.Thread):
 
     def run(self):
         """
-        Execute database command and return results to session pipe.
+        Execute database command and return results to session queue.
         """
-
+        import logging
+        import sqlitedict
+        logger = logging.getLogger(__name__)
         FILELOCK.acquire()
         if not os.path.exists(os.path.dirname(self.filepath)):
             os.makedirs(os.path.dirname(self.filepath))
@@ -76,32 +72,32 @@ class DBHandler(threading.Thread):
             #         Catching too general exception
             except Exception as err:
                 # Pokemon exception; package & raise from session process,
-                self.pipe.send(('exception', err,))
+                self.queue.send(('exception', err,))
                 dictdb.close()
                 logger.exception(err)
                 return
-            self.pipe.send((self.event, result))
+            self.queue.send((self.event, result))
             dictdb.close()
             return
 
         # iterable value result,
-        self.pipe.send((self.event, (None, 'StartIteration'),))
+        self.queue.send((self.event, (None, 'StartIteration'),))
         try:
             if 0 == len(self.args):
                 for item in func():
-                    self.pipe.send((self.event, item,))
+                    self.queue.send((self.event, item,))
             else:
                 for item in func(*self.args):
-                    self.pipe.send((self.event, item,))
+                    self.queue.send((self.event, item,))
         # pylint: disable=W0703
         #         Catching too general exception
         except Exception as err:
             # Pokemon exception; package & raise from session process,
-            self.pipe.send(('exception', err,))
+            self.queue.send(('exception', err,))
             dictdb.close()
             logger.exception(err)
             return
 
-        self.pipe.send((self.event, (None, StopIteration,),))
+        self.queue.send((self.event, (None, StopIteration,),))
         dictdb.close()
         return

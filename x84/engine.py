@@ -95,6 +95,7 @@ def _loop(telnetd):
         logger.warn('Python not built with wide unicode support!')
     logger.info('listening %s/tcp', telnetd.port)
     timeout = CFG.getint('system', 'timeout')
+    timeout_ipc = CFG.getint('system', 'timeout_ipc')
     fileno_telnetd = telnetd.server_socket.fileno()
     locks = dict()
 
@@ -109,12 +110,13 @@ def _loop(telnetd):
     def lookup(client):
         """
         Given a telnet client, return a matching session
-        of tuple (client, pipe, lock).  If no session matches
-        a telnet client, (None, None, None) is returned.
+        of tuple (client, inp_queue, out_queue, lock).
+        If no session matches a telnet client,
+            (None, None, None, None) is returned.
         """
-        for o_client, pipe, lock in terminals():
-            if o_client == client:
-                return (client, pipe, lock)
+        for _client, inp_queue, out_queue, lock in terminals():
+            if client == _client:
+                return (client, inp_queue, out_queue, lock)
         return (None, None, None)
 
     def telnet_recv(fds):
@@ -131,12 +133,12 @@ def _loop(telnetd):
             except Disconnected as err:
                 logger.info('%s Connection Closed: %s.',
                             client.addrport(), err)
-                o_client, pipe, lock = lookup(client)
-                if o_client is not None:
-                    pipe.send(('exception', Disconnected(err)))
-                    unregister(client, pipe, lock)
+                _client, _iqueue, _oqueue, _lock = lookup(client)
+                if _client is not None:
+                    _iqueue.send(('exception', Disconnected(err)))
+                    unregister(_client, _iqueue, _oqueue, _lock)
                 else:
-                    client.deactivate()
+                    _client.deactivate()
 
     def telnet_send(recv_list):
         """
@@ -144,7 +146,7 @@ def _loop(telnetd):
         signal exit to subprocess, unregister the session, and return
         recv_list pruned of their file descriptors.
         """
-        for client, pipe, lock in terminals():
+        for client, inp_queue, out_queue, lock in terminals():
             if client.send_ready():
                 try:
                     client.socket_send()
@@ -158,8 +160,8 @@ def _loop(telnetd):
                         if client == clt and o_fd in recv_list:
                             recv_list.remove(o_fd)
                             break
-                    pipe.send(('exception', Disconnected(err),))
-                    unregister(client, pipe, lock)
+                    inp_queue.send(('exception', Disconnected(err),))
+                    unregister(client, inp_queue, out_queue, lock)
         return recv_list
 
     def accept():
@@ -193,45 +195,45 @@ def _loop(telnetd):
         unregister the session.  Also test for data received by telnet
         client, and send to subprocess as 'input' event.
         """
+        @timeout_alarm(timeout_ipc, False)
+        def send_input(client, inp_queue, lock):
+            inp = client.get_input()
+            inp_queue.send(('input', inp))
+            return True
+
         # accept session event i/o, such as output
-        for client, pipe, lock in terminals():
+        for client, inp_queue, out_queue, lock in terminals():
             # poll about and kick off idle users
             if client.idle() > timeout:
                 err = 'timeout: %ds' % (client.idle())
-                pipe.send(('exception', Disconnected(err)))
+                inp_queue.send(('exception', Disconnected(err)))
                 continue
-
-            # send recieved telnet input to subprocess; but only
-            # if that subprocess does not still have output waiting
-            if client.input_ready() and (
-                    not pipe.poll() and lock.acquire(False)):
-                inp = client.get_input()
-                pipe.send(('input', inp,))
-                lock.release()
+            elif client.input_ready():
+                if not send_input(client, inp_queue, lock):
+                    logger.warn('%s input buffer exceeded', client.addrport())
 
     def session_recv(fds):
         """
-        receive data waiting for session pipe filenos in fds.
-        all data received from subprocess is in form (event, data),
-        and is handled by ipc_recv.
+        receive data waiting for session; all data received from
+        subprocess is in form (event, data), and is handled by ipc_recv.
         """
-        def handle_lock(pipe, event, data):
+        def handle_lock(iqueue, event, data):
             """
-            handle locking event on pipe of (lock-key, (method, stale))
+            handle locking event on iqueue of (lock-key, (method, stale))
             """
             method, stale = data
             if method == 'acquire':
                 if not event in locks:
                     locks[event] = time.time()
                     logger.debug('%r granted.', (event, data))
-                    pipe.send((event, True,))
+                    iqueue.send((event, True,))
                 elif (stale is not None
                         and time.time() - locks[event] > stale):
                     logger.error('%r stale.', (event, data))
-                    pipe.send((event, True,))
+                    iqueue.send((event, True,))
                 else:
                     logger.warn('%r failed.', (event, data))
-                    pipe.send((event, False,))
+                    iqueue.send((event, False,))
             elif method == 'release':
                 if not event in locks:
                     logger.error('%r failed.', (event, data))
@@ -239,25 +241,23 @@ def _loop(telnetd):
                     del locks[event]
                     logger.debug('%r removed.', (event, data))
 
-        def read_ipc(client, pipe, lock):
+        def read_ipc(client, iqueue, oqueue, lock):
             """
             handle all events of form (event, data)
             """
             disp_handle = lambda handle: ((handle + u' ')
                     if handle is not None and 0 != len(handle)
                     else u'')
-            while True:
+            while oqueue.poll():
                 try:
-                    event, data = pipe.recv()
+                    event, data = oqueue.recv()
                 except (EOFError, IOError) as err:
-                    # issue with pipe; sub-process unexpectedly closed
+                    # sub-process unexpectedly closed
                     logger.exception(err)
-                    pipe.send(('exception', Disconnected('%s' % (err,)),))
-                    unregister(client, pipe, lock)
+                    unregister(client, iqueue, oqueue, lock)
                     return
-
                 if event == 'exit':
-                    unregister(client, pipe, lock)
+                    unregister(client, iqueue, oqueue, lock)
                     return
                 elif event == 'logger':
                     # prefix message with 'ip:port/nick '
@@ -271,60 +271,56 @@ def _loop(telnetd):
                     client.send_unicode(ucs=data[0], encoding=data[1])
 
                 elif event == 'remote-disconnect':
-                    for o_client, o_pipe, o_lock in terminals():
-                        if o_client.addrport() == data[0]:
-                            send_event, send_val = data[1], data[2:]
-                            pipe.send(('exception',
+                    send_event, send_val = data[1], data[2:]
+                    for _client, _iqueue, _oqueue, _lock in terminals():
+                        if data[0] == _client.addrport():
+                            _iqueue.send(('exception',
                                 Disconnected('disconnected by %s' % (
                                     client.addrport(),)),))
-                            unregister(client, pipe, lock)
+                            unregister(_client, _iqueue, _oqueue, _lock)
                             break
 
                 elif event == 'route':
                     logger.debug('route %r', (event, data))
-                    for o_client, o_pipe, o_lock in terminals():
-                        if o_client.addrport() == data[0]:
+                    for _client, _iqueue, _oqueue, _lock in terminals():
+                        if data[0] == _client.addrport():
                             send_event, send_val = data[1], data[2:]
-                            if not o_lock.acquire(False):
-                                logger.warn('%s is blocking route',
+                            if not _lock.acquire(False):
+                                logger.warn('%s block route',
                                         client.addrport())
                             else:
-                                o_pipe.send((send_event, send_val))
-                                o_lock.release()
+                                _iqueue.send((send_event, send_val))
+                                _lock.release()
                             break
 
                 elif event == 'global':
                     logger.debug('broadcast %r', (event, data))
-                    for o_client, o_pipe, o_lock in terminals():
-                        if o_client != client:
-                            if not o_lock.acquire(False):
-                                logger.warn('%s is blocking broadcast',
+                    for _client, _iqueue, _oqueue, _lock in terminals():
+                        if client != _client:
+                            if not _lock.acquire(False):
+                                logger.warn('%s block broadcast',
                                         client.addrport())
                             else:
-                                o_pipe.send((event, data,))
-                                o_lock.release()
+                                _iqueue.send((event, data,))
+                                _lock.release()
 
                 elif event.startswith('db'):
                     # db query-> database dictionary method,
                     # spawn thread; callback by matching ('db-*',) event.
-                    thread = DBHandler(pipe, event, data)
+                    thread = DBHandler(iqueue, event, data)
                     thread.start()
 
                 elif event.startswith('lock'):
                     # fine-grained lock acquire and release
-                    handle_lock(pipe, event, data)
+                    handle_lock(iqueue, event, data)
 
                 else:
                     assert False, 'unhandled %r' % ((event, data),)
 
-                try:
-                    if not pipe.poll():
-                        return
-                except IOError:
-                    return
-        for client, pipe, lock in terminals():
-            if pipe.fileno() in fds:
-                read_ipc(client, pipe, lock)
+        for client, inp_queue, out_queue, lock in terminals():
+            if out_queue.fileno() in fds:
+                read_ipc(client, inp_queue, out_queue, lock)
+
 
     # main event loop
     while True:
@@ -343,16 +339,20 @@ def _loop(telnetd):
         #           session IPC input,
         # pylint: disable=W0612
         #        Unused variable 'lock'
-        client_fds = set([fileno_telnetd] + telnetd.clients.keys() +
-                        [pipe.fileno() for client, pipe, lock in terminals()])
+        client_fds = [fileno_telnetd] + telnetd.clients.keys()
 
         # send, pruning list of any clients d/c during activity
         client_fds = telnet_send(client_fds)
+        session_fds = [oqueue.fileno()
+                for client, iqueue, oqueue, lock in terminals()]
 
         # poll for recv,
         ready_read = list()
         try:
-            ready_read.extend(select.select(client_fds, [], [], 1)[0])
+            ready_read.extend(
+                    select.select(
+                        client_fds + session_fds, [], [], 0.1)
+                    [0])
         except select.error as err:
             logger.exception(err)
 
@@ -361,10 +361,35 @@ def _loop(telnetd):
 
         # recv telnet,
         telnet_recv(ready_read)
-        # send session ev,
-        session_send()
+
         # recv session ev,
         session_recv(ready_read)
+
+        # send session ev,
+        session_send()
+
+def timeout_alarm(timeout_time, default):
+    # http://pguides.net/python-tutorial/python-timeout-a-function/
+    import signal
+    class TimeoutException(Exception):
+        pass
+    def timeout_function(f, *args):
+        def f2(*args):
+            def timeout_handler(signum, frame):
+                raise TimeoutException()
+            old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(timeout_time)
+            try:
+                retval = f(*args)
+            except TimeoutException:
+                return default
+            finally:
+                signal.signal(signal.SIGALRM, old_handler)
+            signal.alarm(0)
+            return retval
+        return f2
+    return timeout_function
+
 
 if __name__ == '__main__':
     exit(main())

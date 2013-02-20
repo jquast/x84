@@ -3,7 +3,6 @@
 Session engine for x/84, http://github.com/jquast/x84/
 """
 import traceback
-import threading
 import logging
 import struct
 import math
@@ -42,12 +41,14 @@ class Session(object):
     _encoding = None
     _decoder = None
 
-    def __init__(self, terminal, pipe, sid, env, encoding='utf8'):
+    def __init__(self, terminal, inp_queue, out_queue,
+            sid, env, lock, encoding='utf8'):
         """
         Instantiate a Session instanance, only one session may be instantiated
         per process. Arguments:
             terminal: blessings.Terminal,
-            pipe: multiprocessing.Pipe child end
+            inp_queue: multiprocessing.Queue Parent writes, Child reads
+            out_queue: multiprocessing.Queue Parent reads, Child writes
             sid: session id by engine: origin of telnet connection (ip:port),
             env: dict of environment variables, such as 'TERM', 'USER'.
         """
@@ -57,12 +58,13 @@ class Session(object):
         global SESSION
         assert SESSION is None, 'Session may be instantiated only once'
         SESSION = self
-        self.pipe = pipe
+        self.iqueue = inp_queue
+        self.oqueue = out_queue
         self.terminal = terminal
         self.sid = sid
         self.env = env
         self.encoding = encoding
-        self.lock = threading.Lock()
+        self.lock = lock
         self._user = None
         self._script_stack = [(ini.CFG.get('matrix', 'script'),)]
         self._tap_input = ini.CFG.getboolean('session', 'tap_input')
@@ -232,7 +234,7 @@ class Session(object):
                     self._script_stack[-1][0]))
             self.write(u' after general exception in %s\r\n' % (
                 self.terminal.bold_cyan(fault[0]),))
-            # give time for exception to write down pipe before
+            # give time for exception to write down queue before
             # continuing or exiting, esp. exiting, otherwise
             # STOP message is not often fully received
             time.sleep(2)
@@ -460,7 +462,7 @@ class Session(object):
 
     def send_event(self, event, data):
         """
-           Send data to IPC pipe in form of (event, data).
+           Send data to IPC output queue in form of (event, data).
 
            Supported events:
                'disconnect': Session wishes to disconnect.
@@ -472,7 +474,9 @@ class Session(object):
                'db=<schema>': Request sqlite dict method result as iterable.
                'lock-<name>': Fine-grained global bbs locking.
         """
-        self.pipe.send((event, data))
+        self.lock.acquire()
+        self.oqueue.send((event, data))
+        self.lock.release()
 
     def poll_event(self, event):
         """
@@ -509,14 +513,15 @@ class Session(object):
                               and 0 != len(self._buffer[e])):
             return (event, data)
         stime = time.time()
-        timeleft = lambda cmp_time: \
-            float('inf') if timeout is None \
-            else timeout - (time.time() - cmp_time)
+        timeleft = lambda cmp_time: (
+                float('inf') if timeout is None else
+                timeout if timeout < 0 else
+                timeout - (time.time() - cmp_time))
         waitfor = timeleft(stime)
         while waitfor > 0:
             poll = None if waitfor == float('inf') else waitfor
-            if self.pipe.poll(poll):
-                event, data = self.pipe.recv()
+            if self.iqueue.poll(poll):
+                event, data = self.iqueue.recv()
                 retval = self.buffer_event(event, data)
                 if event != 'input':
                     logger.debug('event %s %s.', event,
@@ -525,7 +530,7 @@ class Session(object):
                                  'buffered',)
                 if event in events:
                     return (event, self._event_pop(event))
-            if timeout == -1:
+            elif timeout == -1:
                 return (None, None)
             waitfor = timeleft(stime)
         return (None, None)

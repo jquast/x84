@@ -9,15 +9,15 @@ class IPCLogHandler(logging.Handler):
     Log handler that sends the log up the 'event pipe'. This is a rather novel
     solution that seems overlooked in documentation or exisiting code, try it!
     """
-    def __init__(self, pipe):
+    def __init__(self, out_queue):
         """ Constructor method, requires multiprocessing.Pipe """
         logging.Handler.__init__(self)
-        self.pipe = pipe
+        self.oqueue = out_queue
         self.session = None
 
     def emit(self, record):
         """
-        emit log record via IPC pipe
+        emit log record via IPC output queue
         """
         try:
             e_inf = record.exc_info
@@ -30,7 +30,11 @@ class IPCLogHandler(logging.Handler):
                 dummy  # pflakes ;/
             record.handle = (self.session.handle
                     if self.session is not None else None)
-            self.pipe.send(('logger', record))
+            if self.session is not None:
+                self.session.lock.acquire()
+            self.oqueue.send(('logger', record))
+            if self.session is not None:
+                self.session.lock.release()
         except (KeyboardInterrupt, SystemExit):
             raise
         except:
@@ -39,26 +43,17 @@ class IPCLogHandler(logging.Handler):
 
 class IPCStream(object):
     """
-    Connect blessings 'stream' to 'child' multiprocessing.Pipe
-    only write(), fileno(), and close() are called by blessings.
+    Connect blessings 'stream' to 'child' output multiprocessing.Queue
+    only write() is called by blessings.
     """
-    def __init__(self, channel):
-        self.channel = channel
+    def __init__(self, out_queue, lock):
+        self.oqueue = out_queue
+        self.lock = lock
 
     def write(self, ucs, encoding):
         """
         Sends unicode text to Pipe.
         """
-        self.channel.send(('output', (ucs, encoding)))
-
-    def fileno(self):
-        """
-        Returns pipe fileno.
-        """
-        return self.channel.fileno()
-
-    def close(self):
-        """
-        Closes pipe.
-        """
-        return self.channel.close()
+        self.lock.acquire()
+        self.oqueue.send(('output', (ucs, encoding)))
+        self.lock.release()

@@ -9,7 +9,7 @@ import re
 
 TERMINALS = list()
 
-def init_term(pipe, env):
+def init_term(out_queue, lock, env):
     """
     curses is initialized using the value of 'TERM' of dictionary env,
     as well as a starting window size of 'LINES' and 'COLUMNS'.
@@ -18,123 +18,125 @@ def init_term(pipe, env):
     """
     from x84.bbs import ini
     from x84.bbs.ipc import IPCStream
-    from x84.blessings import Terminal
+    from x84.blessings import Terminal as BTerminal
     if (env.get('TERM', 'unknown') == 'ansi'
             and ini.CFG.get('system', 'termcap-ansi', u'no') != 'no'):
         # special workaround for systems with 'ansi-bbs' termcap,
         # translate 'ansi' -> 'ansi-bbs'
         # http://wiki.synchro.net/install:nix?s[]=termcap#terminal_capabilities
         env['TERM'] = ini.CFG.get('system', 'termcap-ansi')
-    return Terminal(env.get('TERM', 'unknown'),
-                    IPCStream(pipe),
+    return BTerminal(env.get('TERM', 'unknown'),
+                    IPCStream(out_queue, lock),
                     int(env.get('LINES', '24')),
                     int(env.get('COLUMNS', '80'),))
 
 
-def mkipc_rlog(pipe):
+def mkipc_rlog(out_queue):
     """
     Remove any existing handlers of the current process, and
-    re-address the root logging handler to an IPC event pipe
+    re-address the root logging handler to an IPC output event queue
     """
     from x84.bbs.ipc import IPCLogHandler
     root = logging.getLogger()
-    for hdlr in root.handlers:
-        root.removeHandler(hdlr)
-    new_hdlr = IPCLogHandler(pipe)
-    root.addHandler(new_hdlr)
-    return new_hdlr
+    for _hdlr in root.handlers:
+        root.removeHandler(_hdlr)
+    hdlr = IPCLogHandler(out_queue)
+    root.addHandler(hdlr)
+    return hdlr
 
 
-def register(client, pipe, lock):
+def register(client, inp_queue, out_queue, lock):
     """
     Register a Terminal, given instances of telnet.TelnetClient,
-    Pipe, and Lock.
+    (inp, out) Queue, and Lock.
     """
-    TERMINALS.append((client, pipe, lock,))
+    TERMINALS.append((client, inp_queue, out_queue, lock,))
 
 
-def flush_pipe(pipe):
+def flush_queue(queue):
     """
-    Seeks any remaining events in pipe, used before closing
+    Seeks any remaining events in queue, used before closing
     to prevent zombie processes with IPC waiting to be picked up.
     """
     logger = logging.getLogger()
-    while pipe.poll():
-        event, data = pipe.recv()
+    while queue.poll():
+        event, data = queue.recv()
         if event == 'logger':
             logger.handle(data)
 
 
-def unregister(client, pipe, lock):
+def unregister(client, inp_queue, out_queue, lock):
     """
     Unregister a Terminal, described by its telnet.TelnetClient,
-    Pipe, and Lock.
+    input and output Queues, and Lock.
     """
     logger = logging.getLogger()
     try:
-        flush_pipe(pipe)
-        pipe.close()
+        flush_queue(out_queue)
+        flush_queue(inp_queue)
     except (EOFError, IOError) as exception:
         logger.exception(exception)
     client.deactivate()
     logger.debug('%s: unregistered', client.addrport())
-    TERMINALS.remove((client, pipe, lock,))
+    TERMINALS.remove((client, inp_queue, out_queue, lock,))
 
 
 def terminals():
     """
-    Returns a list of tuple (telnet.TelnetClient, Pipe, Lock).
+    Returns a list of tuple (telnet.TelnetClient,
+        input Queue, output Queue, Lock).
     """
     return TERMINALS[:]
 
 
-def start_process(pipe, sid, env, binary=False):
+def start_process(inp_queue, out_queue, sid, env, lock, binary=False):
     """
     A multiprocessing.Process target. Arguments:
-        pipe: multiprocessing.Pipe
+        inp_queue and out_queue: multiprocessing.Queue
         sid: string describing session source (fe. IP address & Port)
         env: dictionary of client environment variables (requires 'TERM')
         binary: If client accepts BINARY, assume utf8 session encoding.
     """
     import x84.bbs.ini
     import x84.bbs.session
+    # terminals of these types are forced to 'cp437' encoding,
     cp437_ttypes = ('unknown', 'ansi', 'ansi-bbs', 'vt100',)
+
     # root handler has dangerously forked file descriptors.
     # replace with ipc 'logger' events so that only the main
     # process is responsible for logging.
-    hdlr = mkipc_rlog(pipe)
-
+    hdlr = mkipc_rlog(out_queue)
     # initialize blessings terminal based on env's TERM.
-    term = init_term(pipe, env)
-
+    term = init_term(out_queue, lock, env)
+    # negotiate encoding; terminals with BINARY mode are utf-8
     encoding = x84.bbs.ini.CFG.get('session', 'default_encoding')
     if env.get('TERM', 'unknown') in cp437_ttypes:
         encoding = 'cp437'
     elif binary:
         encoding = 'utf8'
     # spawn and begin a new session
-    session = x84.bbs.session.Session(term, pipe, sid, env, encoding)
-    # copy ptr to session instance to logger, so nicks can be
-    # added to the log handler
+    session = x84.bbs.session.Session(
+            term, inp_queue, out_queue, sid, env, lock, encoding)
+    # copy session ptr to logger handler for 'handle' emit logging
     hdlr.session = session
+    # run session
     session.run()
-    flush_pipe(pipe)
-    pipe.send(('exit', None))
-    pipe.close()
+    # signal engine to shutdown subprocess
+    out_queue.send(('exit', None))
 
 
 def on_naws(client):
     """
-    On a NAWS event, check if client is yet registered in registry and send the
-    pipe a refresh event. This is the same thing as ^L to the 'userland', but
-    should indicate also that the window sizes are checked`.
+    On a NAWS event, check if client is yet registered in registry and send
+    the input event queue a 'refresh' event. This is the same thing as ^L
+    to the 'userland', but should indicate also that the window sizes are
+    checked`.
     """
-    for cpl in terminals():
-        if client == cpl[0]:
-            o_client, o_pipe = cpl[0], cpl[1]
-            columns = int(o_client.env['COLUMNS'])
-            rows = int(o_client.env['LINES'])
-            o_pipe.send(('refresh', ('resize', (columns, rows),)))
+    for (_client, _iqueue, _oqueue, _lock) in terminals():
+        if client == _client:
+            columns = int(client.env['COLUMNS'])
+            rows = int(client.env['LINES'])
+            _iqueue.send(('refresh', ('resize', (columns, rows),)))
             return True
 
 
@@ -162,30 +164,31 @@ class ConnectTelnet (threading.Thread):
     def _spawn_session(self):
         """
         Spawn a subprocess, avoiding GIL and forcing all shared data over a
-        pipe. Previous versions of x/84 and prsv were single process,
+        Queue. Previous versions of x/84 and prsv were single process,
         thread-based, and shared variables.
 
-        All IPC communication occurs through the bi-directional pipe.  The
-        server end (engine.py) polls the parent end of a pipe, while the client
-        (session.py) polls the child.
+        All IPC communication occurs through the bi-directional queues.  The
+        server end (engine.py) polls the out_queue, and places results
+        and input events into the inp_queue, while the client end (session.py),
+        polls the inp_queue, and places output into out_queue.
         """
         logger = logging.getLogger()
         if not self.client.active:
             logger.debug('session aborted; socket was closed.')
             return
-        import multiprocessing
+        from multiprocessing import Process, Pipe, Lock
         from x84.telnet import BINARY
+        inp_recv, inp_send = Pipe(duplex=False)
+        out_recv, out_send = Pipe(duplex=False)
+        lock = Lock()
         is_binary = (self.client.check_local_option(BINARY)
                 and self.client.check_remote_option(BINARY))
-        parent_conn, child_conn = multiprocessing.Pipe()
-        lock = threading.Lock()
-        child_args = (child_conn, self.client.addrport(),
-                self.client.env, is_binary)
+        child_args = (inp_recv, out_send, self.client.addrport(),
+                self.client.env, lock, is_binary)
         logger.debug('starting session')
-        proc = multiprocessing.Process(
-            target=start_process, args=child_args)
+        proc = Process(target=start_process, args=child_args)
         proc.start()
-        register(self.client, parent_conn, lock)
+        register(self.client, inp_send, out_recv, lock)
 
     def banner(self):
         """
