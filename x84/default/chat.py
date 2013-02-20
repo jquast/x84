@@ -369,3 +369,4 @@ def main(channel=None, caller=None):
             echo(refresh(pager, readline))
             dirty = None
     echo(u''.join((term.move(term.height, 0), term.normal)))
+    return True
