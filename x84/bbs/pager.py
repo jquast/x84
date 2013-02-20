@@ -210,9 +210,10 @@ class Pager(AnsiWindow):
         """
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
-        return u''.join([self.refresh_row(row) for
-                         row in range(start_row, len(self.visible_content))]
-                        + [term.normal])
+        return u''.join(
+                [term.normal] + [self.refresh_row(row) for
+                    row in range(start_row, len(self.visible_content))]
+                + [term.normal])
 
     def update(self, ucs):
         """
