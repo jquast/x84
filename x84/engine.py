@@ -201,8 +201,10 @@ def _loop(telnetd):
                 pipe.send(('exception', Disconnected(err)))
                 continue
 
-            # send input to subprocess,
-            if client.input_ready() and lock.acquire(False):
+            # send recieved telnet input to subprocess; but only
+            # if that subprocess does not still have output waiting
+            if client.input_ready() and (
+                    not pipe.poll() and lock.acquire(False)):
                 inp = client.get_input()
                 pipe.send(('input', inp,))
                 lock.release()
@@ -241,8 +243,6 @@ def _loop(telnetd):
             """
             handle all events of form (event, data)
             """
-            has_data = lambda pipe: bool(len(select.select(
-                [pipe.fileno()], [], [], 0)[0]))
             disp_handle = lambda handle: ((handle + u' ')
                     if handle is not None and 0 != len(handle)
                     else u'')
@@ -318,7 +318,7 @@ def _loop(telnetd):
                     assert False, 'unhandled %r' % ((event, data),)
 
                 try:
-                    if not has_data(pipe):
+                    if not pipe.poll():
                         return
                 except IOError:
                     return
