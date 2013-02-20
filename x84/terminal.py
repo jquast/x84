@@ -59,10 +59,13 @@ def flush_queue(queue):
     to prevent zombie processes with IPC waiting to be picked up.
     """
     logger = logging.getLogger()
-    while queue.poll():
-        event, data = queue.recv()
-        if event == 'logger':
-            logger.handle(data)
+    try:
+        while queue.poll():
+            event, data = queue.recv()
+            if event == 'logger':
+                logger.handle(data)
+    except (EOFError, IOError) as err:
+        logger.debug(err)
 
 
 def unregister(client, inp_queue, out_queue, lock):
@@ -75,8 +78,8 @@ def unregister(client, inp_queue, out_queue, lock):
         flush_queue(out_queue)
         out_queue.close()
         inp_queue.close()
-    except (EOFError, IOError) as exception:
-        logger.exception(exception)
+    except (EOFError, IOError) as err:
+        logger.exception(err)
     client.deactivate()
     logger.debug('%s: unregistered', client.addrport())
     TERMINALS.remove((client, inp_queue, out_queue, lock,))
