@@ -50,30 +50,23 @@ class DBProxy(object):
 
     def acquire(self, blocking=False):
         """
-        Acquire a bbs-global lock, blocking or non-blocking.
+        Acquire a fine-grained BBS-global lock, blocking or non-blocking.
 
         When invoked with the blocking argument set to True (the default),
-        block until the lock is unlocked, then set it to locked and return
-        True.
+        block until the lock is acquired, and return True.
 
-        When invoked with the blocking argument set to False, do not block. If
-        a call with blocking set to True would block, return False immediately;
-        otherwise, set the lock to locked and return True.
+        When invoked with the blocking argument set to False, do not block.
+        Returns False if lock is not acquired.
         """
         import x84.bbs.session
         event = 'lock-%s/%s' % (self.schema, self.table)
         session = x84.bbs.session.getsession()
         while True:
-            session.lock.acquire()
             session.send_event(event, ('acquire', True))
             if session.read_event(event):
-                session.lock.release()
                 return True
             if not blocking:
-                session.lock.release()
                 return False
-            # let another thread have a go,
-            session.lock.release()
             time.sleep(0.1)
 
     def release(self):
