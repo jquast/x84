@@ -71,7 +71,9 @@ class Lightbar (AnsiWindow):
         ucs += (self.colors.get('highlight', u'')
                 if entry == self.index
                 else self.colors.get('lowlight', u''))
-        ucs += self.align(self.content[entry][1])
+        # allow ucs data with '\r\n', to accomidate soft and hardbreaks; just
+        # don't display them, really wrecks up cusor positioning.
+        ucs += self.align(self.content[entry][1].strip(u'\r\n'))
         return ucs + term.normal
 
     def fixate(self):
