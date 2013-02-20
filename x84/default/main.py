@@ -37,7 +37,7 @@ def refresh():
             ('r', 'EAd All MSGS'),
             ('g', 'OOdbYE /lOGOff'),)
     if 'sysop' in session.user.groups:
-        entries += (('v', 'VidEO CASSEttE'),)
+        entries += (('v', 'idEO CASSEttE'),)
     buf_str = u''
     for key, name in entries:
         out_str = u''.join((
