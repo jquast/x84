@@ -790,7 +790,7 @@ def main():
                 # provide dumb terminal with hotkey prompt
                 if thread is not None:
                     wait_for(thread)
-                if chk_thread(thread):
+                if chk_thread(thread) != False:
                     thread = None
                 return dummy_pager()
             else:
