@@ -4,18 +4,21 @@ ALREADY_READ = set()
 DELETED = set()
 SEARCH_TAGS = set()
 READING = False
-TIME_FMT = '%A %b-%d, %Y at %I:%M:%S%p'
+TIME_FMT = '%A %b-%d, %Y at %r'
 
-def quote_body(msg, width=79):
+def quote_body(msg, width=79, quote_txt=u'> ', hardwrap=u'\r\n'):
     from x84.bbs import Ansi
     ucs = u''
     for line in msg.body.splitlines():
-        ucs += u'> ' + Ansi(line).wrap(width - 2, indent=u'> ')
+        ucs += u''.join((
+            quote_txt,
+            Ansi(line).wrap(width - len(quote_txt), indent=quote_txt),
+            hardwrap,))
     return u''.join((
         'On ',
         msg.stime.strftime(TIME_FMT), u' ',
         msg.author, ' wrote:',
-        u'\r\n', ucs, u'\r\n'))
+        hardwrap, ucs, hardwrap))
 
 def allow_tag(idx):
     """
@@ -48,7 +51,7 @@ def mark_undelete(idx):
     DELETED = session.user.get('trash', set())
     if idx in DELETED:
         DELETED.remove(idx)
-        session.user['deleted'] = DELETED
+        session.user['trash'] = DELETED
         return True
 
 
@@ -60,9 +63,9 @@ def mark_delete(idx):
     #         Using the global statement
     global DELETED
     DELETED = session.user.get('trash', set())
-    if idx not in DELETED:
+    if not idx in DELETED:
         DELETED.add(idx)
-        session.user['deleted'] = DELETED
+        session.user['trash'] = DELETED
         return True
 
 
@@ -416,14 +419,14 @@ def read_messages(msgs, new):
     def format_msg(reader, idx):
         """ Format message of index ``idx`` into Pager instance ``reader``. """
         msg = get_msg(idx)
-        sent = msg.stime.strftime('%A %b-%d, %Y at %H:%M:%S')
+        sent = msg.stime.strftime(TIME_FMT)
         to_attr = term.bold_green if (
                 msg.recipient == session.user.handle) else term.underline
         return u'\r\n'.join((
             (u''.join((
                 term.yellow('fROM: '),
                 (u'%s' % term.bold(msg.author,)).rjust(len_author),
-                u' ' * (reader.visible_width - len_author - len(sent)),
+                u' ' * (reader.visible_width - (len_author + len(sent))),
                 sent,))),
             u''.join((
                 term.yellow('tO: '),

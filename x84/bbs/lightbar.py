@@ -378,6 +378,27 @@ class Lightbar (AnsiWindow):
             self.vitem_shift += 1
         return self.refresh_quick()
 
+
+    def goto(self, index):
+        """
+        Move selection to index of lightbar content.
+        """
+        assert index >= 0 and index < len(self.content)
+        row, shift = self.position
+        while (row + shift) < index:
+            if row < (self.visible_height - 1):
+                row += 1
+            else:
+                shift += 1
+        while (row + shift) > index:
+            if row > 0:
+                row -= 1
+            else:
+                shift -= 1
+        self.position = row, shift
+        return self.refresh_quick()
+
+
     def move_up(self):
         """
         Move selection up one row.

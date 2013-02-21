@@ -188,7 +188,10 @@ def main(save_key=u'draft'):
               'command': (unichr(27), term.KEY_ESCAPE),
               'kill': (u'K',),
               'undo': (u'u', 'U',),
-              'insert': (u'i', u'I'),
+              'goto': (u'G',),
+              'insert': (u'I',),
+              'insert-before': (u'O',),
+              'insert-after': (u'o',),
               'join': (u'J',),
               'rubout': (unichr(8), unichr(127),
                   unichr(23), term.KEY_BACKSPACE,),
@@ -330,6 +333,8 @@ def main(save_key=u'draft'):
     echo(banner())
     dirty = True
     edit = False
+    digbuf, num_repeat = u'', -1
+    count_repeat = lambda: range(num_repeat if num_repeat != -1 else 1)
     while True:
         # poll for refresh
         if session.poll_event('refresh'):
@@ -343,12 +348,32 @@ def main(save_key=u'draft'):
         # poll for input
         inp = getch(1)
 
+        # buffer keystrokes for repeat
+        if inp is not None and type(inp) is not int and inp.isdigit():
+            digbuf += inp
+            if len(digbuf) > 10:
+                # overflow,
+                echo(u'\a')
+                digbuf = inp
+            try:
+                num_repeat = int(digbuf)
+            except ValueError:
+                try:
+                    num_repeat = int(inp)
+                except ValueError:
+                    pass
+            continue
+        else:
+            digbuf = u''
+
         # toggle edit mode,
         if inp in keyset['command'] or not edit and inp in keyset['edit']:
             edit = not edit  # toggle
             if not edit:
                 # switched to command mode, merge our lines
+
                 echo(term.normal + lneditor.erase_border())
+
                 merge()
                 lightbar.colors['highlight'] = term.yellow_reverse
             else:
@@ -363,44 +388,87 @@ def main(save_key=u'draft'):
         elif not edit and inp in keyset['kill']:
             # when 'killing' a line, make accomidations to clear
             # bottom-most row, otherwise a ghosting effect occurs
-            del lightbar.content[lightbar.index]
-            set_lbcontent(lightbar, get_lbcontent(lightbar))
-            if lightbar.visible_bottom > len(lightbar.content):
-                echo(lightbar.refresh_row(lightbar.visible_bottom + 1))
-            else:
-                dirty = True
+            for _count in count_repeat():
+                del lightbar.content[lightbar.index]
+                set_lbcontent(lightbar, get_lbcontent(lightbar))
+                if lightbar.visible_bottom > len(lightbar.content):
+                    echo(lightbar.refresh_row(lightbar.visible_bottom + 1))
+                else:
+                    dirty = True
+            save_draft(save_key, get_lbcontent(lightbar))
 
         # command mode, insert line
         elif not edit and inp in keyset['insert']:
+            for _count in count_repeat():
+                lightbar.content.insert(lightbar.index,
+                        (lightbar.index, HARDWRAP,))
+                set_lbcontent(lightbar, get_lbcontent(lightbar))
+            save_draft(save_key, get_lbcontent(lightbar))
+            dirty = True
+
+        # command mode; goto line
+        elif not edit and inp in keyset['goto']:
+            if num_repeat == -1:
+                # 'G' alone goes to end of file,
+                num_repeat = len(lightbar.content)
+            echo(lightbar.goto((num_repeat or 1) - 1))
+            echo(statusline(lightbar))
+
+        # command mode; insert-before (switch to edit mode)
+        elif not edit and inp in keyset['insert-before']:
             lightbar.content.insert(lightbar.index,
                     (lightbar.index, HARDWRAP,))
             set_lbcontent(lightbar, get_lbcontent(lightbar))
-            dirty = True
+            edit = dirty = True
+            # switched to edit mode, save draft,
+            # instantiate new line editor
+            lightbar.colors['highlight'] = term.red_reverse
+            lneditor = get_lneditor(lightbar)
+            save_draft(save_key, get_lbcontent(lightbar))
+
+        # command mode; insert-after (switch to edit mode)
+        elif not edit and inp in keyset['insert-after']:
+            lightbar.content.insert(lightbar.index + 1,
+                    (lightbar.index + 1, HARDWRAP,))
+            set_lbcontent(lightbar, get_lbcontent(lightbar))
+            edit = dirty = True
+            # switched to edit mode, save draft,
+            # instantiate new line editor
+            lightbar.colors['highlight'] = term.red_reverse
+            lightbar.move_down()
+            lneditor = get_lneditor(lightbar)
+            save_draft(save_key, get_lbcontent(lightbar))
 
         # command mode, undo
         elif not edit and inp in keyset['undo']:
-            if len(UNDO):
-                set_lbcontent(lightbar, UNDO.pop())
-                dirty = True
-            else:
-                echo(u'\a')
+            for _count in count_repeat():
+                if len(UNDO):
+                    set_lbcontent(lightbar, UNDO.pop())
+                    dirty = True
+                else:
+                    echo(u'\a')
+                    break
 
         # command mode, join line
         elif not edit and inp in keyset['join']:
-            if lightbar.index + 1 < len(lightbar.content):
-                idx = lightbar.index
-                lightbar.content[idx] = (idx,
-                        WHITESPACE.join((
-                            lightbar.content[idx][1].rstrip(),
-                            lightbar.content[idx + 1][1].lstrip(),)))
-                del lightbar.content[idx + 1]
-                prior_length = len(lightbar.content)
-                set_lbcontent(lightbar, get_lbcontent(lightbar))
-                if len(lightbar.content) - prior_length > 0:
-                    lightbar.move_down()
-                dirty = True
-            else:
-                echo(u'\a')
+            for _count in count_repeat():
+                if lightbar.index + 1 < len(lightbar.content):
+                    idx = lightbar.index
+                    lightbar.content[idx] = (idx,
+                            WHITESPACE.join((
+                                lightbar.content[idx][1].rstrip(),
+                                lightbar.content[idx + 1][1].lstrip(),)))
+                    del lightbar.content[idx + 1]
+                    prior_length = len(lightbar.content)
+                    set_lbcontent(lightbar, get_lbcontent(lightbar))
+                    if len(lightbar.content) - prior_length > 0:
+                        lightbar.move_down()
+                    dirty = True
+                else:
+                    echo(u'\a')
+                    break
+            if dirty:
+                save_draft(save_key, get_lbcontent(lightbar))
 
 
         # command mode, basic cmds & movement
@@ -433,8 +501,11 @@ def main(save_key=u'draft'):
                 echo(pager.erase_border())
                 dirty = True
             else:
-                echo(lightbar.process_keystroke(inp))
-                if lightbar.moved:
+                moved = False
+                for _count in count_repeat():
+                    echo(lightbar.process_keystroke(inp))
+                    moved = lightbar.moved or moved
+                if moved:
                     echo(statusline(lightbar))
 
         # edit mode
@@ -444,11 +515,14 @@ def main(save_key=u'draft'):
                 lightbar.content.insert(lightbar.index + 1,
                         [lightbar.selection[0] + 1, u''])
                 inp = term.KEY_DOWN
+                dirty = True
             lightbar.process_keystroke(inp)
             if lightbar.moved:
                 echo(term.normal + lneditor.erase_border())
                 lneditor = get_lneditor(lightbar)
-            dirty = True
+                save_draft(save_key, get_lbcontent(lightbar))
+            else:
+                dirty = True
 
         # edit mode -- append character / backspace
         elif edit and inp is not None:
@@ -467,3 +541,7 @@ def main(save_key=u'draft'):
                 echo(lneditor.process_keystroke(inp))
                 if lneditor.moved:
                     echo(statusline(lightbar))
+
+        if inp is not None and type(inp) is not int and not inp.isdigit():
+            # commands were processed, reset num_repeat to 1
+            num_repeat = -1
