@@ -124,10 +124,8 @@ class Lightbar (AnsiWindow):
                 return self.refresh()
             if self._vitem_lastidx != self.vitem_idx:
                 # unhighlight last selection, highlight new
-                xyzzy = (self.refresh_row(self._vitem_lastidx)
+                return (self.refresh_row(self._vitem_lastidx)
                         + self.refresh_row(self.vitem_idx))
-                print 'xyzzy', repr(xyzzy)
-                return xyzzy
             else:
                 # just highlight new ..
                 return (self.refresh_row(self.vitem_idx))
