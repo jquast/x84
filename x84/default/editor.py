@@ -337,12 +337,14 @@ def main(save_key=u'draft'):
                 and lightbar.index + 1 < len(lightbar.content)):
             idx = lightbar.index
             lightbar.content[idx] = (idx,
-                    ' '.join((
+                    WHITESPACE.join((
                         lightbar.content[idx][1].rstrip(),
-                        WHITESPACE,
                         lightbar.content[idx + 1][1].lstrip(),)))
             del lightbar.content[idx + 1]
+            prior_length = len(lightbar.content)
             set_lbcontent(lightbar, get_lbcontent(lightbar))
+            if len(lightbar.content) - prior_length > 0:
+                lightbar.move_down()
             dirty = True
 
 
