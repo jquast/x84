@@ -73,24 +73,30 @@ class Lightbar (AnsiWindow):
         # allow ucs data with '\r\n', to accomidate soft and hardbreaks; just
         # don't display them, really wrecks up cusor positioning.
         ucs = self.content[entry][1].strip(u'\r\n')
+
+        # highlighted entry
         if entry == self.index:
+            if len(Ansi(ucs)) > self.visible_width:
+                strip_char = self.glyphs.get('strip', u' $')
+                strip_to = self.visible_width - len(strip_char)
+                ucs = Ansi(ucs).wrap(strip_to).splitlines()[0] + strip_char
             # current selection, strip of ansi sequences, use color 'highlight'
             return u''.join(( pos,
                 self.colors.get('highlight', u''),
-                self.align(Ansi(ucs).seqfill()[:self.visible_width]),
+                self.align(Ansi(ucs).seqfill()),
                 term.normal,))
-        else:
-            # allow data too large to fit, display only first line
-            # after wrapping, using strip_char (u' $' by default).
-            ucs = Ansi(ucs).decode_pipe()
-            if len(ucs) > self.visible_width:
-                strip_char = self.glyphs.get('strip', u' $')
-                strip_to = self.visible_width - len(strip_char)
-                ucs = Ansi(ucs).wrap(strip_to).splitlines()[0]
-            return u''.join(( pos,
-                self.colors.get('lowlight', u''),
-                self.align(Ansi(ucs).decode_pipe()),
-                term.normal,))
+
+        # allow data too large to fit, display only first line
+        # after wrapping, using strip_char (u' $' by default).
+        ucs = Ansi(ucs).decode_pipe()
+        if len(Ansi(ucs)) > self.visible_width:
+            strip_char = self.glyphs.get('strip', u' $')
+            strip_to = self.visible_width - len(strip_char)
+            ucs = Ansi(ucs).wrap(strip_to).splitlines()[0] + strip_char
+        return u''.join(( pos,
+            self.colors.get('lowlight', u''),
+            self.align(Ansi(ucs).decode_pipe()),
+            term.normal,))
 
     def fixate(self):
         """
@@ -118,10 +124,12 @@ class Lightbar (AnsiWindow):
                 return self.refresh()
             if self._vitem_lastidx != self.vitem_idx:
                 # unhighlight last selection, highlight new
-                return (self.refresh_row(self._vitem_lastidx)
+                xyzzy = (self.refresh_row(self._vitem_lastidx)
                         + self.refresh_row(self.vitem_idx))
+                print 'xyzzy', repr(xyzzy)
+                return xyzzy
             else:
-                # just highlight new .. ?
+                # just highlight new ..
                 return (self.refresh_row(self.vitem_idx))
         return u''
 
