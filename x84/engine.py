@@ -137,8 +137,6 @@ def _loop(telnetd):
                 if _client is not None:
                     _iqueue.send(('exception', Disconnected(err)))
                     unregister(_client, _iqueue, _oqueue, _lock)
-                else:
-                    _client.deactivate()
 
     def telnet_send(recv_list):
         """
