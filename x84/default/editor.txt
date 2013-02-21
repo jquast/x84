@@ -1,22 +1,25 @@
-Welcome to the editor for x/84.
+|07Welcome to the editor for x/84.
 
-Like the unix vi editor, there are two modes:
+|07Like the unix vi editor, there are |10two modes|07:
 
-Edit mode keys:
+|10Edit mode|07 keys:
 
-   <movement> any of pg/up/down, backspace, return.
-   ^w: delete word
+   |11<movement>|07 any of pg/up/down, backspace, return.
+   |11^w|07: delete word
 
-Command mode keys:
+|10Command mode|07 keys:
 
-    enter: switch to edit mode
-    s: save
-    a: abort
-    j: join current line with next
-    k: kill current line
-    <n>: repeat next command <n> times
-    <movement>: any of pg/up/down/home/end
-    G: goto line
+    |11enter|07: switch to edit mode
+    |11s|07: save
+    |11a|07: abort
+    |11o|07: append new line after current and edit
+    |11O|07: insert new line before current and edit
+    |11<n>*|07: repeat next command <n> times
+    |11<n>j|07: join current line with next
+    |11<n>k|07: kill current line
+    |11<n>u|07: undo
+    |11<n>G|07: goto line, or end of file without <n>
+    |11<n><movement>|07: any of pg/up/down/home/end
     
 Limited formatting is possible with ANSI Pipe codes:
 
