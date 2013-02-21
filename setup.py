@@ -18,7 +18,7 @@ setup(name='x84',
       packages=['x84', 'x84.default', 'x84.default.art', 'x84.bbs'],
       package_data={
           '': ['README.rst'],
-          'x84.default': ['*.ans',],
+          'x84.default': ['*.ans', '*.txt',],
           'x84.default.art': ['*.asc', '*.ans', '*.txt'],
       },
       install_requires=[
