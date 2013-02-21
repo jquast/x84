@@ -135,7 +135,9 @@ def _loop(telnetd):
                 logger.info('%s Connection Closed: %s.',
                             client.addrport(), err)
                 _client, _iqueue, _oqueue, _lock = lookup(client)
-                if _client is not None:
+                if _client is None:
+                    _client.deactivate()
+                else:
                     _iqueue.send(('exception', Disconnected(err)))
                     unregister(_client, _iqueue, _oqueue, _lock)
 
