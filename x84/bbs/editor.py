@@ -483,7 +483,6 @@ class ScrollingEditor(AnsiWindow):
                 u'\b' * len_toss,
                 u' ' * len_move,
                 u'\b' * len_move,))
-        print repr(rstr)
         self._horiz_pos -= 1
         return rstr
 

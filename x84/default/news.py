@@ -120,7 +120,6 @@ def main():
                 session.user['news'] = u'\r\n'.join(NEWS)
                 if gosub('editor', 'news'):
                     NEWS = session.user['news'].splitlines()
-                    print repr(NEWS)
                     codecs.open(newsfile, 'wb', 'utf8').write(
                             u'\r\n'.join(NEWS))
                 dirty = True

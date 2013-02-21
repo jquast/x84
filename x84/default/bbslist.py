@@ -168,7 +168,6 @@ def get_bbslist(max_len=23):
         output.append((None, term.blue(_grp.rjust(max_len))))
         for key, bbs in sorted(_value):
             output.append((key, bbs['bbsname']))
-    print repr(output)
     return output
 
 
