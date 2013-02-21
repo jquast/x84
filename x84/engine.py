@@ -79,6 +79,7 @@ def _loop(telnetd):
     #         Too many local variables (24/15)
     import logging
     import select
+    import warnings
     import socket
     import time
     import sys
@@ -208,7 +209,8 @@ def _loop(telnetd):
                 continue
             elif client.input_ready():
                 if not send_input(client, inp_queue, lock):
-                    logger.warn('%s input buffer exceeded', client.addrport())
+                    warnings.warn('%s input buffer exceeded',
+                            client.addrport())
 
     def session_recv(fds):
         """
