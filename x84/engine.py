@@ -117,7 +117,7 @@ def _loop(telnetd):
         for _client, inp_queue, out_queue, lock in terminals():
             if client == _client:
                 return (client, inp_queue, out_queue, lock)
-        return (None, None, None)
+        return (None, None, None, None)
 
     def telnet_recv(fds):
         """
