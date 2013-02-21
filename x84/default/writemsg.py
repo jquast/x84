@@ -126,7 +126,6 @@ def prompt_tags(msg):
             term.bold_red('TAG(s)'),)
     prompt_tags2 = u"OR '/list', %s:quit\r\n : " % (
             term.bold_yellow_underline('Escape'),)
-    global FILTER_PRIVATE
     while True:
         # Accept user input for multiple 'tag's, or /list command
         echo(u'\r\n\r\n')
@@ -152,8 +151,8 @@ def prompt_tags(msg):
                     for (_key, _value) in all_tags]))
                     ).wrap(term.width - 2))
             continue
-
         echo(u'\r\n')
+
         # search input as valid tag(s)
         tags = set([inp.strip().lower() for inp in inp_tags.split(',')])
         err = False
