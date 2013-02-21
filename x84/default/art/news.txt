@@ -1,5 +1,5 @@
-|12Thu Feb 21 01:19:47 EST 2013
-|08============================
+|12Thu Feb 21 01:19:47 EST 2013.
+|08=============================
 
 x/84 version 1.0.4 has been released to pypi, to install:
 

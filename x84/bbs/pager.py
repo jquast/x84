@@ -216,6 +216,7 @@ class Pager(AnsiWindow):
         ucs = (Ansi(self.visible_content[row])
                if row < len(self.visible_content)
                else u'')
+        print repr(self.align(ucs)), '*'
         return u''.join((
             term.normal,
             self.pos(row + self.ypadding, self.xpadding),

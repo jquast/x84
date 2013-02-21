@@ -351,7 +351,9 @@ class Ansi(unicode):
             while value.startswith('0'):
                 value = value[1:]
             value = 0 if 0 == len(value) else int(value, 10)
-            pass1 += self[ptr or ptr + 1:match1.start() + 1] + term.color(value)
+            if ptr == 0 and self[ptr] == u'|':
+                ptr += 1
+            pass1 += self[ptr and ptr + 1:match1.start() + 1] + term.color(value)
             ptr = match1.end()
         if match1 is None:
             pass1 = self
