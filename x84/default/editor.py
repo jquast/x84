@@ -9,6 +9,21 @@ editor script for X/84, https://github.com/jquast/x84
 WHITESPACE = u' '
 SOFTWRAP=u'\n'
 HARDWRAP=u'\r\n'
+UNDO = list()
+UNDOLEVELS = 9
+
+def save_draft(key, ucs):
+    save(key, ucs)
+    global UNDO
+    UNDO.append(ucs)
+    if len(UNDO) > UNDOLEVELS:
+        del UNDO[0]
+
+def save(key, ucs):
+    from x84.bbs import getsession
+    getsession().user[key] = HARDWRAP.join(
+            [softwrap_join(_ucs) for _ucs in ucs.split(HARDWRAP)])
+
 
 def get_help():
     import os
@@ -172,6 +187,8 @@ def main(save_key=u'draft'):
     keyset = {'edit': (term.KEY_ENTER,),
               'command': (unichr(27), term.KEY_ESCAPE),
               'kill': (u'K',),
+              'undo': (u'u', 'U',),
+              'insert': (u'i', u'I'),
               'join': (u'J',),
               'rubout': (unichr(8), unichr(127),
                   unichr(23), term.KEY_BACKSPACE,),
@@ -335,12 +352,14 @@ def main(save_key=u'draft'):
                 merge()
                 lightbar.colors['highlight'] = term.yellow_reverse
             else:
-                # switched to edit mode, instantiate new line editor
+                # switched to edit mode, save draft,
+                # instantiate new line editor
+                save_draft(save_key, get_lbcontent(lightbar))
                 lneditor = get_lneditor(lightbar)
                 lightbar.colors['highlight'] = term.red_reverse
             dirty = True
 
-        # edit mode, kill line
+        # command mode, kill line
         elif not edit and inp in keyset['kill']:
             # when 'killing' a line, make accomidations to clear
             # bottom-most row, otherwise a ghosting effect occurs
@@ -351,20 +370,37 @@ def main(save_key=u'draft'):
             else:
                 dirty = True
 
-        # edit mode, join line
-        elif (not edit and inp in keyset['join']
-                and lightbar.index + 1 < len(lightbar.content)):
-            idx = lightbar.index
-            lightbar.content[idx] = (idx,
-                    WHITESPACE.join((
-                        lightbar.content[idx][1].rstrip(),
-                        lightbar.content[idx + 1][1].lstrip(),)))
-            del lightbar.content[idx + 1]
-            prior_length = len(lightbar.content)
+        # command mode, insert line
+        elif not edit and inp in keyset['insert']:
+            lightbar.content.insert(lightbar.index,
+                    (lightbar.index, HARDWRAP,))
             set_lbcontent(lightbar, get_lbcontent(lightbar))
-            if len(lightbar.content) - prior_length > 0:
-                lightbar.move_down()
             dirty = True
+
+        # command mode, undo
+        elif not edit and inp in keyset['undo']:
+            if len(UNDO):
+                set_lbcontent(lightbar, UNDO.pop())
+                dirty = True
+            else:
+                echo(u'\a')
+
+        # command mode, join line
+        elif not edit and inp in keyset['join']:
+            if lightbar.index + 1 < len(lightbar.content):
+                idx = lightbar.index
+                lightbar.content[idx] = (idx,
+                        WHITESPACE.join((
+                            lightbar.content[idx][1].rstrip(),
+                            lightbar.content[idx + 1][1].lstrip(),)))
+                del lightbar.content[idx + 1]
+                prior_length = len(lightbar.content)
+                set_lbcontent(lightbar, get_lbcontent(lightbar))
+                if len(lightbar.content) - prior_length > 0:
+                    lightbar.move_down()
+                dirty = True
+            else:
+                echo(u'\a')
 
 
         # command mode, basic cmds & movement
@@ -379,9 +415,7 @@ def main(save_key=u'draft'):
                 if yes_no(lightbar, term.yellow(u'- ')
                         + term.bold_green(u'SAVE')
                         + term.yellow(u' -'), term.reverse_green):
-                    session.user[save_key] = HARDWRAP.join(
-                            [softwrap_join(_ucs) for _ucs in
-                                get_lbcontent(lightbar).split(HARDWRAP)])
+                    save(save_key, get_lbcontent(lightbar))
                     return True
                 dirty = True
             elif inp in (u'?',):
@@ -408,7 +442,7 @@ def main(save_key=u'draft'):
             merge()
             if inp in (u'\r', term.KEY_ENTER,):
                 lightbar.content.insert(lightbar.index + 1,
-                        [lightbar.selection[0] + 1, HARDWRAP])
+                        [lightbar.selection[0] + 1, u''])
                 inp = term.KEY_DOWN
             lightbar.process_keystroke(inp)
             if lightbar.moved:

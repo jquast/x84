@@ -135,8 +135,11 @@ def prompt_tags(msg):
         width = term.width - 6
         sel_tags = u', '.join(msg.tags)
         inp_tags = LineEditor(width, sel_tags).read()
-        if (inp_tags is None or 0 == len(inp_tags)
-                or inp_tags.strip().lower() == '/quit'):
+        if inp_tags is not None and 0 == len(inp_tags.strip()):
+            # no tags must be (private ..)
+            msg.tags = set()
+            return True
+        if inp_tags is None or inp_tags.strip().lower() == '/quit':
             return False
         elif inp_tags.strip().lower() == '/list':
             # list all available tags, and number of messages
@@ -223,12 +226,28 @@ def prompt_body(msg):
                   width=20,
                   left=u'CONtiNUE', right=u'CANCEl')
     blurb = u'CONtiNUE tO Edit MESSAGE bOdY'
+    echo(u'\r\n\r\n')
     echo(term.move(inp.yloc, inp.xloc - len(blurb)))
     echo(term.bold_yellow(blurb))
     selection = inp.read()
     echo(term.move(inp.yloc, 0) + term.clear_eol)
     if selection != u'CONtiNUE':
         return False
+    if 0 != len(session.user.get('draft', u'')):
+        inp = Selector(yloc=term.height - 1,
+                      xloc=term.width - 22,
+                      width=20,
+                      left=u'REStORE', right=u'ERASE')
+        blurb = u'CONtiNUE PREViOUSlY SAVEd dRAft ?'
+        echo(u'\r\n\r\n')
+        echo(term.move(inp.yloc, inp.xloc - len(blurb)))
+        echo(term.bold_yellow(blurb))
+        selection = inp.read()
+        echo(term.move(inp.yloc, 0) + term.clear_eol)
+        if selection == u'REStORE':
+            msg.body = session.user['draft']
+    echo(u'\r\n\r\n')
+    session.user['draft'] = msg.body
     if gosub('editor', 'draft'):
         echo(u'\r\n\r\n' + term.normal)
         msg.body = session.user.get('draft', u'')

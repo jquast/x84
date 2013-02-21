@@ -4,13 +4,18 @@ ALREADY_READ = set()
 DELETED = set()
 SEARCH_TAGS = set()
 READING = False
+TIME_FMT = '%A %b-%d, %Y at %I:%M:%S%p'
 
-def quote_body(body, width=79):
+def quote_body(msg, width=79):
     from x84.bbs import Ansi
     ucs = u''
-    for line in body.splitlines():
+    for line in msg.body.splitlines():
         ucs += u'> ' + Ansi(line).wrap(width - 2, indent=u'> ')
-    return ucs + u'\r\n'
+    return u''.join((
+        'On ',
+        msg.stime.strftime(TIME_FMT), u' ',
+        msg.author, ' wrote:',
+        u'\r\n', ucs, u'\r\n'))
 
 def allow_tag(idx):
     """
@@ -91,7 +96,7 @@ def msg_filter(msgs):
     #         Too many branches
     from x84.bbs import list_msgs, echo, getsession, getterminal, get_msg, Ansi
     session, term = getsession(), getterminal()
-    public_msgs = list_msgs()
+    public_msgs = list_msgs(('public',))
     addressed_to = 0
     addressed_grp = 0
     filtered = 0
@@ -187,7 +192,7 @@ def prompt_tags(tags):
         # Accept user input for a 'search tag', or /list command
         #
         echo(u"\r\n\r\nENtER SEARCh %s, COMMA-dEliMitEd. " % (
-            term.bold_red('TAG(s)'),))
+            term.red('TAG(s)'),))
         echo(u"OR '/list', %s:quit\r\n : " % (
             term.yellow_underline('Escape'),))
         width = term.width - 6
@@ -238,19 +243,25 @@ def main(autoscan_tags=None):
     global ALREADY_READ, SEARCH_TAGS, DELETED
     if autoscan_tags is not None:
         SEARCH_TAGS = autoscan_tags
-        echo(u'\r\n\r\nAutoscan: %s' % (
-            u', '.join([term.bold_red(tag) for tag in SEARCH_TAGS])))
+        echo(u''.join((
+            term.bold_black('[ '),
+            term.yellow('AUtOSCAN'),
+            term.bold_black(' ]'), u'\r\n')))
     else:
         SEARCH_TAGS = set(['public'])
         # also throw in user groups
         SEARCH_TAGS.update(session.user.groups)
         SEARCH_TAGS = prompt_tags(SEARCH_TAGS)
+        if SEARCH_TAGS is None:
+            SEARCH_TAGS = set()
 
+    echo(u'\r\n\r\n%s%s ' % (
+        term.bold_yellow('SCANNiNG'),
+        term.bold_black(':'),))
+    echo(u','.join([term.red(tag) for tag in SEARCH_TAGS]
+        if 0 != len(SEARCH_TAGS) else ['<All>',]))
 
-    if 0 != len(SEARCH_TAGS) and (
-            SEARCH_TAGS != session.user.get('autoscan', None)):
-        echo(u'\r\n\r\n  : ')
-        echo(u','.join(SEARCH_TAGS))
+    if (SEARCH_TAGS != session.user.get('autoscan', None)):
         echo(u'\r\n\r\nSave tag list as autoscan on login [yn] ?\b\b')
         while True:
             inp = getch()
@@ -405,7 +416,7 @@ def read_messages(msgs, new):
     def format_msg(reader, idx):
         """ Format message of index ``idx`` into Pager instance ``reader``. """
         msg = get_msg(idx)
-        sent = msg.stime.strftime('%A %b-%d %Y %H:%M:%S')
+        sent = msg.stime.strftime('%A %b-%d, %Y at %H:%M:%S')
         to_attr = term.bold_green if (
                 msg.recipient == session.user.handle) else term.underline
         return u'\r\n'.join((
@@ -550,7 +561,9 @@ def read_messages(msgs, new):
             reply_msg.tags = reply_to.tags
             reply_msg.subject = reply_to.subject
             reply_msg.parent = reply_to.idx
-            reply_msg.body = quote_body(reply_to.body, min(79, term.width - 5))
+            # quote between 30 and 79, 'screen width - 4' as variable dist.
+            reply_msg.body = quote_body(reply_to,
+                    max(30, min(79, term.width - 4)))
             echo(term.move(term.height, 0) + u'\r\n')
             if gosub('writemsg', reply_msg):
                 reply_msg.save()

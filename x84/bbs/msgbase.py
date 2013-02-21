@@ -13,22 +13,24 @@ TAGDB = 'tags'
 logger = logging.getLogger()
 
 
-def get_msg(idx):
+def get_msg(idx=0):
     """
     Return Msg record instance by index ``idx``.
     """
     return DBProxy(MSGDB)['%d' % (idx,)]
 
 
-def list_msgs(tags=('public',)):
+def list_msgs(tags=None):
     """
-    Return set of Msg keys matching 1 or more ``tags``.
+    Return set of Msg keys matching 1 or more ``tags``, or all.
     """
-    msgs = set()
-    db_tag = DBProxy(TAGDB)
-    for tag in (_tag for _tag in tags if _tag in db_tag):
-        msgs.update(db_tag[tag])
-    return msgs
+    if tags is not None and 0 != len(tags):
+        msgs = set()
+        db_tag = DBProxy(TAGDB)
+        for tag in (_tag for _tag in tags if _tag in db_tag):
+            msgs.update(db_tag[tag])
+        return msgs
+    return set([int(key) for key in DBProxy(MSGDB).keys()])
 
 
 def list_tags():

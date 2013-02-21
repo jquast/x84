@@ -157,7 +157,7 @@ def main(handle=None):
     session.activity = 'top'
 
     # 6. check for new msgs,
-    gosub('readmsgs')
+    gosub('readmsgs', session.user.get('autoscan', None))
     session.activity = 'top'
 
     # 7. news
