@@ -369,18 +369,18 @@ def main(save_key=u'draft'):
 
         # command mode, basic cmds & movement
         elif not edit and inp is not None:
-            if inp in (u'a', u'A'):
+            if inp in (u'a', u'A',):
                 if yes_no(lightbar, u'- AbORt -'):
                     return False
                 dirty = True
-            elif inp in (u's', u'S'):
+            elif inp in (u's', u'S',):
                 if yes_no(lightbar, u'- SAVE -'):
                     session.user[save_key] = HARDWRAP.join(
                             [softwrap_join(_ucs) for _ucs in
                                 get_lbcontent(lightbar).split(HARDWRAP)])
                     return True
                 dirty = True
-            elif inp in (u'?'):
+            elif inp in (u'?',):
                 pager = Pager(lightbar.height, lightbar.width,
                         lightbar.yloc, lightbar.xloc)
                 pager.update(get_help())
@@ -401,7 +401,7 @@ def main(save_key=u'draft'):
         # edit mode
         elif edit and inp in movement:
             merge()
-            if inp in (u'\r', term.KEY_ENTER):
+            if inp in (u'\r', term.KEY_ENTER,):
                 lightbar.content.insert(lightbar.index + 1,
                         [lightbar.selection[0] + 1, HARDWRAP])
                 inp = term.KEY_DOWN
