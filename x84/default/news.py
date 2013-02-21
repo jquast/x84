@@ -50,12 +50,12 @@ def get_pager(news_txt, position=None):
 
 def redraw(pager):
     """ Returns string suitable for refreshing screen. """
-    from x84.bbs import getterminal
+    from x84.bbs import getsession, getterminal
     import os
     # pylint: disable=W0603
     #         Using the global statement
     global NEWS_ART  # in-memory cache
-    term = getterminal()
+    session, term = getsession(), getterminal()
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'news.asc')
     if NEWS_ART is None:
         NEWS_ART = [line for line in open(artfile)]
@@ -64,9 +64,11 @@ def redraw(pager):
             line.rstrip().center(term.width)[:term.width].rstrip())
     title = u''.join(( u']- ', term.bold_blue('PARtY NEWS'), ' [-',))
     footer = u''.join(( u'-[ ',
-            term.underline(u'arrow keys'), u'-',
-            term.underline(u'Escape/q'), u'uit',
-            u' ]-',
+            term.blue_underline(u'Escape'), '/',
+            term.blue_underline(u'q'), term.bold_blue(u'uit '),
+            ((u'- ' + term.blue_underline(u'e') + term.bold_blue(u'dit '))
+                if 'sysop' in session.user.groups else u''),
+            u']-',
             ))
     return u''.join(( u'\r\n\r\n',
         '\r\n'.join((ladjust(line) for line in NEWS_ART)), u'\r\n',
@@ -80,7 +82,7 @@ def redraw(pager):
 
 def main():
     """ Main procedure. """
-    from x84.bbs import getsession, echo, getch
+    from x84.bbs import getsession, echo, getch, gosub
     import codecs
     import time
     import os
@@ -94,26 +96,35 @@ def main():
         echo(u'\r\n\r\nNo news.')
         return
 
-    if NEWS is None or os.stat(newsfile).st_mtime > NEWSAGE:
-        # open a utf-8 file for international encodings/art/language
-        NEWS = [line.rstrip() for line in codecs.open(newsfile, 'rb', 'utf8')]
-        NEWSAGE = time.time()
-    if (session.user.get('expert', False)):
-        return dummy_pager(NEWS)
 
     pager = None
     dirty = True
     while True:
-        if dirty:
-            pager = get_pager(NEWS,
-                    pager.position if pager is not None else None)
-            echo(redraw(pager))
-            dirty = False
         if session.poll_event('refresh'):
             dirty = True
-            continue
+        if dirty:
+            if NEWS is None or os.stat(newsfile).st_mtime > NEWSAGE:
+                # open a utf-8 file for international encodings/art/language
+                NEWSAGE = time.time()
+                NEWS = [line.rstrip() for line in
+                        codecs.open(newsfile, 'rb', 'utf8')]
+            if (session.user.get('expert', False)):
+                return dummy_pager(NEWS)
+            pos = pager.position if pager is not None else None
+            pager = get_pager(NEWS, pos)
+            echo(redraw(pager))
+            dirty = False
         inp = getch(1)
         if inp is not None:
-            echo(pager.process_keystroke(inp))
-            if pager.quit:
-                return
+            if inp in (u'e', u'E',) and 'sysop' in session.user.groups:
+                session.user['news'] = u'\r\n'.join(NEWS)
+                if gosub('editor', 'news'):
+                    NEWS = session.user['news'].splitlines()
+                    print repr(NEWS)
+                    codecs.open(newsfile, 'wb', 'utf8').write(
+                            u'\r\n'.join(NEWS))
+                dirty = True
+            else:
+                echo(pager.process_keystroke(inp))
+                if pager.quit:
+                    return
