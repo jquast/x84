@@ -10,6 +10,10 @@ WHITESPACE = u' '
 SOFTWRAP=u'\n'
 HARDWRAP=u'\r\n'
 
+def get_help():
+    import os
+    return open(os.path.join(os.path.dirname(__file__), 'editor.txt')).read()
+
 def wrap_rstrip(value):
     if value[-len(HARDWRAP):] == HARDWRAP:
         value = value[:-len(HARDWRAP)]
@@ -30,7 +34,7 @@ def get_lbcontent(lightbar):
     """
     Returns ucs string for content of Lightbar instance, ``lightbar``.
     """
-    #from x84.bbs import Ansi
+    from x84.bbs import Ansi
     # a custom 'soft newline' versus 'hard newline' is implemented,
     # '\n' == 'soft', '\r\n' == 'hard'
     lines = list()
@@ -47,7 +51,7 @@ def get_lbcontent(lightbar):
             # SOFTWRAP, strip that softwrap and re-assign value to a
             # whitespace-joined value by current line value.
             lines[-1] = WHITESPACE.join((lines[-1].rstrip(), ucs.lstrip(),))
-    retval = u''.join(lines)
+    retval = Ansi(u''.join(lines)).encode_pipe()
     return retval
 
 
@@ -159,7 +163,7 @@ def main(save_key=u'draft'):
     #         Too many local variables
     #         Too many branches
     #         Too many statements
-    from x84.bbs import getsession, getterminal, echo, getch
+    from x84.bbs import getsession, getterminal, echo, getch, Ansi, Pager
     session, term = getsession(), getterminal()
 
     movement = (term.KEY_UP, term.KEY_DOWN, term.KEY_NPAGE,
@@ -204,33 +208,48 @@ def main(save_key=u'draft'):
         Display status line and command help on ``lightbar`` borders
         """
         lightbar.colors['border'] = term.red if edit else term.yellow
+        keyset_cmd = u''
+        if not edit:
+            keyset_cmd = u''.join((
+                term.yellow(u'-( '),
+                term.yellow_underline(u'S'), u':', term.bold(u'ave'),
+                u' ',
+                term.yellow_underline(u'A'), u':', term.bold(u'bort'),
+                u' ',
+                term.yellow_underline(u'?'), u':', term.bold(u'help'),
+                term.yellow(u' )-'),))
+#                    ) + keyset_cmd
+            keyset_cmd = lightbar.pos(lightbar.height - 1,
+                    max(0, lightbar.width - (len(Ansi(keyset_cmd)) + 3))
+                    ) + keyset_cmd
         return u''.join((
             lightbar.border(),
+            keyset_cmd,
             lightbar.pos(lightbar.height, lightbar.xpadding),
-            (u'-[ EditiNG liNE %d ]-' % (lightbar.index + 1,) if edit else
-                u'- liNE %d/%d %d%% -' % (
-                    lightbar.index + 1,
-                    len(lightbar.content), int((float(lightbar.index + 1)
-                      / max(1, len(lightbar.content))) * 100))),
-            lightbar.pos(0, lightbar.xpadding),
-            lightbar.title(u''.join((
-                    term.red('-[ '),
-                    term.red_underline(u'Escape'),
-                    u':', term.red(u'command mode'),
-                    term.red(' ]-'),)
-                    ) if edit else u''.join((
-                        term.yellow('-[ '),
-                        term.yellow_underline(u'Enter'),
-                        u':', term.bold(u'edit mode'), u' ',
-                        term.yellow_underline(u'K'),
-                        u':', term.bold(u'ill'), u' ',
-                        term.yellow_underline(u'J'),
-                        u':', term.bold(u'oin'), u' ',
-                        term.yellow_underline(u'S'),
-                        u':', term.bold(u'ave'), u' ',
-                        term.yellow_underline(u'A'),
-                        u':', term.bold(u'bort'),
-                        term.yellow(' ]-'),))),))
+            u''.join((
+                term.red(u'-[ '),
+                u'EditiNG liNE ',
+                term.reverse_red('%d' % (lightbar.index + 1,)),
+                term.red(u' ]-'),)) if edit else u''.join((
+                    term.yellow(u'-( '),
+                    u'liNE ',
+                    term.yellow('%d/%d ' % (
+                        lightbar.index + 1,
+                        len(lightbar.content),)),
+                    '%d%% ' % (
+                        int((float(lightbar.index + 1)
+                            / max(1, len(lightbar.content))) * 100)),
+                    term.yellow(u' )-'),)),
+                lightbar.title(u''.join((
+                        term.red('-] '),
+                        term.bold(u'Escape'),
+                        u':', term.bold_red(u'command mode'),
+                        term.red(' [-'),)
+                        ) if edit else u''.join((
+                            term.yellow('-( '),
+                            term.bold(u'Enter'),
+                            u':', term.bold_yellow(u'edit mode'),
+                            term.yellow(' )-'),))),))
 
 
     def redraw_lneditor(lightbar, lneditor):
@@ -361,8 +380,23 @@ def main(save_key=u'draft'):
                                 get_lbcontent(lightbar).split(HARDWRAP)])
                     return True
                 dirty = True
+            elif inp in (u'?'):
+                pager = Pager(lightbar.height, lightbar.width,
+                        lightbar.yloc, lightbar.xloc)
+                pager.update(get_help())
+                pager.colors['border'] = term.bold_blue
+                echo(pager.border() + pager.title(u''.join((
+                    term.blue(u'-( '),
+                    term.blue_underline(u'r'), u':', term.bold(u'eturn'),
+                    u' ',
+                    term.blue(u' )-'),))))
+                pager.keyset['exit'].extend([u'r', u'R'])
+                pager.read()
+                dirty = True
             else:
                 echo(lightbar.process_keystroke(inp))
+                if lightbar.moved:
+                    echo(statusline(lightbar))
 
         # edit mode
         elif edit and inp in movement:
