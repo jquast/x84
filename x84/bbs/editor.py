@@ -129,7 +129,7 @@ class LineEditor(object):
                 self.content = self.content[:-1]
                 return u''.join((
                     u'\b' * len_toss,
-                    u' ',
+                    u' ' * len_toss,
                     u'\b',))
         elif keystroke in self.keyset['backword']:
             if len(self.content) != 0:
@@ -197,7 +197,6 @@ class ScrollingEditor(AnsiWindow):
         self._max_length = 0
         self._quit = False
         self._bell = False
-        self._trim_char = '$ '
         self.content = u''
         self.keyset = PC_KEYSET
         height = 3  # TODO: 2 of 3 for top and bottom border
@@ -222,20 +221,6 @@ class ScrollingEditor(AnsiWindow):
         Return True when no more input can be accepted (end of line).
         """
         return len(Ansi(self.content)) >= self.max_length
-
-    @property
-    def trim_char(self):
-        """
-        When scrolling, this unicode string is prefixed to the line to
-        indicate it has been shifted.
-        """
-        return self._trim_char
-
-    @trim_char.setter
-    def trim_char(self, value):
-        # pylint: disable=C0111
-        #         Missing docstring
-        self._trim_char = value
 
     @property
     def bell(self):
@@ -356,13 +341,13 @@ class ScrollingEditor(AnsiWindow):
 
     def init_theme(self):
         """
-        Initialize colors['highlight'] as REVERSE and trim_char as '$ '.
+        Initialize colors['highlight'] as REVERSE and glyphs['strip'] as '$ '.
         """
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
         AnsiWindow.init_theme(self)
         self.colors['highlight'] = term.yellow_reverse
-        self.trim_char = '$ '
+        self.glyphs['strip'] = '$ '
 
     def init_keystrokes(self):
         """
@@ -452,9 +437,9 @@ class ScrollingEditor(AnsiWindow):
                 self.enable_scrolling = True
             self._horiz_pos += 1
         if self._horiz_shift > 0:
-            self._horiz_shift += len(self.trim_char)
-            #scrl = self._horiz_shift + len(self.trim_char)
-            prnt = self.trim_char + self.content[self._horiz_shift:]
+            self._horiz_shift += len(self.glyphs['strip'])
+            #self._horiz_shift += len(self.glyphs['strip'])
+            prnt = self.glyphs['strip'] + self.content[self._horiz_shift:]
         else:
             prnt = self.content
         erase_len = self.visible_width - (len(prnt))
@@ -485,19 +470,20 @@ class ScrollingEditor(AnsiWindow):
         rstr = u''
         # measured backspace erases over double-wide
         len_toss = len(Ansi(self.content[-1]))
-        len_move = len(Ansi(self.content[-1]))
+        len_move = len(self.content[-1])
         self.content = self.content[:-1]
-        if (self.is_scrolled and (self._horiz_pos
-                    < (self.visible_width - self.scroll_amt))):
+        if (self.is_scrolled and (self._horiz_pos < self.scroll_amt)):
             # shift left,
             self._horiz_shift -= self.scroll_amt
             self._horiz_pos += self.scroll_amt
             rstr += self.refresh()
-        rstr += u''.join((
-            self.fixate(),
-            u'\b' * len_toss,
-            u' ' * len_move,
-            u'\b' * len_move,))
+        else:
+            rstr += u''.join((
+                self.fixate(0),
+                u'\b' * len_toss,
+                u' ' * len_move,
+                u'\b' * len_move,))
+        print repr(rstr)
         self._horiz_pos -= 1
         return rstr
 
