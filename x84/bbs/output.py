@@ -359,9 +359,9 @@ class Ansi(unicode):
             # out by using dim color and bold attribute instead.
             attr = u''
             if int_value <= 7 or int_value >= 16:
-                attr = term.color(int_value)
+                attr = term.normal + term.color(int_value)
             elif int_value <= 15:
-                attr = term.color(int_value - 8) + term.bold
+                attr = term.normal + term.color(int_value - 8) + term.bold
             ucs += self[ptr:match.start()] + attr
             ptr = match.end()
         if match is None:
