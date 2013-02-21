@@ -13,7 +13,7 @@ ANSI_PIPE = re.compile(r'[^\|]\|(\d{2,3})')
 ANSI_NOPIPE = re.compile(r'\|\|(\d{2,3})')
 ANSI_COLOR = re.compile(r'\033\[(\d{2,3})m')
 ANSI_RIGHT = re.compile(r'\033\[(\d{1,4})C')
-ANSI_CODEPAGE = re.compile(r'\033\([A-Z]')
+ANSI_CODEPAGE = re.compile(r'\033[\(\)][AB012]')
 ANSI_WILLMOVE = re.compile(r'\033\[[HJuABCDEF]')
 ANSI_WONTMOVE = re.compile(r'\033\[[sm]')
 
@@ -231,6 +231,10 @@ class Ansi(unicode):
             if not self[ptr2] in u'hl':
                 # ? followed illegaly, UNKNOWN
                 return False
+            return False
+        elif self[2] in ('(', ')'):
+            # CSI + '\([AB012]' # set G0/G1
+            assert self[3] in (u'A', 'B', '0', '1', '2',)
             return False
         elif not self[2].isdigit():
             # illegal nondigit in seq
