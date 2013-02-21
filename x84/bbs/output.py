@@ -364,7 +364,6 @@ class Ansi(unicode):
         else:
             pass2 += pass1[match2.end():]
         # return new string terminal-decorated string
-        print 'pass2', repr(pass2)
         return ''.join((pass2, term.normal))
 
     def seqlen(self):
