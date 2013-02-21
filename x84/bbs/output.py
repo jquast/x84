@@ -9,7 +9,9 @@ import textwrap
 from x84.bbs.session import getterminal, getsession
 from x84.bbs.wcswidth import wcswidth
 
-ANSI_PIPE = re.compile(r'(\|\d\d)')
+ANSI_PIPE = re.compile(r'[^\|]\|(\d{2,3})')
+ANSI_NOPIPE = re.compile(r'\|\|(\d{2,3})')
+ANSI_COLOR = re.compile(r'\033\[(\d{2,3})m')
 ANSI_RIGHT = re.compile(r'\033\[(\d{1,4})C')
 ANSI_CODEPAGE = re.compile(r'\033\([A-Z]')
 ANSI_WILLMOVE = re.compile(r'\033\[[HJuABCDEF]')
@@ -170,7 +172,7 @@ class Ansi(unicode):
 
     def wrap(self, width, indent=u''):
         """
-        A.wrap(width) --> unicode
+        A.wrap(width) -> unicode
 
         Like textwrap.wrap, but honor existing linebreaks and understand
         printable length of a unicode string that contains ANSI sequences.
@@ -272,7 +274,7 @@ class Ansi(unicode):
         # illegal single value, UNKNOWN
         return False
 
-    def seqfill(self):
+    def seqfill(self, encode_pipe=False):
         """
          S.seqfill() -> unicode
 
@@ -282,6 +284,11 @@ class Ansi(unicode):
            by replacing with padded u' 's, we can scroll such artwork
            bi-directionally or within pager windows without 'bleeding' at the
            cost of extra bytes.
+
+           When encode_pipe is True, color sequences are replaced with
+           user-editable pipe sequences following the guidelines of MCI
+           codes, http://wiki.mysticbbs.com/mci_codes. When False (default),
+           colors are stripped entirely.
         """
         ptr = 0
         rstr = u''
@@ -292,13 +299,20 @@ class Ansi(unicode):
                 rstr += u' ' * (Ansi(self[idx:]).anspadd())
             elif seq_left and Ansi(self[idx:]).is_movement():
                 ptr = idx + seq_left
+                match = ANSI_COLOR.match(self[idx:])
+                if match:
+                    # http://wiki.mysticbbs.com/mci_codes
+                    value = int(self[match.start():match.end() + 1]) - 30
+                    assert value >= 0 and value <= 60, ('illegal sgr: %r' % (
+                                self[idx:],))
+                    rstr += u'|%02d' % (value,)
             elif ptr <= idx:
                 rstr += self[idx]
         return rstr
 
     def anspadd(self):
         """
-         S.anspadd() --> integer
+         S.anspadd() -> integer
 
         Returns int('nn') in CSI sequence \\033[nnC for use with replacing
         ansi.right(nn) with printable characters. prevents bleeding in
@@ -309,26 +323,49 @@ class Ansi(unicode):
             return int(right.group(1))
         return 0
 
+    def encode_pipe(self):
+        """
+        S.encode_pipe() <==> S.seqfill(encode_pipe=True)
+        """
+        return self.seqfill(encode_pipe=True)
+
     def decode_pipe(self):
         """
-        S.decode_pipe() --> unicode
+        S.decode_pipe() -> unicode
 
         Return new terminal sequence, replacing 'pipe codes', such as u'|03'
         with this terminals equivalent attribute sequence.
         """
         term = getterminal()
-        rstr = u''
+        pass1 = u''
+        pass2 = u''
         ptr = 0
-        match = None
-        for match in ANSI_PIPE.finditer(self):
-            value = int(self[match.start() + len('|'):match.end()], 10)
-            rstr += self[ptr:match.start()] + term.color(value)
-            ptr = match.end()
-        if match is None:
-            # no pipe matches, return as-is
-            return self
+        match1, match2 = None, None
+        # decode |02 to color
+        for match1 in ANSI_PIPE.finditer(self):
+            value = match1.group(1)
+            while value.startswith('0'):
+                value = value[1:]
+            value = 0 if 0 == len(value) else int(value, 10)
+            pass1 += self[ptr:match1.start() + 1] + term.color(value)
+            ptr = match1.end()
+        if match1 is None:
+            pass1 = self
+        else:
+            pass1 += self[match1.end():]
+        ptr = 0
+        # decode ||02 to |02
+        for match2 in ANSI_NOPIPE.finditer(pass1):
+            pass2 += (pass1[ptr:match2.start() + 1]
+                    + u'|%s' % (match2.group(1),))
+            ptr = match2.end()
+        if match2 is None:
+            pass2 = pass1
+        else:
+            pass2 += pass1[match2.end():]
         # return new string terminal-decorated string
-        return ''.join((rstr, self[match.end():], term.normal))
+        print 'pass2', repr(pass2)
+        return ''.join((pass2, term.normal))
 
     def seqlen(self):
         """
@@ -377,10 +414,14 @@ class Ansi(unicode):
                 ptr2 = 2
                 while (self[ptr2].isdigit()):
                     ptr2 += 1
+                    if ptr2 == unicode.__len__(self):
+                        return 0
 
                 # multi-attribute SGR '[01;02(..)'(m|H)
                 while self[ptr2] == ';':
                     ptr2 += 1
+                    if ptr2 == unicode.__len__(self):
+                        return 0
                     try:
                         while (self[ptr2].isdigit()):
                             ptr2 += 1
