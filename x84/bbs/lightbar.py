@@ -58,11 +58,12 @@ class Lightbar (AnsiWindow):
         """
         Return unicode byte sequence suitable for moving to location ypos of
         window-relative row, and displaying any valid entry there, or using
-        glyphs['erase'] if out of bounds.
+        glyphs['erase'] if out of bounds. Strings are ansi color safe, and
+        will be trimmed using glyphs['strip'] if their displayed width is
+        wider than window.
         """
         import x84.bbs.session
         from x84.bbs.output import Ansi
-        term = x84.bbs.session.getterminal()
         pos = self.pos(self.ypadding + row, self.xpadding)
         entry = self.vitem_shift + row
         if entry >= len(self.content):
@@ -70,32 +71,35 @@ class Lightbar (AnsiWindow):
             return u''.join(( pos,
                 self.glyphs.get('erase', u' ') * self.visible_width,))
 
+        def fit_row(ucs):
+            strip_char = self.glyphs.get('strip', u' $')
+            ptr = self.visible_width - len(strip_char)
+            return ((Ansi(ucs).wrap(ptr).splitlines()[0]
+                        .ljust(ptr) + strip_char))
+
+        term = x84.bbs.session.getterminal()
         # allow ucs data with '\r\n', to accomidate soft and hardbreaks; just
         # don't display them, really wrecks up cusor positioning.
         ucs = self.content[entry][1].strip(u'\r\n')
 
-        # highlighted entry
+        # highlighted entry; strip of ansi sequences, use color 'highlight'
+        # trim and append '$ ' if it cannot fit,
         if entry == self.index:
+            ucs = Ansi(ucs).seqfill()
             if len(Ansi(ucs)) > self.visible_width:
-                strip_char = self.glyphs.get('strip', u' $')
-                strip_to = self.visible_width - len(strip_char)
-                ucs = Ansi(ucs).wrap(strip_to).splitlines()[0] + strip_char
-            # current selection, strip of ansi sequences, use color 'highlight'
+                ucs = fit_row(ucs)
             return u''.join(( pos,
                 self.colors.get('highlight', u''),
-                self.align(Ansi(ucs).seqfill()),
+                self.align(ucs),
                 term.normal,))
-
-        # allow data too large to fit, display only first line
-        # after wrapping, using strip_char (u' $' by default).
+        # unselected entry; retain ansi sequences, decode any pipe characters,
+        # trim and append '$ ' if it cannot fit
         ucs = Ansi(ucs).decode_pipe()
         if len(Ansi(ucs)) > self.visible_width:
-            strip_char = self.glyphs.get('strip', u' $')
-            strip_to = self.visible_width - len(strip_char)
-            ucs = Ansi(ucs).wrap(strip_to).splitlines()[0] + strip_char
+            ucs = fit_row(ucs)
         return u''.join(( pos,
             self.colors.get('lowlight', u''),
-            self.align(Ansi(ucs).decode_pipe()),
+            self.align(ucs),
             term.normal,))
 
     def fixate(self):
