@@ -9,7 +9,7 @@ import textwrap
 from x84.bbs.session import getterminal, getsession
 from x84.bbs.wcswidth import wcswidth
 
-ANSI_PIPE = re.compile(r'[^\|]\|(\d{2,3})')
+ANSI_PIPE = re.compile(r'([^\|]|^)\|(\d{2,3})')
 ANSI_NOPIPE = re.compile(r'\|\|(\d{2,3})')
 ANSI_COLOR = re.compile(r'\033\[(\d{2,3})m')
 ANSI_RIGHT = re.compile(r'\033\[(\d{1,4})C')
@@ -347,11 +347,11 @@ class Ansi(unicode):
         match1, match2 = None, None
         # decode |02 to color
         for match1 in ANSI_PIPE.finditer(self):
-            value = match1.group(1)
+            value = match1.group(2)
             while value.startswith('0'):
                 value = value[1:]
             value = 0 if 0 == len(value) else int(value, 10)
-            pass1 += self[ptr:match1.start() + 1] + term.color(value)
+            pass1 += self[ptr or ptr + 1:match1.start() + 1] + term.color(value)
             ptr = match1.end()
         if match1 is None:
             pass1 = self
