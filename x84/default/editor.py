@@ -516,11 +516,13 @@ def main(save_key=u'draft'):
                         [lightbar.selection[0] + 1, u''])
                 inp = term.KEY_DOWN
                 dirty = True
-            lightbar.process_keystroke(inp)
+            ucs = lightbar.process_keystroke(inp)
             if lightbar.moved:
                 echo(term.normal + lneditor.erase_border())
+                echo(ucs)
                 lneditor = get_lneditor(lightbar)
                 save_draft(save_key, get_lbcontent(lightbar))
+                echo(lneditor.refresh())
             else:
                 dirty = True
 
