@@ -3,6 +3,7 @@ editor package for x/84, https://github.com/jquast/x84
 """
 
 from x84.bbs.ansiwin import AnsiWindow
+from x84.bbs.output import Ansi
 
 PC_KEYSET = {'refresh': [unichr(12), ],
              'backspace': [unichr(8), unichr(127), ],
@@ -108,7 +109,7 @@ class LineEditor(object):
             self.colors.get('highlight', u''),
             ' ' * self.width,
             '\b' * self.width))
-        content = (self.hidden * len(self.content)
+        content = (self.hidden * len(Ansi(self.content))
                    if self.hidden else self.content)
         return u''.join((
             lightbar,
@@ -124,12 +125,16 @@ class LineEditor(object):
             return self.refresh()
         elif keystroke in self.keyset['backspace']:
             if len(self.content) != 0:
+                toss = self.content[-1]
                 self.content = self.content[:-1]
-                return u'\b \b'
+                return u''.join((
+                    u'\b' * len(toss),
+                    ' ' * len(toss),
+                    '\b' * len(toss),))
         elif keystroke in self.keyset['backword']:
             if len(self.content) != 0:
                 ridx = self.content.rstrip().rfind(' ') + 1
-                toss = len(self.content[ridx:])
+                toss = len(Ansi(self.content[ridx:]))
                 self.content = self.content[:ridx]
                 return u''.join((
                     u'\b' * toss,
@@ -142,7 +147,7 @@ class LineEditor(object):
         elif type(keystroke) is int:
             return u''
         elif (ord(keystroke) >= ord(' ') and
-                (len(self.content) < self.width or self.width == 0)):
+                (len(Ansi(self.content)) < self.width or self.width == 0)):
             self.content += keystroke
             return keystroke if not self.hidden else self.hidden
         return u''
@@ -215,7 +220,7 @@ class ScrollingEditor(AnsiWindow):
         """
         Return True when no more input can be accepted (end of line).
         """
-        return len(self.content) >= self.max_length
+        return len(Ansi(self.content)) >= self.max_length
 
     @property
     def trim_char(self):
@@ -438,7 +443,7 @@ class ScrollingEditor(AnsiWindow):
         self._horiz_lastshift = self._horiz_shift
         self._horiz_shift = 0
         self._horiz_pos = 0
-        for _count in range(len(self.content)):
+        for _count in range(len(Ansi(self.content))):
             if (self._horiz_pos >
                     (self.visible_width - self.scroll_amt)):
                 self._horiz_shift += self.scroll_amt
@@ -476,6 +481,8 @@ class ScrollingEditor(AnsiWindow):
         if 0 == len(self.content):
             return u''
         rstr = u''
+        # measured backspace erases over double-wide
+        len_backspace = len(Ansi(self.content[-1]))
         self.content = self.content[:-1]
         if (self.is_scrolled and (self._horiz_pos
                     < (self.visible_width - self.scroll_amt))):
@@ -484,7 +491,7 @@ class ScrollingEditor(AnsiWindow):
             self._horiz_pos += self.scroll_amt
             rstr += self.refresh()
         rstr += self.fixate(-1)
-        rstr += ' \b'
+        rstr += (' ' * len_backspace) + ('\b' * len_backspace)
         self._horiz_pos -= 1
         return rstr
 
