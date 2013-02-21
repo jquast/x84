@@ -493,7 +493,7 @@ class TelnetClient(object):
             self._sb_decoder()
         elif cmd == IP:
             self.deactivate()
-            logger.warn('%s Interrupt Process (IP); closing.', self.addrport())
+            logger.debug('%s Interrupt; closing.', self.addrport())
         elif cmd == AO:
             flushed = len(self.recv_buffer)
             self.recv_buffer = array.array('c')
