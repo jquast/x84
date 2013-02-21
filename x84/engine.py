@@ -136,8 +136,10 @@ def _loop(telnetd):
                             client.addrport(), err)
                 _client, _iqueue, _oqueue, _lock = lookup(client)
                 if _client is None:
-                    _client.deactivate()
+                    # no session found, just de-activate this client
+                    client.deactivate()
                 else:
+                    # signal exit to sub-process and shutdown
                     _iqueue.send(('exception', Disconnected(err)))
                     unregister(_client, _iqueue, _oqueue, _lock)
 
