@@ -9,4 +9,4 @@ To upgrade:
 
    $ |11pip install --upgrade x84
 
-This release improves editing and message reading capabilities. You may have noticed the |13Colors|08, which are safe to use in pager and lightbars. If you need to escape, use another pipe, '||13'. The |11Ansi|08 class now provides an additional method, |11encode_pipe|07, to accompany the previously existing method, |11decode_pipe|07.
+This release improves editing and message reading capabilities. You may have noticed the |10Colors|07, which are safe to use in pager and lightbars. If you need to escape, use another pipe, '||13'. The |14Ansi|07 class now provides an additional method, |14encode_pipe|07, to accompany the previously existing method, |14decode_pipe|07.
