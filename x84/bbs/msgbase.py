@@ -125,6 +125,9 @@ class Msg(object):
         db_tag.release()
 
         # persist message as child to parent;
+        if not hasattr(self, 'parent'):
+            self.parent = None
+        assert self.parent not in self.children
         if self.parent is not None:
             parent_msg = get_msg(self.parent)
             if not hasattr(parent_msg, 'children'):
