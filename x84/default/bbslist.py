@@ -136,8 +136,8 @@ def get_bbslist(max_len=23):
     """
     Returns tuple, (bbs_key, display_string), grouped by bbs software !
     """
-    from x84.bbs import getsession, DBProxy
-    session = getsession()
+    from x84.bbs import getsession, DBProxy, getterminal
+    session, term = getsession(), getterminal()
     session.flush_event('bbslist_update')
 
     def get_bysoftware():
@@ -167,7 +167,7 @@ def get_bbslist(max_len=23):
     # pylint: disable=W0612
     #         Unused variable 'idx'
     for _idx, (bbs_sw, bbs_keys) in enumerate(sorted(get_bysoftware())):
-        soft_line = bbs_sw.rjust(max_len)[:max_len]
+        soft_line = term.underline(bbs_sw.rjust(max_len)[:max_len])
         output.append((None, soft_line))
         for key, bbs in sorted(bbs_keys):
             output.append((key, bbs['bbsname'][:max_len - 2]
@@ -777,7 +777,7 @@ def main():
             echo(u'\r\n' * lightbar.height)
             dirty = True
         t_val = chk_thread(thread)
-        if t_val:
+        if t_val != False:
             thread = None
             if t_val == 'dirty':
                 dirty = True
