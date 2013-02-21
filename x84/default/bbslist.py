@@ -146,17 +146,17 @@ def get_bbslist(max_len=23):
         """
         by_group = dict()
         for (key, bbs) in DBProxy('bbslist').iteritems():
-            grp = bbs['software']
+            grp = bbs['software'].decode('iso8859-1', 'replace')
+            if 'citadel' in grp.lower():
+                grp = u'Citadel'
+            elif 'mystic' in grp.lower():
+                grp = u'Mystic'
+            elif 'synchronet' in grp.lower():
+                grp = u'Synchronet'
             if not grp.lower().startswith('the'):
                 grp = grp.split()[0].title()
             else:
-                grp = grp.title().split()[0]
-            if 'citadel' in grp.lower():
-                grp = 'Citadel'
-            elif 'mystic' in grp.lower():
-                grp = 'Mystic'
-            elif 'synchronet' in grp.lower():
-                grp = 'Synchronet'
+                grp = grp.title().split()[1]
             if not grp in by_group:
                 by_group[grp] = [(key, bbs)]
                 continue
@@ -164,15 +164,11 @@ def get_bbslist(max_len=23):
         return by_group.items()
 
     output = list()
-    # pylint: disable=W0612
-    #         Unused variable 'idx'
-    for _idx, (bbs_sw, bbs_keys) in enumerate(sorted(get_bysoftware())):
-        soft_line = term.underline(bbs_sw.rjust(max_len)[:max_len])
-        output.append((None, soft_line))
-        for key, bbs in sorted(bbs_keys):
-            output.append((key, bbs['bbsname'][:max_len - 2]
-                           + (' $' if len(bbs['bbsname']) >= (max_len - 2)
-                              else u'')))
+    for _grp, _value in sorted(get_bysoftware()):
+        output.append((None, term.blue(_grp.rjust(max_len))))
+        for key, bbs in sorted(_value):
+            output.append((key, bbs['bbsname']))
+    print repr(output)
     return output
 
 
@@ -272,8 +268,11 @@ def get_swinfo(entry, pager):
     fetch a description paragraph for use in pager
     """
     from x84.bbs import getterminal
+    from x84.bbs.output import Ansi
     term = getterminal()
     output = pager.clear()
+    if entry:
+        entry = Ansi(entry).seqfill().strip()
     if entry and entry.strip().lower() == 'enthral':
         output += pager.update(
             "Enthral is a fresh look at the old school art of bbsing. "
@@ -319,12 +318,12 @@ def get_swinfo(entry, pager):
             "Author: Deuce\r\n"
             "IRC: #synchronet on irc.bbs-scene.org")
         output += pager.title(u'- about ' + term.blue('Synchronet') + u' -')
-    elif entry and entry.strip().lower() == 'the progressive':
+    elif entry and entry.strip().lower() == 'progressive':
         output += pager.update(
             "This bbs features threading, intra-process communication, "
             "and easy scripting in python. X/84 is a continuation of "
             "this codebase.\r\n\r\n"
-            + "\r\n\r\nAuthor: jojo\r\n"
+            + "Author: jojo\r\n"
             "IRC: #prsv on irc.efnet.org")
         output += pager.title(u'- about ' + term.blue('The Progressive -'))
     elif entry and entry.strip().lower() == 'x/84':
@@ -761,7 +760,7 @@ def main():
         thread = FetchUpdates()
         thread.start()
         session.activity = u'bbs lister [bbs-scene.org]'
-        echo('fetching bbs-scene.org updates ...')
+        echo(u'fetching bbs-scene.org updates ...')
     else:
         session.activity = u'bbs lister'
 
@@ -776,13 +775,16 @@ def main():
             echo(banner())
             echo(u'\r\n' * lightbar.height)
             dirty = True
-        t_val = chk_thread(thread)
-        if t_val != False:
-            thread = None
-            if t_val == 'dirty':
-                dirty = True
+        if thread is not None:
+            t_val = chk_thread(thread)
+            if t_val != False:
+                thread = None
+                if t_val == 'dirty':
+                    dirty = True
         if session.poll_event('bbslist_update'):
             dirty = True
+            while session.poll_event('bbslist_update', 0.1):
+                None
 
         # refresh advanced screen with lightbar and pager
         if dirty:
