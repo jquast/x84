@@ -168,8 +168,9 @@ def lc_retrieve():
     """
     # pylint: disable=R0914
     #         Too many local variables
-    from x84.bbs import list_users, get_user, ini, timeago
+    from x84.bbs import list_users, get_user, ini, timeago, getterminal
     import time
+    term = getterminal()
     udb = dict()
     for handle in list_users():
         user = get_user(handle)
@@ -180,9 +181,9 @@ def lc_retrieve():
     nicks = []
     for ((tm_lc, handle), (_nc, origin)) in (reversed(sorted(udb.items()))):
         is_sysop = 'sysop' in get_user(handle).groups
-        rstr += (u'@' if is_sysop else u''
+        rstr += (term.bold_red(u'@') if is_sysop else u''
                 )+(handle.ljust(padd_handle - (2 if is_sysop else 1)))
-        rstr += origin.ljust(padd_origin)
+        rstr += term.red(origin.ljust(padd_origin))
         rstr += timeago(time.time() - tm_lc)
         rstr += u'\n'
         nicks.append(handle)
