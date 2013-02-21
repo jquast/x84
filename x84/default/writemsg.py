@@ -101,7 +101,7 @@ def prompt_subject(msg):
     max_subject = int(ini.CFG.getint('msg', 'max_subject'))
     lne = LineEditor(max_subject, msg.subject)
     lne.highlight = term.yellow_reverse
-    echo(u'\r\n     SUBjECt: ')
+    echo(u'\r\n\r\n     SUBjECt: ')
     subject = lne.read()
     if subject is None or 0 == len(subject):
         return False
@@ -122,13 +122,14 @@ def prompt_tags(msg):
             "GROUP MAY CREAtE NEW tAGS." % (
                 term.bold_yellow('sysop'), term.bold_blue('moderator'),))
     msg_invalidtag = u"\r\n'%s' is not a valid tag."
-    prompt_tags1 = u"\r\n\r\nENtER %s, COMMA-dEliMitEd. " % (
+    prompt_tags1 = u"ENtER %s, COMMA-dEliMitEd. " % (
             term.bold_red('TAG(s)'),)
     prompt_tags2 = u"OR '/list', %s:quit\r\n : " % (
             term.bold_yellow_underline('Escape'),)
     global FILTER_PRIVATE
     while True:
         # Accept user input for multiple 'tag's, or /list command
+        echo(u'\r\n\r\n')
         echo(prompt_tags1)
         echo(prompt_tags2)
         width = term.width - 6
