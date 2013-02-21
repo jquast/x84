@@ -61,20 +61,36 @@ class Lightbar (AnsiWindow):
         glyphs['erase'] if out of bounds.
         """
         import x84.bbs.session
+        from x84.bbs.output import Ansi
         term = x84.bbs.session.getterminal()
-        ucs = u''
-        ucs += self.pos(self.ypadding + row, self.xpadding)
+        pos = self.pos(self.ypadding + row, self.xpadding)
         entry = self.vitem_shift + row
         if entry >= len(self.content):
             # out-of-bounds;
-            return self.glyphs.get('erase', u' ') * self.visible_width
-        ucs += (self.colors.get('highlight', u'')
-                if entry == self.index
-                else self.colors.get('lowlight', u''))
+            return u''.join(( pos,
+                self.glyphs.get('erase', u' ') * self.visible_width,))
+
         # allow ucs data with '\r\n', to accomidate soft and hardbreaks; just
         # don't display them, really wrecks up cusor positioning.
-        ucs += self.align(self.content[entry][1].strip(u'\r\n'))
-        return ucs + term.normal
+        ucs = self.content[entry][1].strip(u'\r\n')
+        if entry == self.index:
+            # current selection, strip of ansi sequences, use color 'highlight'
+            return u''.join(( pos,
+                self.colors.get('highlight', u''),
+                self.align(Ansi(ucs).seqfill()[:self.visible_width]),
+                term.normal,))
+        else:
+            # allow data too large to fit, display only first line
+            # after wrapping, using strip_char (u' $' by default).
+            ucs = Ansi(ucs).decode_pipe()
+            if len(ucs) > self.visible_width:
+                strip_char = self.glyphs.get('strip', u' $')
+                strip_to = self.visible_width - len(strip_char)
+                ucs = Ansi(ucs).wrap(strip_to).splitlines()[0]
+            return u''.join(( pos,
+                self.colors.get('lowlight', u''),
+                self.align(Ansi(ucs).decode_pipe()),
+                term.normal,))
 
     def fixate(self):
         """
@@ -115,6 +131,7 @@ class Lightbar (AnsiWindow):
         """
         from x84.bbs.session import getterminal
         self.colors['highlight'] = getterminal().reverse_green
+        self.glyphs['strip'] = u' $' # indicates content was stripped
         AnsiWindow.init_theme(self)
 
     def init_keystrokes(self):

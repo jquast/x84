@@ -2,6 +2,7 @@
 Pager class for x/84, http://github.com/jquast/x84/
 """
 from x84.bbs.ansiwin import AnsiWindow
+from x84.bbs.output import Ansi
 import logging
 
 VI_KEYSET = {
@@ -141,6 +142,20 @@ class Pager(AnsiWindow):
                 else x84.bbs.session.getterminal().keyname(keystroke))
         return rstr
 
+
+    def read(self):
+        """
+        Reads input until ESCAPE key is pressed (Blocking).  Returns None.
+        """
+        from x84.bbs.session import getsession
+        from x84.bbs.output import echo
+        session = getsession()
+        self._quit = False
+        echo(self.refresh())
+        while not self.quit:
+            echo(self.process_keystroke(session.read_event('input')))
+
+
     def move_home(self):
         """
         Scroll to top.
@@ -196,10 +211,16 @@ class Pager(AnsiWindow):
         Return unicode string suitable for refreshing pager window at
         visible row.
         """
-        ucs = (self.visible_content[row]
+        import x84.bbs.session
+        term = x84.bbs.session.getterminal()
+        ucs = (Ansi(self.visible_content[row])
                if row < len(self.visible_content)
                else u'')
-        return self.pos(row + self.ypadding, self.xpadding) + self.align(ucs)
+        return u''.join((
+            term.normal,
+            self.pos(row + self.ypadding, self.xpadding),
+            self.align(ucs),
+            term.normal))
 
     def refresh(self, start_row=0):
         """
@@ -219,9 +240,8 @@ class Pager(AnsiWindow):
         """
         Update content buffer with '\n'-delimited lines of Ansi.
         """
-        import x84.bbs.output
         try:
-            self.content = x84.bbs.output.Ansi(ucs).wrap(
+            self.content = Ansi(Ansi(ucs).decode_pipe()).wrap(
                 self.visible_width).splitlines()
         except AssertionError, err:
             # indeterminate length
@@ -234,7 +254,6 @@ class Pager(AnsiWindow):
         """
         Update content buffer with additional lines of ansi unicodes.
         """
-        import x84.bbs.output
-        self.content.extend(x84.bbs.output.Ansi(ucs)
+        self.content.extend(Ansi(Ansi(ucs).decode_pipe())
                             .wrap(self.visible_width - 1).splitlines())
         return self.move_end() or self.refresh(self.bottom)
