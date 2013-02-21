@@ -229,8 +229,8 @@ def read_messages(msgs, new):
     # pylint: disable=R0914,R0912
     #         Too many local variables
     #         Too many branches
-    from x84.bbs import timeago, get_msg, getterminal, echo
-    from x84.bbs import ini, Pager, getsession, getch, Ansi
+    from x84.bbs import timeago, get_msg, getterminal, echo, gosub
+    from x84.bbs import ini, Pager, getsession, getch, Ansi, Msg
     session, term = getsession(), getterminal()
 
     # build header
@@ -240,7 +240,7 @@ def read_messages(msgs, new):
     len_subject = ini.CFG.getint('msg', 'max_subject')
     len_preview = len_idx + len_author + len_ago + len_subject + 4
 
-    def get_header(msgs_idx):
+    def get_header(msgs_idx, max_width):
         """ Return list of tuples, (idx, unicodestring), suitable for Lightbar.
         """
         import datetime
@@ -249,12 +249,17 @@ def read_messages(msgs, new):
             msg = get_msg(idx)
             author, subj = msg.author, msg.subject
             tm_ago = (datetime.datetime.now() - msg.stime).total_seconds()
-            msg_list.append((idx, u'%s %s %s %s: %s' % (
-                u'U' if not idx in ALREADY_READ else u' ',
-                str(idx).rjust(len_idx),
-                author.ljust(len_author),
-                (timeago(tm_ago) + ' ago').rjust(len_ago),
-                subj[:len_subject],)))
+            attr = lambda arg: (
+                    term.red(arg) if not idx in ALREADY_READ
+                    else term.yellow(arg))
+            row_txt = u'%s %s %s %s%s %s' % (
+                    u'U' if not idx in ALREADY_READ else u' ',
+                    attr(str(idx).rjust(len_idx)),
+                    attr(author.ljust(len_author)),
+                    attr((timeago(tm_ago) + ' ago').rjust(len_ago)),
+                    term.bold_black(':'),
+                    subj[:len_subject],)
+            msg_list.append((idx, row_txt))
         msg_list.sort()
         return msg_list
 
@@ -400,10 +405,10 @@ def read_messages(msgs, new):
     while (msg_selector is None and msg_reader is None
             ) or not (msg_selector.quit or msg_reader.quit):
         if session.poll_event('refresh'):
-            dirty = dirty or 1
+            dirty = 2
         if dirty:
             if dirty == 2:
-                mailbox = get_header(msgs)
+                mailbox = get_header(msgs, term.width - 4)
             msg_selector = get_selector(mailbox, msg_selector)
             idx = msg_selector.selection[0]
             msg_reader = get_reader()
@@ -411,6 +416,28 @@ def read_messages(msgs, new):
             echo(refresh(msg_reader, msg_selector, msgs, new))
             dirty = 0
         inp = getch(1)
+        if inp in (u'r', u'R'):
+            reply_to = get_msg(idx)
+            reply_msg = Msg()
+            reply_msg.recipient = reply_to.author
+            reply_msg.tags = reply_to.tags
+            reply_msg.subject = reply_to.subject
+            reply_msg.parent = reply_to.idx
+            echo(term.move(term.height, 0) + u'\r\n')
+            if gosub('writemsg', reply_msg):
+                reply_msg.save()
+                dirty = 2
+                READING = False
+            else:
+                dirty = 1
+
+        # spacebar marks as read, goes to next message
+        elif inp in (u' ',):
+            dirty = 2 if mark_read(idx) else 1
+            msg_selector.move_down()
+            idx = msg_selector.selection[0]
+            READING = False
+
         if READING:
             echo(msg_reader.process_keystroke(inp))
             # left, <, or backspace moves UI
@@ -421,11 +448,6 @@ def read_messages(msgs, new):
         else:
             echo(msg_selector.process_keystroke(inp))
             idx = msg_selector.selection[0]
-            # spacebar marks as read, goes to next message
-            if inp in (u' ',):
-                dirty = 2 if mark_read(idx) else 1
-                msg_selector.move_down()
-                idx = msg_selector.selection[0]
             # right, >, or enter marks message read, moves UI
             if inp in (u'\r', term.KEY_ENTER, u'>',
                     u'l', 'L', term.KEY_RIGHT):
