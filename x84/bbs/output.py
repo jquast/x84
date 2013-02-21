@@ -9,8 +9,7 @@ import textwrap
 from x84.bbs.session import getterminal, getsession
 from x84.bbs.wcswidth import wcswidth
 
-ANSI_PIPE = re.compile(r'([^\|]|^)\|(\d{2,3})')
-ANSI_NOPIPE = re.compile(r'\|\|(\d{2,3})')
+ANSI_PIPE = re.compile(r'\|(\d{2,3})')
 ANSI_COLOR = re.compile(r'\033\[(\d{2,3})m')
 ANSI_RIGHT = re.compile(r'\033\[(\d{1,4})C')
 ANSI_CODEPAGE = re.compile(r'\033[\(\)][AB012]')
@@ -341,36 +340,36 @@ class Ansi(unicode):
         with this terminals equivalent attribute sequence.
         """
         term = getterminal()
-        pass1 = u''
-        pass2 = u''
+        ucs = u''
         ptr = 0
-        match1, match2 = None, None
-        # decode |02 to color
-        for match1 in ANSI_PIPE.finditer(self):
-            value = match1.group(2)
-            while value.startswith('0'):
-                value = value[1:]
-            value = 0 if 0 == len(value) else int(value, 10)
-            if ptr == 0 and self[ptr] == u'|':
-                ptr += 1
-            pass1 += self[ptr and ptr + 1:match1.start() + 1] + term.color(value)
-            ptr = match1.end()
-        if match1 is None:
-            pass1 = self
+        match = None
+        for match in ANSI_PIPE.finditer(self):
+            ucs_value = match.group(1)
+            # allow escaping using a second pipe
+            if match.start() and self[match.start() - 1] == '|':
+                continue
+            # 07 -> 7
+            while ucs_value.startswith('0'):
+                ucs_value = ucs_value[1:]
+            int_value = 0 if 0 == len(ucs_value) else int(ucs_value, 10)
+            assert int_value >= 0 and int_value <= 256
+            # colors 0-7 and 16-256 are as-is term.color()
+            # special accomidations for 8-15, some termcaps are ok
+            # with term.color(11), whereas others have trouble, help
+            # out by using dim color and bold attribute instead.
+            attr = u''
+            if int_value <= 7 or int_value >= 16:
+                attr = term.color(int_value)
+            elif int_value <= 15:
+                attr = term.color(int_value - 8) + term.bold
+            ucs += self[ptr:match.start()] + attr
+            ptr = match.end()
+        if match is None:
+            ucs = self
         else:
-            pass1 += self[match1.end():]
+            ucs += self[match.end():]
         ptr = 0
-        # decode ||02 to |02
-        for match2 in ANSI_NOPIPE.finditer(pass1):
-            pass2 += (pass1[ptr:match2.start() + 1]
-                    + u'|%s' % (match2.group(1),))
-            ptr = match2.end()
-        if match2 is None:
-            pass2 = pass1
-        else:
-            pass2 += pass1[match2.end():]
-        # return new string terminal-decorated string
-        return ''.join((pass2, term.normal))
+        return ''.join((ucs, term.normal))
 
     def seqlen(self):
         """
