@@ -435,20 +435,20 @@ def redraw_lightbar(lightbar, active=True):
     output = lightbar.border()
     if active:
         lightbar.colors['selected'] = term.green_reverse
-        output += lightbar.footer(u''.join((
-            u'- ',
-            fancy_green('up', '.'),
-            fancy_green('down', '.'),
-            fancy_green('right', u''),
-            u' -')))
     else:
         lightbar.colors['selected'] = term.blue_reverse
-        output += lightbar.footer(u''.join((
-            u'- ',
-            fancy_blue('up', '.'),
-            fancy_blue('down', '.'),
-            fancy_green('left', u''),
-            u' -')))
+#        output += lightbar.footer(u''.join((
+#            u'- ',
+#            fancy_green('up', '.'),
+#            fancy_green('down', '.'),
+#            fancy_green('right', u''),
+#            u' -')))
+#        output += lightbar.footer(u''.join((
+#            u'- ',
+#            fancy_blue('up', '.'),
+#            fancy_blue('down', '.'),
+#            fancy_green('left', u''),
+#            u' -')))
     output += lightbar.title(u'- ' + fancy_green('a', 'add') + ' -')
     output += lightbar.refresh()
     return output
@@ -764,15 +764,12 @@ def main():
         session.activity = u'bbs lister'
 
     dirty = True
-    session.buffer_event('refresh', ('init',))
+    #session.buffer_event('refresh', ('init',))
     leftright = 0  # 'left'
 
     while True:
         # check if screen requires refresh of any kind,
         if session.poll_event('refresh'):
-            pager, lightbar = get_ui(lightbar.position)
-            echo(banner())
-            echo(u'\r\n' * lightbar.height)
             dirty = True
         if thread is not None:
             t_val = chk_thread(thread)
@@ -781,9 +778,9 @@ def main():
                 if t_val == 'dirty':
                     dirty = True
         if session.poll_event('bbslist_update'):
-            dirty = True
             while session.poll_event('bbslist_update', 0.1):
                 None
+            dirty = True
 
         # refresh advanced screen with lightbar and pager
         if dirty:
@@ -795,10 +792,11 @@ def main():
                     thread = None
                 return dummy_pager()
             else:
+                pager, lightbar = get_ui(lightbar.position)
+                echo(banner())
+                echo(u'\r\n' * lightbar.height)
                 echo(redraw(pager, lightbar, leftright))
                 dirty = False
-            echo(redraw(pager, lightbar, leftright))
-            dirty = False
 
         # detect and process keyboard input for advanced screen
         inp = getch(1)

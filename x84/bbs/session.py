@@ -69,6 +69,7 @@ class Session(object):
         self._script_stack = [(ini.CFG.get('matrix', 'script'),)]
         self._tap_input = ini.CFG.getboolean('session', 'tap_input')
         self._tap_output = ini.CFG.getboolean('session', 'tap_output')
+        self._tap_events =  ini.CFG.getboolean('session', 'tap_events')
         self._ttyrec_folder = ini.CFG.get('system', 'ttyrecpath')
         self._record_tty = ini.CFG.getboolean('session', 'record_tty')
         self._show_traceback = ini.CFG.getboolean('system', 'show_traceback')
@@ -523,7 +524,7 @@ class Session(object):
             if self.iqueue.poll(poll):
                 event, data = self.iqueue.recv()
                 retval = self.buffer_event(event, data)
-                if event != 'input':
+                if event != 'input' and self._tap_events:
                     logger.debug('event %s %s.', event,
                                  'caught' if event in events else
                                  'handled' if retval is not None else

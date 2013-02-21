@@ -7,7 +7,7 @@ import socket
 import time
 import re
 
-TERMINALS = list()
+TERMINALS = dict()
 
 def init_term(out_queue, lock, env):
     """
@@ -45,12 +45,26 @@ def mkipc_rlog(out_queue):
     return hdlr
 
 
-def register(client, inp_queue, out_queue, lock):
+class TerminalProcess():
+    def __init__(self, client, iqueue, oqueue, lock):
+        self.client = client
+        self.iqueue = iqueue
+        self.oqueue = oqueue
+        self.lock = lock
+
+    @property
+    def sid(self):
+        return self.client.addrport()
+
+    def session_fileno(self):
+        return self.oqueue.fileno()
+
+
+def register(tty):
     """
-    Register a Terminal, given instances of telnet.TelnetClient,
-    (inp, out) Queue, and Lock.
+    Register a global instance of TerminalProcess
     """
-    TERMINALS.append((client, inp_queue, out_queue, lock,))
+    TERMINALS[tty.sid] = tty
 
 
 def flush_queue(queue):
@@ -68,21 +82,23 @@ def flush_queue(queue):
         logger.debug(err)
 
 
-def unregister(client, inp_queue, out_queue, lock):
+def unregister(tty):
     """
     Unregister a Terminal, described by its telnet.TelnetClient,
     input and output Queues, and Lock.
     """
     logger = logging.getLogger()
     try:
-        flush_queue(out_queue)
-        out_queue.close()
-        inp_queue.close()
+        flush_queue(tty.oqueue)
+        tty.oqueue.close()
+        tty.iqueue.close()
     except (EOFError, IOError) as err:
         logger.exception(err)
-    client.deactivate()
-    logger.debug('%s: unregistered', client.addrport())
-    TERMINALS.remove((client, inp_queue, out_queue, lock,))
+    if tty.client.active:
+        # signal tcp socket to close
+        tty.client.deactivate()
+    del TERMINALS[tty.sid]
+    logger.debug('%s: unregistered', tty.client.addrport())
 
 
 def terminals():
@@ -90,7 +106,7 @@ def terminals():
     Returns a list of tuple (telnet.TelnetClient,
         input Queue, output Queue, Lock).
     """
-    return TERMINALS[:]
+    return TERMINALS.items()
 
 
 def start_process(inp_queue, out_queue, sid, env, lock, binary=False):
@@ -136,11 +152,11 @@ def on_naws(client):
     to the 'userland', but should indicate also that the window sizes are
     checked`.
     """
-    for (_client, _iqueue, _oqueue, _lock) in terminals():
-        if client == _client:
+    for sid, tty in terminals():
+        if client == tty.client:
             columns = int(client.env['COLUMNS'])
             rows = int(client.env['LINES'])
-            _iqueue.send(('refresh', ('resize', (columns, rows),)))
+            tty.iqueue.send(('refresh', ('resize', (columns, rows),)))
             return True
 
 
@@ -192,7 +208,9 @@ class ConnectTelnet (threading.Thread):
         logger.debug('starting session')
         proc = Process(target=start_process, args=child_args)
         proc.start()
-        register(self.client, inp_send, out_recv, lock)
+        tty = TerminalProcess(self.client, inp_send, out_recv, lock)
+        register(tty)
+
 
     def banner(self):
         """

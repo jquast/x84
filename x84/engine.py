@@ -79,7 +79,6 @@ def _loop(telnetd):
     #         Too many local variables (24/15)
     import logging
     import select
-    import warnings
     import socket
     import time
     import sys
@@ -100,14 +99,6 @@ def _loop(telnetd):
     fileno_telnetd = telnetd.server_socket.fileno()
     locks = dict()
 
-    def inactive():
-        """
-        Returns list of tuples (fileno, client) of telnet
-        clients that have been deactivated
-        """
-        return [(fd, client) for (fd, client) in
-                telnetd.clients.items() if not client.active]
-
     def lookup(client):
         """
         Given a telnet client, return a matching session
@@ -115,10 +106,10 @@ def _loop(telnetd):
         If no session matches a telnet client,
             (None, None, None, None) is returned.
         """
-        for _client, inp_queue, out_queue, lock in terminals():
-            if client == _client:
-                return (client, inp_queue, out_queue, lock)
-        return (None, None, None, None)
+        for sid, tty in terminals():
+            if client == tty.client:
+                return tty
+        return None
 
     def telnet_recv(fds):
         """
@@ -134,14 +125,15 @@ def _loop(telnetd):
             except Disconnected as err:
                 logger.info('%s Connection Closed: %s.',
                             client.addrport(), err)
-                _client, _iqueue, _oqueue, _lock = lookup(client)
-                if _client is None:
+                tty = lookup(client)
+                if tty is None:
                     # no session found, just de-activate this client
                     client.deactivate()
                 else:
                     # signal exit to sub-process and shutdown
-                    _iqueue.send(('exception', Disconnected(err)))
-                    unregister(_client, _iqueue, _oqueue, _lock)
+                    send_event, send_data = 'exception', Disconnected(err)
+                    tty.iqueue.send((send_event, send_data))
+                    unregister(tty)
 
     def telnet_send(recv_list):
         """
@@ -149,10 +141,10 @@ def _loop(telnetd):
         signal exit to subprocess, unregister the session, and return
         recv_list pruned of their file descriptors.
         """
-        for client, inp_queue, out_queue, lock in terminals():
-            if client.send_ready():
+        for sid, tty in terminals():
+            if tty.client.send_ready():
                 try:
-                    client.socket_send()
+                    tty.client.socket_send()
                 except Disconnected as err:
                     logger.debug('%s Disconnected: %s.',
                                  client.addrport(), err)
@@ -160,11 +152,13 @@ def _loop(telnetd):
                     # so, to remove it from the recv_list, reverse match by
                     # instance saved with its FD as a key for telnetd.clients!
                     for _fd, _client in telnetd.clients.items():
-                        if client == _client and _fd in recv_list:
-                            recv_list.remove(_fd)
+                        if tty.client == _client:
+                            if _fd in recv_list:
+                                recv_list.remove(_fd)
                             break
-                    inp_queue.send(('exception', Disconnected(err),))
-                    unregister(client, inp_queue, out_queue, lock)
+                    send_event, send_data = 'exception', Disconnected(err)
+                    tty.iqueue.send((send_event, send_data,))
+                    unregister(tty)
         return recv_list
 
     def accept():
@@ -187,10 +181,27 @@ def _loop(telnetd):
                 return
             client = TelnetClient(sock, address_pair, telnetd.on_naws)
             telnetd.clients[client.sock.fileno()] = client
+            # spawn negotiation and process registration thread
             ConnectTelnet(client).start()
             logger.info('%s Connected.', client.addrport())
         except socket.error as err:
             logger.error('accept error %d:%s', err[0], err[1],)
+
+
+    @timeout_alarm(timeout_ipc, False)
+    def f_send_event(iqueue, event, data):
+        iqueue.send((event, data))
+        return True
+
+
+    def send_input(client, iqueue):
+        inp = client.get_input()
+        retval = f_send_event(iqueue, 'input', inp)
+        # if timeout occured, re-buffer input
+        if not retval:
+            client.recv_buffer.fromstring(inp)
+        return retval
+
 
     def session_send():
         """
@@ -198,180 +209,176 @@ def _loop(telnetd):
         unregister the session.  Also test for data received by telnet
         client, and send to subprocess as 'input' event.
         """
-        @timeout_alarm(timeout_ipc, False)
-        def send_input(client, inp_queue, lock):
-            inp = client.get_input()
-            inp_queue.send(('input', inp))
-            return True
-
         # accept session event i/o, such as output
-        for client, inp_queue, out_queue, lock in terminals():
+        for sid, tty in terminals():
             # poll about and kick off idle users
-            if client.idle() > timeout:
-                err = 'timeout: %ds' % (client.idle())
-                inp_queue.send(('exception', Disconnected(err)))
+            if tty.client.idle() > timeout:
+                send_event = 'exception'
+                send_data = Disconnected('timeout: %ds' % (tty.client.idle()))
+                tty.iqueue.send((send_event, send_data))
                 continue
-            elif client.input_ready():
-                if not send_input(client, inp_queue, lock):
-                    warnings.warn('%s input buffer exceeded',
-                            client.addrport())
+            elif tty.client.input_ready():
+                # input buffered on tcp socket, attempt to send to client
+                # with a signal alarm timeout; raising a warning if exceeded.
+                if not send_input(tty.client, tty.iqueue):
+                    logger.warn('%s input buffer exceeded', sid)
+                    client.deactivate()
+
+    def handle_lock(tty, event, data):
+        """
+        handle locking event of (lock-key, (method, stale))
+        """
+        method, stale = data
+        if method == 'acquire':
+            if not event in locks:
+                locks[event] = time.time()
+                tty.iqueue.send((event, True,))
+                logger.debug('[%s] %r granted.',
+                        tty.sid, (event, data))
+            elif (stale is not None
+                    and time.time() - locks[event] > stale):
+                tty.iqueue.send((event, True,))
+                logger.warn('[%s] %r stale %fs.',
+                        tty.sid, (event, data),
+                        time.time() - locks[event])
+            else:
+                tty.iqueue.send((event, False,))
+                logger.warn('[%s] %r not acquired.',
+                        tty.sid, (event, data))
+        elif method == 'release':
+            if not event in locks:
+                logger.error('[%s] %r failed: no match',
+                        tty.sid, (event, data))
+            else:
+                del locks[event]
+                logger.debug('[%s] %r removed.',
+                        tty.sid, (event, data))
+
 
     def session_recv(fds):
         """
         receive data waiting for session; all data received from
         subprocess is in form (event, data), and is handled by ipc_recv.
-        """
-        def handle_lock(iqueue, event, data):
-            """
-            handle locking event on iqueue of (lock-key, (method, stale))
-            """
-            method, stale = data
-            if method == 'acquire':
-                if not event in locks:
-                    locks[event] = time.time()
-                    logger.debug('%r granted.', (event, data))
-                    iqueue.send((event, True,))
-                elif (stale is not None
-                        and time.time() - locks[event] > stale):
-                    logger.error('%r stale.', (event, data))
-                    iqueue.send((event, True,))
-                else:
-                    logger.warn('%r failed.', (event, data))
-                    iqueue.send((event, False,))
-            elif method == 'release':
-                if not event in locks:
-                    logger.error('%r failed.', (event, data))
-                else:
-                    del locks[event]
-                    logger.debug('%r removed.', (event, data))
 
-        def read_ipc(client, iqueue, oqueue, lock):
-            """
-            handle all events of form (event, data)
-            """
-            disp_handle = lambda handle: ((handle + u' ')
-                    if handle is not None and 0 != len(handle)
-                    else u'')
-            while oqueue.poll():
+        if stale is not None, elapsed time lock was held to consider stale
+        and acquire anyway. no actual locks are held or released, just a
+        simple dictionary state/time tracking system.
+        """
+
+        disp_handle = lambda handle: ((handle + u' ')
+                if handle is not None and 0 != len(handle)
+                else u'')
+        disp_origin = lambda client: client.addrport().split(':',1)[0]
+
+        for sid, tty in terminals():
+            while tty.oqueue.poll():
+                # receive data from pipe, unregister if any error,
                 try:
-                    event, data = oqueue.recv()
+                    event, data = tty.oqueue.recv()
                 except (EOFError, IOError) as err:
                     # sub-process unexpectedly closed
                     logger.exception(err)
-                    unregister(client, iqueue, oqueue, lock)
+                    unregister(tty)
                     return
+                # 'exit' event, unregisters client
                 if event == 'exit':
-                    unregister(client, iqueue, oqueue, lock)
+                    unregister(tty)
                     return
+                # 'logger' event, propogated upward
                 elif event == 'logger':
                     # prefix message with 'ip:port/nick '
                     data.msg = '%s[%s] %s' % (
                             disp_handle(data.handle),
-                            client.addrport(),
+                            disp_origin(tty.client),
                             data.msg)
                     logger.handle(data)
-
+                # 'output' event, buffer for tcp socket
                 elif event == 'output':
-                    client.send_unicode(ucs=data[0], encoding=data[1])
-
+                    tty.client.send_unicode(ucs=data[0], encoding=data[1])
+                # 'remote-disconnect' event, hunt and destroy
                 elif event == 'remote-disconnect':
-                    send_event, send_val = data[1], data[2:]
-                    for _client, _iqueue, _oqueue, _lock in terminals():
-                        if data[0] == _client.addrport():
-                            _iqueue.send(('exception',
-                                Disconnected('disconnected by %s' % (
-                                    client.addrport(),)),))
-                            unregister(_client, _iqueue, _oqueue, _lock)
+                    send_to = data[0]
+                    for _sid, _tty in terminals():
+                        if send_to == _sid:
+                            send_event = 'exception'
+                            send_val = Disconnected(
+                                    'remote-disconnect by %s' % (sid,))
+                            tty.iqueue.send((send_event, send_val))
+                            unregister(tty)
                             break
-
+                # 'route': message passing directly from one session to another
                 elif event == 'route':
                     logger.debug('route %r', (event, data))
-                    for _client, _iqueue, _oqueue, _lock in terminals():
-                        if data[0] == _client.addrport():
-                            send_event, send_val = data[1], data[2:]
-                            if not _lock.acquire(False):
-                                logger.warn('%s block route',
-                                        client.addrport())
-                            else:
-                                _iqueue.send((send_event, send_val))
-                                _lock.release()
+                    send_event, send_val = data[1], data[2:]
+                    for _sid, _tty in terminals():
+                        if data[0] == _sid:
+                            _tty.iqueue.send((send_event, send_val))
                             break
-
+                # 'global': message broadcasting to all sessions
                 elif event == 'global':
                     logger.debug('broadcast %r', (event, data))
-                    for _client, _iqueue, _oqueue, _lock in terminals():
-                        if client != _client:
-                            if not _lock.acquire(False):
-                                logger.warn('%s block broadcast',
-                                        client.addrport())
-                            else:
-                                _iqueue.send((event, data,))
-                                _lock.release()
-
+                    for _sid, _tty in terminals():
+                        if sid != _sid:
+                            _tty.iqueue.send((event, data,))
+                # 'db*': access DBProxy API for shared sqlitedict
                 elif event.startswith('db'):
-                    # db query-> database dictionary method,
-                    # spawn thread; callback by matching ('db-*',) event.
-                    thread = DBHandler(iqueue, event, data)
+                    thread = DBHandler(tty.iqueue, event, data)
                     thread.start()
-
+                # 'lock': access fine-grained bbs-global locking
                 elif event.startswith('lock'):
-                    # fine-grained lock acquire and release
-                    handle_lock(iqueue, event, data)
-
+                    handle_lock(tty, event, data)
                 else:
                     assert False, 'unhandled %r' % ((event, data),)
 
-        for client, inp_queue, out_queue, lock in terminals():
-            if out_queue.fileno() in fds:
-                read_ipc(client, inp_queue, out_queue, lock)
-
-
+    #
     # main event loop
+    #
     while True:
+
         # shutdown, close & delete inactive sockets,
-        for fileno, client in inactive()[:]:
-            logger.debug('close %s', telnetd.clients[fileno].addrport(),)
+        for fileno, client in [(_fno, _client)
+                for (_fno, _client) in telnetd.clients.items()
+                if not _client.active]:
+            logger.info('close %s', telnetd.clients[fileno].addrport(),)
             try:
                 client.sock.shutdown(socket.SHUT_RDWR)
             except socket.error:
                 pass
             client.sock.close()
-            # signal the sub-process to close.
-            for _client, _iqueue, _oqueue, _lock in terminals():
-                if client == _client:
-                    _iqueue.send(('exception', Disconnected('deactivated')))
+
+            # signal exit to any matching session
+            for sid, tty in terminals():
+                if client == tty.client:
+                    send_event = 'exception'
+                    send_data = Disconnected('deactivated')
+                    tty.iqueue.send((send_event, send_data,))
+                    break
+
+            # unregister
             del telnetd.clients[fileno]
 
-        # poll for: new connections,
-        #           telnet client input,
-        #           session IPC input,
-        # pylint: disable=W0612
-        #        Unused variable 'lock'
-        client_fds = [fileno_telnetd] + telnetd.clients.keys()
+        # send tcp data, pruning list of any clients d/c during activity
+        fds = telnet_send([fileno_telnetd] + telnetd.clients.keys())
 
-        # send, pruning list of any clients d/c during activity
-        client_fds = telnet_send(client_fds)
-        session_fds = [oqueue.fileno()
-                for client, iqueue, oqueue, lock in terminals()]
+        # extend fd list with all session Pipes
+        fds.extend([tty.oqueue.fileno() for sid, tty in terminals()])
 
-        # poll for recv,
-        ready_read = list()
         try:
-            ready_read.extend(
-                    select.select(client_fds + session_fds, [], [], 0.1)[0])
+            fds = select.select(fds, [], [], 0.1)[0]
         except select.error as err:
             logger.exception(err)
+            fds = list()
 
-        if fileno_telnetd in ready_read:
+        if fileno_telnetd in fds:
             accept()
 
-        # recv telnet,
-        telnet_recv(ready_read)
+        # recv telnet data,
+        telnet_recv(fds)
 
-        # recv session ev,
-        session_recv(ready_read)
+        # recv and handle session events,
+        session_recv(fds)
 
-        # send session ev,
+        # send any session input data, poll timeout
         session_send()
 
 def timeout_alarm(timeout_time, default):

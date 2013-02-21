@@ -11,7 +11,7 @@ def banner():
 
 def display_msg(msg):
     """ Refresh screen, level indicates up to which step """
-    from x84.bbs import getterminal, getsession, echo
+    from x84.bbs import getterminal, getsession, echo, Ansi
     session, term = getsession(), getterminal()
     body = msg.body.splitlines()
     echo(u'    AUthOR: ' + term.bold_yellow(msg.author) + u'\r\n\r\n')
@@ -27,8 +27,8 @@ def display_msg(msg):
     echo(term.yellow(u', '.join(msg.tags)))
     echo(u'\r\n\r\n')
     echo(term.underline(u'        bOdY: '.ljust(term.width - 1)) + u'\r\n')
-    echo(term.yellow(u'\r\n'.join(body)) + u'\r\n')
-    echo(term.underline(u''.ljust(term.width - 1)))
+    echo(Ansi(u'\r\n'.join(body)).decode_pipe() + term.normal)
+    echo(u'\r\n' + term.underline(u''.ljust(term.width - 1)))
     echo(u'\r\n\r\n')
     session.activity = 'Constructing a %s message' % (
             u'public' if u'public' in msg.tags else u'private',)
@@ -230,6 +230,7 @@ def prompt_body(msg):
     if selection != u'CONtiNUE':
         return False
     if gosub('editor', 'draft'):
+        echo(u'\r\n\r\n' + term.normal)
         msg.body = session.user.get('draft', u'')
         del session.user['draft']
         return 0 != len(msg.body.strip())

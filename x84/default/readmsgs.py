@@ -1,8 +1,65 @@
 """ message reader for x/84, https://github.com/jquast/x84 """
 FILTER_PRIVATE = True
 ALREADY_READ = set()
+DELETED = set()
+SEARCH_TAGS = set()
 READING = False
-SEARCH_TAGS = None
+
+def quote_body(body, width=79):
+    from x84.bbs import Ansi
+    ucs = u''
+    for line in body.splitlines():
+        ucs += u'> ' + Ansi(line).wrap(width - 2, indent=u'> ')
+    return ucs + u'\r\n'
+
+def allow_tag(idx):
+    """
+    Returns true if user is allowed to 't'ag message at idx:
+        * sysop and moderator
+        * author or recipient
+        * a member of any message tag matching user group
+    """
+    from x84.bbs import getsession, get_msg
+    session = getsession()
+    if ('sysop' in session.user.groups
+            or 'moderator' in session.user.groups):
+        return True
+    msg = get_msg(idx)
+    if session.user.handle in (msg.recipient, msg.author):
+        return True
+    for tag in msg.tags:
+        if tag in session.user.groups:
+            return True
+    return False
+
+
+def mark_undelete(idx):
+    """ Mark message ``idx`` as deleted. """
+    from x84.bbs import getsession
+    session = getsession()
+    # pylint: disable=W0603
+    #         Using the global statement
+    global DELETED
+    DELETED = session.user.get('trash', set())
+    if idx in DELETED:
+        DELETED.remove(idx)
+        session.user['deleted'] = DELETED
+        return True
+
+
+def mark_delete(idx):
+    """ Mark message ``idx`` as deleted. """
+    from x84.bbs import getsession
+    session = getsession()
+    # pylint: disable=W0603
+    #         Using the global statement
+    global DELETED
+    DELETED = session.user.get('trash', set())
+    if idx not in DELETED:
+        DELETED.add(idx)
+        session.user['deleted'] = DELETED
+        return True
+
 
 def mark_read(idx):
     """ Mark message ``idx`` as read. """
@@ -11,12 +68,12 @@ def mark_read(idx):
     # pylint: disable=W0603
     #         Using the global statement
     global ALREADY_READ
-    ALREADY_READ = session.user['readmsgs']
+    ALREADY_READ = session.user.get('readmsgs', set())
     if idx not in ALREADY_READ:
         ALREADY_READ.add(idx)
         session.user['readmsgs'] = ALREADY_READ
         return True
-    return False
+
 
 def msg_filter(msgs):
     """
@@ -38,6 +95,7 @@ def msg_filter(msgs):
     addressed_to = 0
     addressed_grp = 0
     filtered = 0
+    deleted = 0
     private = 0
     public = 0
     new = set()
@@ -68,6 +126,9 @@ def msg_filter(msgs):
                     msgs.remove(msg_id)
                     filtered += 1
                     continue
+            elif msg_id in DELETED:
+                msgs.remove(msg_id)
+                deleted += 1
         if msg_id not in ALREADY_READ:
             new.add(msg_id)
 
@@ -84,6 +145,9 @@ def msg_filter(msgs):
         if filtered > 0:
             txt_out.append ('%s filtered' % (
                 term.bold_yellow(str(filtered)),))
+        if deleted > 0:
+            txt_out.append ('%s deleted' % (
+                term.bold_yellow(str(deleted)),))
         if public > 0:
             txt_out.append ('%s public' % (
                 term.bold_yellow(str(public)),))
@@ -98,6 +162,7 @@ def msg_filter(msgs):
                 u', '.join(txt_out) + u'.').wrap(term.width - 2))
     return msgs, new
 
+
 def banner():
     """ Returns string suitable for displaying banner. """
     from x84.bbs import getterminal
@@ -106,6 +171,7 @@ def banner():
         term.yellow(u'... '.center(term.width).rstrip()),
         term.bold_yellow(' MSG R'),
         term.yellow('EAdER'),))
+
 
 def prompt_tags(tags):
     """ Prompt for and return valid tags from TAGDB. """
@@ -161,7 +227,7 @@ def prompt_tags(tags):
         return tags
 
 
-def main(tags=None):
+def main(autoscan_tags=None):
     """ Main procedure. """
     from x84.bbs import getsession, getterminal, echo, getch
     from x84.bbs import list_msgs
@@ -169,56 +235,69 @@ def main(tags=None):
     echo(banner())
     # pylint: disable=W0603
     #         Using the global statement
-    global ALREADY_READ
-    global SEARCH_TAGS
-    if tags is None:
-        tags = set(['public'])
+    global ALREADY_READ, SEARCH_TAGS, DELETED
+    if autoscan_tags is not None:
+        SEARCH_TAGS = autoscan_tags
+        echo(u'\r\n\r\nAutoscan: %s' % (
+            u', '.join([term.bold_red(tag) for tag in SEARCH_TAGS])))
+    else:
+        SEARCH_TAGS = set(['public'])
         # also throw in user groups
-        tags.update(session.user.groups)
+        SEARCH_TAGS.update(session.user.groups)
+        SEARCH_TAGS = prompt_tags(SEARCH_TAGS)
 
-    while True:
-        # prompt user for tags
-        SEARCH_TAGS = prompt_tags(tags)
-        if SEARCH_TAGS is None or 0 == len(SEARCH_TAGS):
-            break
 
-        # retrieve all matching messages,
-        all_msgs = list_msgs(SEARCH_TAGS)
-        echo(u'\r\n\r\n%d messages.' % (len(all_msgs),))
-        if 0 == len(all_msgs):
-            break
-
-        # filter messages public/private/group-tag/new
-        ALREADY_READ = session.user.get('readmsgs', None)
-        if ALREADY_READ is None:
-            session.user['readmsgs'] = set()
-            ALREADY_READ = session.user['readmsgs']
-        msgs, new = msg_filter(all_msgs)
-        if 0 == len(msgs) and 0 == len(new):
-            break
-
-        # prompt read 'a'll, 'n'ew, or 'q'uit
-        echo(u'\r\n  REAd [%s]ll %d%s message%s [qa%s] ?\b\b' % (
-                term.yellow_underline(u'a'),
-                len(msgs), (
-                    u' or %d [%s]EW\a ' % (
-                        len(new), term.yellow_underline(u'n'),)
-                    if new else u''),
-                u's' if 1 != len(msgs) else u'',
-                u'n' if new else u'',))
+    if 0 != len(SEARCH_TAGS) and (
+            SEARCH_TAGS != session.user.get('autoscan', None)):
+        echo(u'\r\n\r\n  : ')
+        echo(u','.join(SEARCH_TAGS))
+        echo(u'\r\n\r\nSave tag list as autoscan on login [yn] ?\b\b')
         while True:
             inp = getch()
-            if inp in (u'q', 'Q', unichr(27)):
-                return
-            elif inp in (u'n', u'N') and len(new):
-                # read only new messages
-                msgs = new
+            if inp in (u'q', 'Q', unichr(27), u'n', u'N'):
                 break
-            elif inp in (u'a', u'A'):
+            elif inp in (u'y', u'Y'):
+                session.user['autoscan'] = SEARCH_TAGS
                 break
 
-        # read target messages
-        read_messages(msgs, new)
+
+    # retrieve all matching messages,
+    all_msgs = list_msgs(SEARCH_TAGS)
+    echo(u'\r\n\r\n%s messages.' % (term.yellow_reverse(str(len(all_msgs),))))
+    if 0 == len(all_msgs):
+        getch(0.5)
+        return
+
+    # filter messages public/private/group-tag/new
+    ALREADY_READ = session.user.get('readmsgs', set())
+    DELETED = session.user.get('trash', set())
+    msgs, new = msg_filter(all_msgs)
+    if 0 == len(msgs) and 0 == len(new):
+        getch(0.5)
+        return
+
+    # prompt read 'a'll, 'n'ew, or 'q'uit
+    echo(u'\r\n  REAd [%s]ll %d%s message%s [qa%s] ?\b\b' % (
+            term.yellow_underline(u'a'),
+            len(msgs), (
+                u' or %d [%s]EW ' % (
+                    len(new), term.yellow_underline(u'n'),)
+                if new else u''),
+            u's' if 1 != len(msgs) else u'',
+            u'n' if new else u'',))
+    while True:
+        inp = getch()
+        if inp in (u'q', 'Q', unichr(27)):
+            return
+        elif inp in (u'n', u'N') and len(new):
+            # read only new messages
+            msgs = new
+            break
+        elif inp in (u'a', u'A'):
+            break
+
+    # read target messages
+    read_messages(msgs, new)
 
 
 def read_messages(msgs, new):
@@ -237,31 +316,53 @@ def read_messages(msgs, new):
     len_idx = max([len('%d' % (_idx,)) for _idx in msgs])
     len_author = ini.CFG.getint('nua', 'max_user')
     len_ago = 9
-    len_subject = ini.CFG.getint('msg', 'max_subject')
+    len_subject = 20 # trim
+    len_subject = min(ini.CFG.getint('msg', 'max_subject'), term.width / 3)
     len_preview = len_idx + len_author + len_ago + len_subject + 4
+    reply_depth = ini.CFG.getint('msg', 'max_depth')
+    indent_start, indent, indent_end = u'\\', u'-', u'> '
 
-    def get_header(msgs_idx, max_width):
-        """ Return list of tuples, (idx, unicodestring), suitable for Lightbar.
+    def get_header(msgs_idx):
+        """
+        Return list of tuples, (idx, unicodestring), suitable for Lightbar.
         """
         import datetime
         msg_list = list()
+        thread_indent = lambda depth: (
+                ((indent * depth) + indent_end) if depth else u'')
+        def head(msg, depth=0, maxdepth=reply_depth):
+            """ This recursive routine finds the 'head' message
+                of any relationship, up to maxdepth.
+            """
+            if (depth <= maxdepth
+                    and hasattr(msg, 'parent')
+                    and msg.parent is not None):
+                return head(get_msg(msg.parent), depth + 1, maxdepth)
+            return msg.idx, depth
+
         for idx in msgs_idx:
             msg = get_msg(idx)
             author, subj = msg.author, msg.subject
             tm_ago = (datetime.datetime.now() - msg.stime).total_seconds()
             attr = lambda arg: (
+                    term.bold_green(arg) if (
+                        not idx in ALREADY_READ
+                        and msg.recipient == session.user.handle) else
                     term.red(arg) if not idx in ALREADY_READ
                     else term.yellow(arg))
-            row_txt = u'%s %s %s %s%s %s' % (
-                    u'U' if not idx in ALREADY_READ else u' ',
+            status = [u'U' if not idx in ALREADY_READ else u' ',
+                      u'D' if idx in DELETED else u' ',]
+            row_txt = u'%s %s %s %s %s%s ' % (
+                    u''.join(status),
                     attr(str(idx).rjust(len_idx)),
                     attr(author.ljust(len_author)),
-                    attr((timeago(tm_ago) + ' ago').rjust(len_ago)),
-                    term.bold_black(':'),
-                    subj[:len_subject],)
-            msg_list.append((idx, row_txt))
+                    (timeago(tm_ago)).rjust(len_ago),
+                    attr(u'ago'),
+                    term.bold_black(':'),)
+            msg_list.append((head(msg), idx, row_txt, subj))
         msg_list.sort()
-        return msg_list
+        return [(idx, row_txt + thread_indent(depth) + subj)
+                for (thread_id, depth), idx, row_txt, subj in msg_list]
 
     def get_selector(mailbox, prev_sel=None):
         """
@@ -273,7 +374,7 @@ def read_messages(msgs, new):
         sel = Lightbar(
             height=(term.height / 3
                 if term.width < 140 else term.height - 2),
-            width=len_preview,
+            width=max(len_preview, term.width - 2),
             yloc=2, xloc=0)
         sel.glyphs['top-horiz'] = u''
         sel.glyphs['left-vert'] = u''
@@ -305,11 +406,18 @@ def read_messages(msgs, new):
         """ Format message of index ``idx`` into Pager instance ``reader``. """
         msg = get_msg(idx)
         sent = msg.stime.strftime('%A %b-%d %Y %H:%M:%S')
+        to_attr = term.bold_green if (
+                msg.recipient == session.user.handle) else term.underline
         return u'\r\n'.join((
             (u''.join((
-                (u'%s' % (msg.author,)).rjust(len_author),
+                term.yellow('fROM: '),
+                (u'%s' % term.bold(msg.author,)).rjust(len_author),
                 u' ' * (reader.visible_width - len_author - len(sent)),
                 sent,))),
+            u''.join((
+                term.yellow('tO: '),
+                to_attr((u'%s' % to_attr(msg.recipient,)).rjust(len_author)
+                if msg.recipient is not None else u'All'),)),
             (Ansi(
                 term.yellow('tAGS: ')
                 + (u'%s ' % (term.bold(','),)).join((
@@ -337,31 +445,46 @@ def read_messages(msgs, new):
                 term.bold(u' MSG%s' % (u's' if 1 != len(mbox) else u'',)),
                 newmsg, term.yellow(u' ]'),))
 
-    def get_selector_footer():
+    dispcmd_mark = lambda idx: (
+            (term.yellow_underline(u' ') + u':mark' + u' ')
+            if idx not in ALREADY_READ else u'')
+    dispcmd_delete = lambda idx: (
+            (term.yellow_underline(u'D') + u':elete' + u' ')
+            if idx not in DELETED else u'')
+    dispcmd_tag = lambda idx: (
+            (term.yellow_underline(u't') + u':ag' + u' ')
+            if allow_tag(idx) else u'')
+
+    def get_selector_footer(idx):
         """
-        Returns unicode string suitable for displaying as footer of mailbox.
+        Returns unicode string suitable for displaying
+        as footer of mailbox when window is active.
         """
         return u''.join((
             term.yellow(u'- '),
-            u' '.join((
-                term.yellow_underline(u'>') + u':read',
-                term.yellow_underline(u'up')
-                + u'/' + term.yellow_underline(u'down')
-                + u'/' + term.yellow_underline(u'spacebar'),
-                term.yellow_underline(u'q') + u':Uit',)),
+            u''.join((
+                term.yellow_underline(u'>') + u':read ',
+                term.yellow_underline(u'r') + u':eply ',
+                dispcmd_mark(idx),
+                dispcmd_delete(idx),
+                dispcmd_tag(idx),
+                term.yellow_underline(u'q') + u':uit',)),
             term.yellow(u' -'),))
 
-    def get_reader_footer():
+    def get_reader_footer(idx):
         """
-        Returns unicode string suitable for displaying as footer of reader.
+        Returns unicode string suitable for displaying
+        as footer of reader when window is active
         """
+
         return u''.join((
             term.yellow(u'- '),
             u' '.join((
-                term.yellow_underline(u'<') + u':back',
-                term.yellow_underline(u'r') + u':EPlY',
-                term.yellow_underline(u'+-') + u':tAG',
-                term.yellow_underline(u'q') + u':Uit',)),
+                term.yellow_underline(u'<') + u':back ',
+                term.yellow_underline(u'r') + u':eply ',
+                dispcmd_delete(idx),
+                dispcmd_tag(idx),
+                term.yellow_underline(u'q') + u':uit',)),
             term.yellow(u' -'),))
 
     def refresh(reader, selector, mbox, new):
@@ -375,22 +498,26 @@ def read_messages(msgs, new):
             reader.colors['border'] = term.bold_black
             selector.colors['border'] = term.bold_yellow
         title = get_selector_title(mbox, new)
-        padd_attr = term.bold_yellow if not READING else term.bold_black
+        padd_attr = (term.bold_yellow if not READING
+                else term.bold_black)
         sel_padd_right = padd_attr(
                 u'-'
                 + selector.glyphs['bot-horiz'] * (
                     selector.visible_width - len(Ansi(title)) - 7)
-                + u'-\u25a0-')
+                + u'-\u25a0-' if READING else u'- -')
         sel_padd_left = padd_attr(
                 selector.glyphs['bot-horiz'] * 3)
+        idx = selector.selection[0]
         return u''.join((term.move(0, 0), term.clear, u'\r\n',
             u'// REAdiNG MSGS ..'.center(term.width).rstrip(),
             selector.refresh(),
             reader.border(),
             selector.border(),
             selector.title(sel_padd_left + title + sel_padd_right),
-            selector.footer(get_selector_footer()) if not READING else u'',
-            reader.footer(get_reader_footer()) if READING else u'',
+            selector.footer(get_selector_footer(idx)
+                ) if not READING else u'',
+            reader.footer(get_reader_footer(idx)
+                ) if READING else u'',
             reader.refresh(),
             ))
 
@@ -408,7 +535,7 @@ def read_messages(msgs, new):
             dirty = 2
         if dirty:
             if dirty == 2:
-                mailbox = get_header(msgs, term.width - 4)
+                mailbox = get_header(msgs)
             msg_selector = get_selector(mailbox, msg_selector)
             idx = msg_selector.selection[0]
             msg_reader = get_reader()
@@ -423,6 +550,7 @@ def read_messages(msgs, new):
             reply_msg.tags = reply_to.tags
             reply_msg.subject = reply_to.subject
             reply_msg.parent = reply_to.idx
+            reply_msg.body = quote_body(reply_to.body, min(79, term.width - 5))
             echo(term.move(term.height, 0) + u'\r\n')
             if gosub('writemsg', reply_msg):
                 reply_msg.save()
@@ -434,6 +562,20 @@ def read_messages(msgs, new):
         # spacebar marks as read, goes to next message
         elif inp in (u' ',):
             dirty = 2 if mark_read(idx) else 1
+            msg_selector.move_down()
+            idx = msg_selector.selection[0]
+            READING = False
+
+        # D marks as deleted, goes to next message
+        elif inp in (u'D',):
+            dirty = 2 if mark_delete(idx) else 1
+            msg_selector.move_down()
+            idx = msg_selector.selection[0]
+            READING = False
+
+        # U undeletes, does not move.
+        elif inp in (u'U',):
+            dirty = 2 if mark_undelete(idx) else 1
             msg_selector.move_down()
             idx = msg_selector.selection[0]
             READING = False

@@ -143,6 +143,7 @@ def init_bbs_ini():
     cfg_bbs.set('session', 'record_tty', 'yes')
     cfg_bbs.set('session', 'tap_input', 'no')
     cfg_bbs.set('session', 'tap_output', 'no')
+    cfg_bbs.set('session', 'tap_events', 'no')
     cfg_bbs.set('session', 'default_encoding', 'utf8')
 
     cfg_bbs.add_section('irc')
@@ -172,6 +173,10 @@ def init_bbs_ini():
 
     cfg_bbs.add_section('msg')
     cfg_bbs.set('msg', 'max_subject', '40')
+    # maximum recursion for searching 'head' in a reply-to chain;
+    # as each get_msg() is a lookup, thread-related sorting could
+    # become too expensive.
+    cfg_bbs.set('msg', 'max_depth', '8')
     return cfg_bbs
 
 
