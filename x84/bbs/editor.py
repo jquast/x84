@@ -125,21 +125,22 @@ class LineEditor(object):
             return self.refresh()
         elif keystroke in self.keyset['backspace']:
             if len(self.content) != 0:
-                toss = self.content[-1]
+                len_toss = len(Ansi(self.content[-1]))
                 self.content = self.content[:-1]
                 return u''.join((
-                    u'\b' * len(toss),
-                    ' ' * len(toss),
-                    '\b' * len(toss),))
+                    u'\b' * len_toss,
+                    u' ',
+                    u'\b',))
         elif keystroke in self.keyset['backword']:
             if len(self.content) != 0:
                 ridx = self.content.rstrip().rfind(' ') + 1
                 toss = len(Ansi(self.content[ridx:]))
+                move = len(self.content[ridx:])
                 self.content = self.content[:ridx]
                 return u''.join((
                     u'\b' * toss,
-                    u' ' * toss,
-                    u'\b' * toss,))
+                    u' ' * move,
+                    u'\b' * move,))
         elif keystroke in self.keyset['enter']:
             self._carriage_returned = True
         elif keystroke in self.keyset['exit']:
@@ -451,8 +452,9 @@ class ScrollingEditor(AnsiWindow):
                 self.enable_scrolling = True
             self._horiz_pos += 1
         if self._horiz_shift > 0:
-            scrl = self._horiz_shift + len(self.trim_char)
-            prnt = self.trim_char + self.content[scrl:]
+            self._horiz_shift += len(self.trim_char)
+            #scrl = self._horiz_shift + len(self.trim_char)
+            prnt = self.trim_char + self.content[self._horiz_shift:]
         else:
             prnt = self.content
         erase_len = self.visible_width - (len(prnt))
@@ -482,7 +484,8 @@ class ScrollingEditor(AnsiWindow):
             return u''
         rstr = u''
         # measured backspace erases over double-wide
-        len_backspace = len(Ansi(self.content[-1]))
+        len_toss = len(Ansi(self.content[-1]))
+        len_move = len(Ansi(self.content[-1]))
         self.content = self.content[:-1]
         if (self.is_scrolled and (self._horiz_pos
                     < (self.visible_width - self.scroll_amt))):
@@ -490,8 +493,11 @@ class ScrollingEditor(AnsiWindow):
             self._horiz_shift -= self.scroll_amt
             self._horiz_pos += self.scroll_amt
             rstr += self.refresh()
-        rstr += self.fixate(-1)
-        rstr += (' ' * len_backspace) + ('\b' * len_backspace)
+        rstr += u''.join((
+            self.fixate(),
+            u'\b' * len_toss,
+            u' ' * len_move,
+            u'\b' * len_move,))
         self._horiz_pos -= 1
         return rstr
 
