@@ -86,7 +86,7 @@ def set_lbcontent(lightbar, ucs):
     lightbar.update(sorted(content.items()))
 
 
-def yes_no(lightbar, msg, prompt_msg='are you sure?'):
+def yes_no(lightbar, msg, prompt_msg='are you sure? ', attr=None):
     """ Prompt user for yes/no, returns True for yes, False for no. """
     from x84.bbs import Selector, echo, getch, getterminal
     term = getterminal()
@@ -99,9 +99,9 @@ def yes_no(lightbar, msg, prompt_msg='are you sure?'):
         lightbar.pos(lightbar.height, lightbar.xpadding),
         msg, u' ', prompt_msg,)))
     sel = Selector(yloc=lightbar.yloc + lightbar.height - 1,
-                  xloc=term.width - 28, width=12,
-                  left='Yes', right='No')
-    sel.colors['selected'] = term.reverse_red
+                  xloc=term.width - 21, width=18,
+                  left='Yes', right=' No ')
+    sel.colors['selected'] = term.reverse_red if attr is None else attr
     sel.keyset['left'].extend(keyset['yes'])
     sel.keyset['right'].extend(keyset['no'])
     echo(sel.refresh())
@@ -370,11 +370,15 @@ def main(save_key=u'draft'):
         # command mode, basic cmds & movement
         elif not edit and inp is not None:
             if inp in (u'a', u'A',):
-                if yes_no(lightbar, u'- AbORt -'):
+                if yes_no(lightbar, term.yellow(u'- ')
+                        + term.bold_red(u'AbORt')
+                        + term.yellow(u' -')):
                     return False
                 dirty = True
             elif inp in (u's', u'S',):
-                if yes_no(lightbar, u'- SAVE -'):
+                if yes_no(lightbar, term.yellow(u'- ')
+                        + term.bold_green(u'SAVE')
+                        + term.yellow(u' -'), term.reverse_green):
                     session.user[save_key] = HARDWRAP.join(
                             [softwrap_join(_ucs) for _ucs in
                                 get_lbcontent(lightbar).split(HARDWRAP)])
@@ -386,12 +390,13 @@ def main(save_key=u'draft'):
                 pager.update(get_help())
                 pager.colors['border'] = term.bold_blue
                 echo(pager.border() + pager.title(u''.join((
-                    term.blue(u'-( '),
-                    term.blue_underline(u'r'), u':', term.bold(u'eturn'),
+                    term.bold_blue(u'-( '),
+                    term.white_on_blue(u'r'), u':', term.bold(u'eturn'),
                     u' ',
-                    term.blue(u' )-'),))))
+                    term.bold_blue(u' )-'),))))
                 pager.keyset['exit'].extend([u'r', u'R'])
                 pager.read()
+                echo(pager.erase_border())
                 dirty = True
             else:
                 echo(lightbar.process_keystroke(inp))
