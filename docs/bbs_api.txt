@@ -14,21 +14,11 @@ General functions
 .. autofunction:: x84.bbs.echo
 .. autofunction:: x84.bbs.timeago
 
-
 Terminal
 ````````
 
 .. autofunction:: x84.bbs.getterminal
 .. autoclass: x84.blessings.Terminal
-
-CP437 and ANSI
-``````````````
-
-.. autofunction:: x84.bbs.showcp437
-.. autofunction:: x84.bbs.from_cp437
-.. autofunction:: x84.bbs.ropen
-.. autoclass: x84.bbs.Ansi
-.. autofunction:: x84.bbs.output.ansiwrap
 
 Session
 ```````
@@ -36,26 +26,15 @@ Session
 .. autofunction:: x84.bbs.getsession
 .. autoclass:: x84.bbs.session.Session
 
-Doors
-`````
-
-.. autoclass:: x84.bbs.Door
-
-Users & Groups
-``````````````
-
 userbase
---------
+````````
 
 .. automodule:: x84.bbs.userbase
    :members:
 
-
-Messages and Tags
-`````````````````
-
 messagebase
------------
+```````````
+
 .. automodule:: x84.bbs.msgbase
    :members:
 
@@ -63,12 +42,6 @@ Database
 ````````
 
 .. autoclass:: x84.bbs.DBProxy
-
-x84.bbs.cp437
--------------
-
-.. automodule:: x84.bbs.cp437
-   :members:
 
 Ansi UI Elements
 ````````````````
@@ -102,6 +75,21 @@ Lightbar
 --------
 
 .. autoclass:: x84.bbs.Lightbar
+
+Doors
+`````
+
+.. autoclass:: x84.bbs.Door
+
+CP437 and ANSI
+``````````````
+
+.. autofunction:: x84.bbs.showcp437
+.. autofunction:: x84.bbs.from_cp437
+.. autofunction:: x84.bbs.ropen
+.. autoclass: x84.bbs.Ansi
+.. autofunction:: x84.bbs.output.ansiwrap
+
 
 Keysets, Themes
 ```````````````
