@@ -319,9 +319,11 @@ def post_bbs_scene(oneliner, dumb=True):
     url = 'http://bbs-scene.org/api/onelinerz.xml'
     usernm = ini.CFG.get('bbs-scene', 'user')
     passwd = ini.CFG.get('bbs-scene', 'pass')
-    data = {'oneliner': oneliner.strip(),
+    data = {
+            'bbsname': ini.CFG.get('system', 'bbsname'),
             'alias': session.user.handle,
-            'bbsname': ini.CFG.get('system', 'bbsname')}
+            'oneliner': oneliner.strip(),
+            }
     # post to bbs-scene.rog
     req = requests.post(url, auth=(usernm, passwd), data=data)
     if (req.status_code != 200 or
