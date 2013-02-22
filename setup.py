@@ -6,10 +6,10 @@ from distutils.core import setup
 import os
 
 setup(name='x84',
-      version='1.0.4',
+      version='1.0.4p1',
       description="Telnet server for UTF-8 and cp437 terminals.",
       long_description=open(os.path.join(os.path.dirname(__file__),
-                                         'README.rst')).read(),
+                                         'README.txt')).read(),
       author='Jeff Quast',
       author_email='contact@jeffquast.com',
       url='http://github.com/jquast/x84/',
@@ -17,7 +17,7 @@ setup(name='x84',
       license='ISC',
       packages=['x84', 'x84.default', 'x84.default.art', 'x84.bbs'],
       package_data={
-          '': ['README.rst'],
+          '': ['README.txt'],
           'x84.default': ['*.ans', '*.txt', ],
           'x84.default.art': ['*.asc', '*.ans', '*.txt'],
       },
