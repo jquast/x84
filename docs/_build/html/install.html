@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Install &mdash; x/84 1.0.4 documentation</title>
+    <title>Install instructions &mdash; x/84 1.0.4 documentation</title>
     
     <link rel="stylesheet" href="_static/default.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -25,7 +25,9 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="x/84 1.0.4 documentation" href="index.html" /> 
+    <link rel="top" title="x/84 1.0.4 documentation" href="index.html" />
+    <link rel="next" title="Compatible Clients" href="clients.html" />
+    <link rel="prev" title="Introduction to x/84" href="intro.html" /> 
   </head>
   <body>
     <div class="related">
@@ -34,6 +36,15 @@
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="clients.html" title="Compatible Clients"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="intro.html" title="Introduction to x/84"
+             accesskey="P">previous</a> |</li>
         <li><a href="index.html">x/84 1.0.4 documentation</a> &raquo;</li> 
       </ul>
     </div>  
@@ -43,8 +54,8 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <div class="section" id="install">
-<h1>Install<a class="headerlink" href="#install" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="install-instructions">
+<h1>Install instructions<a class="headerlink" href="#install-instructions" title="Permalink to this headline">¶</a></h1>
 <ol class="arabic">
 <li><p class="first">Install <a class="reference external" href="https:/www.python.org/">python</a> 2.6 or 2.7</p>
 </li>
@@ -63,6 +74,33 @@
 </div>
 </li>
 </ol>
+<div class="section" id="getting-started">
+<h2>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h2>
+<ol class="arabic">
+<li><p class="first">Launch the <em>x84.engine</em> python module:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">x84</span>
+</pre></div>
+</div>
+<p><em>x84</em> is a <tt class="docutils literal"><span class="pre">/bin/sh</span></tt> wrapper for launching <em>python -m x84.engine</em>.
+If the <tt class="docutils literal"><span class="pre">*x84</span></tt> helper script fails, try using the python interpreter
+used with <tt class="docutils literal"><span class="pre">pip</span></tt>, for example:</p>
+<div class="highlight-python"><pre>/usr/local/bin/python2.7 -m x84.engine</pre>
+</div>
+</li>
+<li><p class="first">Telnet to 127.0.0.1 6023, Assuming a <em>bsd telnet</em> client:</p>
+<div class="highlight-python"><pre>telnet localhost 6023</pre>
+</div>
+</li>
+</ol>
+</div>
+<div class="section" id="x84-usage">
+<h2>x84 Usage<a class="headerlink" href="#x84-usage" title="Permalink to this headline">¶</a></h2>
+<p>Optional command line arguments,</p>
+<blockquote>
+<div><p><tt class="docutils literal"><span class="pre">--config=</span></tt> alternate bbs configuration filepath</p>
+<p><tt class="docutils literal"><span class="pre">--logger=</span></tt> alternate logging configuration filepath</p>
+</div></blockquote>
+</div>
 </div>
 
 
@@ -71,6 +109,21 @@
       </div>
       <div class="sphinxsidebar">
         <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Install instructions</a><ul>
+<li><a class="reference internal" href="#getting-started">Getting Started</a></li>
+<li><a class="reference internal" href="#x84-usage">x84 Usage</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="intro.html"
+                        title="previous chapter">Introduction to x/84</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="clients.html"
+                        title="next chapter">Compatible Clients</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/install.txt"
@@ -99,6 +152,15 @@
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="clients.html" title="Compatible Clients"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="intro.html" title="Introduction to x/84"
+             >previous</a> |</li>
         <li><a href="index.html">x/84 1.0.4 documentation</a> &raquo;</li> 
       </ul>
     </div>

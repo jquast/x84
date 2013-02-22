@@ -9,21 +9,23 @@ Welcome to x/84's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :titlesonly:
    :glob:
 
    intro
    install
-   quickstart
    clients
    port23
-   customizing
    default_api
    bbs_api
    developers
-   support
    others
+
+Support
+=======
+
+An irc channel, *#prsv* on efnet, is available for development discussion.
    
 Indices and tables
 ==================

@@ -1,5 +1,5 @@
 Install instructions
-````````````````````
+====================
 
 1. Install python_ 2.6 or 2.7
 

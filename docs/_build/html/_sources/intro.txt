@@ -1,6 +1,5 @@
-====
-x/84
-====
+Introduction to x/84
+====================
 
 **A python Telnet server for modern UTF-8 and classic network virtual terminals**.
 

@@ -104,7 +104,7 @@ A bbs listing utility, to allow users to post, vote on, and leave comments for o
 
 A list of bbs's from bbs-scene_.org's API is retrieved if configured. Create a new section, *[bbs-scene]* in ``defaults.ini``, with two options, *user* and *pass*.
 
-.. automodule:: x84.default.speedhack
+.. automodule:: x84.default.bbslist
 
 weather.py
 ----------
@@ -188,7 +188,7 @@ A terminal game of tetris with ANSI art blocks by jojo. High scores are persiste
 ttyplay.py
 ----------
 
-The ``default.ini`` file option, *exe*, of section *[ttyplay]*, defines path to external door to be used to playback ttyrec_ formatted files.
+The ``default.ini`` file option, *exe*, of section *[ttyplay]*, defines path to external door to be used to playback ttyplay_ formatted files.
 
 If no arguments are specified, the sysop is provided a lightbar interface to display all recorded tty sessions for playback.
 

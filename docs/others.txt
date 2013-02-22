@@ -1,5 +1,5 @@
 Other Telnet BBS Systems
-````````````````````````
+========================
 
 Listed here is software known in the "bbs-scene" as still being actively used.
 

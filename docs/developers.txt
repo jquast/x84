@@ -1,5 +1,5 @@
 Developer Environment
-`````````````````````
+=====================
 
 For developing from git, simply clone and execute the ./x84/bin/dev-setup python script with the target interpreter, specifying a ``virtual env`` folder. Source the ``*virtual env*/bin/activate`` file so that subsequent *pip* commands affect only that specific environment. Target environment for x/84 is currently python 2.7.
 

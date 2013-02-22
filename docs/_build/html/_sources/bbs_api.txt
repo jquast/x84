@@ -4,20 +4,39 @@ API Documentation
 .. toctree::
    :maxdepth: 2
 
+General functions
+`````````````````
+
 .. automodule:: x84.bbs
    :members:
 
+.. automodule:: x84.bbs.cp437
+   :members:
+
+User & Messagebase
+``````````````````
 .. automodule:: x84.bbs.userbase
    :members:
 
 .. automodule:: x84.bbs.msgbase
    :members:
 
+Ansi Window interfaces
+``````````````````````
+.. automodule:: x84.bbs.ansiwin
+   :members:
+
+.. automodule:: x84.bbs.output
+   :members:
+
+Editing
+-------
+
 .. automodule:: x84.bbs.editor
    :members:
 
-.. automodule:: x84.bbs.ansiwin
-   :members:
+Selecting
+---------
 
 .. automodule:: x84.bbs.selector
    :members:
@@ -25,14 +44,19 @@ API Documentation
 .. automodule:: x84.bbs.lightbar
    :members:
 
-.. automodule:: x84.bbs.cp437
-   :members:
-
-.. automodule:: x84.bbs.dbproxy
-   :members:
+Reading
+-------
 
 .. automodule:: x84.bbs.pager
    :members:
 
+External door support
+`````````````````````
 .. automodule:: x84.bbs.door
+   :members:
+
+Database access
+```````````````
+
+.. automodule:: x84.bbs.dbproxy
    :members:

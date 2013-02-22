@@ -25,7 +25,9 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="x/84 1.0.4 documentation" href="index.html" /> 
+    <link rel="top" title="x/84 1.0.4 documentation" href="index.html" />
+    <link rel="next" title="Binding to port 23" href="port23.html" />
+    <link rel="prev" title="Install instructions" href="install.html" /> 
   </head>
   <body>
     <div class="related">
@@ -34,6 +36,15 @@
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="port23.html" title="Binding to port 23"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="install.html" title="Install instructions"
+             accesskey="P">previous</a> |</li>
         <li><a href="index.html">x/84 1.0.4 documentation</a> &raquo;</li> 
       </ul>
     </div>  
@@ -45,17 +56,29 @@
             
   <div class="section" id="compatible-clients">
 <h1>Compatible Clients<a class="headerlink" href="#compatible-clients" title="Permalink to this headline">¶</a></h1>
-<p>Any UTF-8 client is compatible. For Apple systems, <em>Andale Mono</em> works wonderfully. When using BSD telnet, use command line argument <tt class="docutils literal"><span class="pre">-L</span></tt> to enable <em>BINARY</em> 8-bit mode for utf-8 input.</p>
-<p>Other utf-8 terminals:</p>
-<ul class="simple">
-<li>PuTTy: Under preference item <em>Window -&gt; Translation</em>, option <em>Remote character set</em>, change <em>iso8859-1</em> to <em>UTF-8</em>.</li>
-<li>iTerm: Menu item <em>iTerm -&gt; Preferences</em>, section <em>Profiles</em>, select tab <em>Text</em>, chose <em>Andale Mono</em> font.</li>
-<li>Terminal.app: Menu item <em>Terminal -&gt; Preferences</em>, chose profile <em>Pro</em>, select Font <em>Andale Mono</em>, and enable <em>use bright colors for bold text</em>.</li>
-<li>uxterm or other utf-8 rxvt and xterm variants: urxvt, dtterm.</li>
-</ul>
-<p>Other than UTF-8, only IBM CP437 encoding is supported. Any 8-bit telnet client with CP437 font is supported.</p>
+<p>Any UTF-8 client is compatible. For Apple systems, <em>Andale Mono</em> works wonderfully.</p>
+<div class="section" id="putty">
+<h2>PuTTy<a class="headerlink" href="#putty" title="Permalink to this headline">¶</a></h2>
+<p>Under preference item <em>Window -&gt; Translation</em>, option <em>Remote character set</em>, change <em>iso8859-1</em> to <em>UTF-8</em>.</p>
+</div>
+<div class="section" id="iterm">
+<h2>iTerm<a class="headerlink" href="#iterm" title="Permalink to this headline">¶</a></h2>
+<p>Menu item <em>iTerm -&gt; Preferences</em>, section <em>Profiles</em>, select tab <em>Text</em>, chose <em>Andale Mono</em> font.</p>
+</div>
+<div class="section" id="terminal-app">
+<h2>Terminal.app<a class="headerlink" href="#terminal-app" title="Permalink to this headline">¶</a></h2>
+<p>Menu item <em>Terminal -&gt; Preferences</em>, chose profile <em>Pro</em>, select Font <em>Andale Mono</em>, and enable <em>use bright colors for bold text</em>.</p>
+</div>
+<div class="section" id="uxterm">
+<h2>uxterm<a class="headerlink" href="#uxterm" title="Permalink to this headline">¶</a></h2>
+<p>Or other utf-8 rxvt and xterm variants: urxvt, dtterm.</p>
+</div>
+<div class="section" id="non-unicode">
+<h2>Non-unicode<a class="headerlink" href="#non-unicode" title="Permalink to this headline">¶</a></h2>
+<p>Other than UTF-8, only IBM CP437 encoding is supported. Any telnet client with CP437 font is supported.</p>
 <p>Examples of these include PuTTy, SyncTerm, mtel, netrunner, linux/bsd console + bsd telnet.</p>
 <p>Some non-DOS terminal emulators may require installing a fontset, such as <em>Terminus_</em> to provide CP437 art.</p>
+</div>
 </div>
 
 
@@ -64,6 +87,24 @@
       </div>
       <div class="sphinxsidebar">
         <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Compatible Clients</a><ul>
+<li><a class="reference internal" href="#putty">PuTTy</a></li>
+<li><a class="reference internal" href="#iterm">iTerm</a></li>
+<li><a class="reference internal" href="#terminal-app">Terminal.app</a></li>
+<li><a class="reference internal" href="#uxterm">uxterm</a></li>
+<li><a class="reference internal" href="#non-unicode">Non-unicode</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="install.html"
+                        title="previous chapter">Install instructions</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="port23.html"
+                        title="next chapter">Binding to port 23</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/clients.txt"
@@ -92,6 +133,15 @@
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="port23.html" title="Binding to port 23"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="install.html" title="Install instructions"
+             >previous</a> |</li>
         <li><a href="index.html">x/84 1.0.4 documentation</a> &raquo;</li> 
       </ul>
     </div>

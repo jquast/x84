@@ -25,7 +25,9 @@
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <link rel="top" title="x/84 1.0.4 documentation" href="index.html" /> 
+    <link rel="top" title="x/84 1.0.4 documentation" href="index.html" />
+    <link rel="next" title="Customizing your board" href="default_api.html" />
+    <link rel="prev" title="Compatible Clients" href="clients.html" /> 
   </head>
   <body>
     <div class="related">
@@ -34,6 +36,15 @@
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="default_api.html" title="Customizing your board"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="clients.html" title="Compatible Clients"
+             accesskey="P">previous</a> |</li>
         <li><a href="index.html">x/84 1.0.4 documentation</a> &raquo;</li> 
       </ul>
     </div>  
@@ -46,17 +57,30 @@
   <div class="section" id="binding-to-port-23">
 <h1>Binding to port 23<a class="headerlink" href="#binding-to-port-23" title="Permalink to this headline">¶</a></h1>
 <p>X/84 does not require privileged access, and its basic configuration binds to port 6023. Multi-user systems do not typically allow non-root users to bind to port 23. Alternatively, you can always use port forwarding on a NAT firewall.</p>
-<p><strong>Linux</strong> using <a class="reference external" href="http://sourceforge.net/projects/privbind/">privbind</a>, run the BBS as user &#8216;bbs&#8217;, group &#8216;adm&#8217;:</p>
+<div class="section" id="linux">
+<h2>Linux<a class="headerlink" href="#linux" title="Permalink to this headline">¶</a></h2>
+<p>using <a class="reference external" href="http://sourceforge.net/projects/privbind/">privbind</a>, run the BBS as user &#8216;bbs&#8217;, group &#8216;adm&#8217;:</p>
 <div class="highlight-python"><pre>sudo privbind -u bbs -g adm x84</pre>
 </div>
-<p><strong>Solaris</strong> 10, grant net_privaddr privilege to user &#8216;bbs&#8217;:</p>
+</div>
+<div class="section" id="solaris-10">
+<h2>Solaris 10<a class="headerlink" href="#solaris-10" title="Permalink to this headline">¶</a></h2>
+<p>grant net_privaddr privilege to user &#8216;bbs&#8217;:</p>
 <div class="highlight-python"><pre>usermod -K defaultpriv=basic,net_privaddr bbs</pre>
 </div>
-<p><strong>BSD</strong>, redirection using pf(4):</p>
+</div>
+<div class="section" id="bsd">
+<h2>BSD<a class="headerlink" href="#bsd" title="Permalink to this headline">¶</a></h2>
+<p>redirection using pf(4):</p>
 <div class="highlight-python"><pre>pass in on egress inet from any to any port telnet rdr-to 192.168.1.11 port 6023</pre>
 </div>
-<p><strong>Other</strong>, Usingirect <a class="reference external" href="http://www.dest-unreach.org/socat/">socat</a>, listen on 192.168.1.11 and for each connection, fork as &#8216;nobody&#8217;, and pipe the connection to 127.0.0.1 port 6023. This has the disadvantage that x84 is unable to identify the originating IP:</p>
+</div>
+<div class="section" id="other">
+<h2>Other<a class="headerlink" href="#other" title="Permalink to this headline">¶</a></h2>
+<p>Usingirect <a class="reference external" href="http://www.dest-unreach.org/socat/">socat</a>, listen on 192.168.1.11 and for each connection, fork as &#8216;nobody&#8217;, and pipe the connection to 127.0.0.1 port 6023:</p>
 <div class="highlight-python"><pre>sudo socat -d -d -lmlocal2 TCP4-LISTEN:23,bind=192.168.1.11,su=nobody,fork,reuseaddr TCP4:127.0.0.1:6023</pre>
+</div>
+<p>This has the disadvantage that x84 is unable to identify the originating IP.</p>
 </div>
 </div>
 
@@ -66,6 +90,23 @@
       </div>
       <div class="sphinxsidebar">
         <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Binding to port 23</a><ul>
+<li><a class="reference internal" href="#linux">Linux</a></li>
+<li><a class="reference internal" href="#solaris-10">Solaris 10</a></li>
+<li><a class="reference internal" href="#bsd">BSD</a></li>
+<li><a class="reference internal" href="#other">Other</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="clients.html"
+                        title="previous chapter">Compatible Clients</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="default_api.html"
+                        title="next chapter">Customizing your board</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/port23.txt"
@@ -94,6 +135,15 @@
         <li class="right" style="margin-right: 10px">
           <a href="genindex.html" title="General Index"
              >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="default_api.html" title="Customizing your board"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="clients.html" title="Compatible Clients"
+             >previous</a> |</li>
         <li><a href="index.html">x/84 1.0.4 documentation</a> &raquo;</li> 
       </ul>
     </div>
