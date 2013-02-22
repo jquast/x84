@@ -1,0 +1,2595 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>API Documentation &mdash; x/84 1.0.4 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.0.4',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="x/84 1.0.4 documentation" href="index.html" />
+    <link rel="next" title="Default Board Documentation" href="default_api.html" />
+    <link rel="prev" title="Other Telnet BBS Systems" href="others.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="default_api.html" title="Default Board Documentation"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="others.html" title="Other Telnet BBS Systems"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">x/84 1.0.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="api-documentation">
+<h1>API Documentation<a class="headerlink" href="#api-documentation" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul class="simple">
+</ul>
+</div>
+<span class="target" id="module-x84.bbs"></span><p>x/84 bbs module, <a class="reference external" href="https://github.com/jquast/x84">https://github.com/jquast/x84</a></p>
+<dl class="function">
+<dt id="x84.bbs.list_users">
+<tt class="descclassname">x84.bbs.</tt><tt class="descname">list_users</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.list_users" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns all user handles.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.get_user">
+<tt class="descclassname">x84.bbs.</tt><tt class="descname">get_user</tt><big>(</big><em>handle</em><big>)</big><a class="headerlink" href="#x84.bbs.get_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns User record, keyed by handle.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.find_user">
+<tt class="descclassname">x84.bbs.</tt><tt class="descname">find_user</tt><big>(</big><em>handle</em><big>)</big><a class="headerlink" href="#x84.bbs.find_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given handle, discover and return matching database key case insensitively.
+The returned value may not be equal to the argument, or None if not found.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="x84.bbs.User">
+<em class="property">class </em><tt class="descclassname">x84.bbs.</tt><tt class="descname">User</tt><big>(</big><em>handle=u'anonymous'</em><big>)</big><a class="headerlink" href="#x84.bbs.User" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple user record object with setter and getter properties, &#8216;handle&#8217;,
+&#8216;location&#8217;, &#8216;email&#8217;, &#8216;password&#8217;, &#8216;groups&#8217;, &#8216;calls&#8217;, &#8216;lastcall&#8217;, and &#8216;plan&#8217;.</p>
+<dl class="method">
+<dt id="x84.bbs.User.auth">
+<tt class="descname">auth</tt><big>(</big><em>try_pass</em><big>)</big><a class="headerlink" href="#x84.bbs.User.auth" title="Permalink to this definition">¶</a></dt>
+<dd><p>U.auth(unicode) &#8211;&gt; boolean</p>
+<p>To authenticate, assert auth(try_pass) == True.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.User.calls">
+<tt class="descname">calls</tt><a class="headerlink" href="#x84.bbs.User.calls" title="Permalink to this definition">¶</a></dt>
+<dd><p>Legacy, number of times user has &#8216;called&#8217; this board.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.User.delete">
+<tt class="descname">delete</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.User.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove user record from database, and as a member of any groups.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.User.email">
+<tt class="descname">email</tt><a class="headerlink" href="#x84.bbs.User.email" title="Permalink to this definition">¶</a></dt>
+<dd><p>E-mail address. May be used for password resets.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.User.get">
+<tt class="descname">get</tt><big>(</big><em>k</em><span class="optional">[</span>, <em>d</em><span class="optional">]</span><big>)</big> &rarr; D[k] if k in D, else d.  d defaults to None.<a class="headerlink" href="#x84.bbs.User.get" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.User.group_add">
+<tt class="descname">group_add</tt><big>(</big><em>group</em><big>)</big><a class="headerlink" href="#x84.bbs.User.group_add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add user to group.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.User.group_del">
+<tt class="descname">group_del</tt><big>(</big><em>group</em><big>)</big><a class="headerlink" href="#x84.bbs.User.group_del" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove user from group.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.User.groups">
+<tt class="descname">groups</tt><a class="headerlink" href="#x84.bbs.User.groups" title="Permalink to this definition">¶</a></dt>
+<dd><p>U.groups() &#8211;&gt; set</p>
+<p>Set of Group records user is a member of.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.User.handle">
+<tt class="descname">handle</tt><a class="headerlink" href="#x84.bbs.User.handle" title="Permalink to this definition">¶</a></dt>
+<dd><p>U.handle() &#8211;&gt; unicode</p>
+<p>User handle, also the database key.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.User.is_sysop">
+<tt class="descname">is_sysop</tt><a class="headerlink" href="#x84.bbs.User.is_sysop" title="Permalink to this definition">¶</a></dt>
+<dd><p>U.is_sysop &#8211;&gt; boolean</p>
+<p>Returns True if user is in u&#8217;sysop&#8217; group.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.User.lastcall">
+<tt class="descname">lastcall</tt><a class="headerlink" href="#x84.bbs.User.lastcall" title="Permalink to this definition">¶</a></dt>
+<dd><p>U.lastcall() &#8211;&gt; float</p>
+<p>Time last called, time.time() epoch-formatted.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.User.location">
+<tt class="descname">location</tt><a class="headerlink" href="#x84.bbs.User.location" title="Permalink to this definition">¶</a></dt>
+<dd><p>Legacy, used as a geographical location, group names, etc.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.User.password">
+<tt class="descname">password</tt><a class="headerlink" href="#x84.bbs.User.password" title="Permalink to this definition">¶</a></dt>
+<dd><p>U.password() &#8211;&gt; tuple</p>
+<p>Returns encrypted form of password as tuple (salt, hash).
+If a password has not yet been set, it is (None, None).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.User.plan">
+<tt class="descname">plan</tt><a class="headerlink" href="#x84.bbs.User.plan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unix .plan contents, the original blogosphere.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.User.save">
+<tt class="descname">save</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.User.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>(re-)Save user record to databases. Changes to user record to not
+automaticly persist. a call to the .save method must be done.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="x84.bbs.Group">
+<em class="property">class </em><tt class="descclassname">x84.bbs.</tt><tt class="descname">Group</tt><big>(</big><em>name</em>, <em>members=()</em><big>)</big><a class="headerlink" href="#x84.bbs.Group" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple group record object with properties name&#8217;, and &#8216;members&#8217;.
+Use methods &#8216;add&#8217; and &#8216;remove&#8217; to add and remove users by handle,
+and &#8216;save&#8217; to persist to disk (and other bbs sessions).</p>
+<dl class="method">
+<dt id="x84.bbs.Group.add">
+<tt class="descname">add</tt><big>(</big><em>handle</em><big>)</big><a class="headerlink" href="#x84.bbs.Group.add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add user to group.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Group.delete">
+<tt class="descname">delete</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Group.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete group record from database, and from .groups of any users.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Group.members">
+<tt class="descname">members</tt><a class="headerlink" href="#x84.bbs.Group.members" title="Permalink to this definition">¶</a></dt>
+<dd><p>Members of this group as user handles.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Group.name">
+<tt class="descname">name</tt><a class="headerlink" href="#x84.bbs.Group.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Name of this group.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Group.remove">
+<tt class="descname">remove</tt><big>(</big><em>handle</em><big>)</big><a class="headerlink" href="#x84.bbs.Group.remove" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove user from group.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Group.save">
+<tt class="descname">save</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Group.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save group record to database.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.list_msgs">
+<tt class="descclassname">x84.bbs.</tt><tt class="descname">list_msgs</tt><big>(</big><em>tags=None</em><big>)</big><a class="headerlink" href="#x84.bbs.list_msgs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return set of Msg keys matching 1 or more <tt class="docutils literal"><span class="pre">tags</span></tt>, or all.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.get_msg">
+<tt class="descclassname">x84.bbs.</tt><tt class="descname">get_msg</tt><big>(</big><em>idx=0</em><big>)</big><a class="headerlink" href="#x84.bbs.get_msg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return Msg record instance by index <tt class="docutils literal"><span class="pre">idx</span></tt>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.list_tags">
+<tt class="descclassname">x84.bbs.</tt><tt class="descname">list_tags</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.list_tags" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return set of available tags.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="x84.bbs.Msg">
+<em class="property">class </em><tt class="descclassname">x84.bbs.</tt><tt class="descname">Msg</tt><big>(</big><em>recipient=None</em>, <em>subject=u''</em>, <em>body=u''</em><big>)</big><a class="headerlink" href="#x84.bbs.Msg" title="Permalink to this definition">¶</a></dt>
+<dd><p>the Msg object is record spec for messages held in the msgbase.
+It contains many default properties to describe a conversation:</p>
+<p>&#8216;creationtime&#8217;, the time the message was initialized</p>
+<p>&#8216;author&#8217;, &#8216;recipient&#8217;, &#8216;subject&#8217;, and &#8216;body&#8217; are envelope parameters.</p>
+<p>&#8216;read&#8217; becomes a list of handles that have viewed a public message, or a
+single time the message was read by the addressed for private messages.</p>
+<p>&#8216;tags&#8217; is for use with message groupings, containing a list of strings that
+other messages may share in relation.</p>
+<p>&#8216;parent&#8217; points to the message this message directly refers to, and
+&#8216;threads&#8217; points to messages that refer to this message. &#8216;parent&#8217; must be
+explicitly set, but children are automaticly populated into &#8216;threads&#8217; of
+messages replied to through the send() method.</p>
+<dl class="attribute">
+<dt id="x84.bbs.Msg.ctime">
+<tt class="descname">ctime</tt><a class="headerlink" href="#x84.bbs.Msg.ctime" title="Permalink to this definition">¶</a></dt>
+<dd><p>M.ctime() &#8211;&gt; datetime</p>
+<p>Datetime message was instantiated</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Msg.save">
+<tt class="descname">save</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Msg.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save message in &#8216;Msgs&#8217; sqlite db, and record index in &#8216;tags&#8217; db.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Msg.stime">
+<tt class="descname">stime</tt><a class="headerlink" href="#x84.bbs.Msg.stime" title="Permalink to this definition">¶</a></dt>
+<dd><p>M.stime() &#8211;&gt; datetime</p>
+<p>Datetime message was saved to database</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="exception">
+<dt id="x84.bbs.Disconnected">
+<em class="property">exception </em><tt class="descclassname">x84.bbs.</tt><tt class="descname">Disconnected</tt><a class="headerlink" href="#x84.bbs.Disconnected" title="Permalink to this definition">¶</a></dt>
+<dd><p>Thrown when a client is disconnected.</p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="x84.bbs.Goto">
+<em class="property">exception </em><tt class="descclassname">x84.bbs.</tt><tt class="descname">Goto</tt><a class="headerlink" href="#x84.bbs.Goto" title="Permalink to this definition">¶</a></dt>
+<dd><p>Thrown to change script without returning.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="x84.bbs.LineEditor">
+<em class="property">class </em><tt class="descclassname">x84.bbs.</tt><tt class="descname">LineEditor</tt><big>(</big><em>width=None</em>, <em>content=u''</em><big>)</big><a class="headerlink" href="#x84.bbs.LineEditor" title="Permalink to this definition">¶</a></dt>
+<dd><p>This unicode line editor is unaware of its (x, y) position and is great
+for prompting a quick phrase on any terminal, such as a login: prompt.</p>
+<dl class="attribute">
+<dt id="x84.bbs.LineEditor.carriage_returned">
+<tt class="descname">carriage_returned</tt><a class="headerlink" href="#x84.bbs.LineEditor.carriage_returned" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True when last keystroke caused carriage to be returned.
+(KEY_ENTER was pressed)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.LineEditor.hidden">
+<tt class="descname">hidden</tt><a class="headerlink" href="#x84.bbs.LineEditor.hidden" title="Permalink to this definition">¶</a></dt>
+<dd><p>When not False, represents a single &#8216;mask&#8217; character to hide input
+with, such as a password prompt</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.LineEditor.init_keystrokes">
+<tt class="descname">init_keystrokes</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.LineEditor.init_keystrokes" title="Permalink to this definition">¶</a></dt>
+<dd><p>This initializer sets keyboard keys for backspace/exit.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.LineEditor.init_theme">
+<tt class="descname">init_theme</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.LineEditor.init_theme" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize colors[&#8216;highlight&#8217;].</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.LineEditor.process_keystroke">
+<tt class="descname">process_keystroke</tt><big>(</big><em>keystroke</em><big>)</big><a class="headerlink" href="#x84.bbs.LineEditor.process_keystroke" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process the keystroke received by read method and take action.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.LineEditor.quit">
+<tt class="descname">quit</tt><a class="headerlink" href="#x84.bbs.LineEditor.quit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns: True if a terminating or quit character was handled by
+process_keystroke(), such as the escape key, or &#8216;q&#8217; by default.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.LineEditor.read">
+<tt class="descname">read</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.LineEditor.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads input until the ENTER or ESCAPE key is pressed (Blocking).
+Allows backspacing. Returns unicode text, or None when cancelled.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.LineEditor.refresh">
+<tt class="descname">refresh</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.LineEditor.refresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns unicode byts suitable for drawing line.
+No movement or positional sequences are returned.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.LineEditor.width">
+<tt class="descname">width</tt><a class="headerlink" href="#x84.bbs.LineEditor.width" title="Permalink to this definition">¶</a></dt>
+<dd><p>When non-zero, represents the upperbound limit of characters to receive
+on input until no more characters are accepted.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="x84.bbs.ScrollingEditor">
+<em class="property">class </em><tt class="descclassname">x84.bbs.</tt><tt class="descname">ScrollingEditor</tt><big>(</big><em>width</em>, <em>yloc</em>, <em>xloc</em><big>)</big><a class="headerlink" href="#x84.bbs.ScrollingEditor" title="Permalink to this definition">¶</a></dt>
+<dd><p>A single line Editor fully aware of its (y, x).
+Infinite horizontal scrolling is enabled with the enable_scrolling
+property. When True, scrolling amount is limited using max_length.</p>
+<dl class="method">
+<dt id="x84.bbs.ScrollingEditor.add">
+<tt class="descname">add</tt><big>(</big><em>u_chr</em><big>)</big><a class="headerlink" href="#x84.bbs.ScrollingEditor.add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns output sequence necessary to add a character to
+content buffer.  An empty content buffer is returned if
+no data could be inserted. Sequences for re-displaying
+the full input line are returned when the character
+addition caused the window to scroll horizontally.
+Otherwise, the input is simply returned to be displayed
+(&#8216;local echo&#8217;).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ScrollingEditor.backspace">
+<tt class="descname">backspace</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.ScrollingEditor.backspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove character from end of content buffer,
+scroll as necessary.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ScrollingEditor.backword">
+<tt class="descname">backword</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.ScrollingEditor.backword" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete word behind cursor, using &#8216; &#8216; as boundary.
+in readline this is unix-word-rubout (C-w).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.ScrollingEditor.bell">
+<tt class="descname">bell</tt><a class="headerlink" href="#x84.bbs.ScrollingEditor.bell" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True when user nears margin and bell has been sounded and
+carriage has not yet been returned.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.ScrollingEditor.carriage_returned">
+<tt class="descname">carriage_returned</tt><a class="headerlink" href="#x84.bbs.ScrollingEditor.carriage_returned" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True when last keystroke caused carriage to be returned.
+(KEY_ENTER was pressed)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.ScrollingEditor.enable_scrolling">
+<tt class="descname">enable_scrolling</tt><a class="headerlink" href="#x84.bbs.ScrollingEditor.enable_scrolling" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enable horizontal scrolling of line editor.
+Otherwise, input is limited to visible width.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.ScrollingEditor.eol">
+<tt class="descname">eol</tt><a class="headerlink" href="#x84.bbs.ScrollingEditor.eol" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return True when no more input can be accepted (end of line).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ScrollingEditor.fixate">
+<tt class="descname">fixate</tt><big>(</big><em>x_adjust=0</em><big>)</big><a class="headerlink" href="#x84.bbs.ScrollingEditor.fixate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return terminal sequence suitable for placing cursor at current
+position in window. Set x_adjust to -1 to position cursor &#8216;on&#8217;
+the last character, or 0 for &#8216;after&#8217; (default).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ScrollingEditor.init_keystrokes">
+<tt class="descname">init_keystrokes</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.ScrollingEditor.init_keystrokes" title="Permalink to this definition">¶</a></dt>
+<dd><p>This initializer sets glyphs and colors appropriate for a &#8220;theme&#8221;,
+override or inherit this method to create a common color and graphic
+set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ScrollingEditor.init_theme">
+<tt class="descname">init_theme</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.ScrollingEditor.init_theme" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize colors[&#8216;highlight&#8217;] as REVERSE and glyphs[&#8216;strip&#8217;] as &#8216;$ &#8216;.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.ScrollingEditor.is_scrolled">
+<tt class="descname">is_scrolled</tt><a class="headerlink" href="#x84.bbs.ScrollingEditor.is_scrolled" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if the horizontal editor is in a scrolled state.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.ScrollingEditor.margin_amt">
+<tt class="descname">margin_amt</tt><a class="headerlink" href="#x84.bbs.ScrollingEditor.margin_amt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns number of columns from right-edge that the horizontal editor
+signals bell=True, indicating that the end is near and the carriage
+should be soon returned. This also indicates the distance from margin
+a user may type into until ScrollingEditor horizontally shifts.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.ScrollingEditor.margin_pct">
+<tt class="descname">margin_pct</tt><a class="headerlink" href="#x84.bbs.ScrollingEditor.margin_pct" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of columns away from input length limit, as a percentage of its
+total visible width, that will alarm the bell. This simulates the bell
+of a typewriter as a signaling mechanism. Default is 20.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.ScrollingEditor.max_length">
+<tt class="descname">max_length</tt><a class="headerlink" href="#x84.bbs.ScrollingEditor.max_length" title="Permalink to this definition">¶</a></dt>
+<dd><p>Maximum line length. This also limits infinite scrolling when
+enable_scrolling is True. When unset, the maximum length is the
+visible width of the window.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.ScrollingEditor.position">
+<tt class="descname">position</tt><a class="headerlink" href="#x84.bbs.ScrollingEditor.position" title="Permalink to this definition">¶</a></dt>
+<dd><p>Tuple of shift amount and column position of line editor.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ScrollingEditor.process_keystroke">
+<tt class="descname">process_keystroke</tt><big>(</big><em>keystroke</em><big>)</big><a class="headerlink" href="#x84.bbs.ScrollingEditor.process_keystroke" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process the keystroke received by read method and take action.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.ScrollingEditor.quit">
+<tt class="descname">quit</tt><a class="headerlink" href="#x84.bbs.ScrollingEditor.quit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns: True if a terminating or quit character was handled by
+process_keystroke(), such as the escape key, or &#8216;q&#8217; by default.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ScrollingEditor.read">
+<tt class="descname">read</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.ScrollingEditor.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads input until the ENTER or ESCAPE key is pressed (Blocking).
+Allows backspacing. Returns unicode text, or None when cancelled.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ScrollingEditor.refresh">
+<tt class="descname">refresh</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.ScrollingEditor.refresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return unicode sequence suitable for refreshing the entire
+line and placing the cursor.</p>
+<p>A strange by-product; if scrolling was not previously enabled,
+it is if wrapping must occur; this can happen if a
+non-scrolling editor was provided a very large .content
+buffer, then later .refresh()&#8217;d. &#8211; essentially enabling
+infinate scrolling</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.ScrollingEditor.scroll_amt">
+<tt class="descname">scroll_amt</tt><a class="headerlink" href="#x84.bbs.ScrollingEditor.scroll_amt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns number of columns horizontal editor will scroll, calculated by
+scroll_pct.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.ScrollingEditor.scroll_pct">
+<tt class="descname">scroll_pct</tt><a class="headerlink" href="#x84.bbs.ScrollingEditor.scroll_pct" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of columns, as a percentage of its total visible width, that
+will be scrolled when a user reaches the margin and enable_scrolling
+is True. Default is 35.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ScrollingEditor.update">
+<tt class="descname">update</tt><big>(</big><em>ucs=u''</em><big>)</big><a class="headerlink" href="#x84.bbs.ScrollingEditor.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace or reset content.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.echo">
+<tt class="descclassname">x84.bbs.</tt><tt class="descname">echo</tt><big>(</big><em>ucs</em><big>)</big><a class="headerlink" href="#x84.bbs.echo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Display unicode terminal sequence.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.timeago">
+<tt class="descclassname">x84.bbs.</tt><tt class="descname">timeago</tt><big>(</big><em>secs</em>, <em>precision=0</em><big>)</big><a class="headerlink" href="#x84.bbs.timeago" title="Permalink to this definition">¶</a></dt>
+<dd><p>timago(float[,int])</p>
+<p>Pass a duration of time and return human readable shorthand, fe.</p>
+<p>asctime(126.32) -&gt; &#8216; 2m 6s&#8217;,
+asctime(70.9999, 2) -&gt; &#8216; 1m 10.99s&#8217;</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="x84.bbs.Ansi">
+<em class="property">class </em><tt class="descclassname">x84.bbs.</tt><tt class="descname">Ansi</tt><a class="headerlink" href="#x84.bbs.Ansi" title="Permalink to this definition">¶</a></dt>
+<dd><p>This unicode variation understands the effect of ansi sequences of
+printable length, as well as double-wide east asian characters on
+terminals, properly implementing .rjust, .ljust, .center, and .len.</p>
+<p>Other ANSI functions also provided as methods.</p>
+<dl class="method">
+<dt id="x84.bbs.Ansi.anspadd">
+<tt class="descname">anspadd</tt><big>(</big><big>)</big> &rarr; integer<a class="headerlink" href="#x84.bbs.Ansi.anspadd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns int(&#8216;nn&#8217;) in CSI sequence 033[nnC for use with replacing
+ansi.right(nn) with printable characters. prevents bleeding in
+scrollable windows. Otherwise 0</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Ansi.center">
+<tt class="descname">center</tt><big>(</big><em>width</em><span class="optional">[</span>, <em>fillchar</em><span class="optional">]</span><big>)</big> &rarr; unicode<a class="headerlink" href="#x84.bbs.Ansi.center" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return S centered in a Unicode string of length width. Padding is
+done using the specified fill character (default is a space)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Ansi.decode_pipe">
+<tt class="descname">decode_pipe</tt><big>(</big><big>)</big> &rarr; unicode<a class="headerlink" href="#x84.bbs.Ansi.decode_pipe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return new terminal sequence, replacing &#8216;pipe codes&#8217;, such as u&#8217;<a href="#id1"><span class="problematic" id="id2">|</span></a>03&#8217;
+with this terminals equivalent attribute sequence.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Ansi.encode_pipe">
+<tt class="descname">encode_pipe</tt><big>(</big><em>) &lt;==&gt; S.seqfill(encode_pipe=True</em><big>)</big><a class="headerlink" href="#x84.bbs.Ansi.encode_pipe" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Ansi.is_movement">
+<tt class="descname">is_movement</tt><big>(</big><big>)</big> &rarr; bool<a class="headerlink" href="#x84.bbs.Ansi.is_movement" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if string S begins with a known terminal sequence that is
+unhealthy for padding, that is, its effects on the terminal window
+position are indeterminate.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Ansi.ljust">
+<tt class="descname">ljust</tt><big>(</big><em>width</em><span class="optional">[</span>, <em>fillchar</em><span class="optional">]</span><big>)</big> &rarr; int<a class="headerlink" href="#x84.bbs.Ansi.ljust" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return S left-justified in a Unicode string of length width. Padding is
+done using the specified fill character (default is a space).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Ansi.rjust">
+<tt class="descname">rjust</tt><big>(</big><em>width</em><span class="optional">[</span>, <em>fillchar</em><span class="optional">]</span><big>)</big> &rarr; unicode<a class="headerlink" href="#x84.bbs.Ansi.rjust" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return S right-justified in a Unicode string of length width. Padding is
+done using the specified fill character (default is a space).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Ansi.seqfill">
+<tt class="descname">seqfill</tt><big>(</big><big>)</big> &rarr; unicode<a class="headerlink" href="#x84.bbs.Ansi.seqfill" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pad string S, previously filled with the terminal
+&#8220;cursor right&#8221; sequence, <tt class="docutils literal"><span class="pre">&lt;ESC&gt;[&lt;N&gt;C</span></tt>, with space character &#8216; &#8216;,
+also used as &#8216;erase&#8217;. Ansi art can also be compressed in this way,
+by replacing with padded u&#8217; &#8216;s, we can scroll such artwork
+bi-directionally or within pager windows without &#8216;bleeding&#8217; at the
+cost of extra bytes.</p>
+<p>When encode_pipe is True, color sequences are replaced with
+user-editable pipe sequences following the guidelines of MCI
+codes, <a class="reference external" href="http://wiki.mysticbbs.com/mci_codes">http://wiki.mysticbbs.com/mci_codes</a>. When False (default),
+colors are stripped entirely.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Ansi.seqlen">
+<tt class="descname">seqlen</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Ansi.seqlen" title="Permalink to this definition">¶</a></dt>
+<dd><p>S.is_sequence() -&gt; integer</p>
+<p>Returns non-zero for string S that begins with an ansi sequence, with
+value of bytes until sequence is complete. Use as a &#8216;next&#8217; pointer to
+skip past sequences.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Ansi.wrap">
+<tt class="descname">wrap</tt><big>(</big><em>width</em><big>)</big> &rarr; unicode<a class="headerlink" href="#x84.bbs.Ansi.wrap" title="Permalink to this definition">¶</a></dt>
+<dd><p>Like textwrap.wrap, but honor existing linebreaks and understand
+printable length of a unicode string that contains ANSI sequences.</p>
+<p>Always returns single unicode string,
+rows are seperated by NVT rn newlines</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="x84.bbs.AnsiWindow">
+<em class="property">class </em><tt class="descclassname">x84.bbs.</tt><tt class="descname">AnsiWindow</tt><big>(</big><em>height</em>, <em>width</em>, <em>yloc</em>, <em>xloc</em><big>)</big><a class="headerlink" href="#x84.bbs.AnsiWindow" title="Permalink to this definition">¶</a></dt>
+<dd><p>The AnsiWindow base class provides position-relative window drawing
+routines to terminal interfaces, such as pager windows, editors, and
+lightbar lists.</p>
+<dl class="method">
+<dt id="x84.bbs.AnsiWindow.align">
+<tt class="descname">align</tt><big>(</big><em>text</em>, <em>width=None</em><big>)</big><a class="headerlink" href="#x84.bbs.AnsiWindow.align" title="Permalink to this definition">¶</a></dt>
+<dd><p>justify Ansi text alignment property and width. When None (default),
+the visible width after padding is used.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.AnsiWindow.alignment">
+<tt class="descname">alignment</tt><a class="headerlink" href="#x84.bbs.AnsiWindow.alignment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Justification of text content. One of &#8216;left&#8217;, &#8216;right&#8217;, or &#8216;center&#8217;.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.AnsiWindow.border">
+<tt class="descname">border</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.AnsiWindow.border" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a unicode sequence suitable for drawing a border of this window
+using self.colors &#8216;border&#8217;, &#8216;normal&#8217; and glyphs:
+&#8216;top-left&#8217;, &#8216;top-horiz&#8217;, &#8216;top-right&#8217;, &#8216;left-vert&#8217;, &#8216;right-vert&#8217;,
+&#8216;bot-left&#8217;, &#8216;bot-horiz&#8217;, and &#8216;bot-right&#8217;.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.AnsiWindow.clear">
+<tt class="descname">clear</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.AnsiWindow.clear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a unicode sequence suitable for erasing
+the contents of this window (border remains).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.AnsiWindow.erase">
+<tt class="descname">erase</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.AnsiWindow.erase" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a unicode sequence suitable for erasing
+this window (includes border).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.AnsiWindow.erase_border">
+<tt class="descname">erase_border</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.AnsiWindow.erase_border" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a unicode sequence suitable for erasing
+the border of this window.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.AnsiWindow.footer">
+<tt class="descname">footer</tt><big>(</big><em>ansi_text</em><big>)</big><a class="headerlink" href="#x84.bbs.AnsiWindow.footer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns sequence that positions and displays unicode sequence
+&#8216;ansi_text&#8217; at the bottom edge of the window.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.AnsiWindow.init_theme">
+<tt class="descname">init_theme</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.AnsiWindow.init_theme" title="Permalink to this definition">¶</a></dt>
+<dd><p>This initializer sets glyphs and colors appropriate for a &#8220;theme&#8221;,
+override this method to create a common color and graphic set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.AnsiWindow.isinview">
+<tt class="descname">isinview</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.AnsiWindow.isinview" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if window is in view of the terminal window.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.AnsiWindow.iswithin">
+<tt class="descname">iswithin</tt><big>(</big><em>win</em><big>)</big><a class="headerlink" href="#x84.bbs.AnsiWindow.iswithin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if our window is within the bounds of window</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.AnsiWindow.moved">
+<tt class="descname">moved</tt><a class="headerlink" href="#x84.bbs.AnsiWindow.moved" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if movement has occured, can be reset to
+False by caller.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.AnsiWindow.pos">
+<tt class="descname">pos</tt><big>(</big><em>yloc=None</em>, <em>xloc=None</em><big>)</big><a class="headerlink" href="#x84.bbs.AnsiWindow.pos" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns terminal sequence to move cursor to window-relative position.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.AnsiWindow.resize">
+<tt class="descname">resize</tt><big>(</big><em>height=None</em>, <em>width=None</em>, <em>yloc=None</em>, <em>xloc=None</em><big>)</big><a class="headerlink" href="#x84.bbs.AnsiWindow.resize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adjust window dimensions.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.AnsiWindow.title">
+<tt class="descname">title</tt><big>(</big><em>ansi_text</em><big>)</big><a class="headerlink" href="#x84.bbs.AnsiWindow.title" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns sequence that positions and displays unicode sequence
+&#8216;ansi_text&#8217; at the title location of the window.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.AnsiWindow.visible_height">
+<tt class="descname">visible_height</tt><a class="headerlink" href="#x84.bbs.AnsiWindow.visible_height" title="Permalink to this definition">¶</a></dt>
+<dd><p>The visible height of the editor window after vertical padding.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.AnsiWindow.visible_width">
+<tt class="descname">visible_width</tt><a class="headerlink" href="#x84.bbs.AnsiWindow.visible_width" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visible width of lightbar after accounting for horizontal padding.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.AnsiWindow.willfit">
+<tt class="descname">willfit</tt><big>(</big><em>win</em><big>)</big><a class="headerlink" href="#x84.bbs.AnsiWindow.willfit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if target window is within our bounds</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.AnsiWindow.xpadding">
+<tt class="descname">xpadding</tt><a class="headerlink" href="#x84.bbs.AnsiWindow.xpadding" title="Permalink to this definition">¶</a></dt>
+<dd><p>Horizontal padding of window border</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.AnsiWindow.ypadding">
+<tt class="descname">ypadding</tt><a class="headerlink" href="#x84.bbs.AnsiWindow.ypadding" title="Permalink to this definition">¶</a></dt>
+<dd><p>Veritcal padding of window border</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="x84.bbs.Selector">
+<em class="property">class </em><tt class="descclassname">x84.bbs.</tt><tt class="descname">Selector</tt><big>(</big><em>yloc</em>, <em>xloc</em>, <em>width</em>, <em>left</em>, <em>right</em><big>)</big><a class="headerlink" href="#x84.bbs.Selector" title="Permalink to this definition">¶</a></dt>
+<dd><p>A two-state horizontal lightbar interface.</p>
+<dl class="method">
+<dt id="x84.bbs.Selector.init_keystrokes">
+<tt class="descname">init_keystrokes</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Selector.init_keystrokes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Merge curses-detected application keys into a VI_KEYSET-formatted
+keyset, for keys &#8216;refresh&#8217;, &#8216;left&#8217;, &#8216;right&#8217;, &#8216;enter&#8217;, and &#8216;exit&#8217;.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Selector.init_theme">
+<tt class="descname">init_theme</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Selector.init_theme" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize colors[&#8216;selected&#8217;] and colors[&#8216;unselected&#8217;].</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Selector.left">
+<tt class="descname">left</tt><a class="headerlink" href="#x84.bbs.Selector.left" title="Permalink to this definition">¶</a></dt>
+<dd><p>Left-side value</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Selector.move_left">
+<tt class="descname">move_left</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Selector.move_left" title="Permalink to this definition">¶</a></dt>
+<dd><p>Force state to left, returning unicode string suitable for refresh.
+If state is unchanged, an empty string is returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Selector.move_right">
+<tt class="descname">move_right</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Selector.move_right" title="Permalink to this definition">¶</a></dt>
+<dd><p>Force state to right, returning unicode string suitable for refresh.
+If state is unchanged, an empty string is returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Selector.process_keystroke">
+<tt class="descname">process_keystroke</tt><big>(</big><em>keystroke</em><big>)</big><a class="headerlink" href="#x84.bbs.Selector.process_keystroke" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process a keystroke, toggling self.selection and returning string
+suitable for refresh when changed.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Selector.quit">
+<tt class="descname">quit</tt><a class="headerlink" href="#x84.bbs.Selector.quit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns: True if a terminating or quit character was handled by
+process_keystroke(), such as the escape key, or &#8216;q&#8217; by default.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Selector.read">
+<tt class="descname">read</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Selector.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads input until the ENTER or ESCAPE key is pressed (Blocking).
+Allows backspacing. Returns unicode text, or None when cancelled.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Selector.refresh">
+<tt class="descname">refresh</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Selector.refresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return terminal sequence suitable for re-drawing left/right menubar.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Selector.right">
+<tt class="descname">right</tt><a class="headerlink" href="#x84.bbs.Selector.right" title="Permalink to this definition">¶</a></dt>
+<dd><p>Right-side value</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Selector.selected">
+<tt class="descname">selected</tt><a class="headerlink" href="#x84.bbs.Selector.selected" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True when keyset[&#8216;enter&#8217;] key detected in process_keystroke</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Selector.selection">
+<tt class="descname">selection</tt><a class="headerlink" href="#x84.bbs.Selector.selection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Current selection.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Selector.toggle">
+<tt class="descname">toggle</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Selector.toggle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Toggle selection and return unicode string suitable for refresh.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="x84.bbs.Lightbar">
+<em class="property">class </em><tt class="descclassname">x84.bbs.</tt><tt class="descname">Lightbar</tt><big>(</big><em>height</em>, <em>width</em>, <em>yloc</em>, <em>xloc</em><big>)</big><a class="headerlink" href="#x84.bbs.Lightbar" title="Permalink to this definition">¶</a></dt>
+<dd><p>This Windowing class offers a classic &#8216;lightbar&#8217; interface.</p>
+<p>Instantiate with yloc, xloc, height, and width, then call the update method
+with a list of unicode strings. send keycodes to process_keystroke () to
+interactive with the &#8216;lightbar&#8217;.</p>
+<dl class="attribute">
+<dt id="x84.bbs.Lightbar.at_bottom">
+<tt class="descname">at_bottom</tt><a class="headerlink" href="#x84.bbs.Lightbar.at_bottom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if current selection is last in list</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Lightbar.at_top">
+<tt class="descname">at_top</tt><a class="headerlink" href="#x84.bbs.Lightbar.at_top" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if current selection is first in list</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Lightbar.fixate">
+<tt class="descname">fixate</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Lightbar.fixate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reterm unicode terminal sequence for moving cursor to current
+selection.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Lightbar.goto">
+<tt class="descname">goto</tt><big>(</big><em>index</em><big>)</big><a class="headerlink" href="#x84.bbs.Lightbar.goto" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move selection to index of lightbar content.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Lightbar.index">
+<tt class="descname">index</tt><a class="headerlink" href="#x84.bbs.Lightbar.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Selected index of self.content</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Lightbar.init_keystrokes">
+<tt class="descname">init_keystrokes</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Lightbar.init_keystrokes" title="Permalink to this definition">¶</a></dt>
+<dd><p>This initializer sets glyphs and colors appropriate for a &#8220;theme&#8221;,
+override or inherit this method to create a common color and graphic
+set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Lightbar.init_theme">
+<tt class="descname">init_theme</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Lightbar.init_theme" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize color[&#8216;highlight&#8217;].</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Lightbar.last_index">
+<tt class="descname">last_index</tt><a class="headerlink" href="#x84.bbs.Lightbar.last_index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Previously selected index of self.content</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Lightbar.move_down">
+<tt class="descname">move_down</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Lightbar.move_down" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move selection down one row.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Lightbar.move_end">
+<tt class="descname">move_end</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Lightbar.move_end" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move selection to the very last and final entry of the list.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Lightbar.move_home">
+<tt class="descname">move_home</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Lightbar.move_home" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move selection to the very top and first entry of the list.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Lightbar.move_pagedown">
+<tt class="descname">move_pagedown</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Lightbar.move_pagedown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move selection down one page.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Lightbar.move_pageup">
+<tt class="descname">move_pageup</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Lightbar.move_pageup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move selection up one page.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Lightbar.move_up">
+<tt class="descname">move_up</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Lightbar.move_up" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move selection up one row.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Lightbar.position">
+<tt class="descname">position</tt><a class="headerlink" href="#x84.bbs.Lightbar.position" title="Permalink to this definition">¶</a></dt>
+<dd><p>Tuple pair (row, page). &#8216;row&#8217; is index from top of window,
+and &#8216;page&#8217; is number of page items scrolled.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Lightbar.process_keystroke">
+<tt class="descname">process_keystroke</tt><big>(</big><em>key</em><big>)</big><a class="headerlink" href="#x84.bbs.Lightbar.process_keystroke" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process the keystroke received by run method and take action.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Lightbar.quit">
+<tt class="descname">quit</tt><a class="headerlink" href="#x84.bbs.Lightbar.quit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns: True if a terminating or quit character was handled by
+process_keystroke(), such as the escape key, or &#8216;q&#8217; by default.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Lightbar.read">
+<tt class="descname">read</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Lightbar.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads input until the ENTER or ESCAPE key is pressed (Blocking).
+Allows backspacing. Returns unicode text, or None when cancelled.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Lightbar.refresh">
+<tt class="descname">refresh</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Lightbar.refresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Refresh full lightbar window contents</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Lightbar.refresh_quick">
+<tt class="descname">refresh_quick</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Lightbar.refresh_quick" title="Permalink to this definition">¶</a></dt>
+<dd><p>Redraw only the &#8216;dirty&#8217; portions after a &#8216;move&#8217; has occured;
+otherwise redraw entire contents (page has shifted).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Lightbar.refresh_row">
+<tt class="descname">refresh_row</tt><big>(</big><em>row</em><big>)</big><a class="headerlink" href="#x84.bbs.Lightbar.refresh_row" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return unicode byte sequence suitable for moving to location ypos of
+window-relative row, and displaying any valid entry there, or using
+glyphs[&#8216;erase&#8217;] if out of bounds. Strings are ansi color safe, and
+will be trimmed using glyphs[&#8216;strip&#8217;] if their displayed width is
+wider than window.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Lightbar.selected">
+<tt class="descname">selected</tt><a class="headerlink" href="#x84.bbs.Lightbar.selected" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True when keyset[&#8216;enter&#8217;] key detected in process_keystroke</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Lightbar.selection">
+<tt class="descname">selection</tt><a class="headerlink" href="#x84.bbs.Lightbar.selection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Selected content of self.content by index</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Lightbar.update">
+<tt class="descname">update</tt><big>(</big><em>keyed_uchars=None</em><big>)</big><a class="headerlink" href="#x84.bbs.Lightbar.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace content of lightbar with iterable of aribitrary (key, unicode).
+unicode is displayed to the user, and key can be used for any
+programming purposes, such as sorting or identifying.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Lightbar.visible_bottom">
+<tt class="descname">visible_bottom</tt><a class="headerlink" href="#x84.bbs.Lightbar.visible_bottom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visible bottom-most item of lightbar.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Lightbar.visible_content">
+<tt class="descname">visible_content</tt><a class="headerlink" href="#x84.bbs.Lightbar.visible_content" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns content that is visible in window</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Lightbar.vitem_idx">
+<tt class="descname">vitem_idx</tt><a class="headerlink" href="#x84.bbs.Lightbar.vitem_idx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Index of selected item relative by index to only the length of the list
+that is visible, without accounting for scrolled content.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Lightbar.vitem_shift">
+<tt class="descname">vitem_shift</tt><a class="headerlink" href="#x84.bbs.Lightbar.vitem_shift" title="Permalink to this definition">¶</a></dt>
+<dd><p>Index of top-most item in viewable window, non-zero when scrolled.
+This value effectively represents the number of items not in view
+due to paging.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.from_cp437">
+<tt class="descclassname">x84.bbs.</tt><tt class="descname">from_cp437</tt><big>(</big><em>text</em><big>)</big><a class="headerlink" href="#x84.bbs.from_cp437" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a bytestring in IBM codepage 437, return a translated
+unicode string suitable for decoding to UTF-8.</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="x84.bbs.DBProxy">
+<em class="property">class </em><tt class="descclassname">x84.bbs.</tt><tt class="descname">DBProxy</tt><big>(</big><em>schema</em>, <em>table='unnamed'</em><big>)</big><a class="headerlink" href="#x84.bbs.DBProxy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provide dictionary-like object interface to a database. a database call,
+such as __len__() or keys() is issued as a command to the main engine,
+which spawns a thread to acquire a lock on the database and return the
+results via IPC pipe transfer.</p>
+<dl class="method">
+<dt id="x84.bbs.DBProxy.acquire">
+<tt class="descname">acquire</tt><big>(</big><em>blocking=False</em><big>)</big><a class="headerlink" href="#x84.bbs.DBProxy.acquire" title="Permalink to this definition">¶</a></dt>
+<dd><p>Acquire a fine-grained BBS-global lock, blocking or non-blocking.</p>
+<p>When invoked with the blocking argument set to True (the default),
+block until the lock is acquired, and return True.</p>
+<p>When invoked with the blocking argument set to False, do not block.
+Returns False if lock is not acquired.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.DBProxy.get">
+<tt class="descname">get</tt><big>(</big><em>k</em><span class="optional">[</span>, <em>d</em><span class="optional">]</span><big>)</big> &rarr; D[k] if k in D, else d.  d defaults to None.<a class="headerlink" href="#x84.bbs.DBProxy.get" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.DBProxy.has_key">
+<tt class="descname">has_key</tt><big>(</big><em>k</em><big>)</big> &rarr; True if D has a key k, else False<a class="headerlink" href="#x84.bbs.DBProxy.has_key" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.DBProxy.items">
+<tt class="descname">items</tt><big>(</big><big>)</big> &rarr; list of D's (key, value) pairs, as 2-tuples<a class="headerlink" href="#x84.bbs.DBProxy.items" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.DBProxy.iteritems">
+<tt class="descname">iteritems</tt><big>(</big><big>)</big> &rarr; an iterator over the (key, value) items of D<a class="headerlink" href="#x84.bbs.DBProxy.iteritems" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.DBProxy.iterkeys">
+<tt class="descname">iterkeys</tt><big>(</big><big>)</big> &rarr; an iterator over the keys of D<a class="headerlink" href="#x84.bbs.DBProxy.iterkeys" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.DBProxy.itervalues">
+<tt class="descname">itervalues</tt><big>(</big><big>)</big> &rarr; an iterator over the values of D<a class="headerlink" href="#x84.bbs.DBProxy.itervalues" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.DBProxy.keys">
+<tt class="descname">keys</tt><big>(</big><big>)</big> &rarr; list of D's keys<a class="headerlink" href="#x84.bbs.DBProxy.keys" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.DBProxy.pop">
+<tt class="descname">pop</tt><big>(</big><em>k</em><span class="optional">[</span>, <em>d</em><span class="optional">]</span><big>)</big> &rarr; v, remove specified key and return the corresponding value.<a class="headerlink" href="#x84.bbs.DBProxy.pop" title="Permalink to this definition">¶</a></dt>
+<dd><p>If key is not found, d is returned if given, otherwise KeyError is raised</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.DBProxy.popitem">
+<tt class="descname">popitem</tt><big>(</big><big>)</big> &rarr; (k, v), remove and return some (key, value) pair as a<a class="headerlink" href="#x84.bbs.DBProxy.popitem" title="Permalink to this definition">¶</a></dt>
+<dd><p>2-tuple; but raise KeyError if D is empty.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.DBProxy.proxy_iter">
+<tt class="descname">proxy_iter</tt><big>(</big><em>method</em>, <em>*args</em><big>)</big><a class="headerlink" href="#x84.bbs.DBProxy.proxy_iter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterable proxy for dictionary methods called over IPC pipe.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.DBProxy.proxy_method">
+<tt class="descname">proxy_method</tt><big>(</big><em>method</em>, <em>*args</em><big>)</big><a class="headerlink" href="#x84.bbs.DBProxy.proxy_method" title="Permalink to this definition">¶</a></dt>
+<dd><p>Proxy for dictionary methods called over IPC pipe.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.DBProxy.release">
+<tt class="descname">release</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.DBProxy.release" title="Permalink to this definition">¶</a></dt>
+<dd><p>Release bbs-global lock on database.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.DBProxy.setdefault">
+<tt class="descname">setdefault</tt><big>(</big><em>k</em><span class="optional">[</span>, <em>d</em><span class="optional">]</span><big>)</big> &rarr; D.get(k,d), also set D[k]=d if k not in D<a class="headerlink" href="#x84.bbs.DBProxy.setdefault" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.DBProxy.update">
+<tt class="descname">update</tt><big>(</big><span class="optional">[</span><em>E</em><span class="optional">]</span>, <em>**F</em><big>)</big> &rarr; None.  Update D from dict/iterable E and F.<a class="headerlink" href="#x84.bbs.DBProxy.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>If E present and has a .keys() method, does:     for k in E: D[k] = E[k]
+If E present and lacks .keys() method, does:     for (k, v) in E: D[k] = v
+In either case, this is followed by: for k in F: D[k] = F[k]</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.DBProxy.values">
+<tt class="descname">values</tt><big>(</big><big>)</big> &rarr; list of D's values<a class="headerlink" href="#x84.bbs.DBProxy.values" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="x84.bbs.Pager">
+<em class="property">class </em><tt class="descclassname">x84.bbs.</tt><tt class="descname">Pager</tt><big>(</big><em>height</em>, <em>width</em>, <em>yloc</em>, <em>xloc</em><big>)</big><a class="headerlink" href="#x84.bbs.Pager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scrolling ansi viewert d</p>
+<dl class="method">
+<dt id="x84.bbs.Pager.append">
+<tt class="descname">append</tt><big>(</big><em>ucs</em><big>)</big><a class="headerlink" href="#x84.bbs.Pager.append" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update content buffer with additional lines of ansi unicodes.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Pager.bottom">
+<tt class="descname">bottom</tt><a class="headerlink" href="#x84.bbs.Pager.bottom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns bottom-most position that contains content</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Pager.init_keystrokes">
+<tt class="descname">init_keystrokes</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Pager.init_keystrokes" title="Permalink to this definition">¶</a></dt>
+<dd><p>This initializer sets keys appropriate for navigation.
+override or inherit this method to create a common keyset.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Pager.move_down">
+<tt class="descname">move_down</tt><big>(</big><em>num=1</em><big>)</big><a class="headerlink" href="#x84.bbs.Pager.move_down" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scroll down <tt class="docutils literal"><span class="pre">num</span></tt> rows.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Pager.move_end">
+<tt class="descname">move_end</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Pager.move_end" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scroll to bottom.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Pager.move_home">
+<tt class="descname">move_home</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Pager.move_home" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scroll to top.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Pager.move_pgdown">
+<tt class="descname">move_pgdown</tt><big>(</big><em>num=1</em><big>)</big><a class="headerlink" href="#x84.bbs.Pager.move_pgdown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scroll down <tt class="docutils literal"><span class="pre">num</span></tt> pages.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Pager.move_pgup">
+<tt class="descname">move_pgup</tt><big>(</big><em>num=1</em><big>)</big><a class="headerlink" href="#x84.bbs.Pager.move_pgup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scroll up <tt class="docutils literal"><span class="pre">num</span></tt> pages.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Pager.move_up">
+<tt class="descname">move_up</tt><big>(</big><em>num=1</em><big>)</big><a class="headerlink" href="#x84.bbs.Pager.move_up" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scroll up <tt class="docutils literal"><span class="pre">num</span></tt> rows.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Pager.position">
+<tt class="descname">position</tt><a class="headerlink" href="#x84.bbs.Pager.position" title="Permalink to this definition">¶</a></dt>
+<dd><p>Index of content buffer displayed at top of window.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Pager.position_last">
+<tt class="descname">position_last</tt><a class="headerlink" href="#x84.bbs.Pager.position_last" title="Permalink to this definition">¶</a></dt>
+<dd><p>Previous position before last move</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Pager.process_keystroke">
+<tt class="descname">process_keystroke</tt><big>(</big><em>keystroke</em><big>)</big><a class="headerlink" href="#x84.bbs.Pager.process_keystroke" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process the keystroke received by run method and return terminal
+sequence suitable for refreshing when that keystroke modifies the
+window.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Pager.quit">
+<tt class="descname">quit</tt><a class="headerlink" href="#x84.bbs.Pager.quit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns: True if a terminating or quit character was handled by
+process_keystroke(), such as the escape key, or &#8216;q&#8217; by default.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Pager.read">
+<tt class="descname">read</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Pager.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads input until ESCAPE key is pressed (Blocking).  Returns None.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Pager.refresh">
+<tt class="descname">refresh</tt><big>(</big><em>start_row=0</em><big>)</big><a class="headerlink" href="#x84.bbs.Pager.refresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return unicode string suitable for refreshing pager window from
+optional visible content row &#8216;start_row&#8217; and downward. This can be
+useful if only the last line is modified; or in an &#8216;insert&#8217; operation,
+only the last line need be refreshed.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Pager.refresh_row">
+<tt class="descname">refresh_row</tt><big>(</big><em>row</em><big>)</big><a class="headerlink" href="#x84.bbs.Pager.refresh_row" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return unicode string suitable for refreshing pager window at
+visible row.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.Pager.update">
+<tt class="descname">update</tt><big>(</big><em>ucs</em><big>)</big><a class="headerlink" href="#x84.bbs.Pager.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update content buffer with &#8216;
+&#8216;-delimited lines of Ansi.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Pager.visible_bottom">
+<tt class="descname">visible_bottom</tt><a class="headerlink" href="#x84.bbs.Pager.visible_bottom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns bottom-most window row that contains content</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.Pager.visible_content">
+<tt class="descname">visible_content</tt><a class="headerlink" href="#x84.bbs.Pager.visible_content" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns content that is visible in window</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="x84.bbs.Door">
+<em class="property">class </em><tt class="descclassname">x84.bbs.</tt><tt class="descname">Door</tt><big>(</big><em>cmd='/bin/uname'</em>, <em>args=()</em>, <em>env_lang='en_US.UTF-8'</em>, <em>env_term=None</em>, <em>env_path=None</em>, <em>env_home=None</em><big>)</big><a class="headerlink" href="#x84.bbs.Door" title="Permalink to this definition">¶</a></dt>
+<dd><p>Spawns a subprocess and pipes input and output over bbs session.</p>
+<dl class="method">
+<dt id="x84.bbs.Door.run">
+<tt class="descname">run</tt><big>(</big><big>)</big><a class="headerlink" href="#x84.bbs.Door.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Begin door execution. pty.fork() is called, child process
+calls execvpe() while the parent process pipes telnet session
+IPC data to and from the slave pty until child process exits.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.goto">
+<tt class="descclassname">x84.bbs.</tt><tt class="descname">goto</tt><big>(</big><em>*args</em><big>)</big><a class="reference internal" href="_modules/x84/bbs.html#goto"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.goto" title="Permalink to this definition">¶</a></dt>
+<dd><p>Change bbs script. Does not return.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.disconnect">
+<tt class="descclassname">x84.bbs.</tt><tt class="descname">disconnect</tt><big>(</big><em>reason=u''</em><big>)</big><a class="reference internal" href="_modules/x84/bbs.html#disconnect"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.disconnect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Disconnect session. Does not return.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.getsession">
+<tt class="descclassname">x84.bbs.</tt><tt class="descname">getsession</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs.html#getsession"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.getsession" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns Session of calling process.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.getterminal">
+<tt class="descclassname">x84.bbs.</tt><tt class="descname">getterminal</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs.html#getterminal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.getterminal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns Terminal of calling process.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.getch">
+<tt class="descclassname">x84.bbs.</tt><tt class="descname">getch</tt><big>(</big><em>timeout=None</em><big>)</big><a class="reference internal" href="_modules/x84/bbs.html#getch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.getch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieve a keystroke from &#8216;input&#8217; queue, blocking forever or, when
+specified, None when timeout has elapsed.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.gosub">
+<tt class="descclassname">x84.bbs.</tt><tt class="descname">gosub</tt><big>(</big><em>*arg</em><big>)</big><a class="reference internal" href="_modules/x84/bbs.html#gosub"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.gosub" title="Permalink to this definition">¶</a></dt>
+<dd><p>Call bbs script with optional arguments, Returns value.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.ropen">
+<tt class="descclassname">x84.bbs.</tt><tt class="descname">ropen</tt><big>(</big><em>filename</em>, <em>mode='rb'</em><big>)</big><a class="reference internal" href="_modules/x84/bbs.html#ropen"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ropen" title="Permalink to this definition">¶</a></dt>
+<dd><p>Open random file using wildcard (glob)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.showcp437">
+<tt class="descclassname">x84.bbs.</tt><tt class="descname">showcp437</tt><big>(</big><em>filepattern</em><big>)</big><a class="reference internal" href="_modules/x84/bbs.html#showcp437"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.showcp437" title="Permalink to this definition">¶</a></dt>
+<dd><p>yield unicode sequences for any given ANSI Art (of cp437 encoding). Effort
+is made to strip SAUCE data, translate cp437 to unicode, and trim artwork
+too large to display. If keyboard input is pressed, &#8216;msg_cancel&#8217; is
+returned as the last line of art</p>
+</dd></dl>
+
+<span class="target" id="module-x84.bbs.userbase"></span><p>Userbase record access for x/84, <a class="reference external" href="https://github.com/jquast/x84/">https://github.com/jquast/x84/</a></p>
+<dl class="class">
+<dt id="x84.bbs.userbase.Group">
+<em class="property">class </em><tt class="descclassname">x84.bbs.userbase.</tt><tt class="descname">Group</tt><big>(</big><em>name</em>, <em>members=()</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/userbase.html#Group"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.Group" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple group record object with properties name&#8217;, and &#8216;members&#8217;.
+Use methods &#8216;add&#8217; and &#8216;remove&#8217; to add and remove users by handle,
+and &#8216;save&#8217; to persist to disk (and other bbs sessions).</p>
+<dl class="method">
+<dt id="x84.bbs.userbase.Group.add">
+<tt class="descname">add</tt><big>(</big><em>handle</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/userbase.html#Group.add"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.Group.add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add user to group.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.userbase.Group.delete">
+<tt class="descname">delete</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/userbase.html#Group.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.Group.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete group record from database, and from .groups of any users.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.userbase.Group.members">
+<tt class="descname">members</tt><a class="reference internal" href="_modules/x84/bbs/userbase.html#Group.members"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.Group.members" title="Permalink to this definition">¶</a></dt>
+<dd><p>Members of this group as user handles.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.userbase.Group.name">
+<tt class="descname">name</tt><a class="reference internal" href="_modules/x84/bbs/userbase.html#Group.name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.Group.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Name of this group.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.userbase.Group.remove">
+<tt class="descname">remove</tt><big>(</big><em>handle</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/userbase.html#Group.remove"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.Group.remove" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove user from group.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.userbase.Group.save">
+<tt class="descname">save</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/userbase.html#Group.save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.Group.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save group record to database.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="x84.bbs.userbase.User">
+<em class="property">class </em><tt class="descclassname">x84.bbs.userbase.</tt><tt class="descname">User</tt><big>(</big><em>handle=u'anonymous'</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/userbase.html#User"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.User" title="Permalink to this definition">¶</a></dt>
+<dd><p>A simple user record object with setter and getter properties, &#8216;handle&#8217;,
+&#8216;location&#8217;, &#8216;email&#8217;, &#8216;password&#8217;, &#8216;groups&#8217;, &#8216;calls&#8217;, &#8216;lastcall&#8217;, and &#8216;plan&#8217;.</p>
+<dl class="method">
+<dt id="x84.bbs.userbase.User.auth">
+<tt class="descname">auth</tt><big>(</big><em>try_pass</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/userbase.html#User.auth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.User.auth" title="Permalink to this definition">¶</a></dt>
+<dd><p>U.auth(unicode) &#8211;&gt; boolean</p>
+<p>To authenticate, assert auth(try_pass) == True.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.userbase.User.calls">
+<tt class="descname">calls</tt><a class="reference internal" href="_modules/x84/bbs/userbase.html#User.calls"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.User.calls" title="Permalink to this definition">¶</a></dt>
+<dd><p>Legacy, number of times user has &#8216;called&#8217; this board.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.userbase.User.delete">
+<tt class="descname">delete</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/userbase.html#User.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.User.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove user record from database, and as a member of any groups.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.userbase.User.email">
+<tt class="descname">email</tt><a class="reference internal" href="_modules/x84/bbs/userbase.html#User.email"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.User.email" title="Permalink to this definition">¶</a></dt>
+<dd><p>E-mail address. May be used for password resets.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.userbase.User.get">
+<tt class="descname">get</tt><big>(</big><em>k</em><span class="optional">[</span>, <em>d</em><span class="optional">]</span><big>)</big> &rarr; D[k] if k in D, else d.  d defaults to None.<a class="reference internal" href="_modules/x84/bbs/userbase.html#User.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.User.get" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.userbase.User.group_add">
+<tt class="descname">group_add</tt><big>(</big><em>group</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/userbase.html#User.group_add"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.User.group_add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add user to group.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.userbase.User.group_del">
+<tt class="descname">group_del</tt><big>(</big><em>group</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/userbase.html#User.group_del"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.User.group_del" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove user from group.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.userbase.User.groups">
+<tt class="descname">groups</tt><a class="reference internal" href="_modules/x84/bbs/userbase.html#User.groups"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.User.groups" title="Permalink to this definition">¶</a></dt>
+<dd><p>U.groups() &#8211;&gt; set</p>
+<p>Set of Group records user is a member of.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.userbase.User.handle">
+<tt class="descname">handle</tt><a class="reference internal" href="_modules/x84/bbs/userbase.html#User.handle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.User.handle" title="Permalink to this definition">¶</a></dt>
+<dd><p>U.handle() &#8211;&gt; unicode</p>
+<p>User handle, also the database key.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.userbase.User.is_sysop">
+<tt class="descname">is_sysop</tt><a class="reference internal" href="_modules/x84/bbs/userbase.html#User.is_sysop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.User.is_sysop" title="Permalink to this definition">¶</a></dt>
+<dd><p>U.is_sysop &#8211;&gt; boolean</p>
+<p>Returns True if user is in u&#8217;sysop&#8217; group.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.userbase.User.lastcall">
+<tt class="descname">lastcall</tt><a class="reference internal" href="_modules/x84/bbs/userbase.html#User.lastcall"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.User.lastcall" title="Permalink to this definition">¶</a></dt>
+<dd><p>U.lastcall() &#8211;&gt; float</p>
+<p>Time last called, time.time() epoch-formatted.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.userbase.User.location">
+<tt class="descname">location</tt><a class="reference internal" href="_modules/x84/bbs/userbase.html#User.location"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.User.location" title="Permalink to this definition">¶</a></dt>
+<dd><p>Legacy, used as a geographical location, group names, etc.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.userbase.User.password">
+<tt class="descname">password</tt><a class="reference internal" href="_modules/x84/bbs/userbase.html#User.password"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.User.password" title="Permalink to this definition">¶</a></dt>
+<dd><p>U.password() &#8211;&gt; tuple</p>
+<p>Returns encrypted form of password as tuple (salt, hash).
+If a password has not yet been set, it is (None, None).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.userbase.User.plan">
+<tt class="descname">plan</tt><a class="reference internal" href="_modules/x84/bbs/userbase.html#User.plan"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.User.plan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unix .plan contents, the original blogosphere.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.userbase.User.save">
+<tt class="descname">save</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/userbase.html#User.save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.User.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>(re-)Save user record to databases. Changes to user record to not
+automaticly persist. a call to the .save method must be done.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.userbase.digestpw_bcrypt">
+<tt class="descclassname">x84.bbs.userbase.</tt><tt class="descname">digestpw_bcrypt</tt><big>(</big><em>password</em>, <em>salt=None</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/userbase.html#digestpw_bcrypt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.digestpw_bcrypt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Password digest using bcrypt (optional)</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.userbase.digestpw_init">
+<tt class="descclassname">x84.bbs.userbase.</tt><tt class="descname">digestpw_init</tt><big>(</big><em>password_digest</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/userbase.html#digestpw_init"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.digestpw_init" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set which password digest routine to use</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.userbase.digestpw_internal">
+<tt class="descclassname">x84.bbs.userbase.</tt><tt class="descname">digestpw_internal</tt><big>(</big><em>password</em>, <em>salt=None</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/userbase.html#digestpw_internal"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.digestpw_internal" title="Permalink to this definition">¶</a></dt>
+<dd><p>Password digest using regular python libs</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.userbase.digestpw_plaintext">
+<tt class="descclassname">x84.bbs.userbase.</tt><tt class="descname">digestpw_plaintext</tt><big>(</big><em>password</em>, <em>salt=None</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/userbase.html#digestpw_plaintext"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.digestpw_plaintext" title="Permalink to this definition">¶</a></dt>
+<dd><p>No password digest, just store the passwords in plain text</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.userbase.find_user">
+<tt class="descclassname">x84.bbs.userbase.</tt><tt class="descname">find_user</tt><big>(</big><em>handle</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/userbase.html#find_user"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.find_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given handle, discover and return matching database key case insensitively.
+The returned value may not be equal to the argument, or None if not found.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.userbase.get_user">
+<tt class="descclassname">x84.bbs.userbase.</tt><tt class="descname">get_user</tt><big>(</big><em>handle</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/userbase.html#get_user"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.get_user" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns User record, keyed by handle.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.userbase.list_users">
+<tt class="descclassname">x84.bbs.userbase.</tt><tt class="descname">list_users</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/userbase.html#list_users"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.userbase.list_users" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns all user handles.</p>
+</dd></dl>
+
+<span class="target" id="module-x84.bbs.msgbase"></span><p>msgbase package for x/84, <a class="reference external" href="https://github.com/jquast/x84">https://github.com/jquast/x84</a></p>
+<dl class="class">
+<dt id="x84.bbs.msgbase.Msg">
+<em class="property">class </em><tt class="descclassname">x84.bbs.msgbase.</tt><tt class="descname">Msg</tt><big>(</big><em>recipient=None</em>, <em>subject=u''</em>, <em>body=u''</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/msgbase.html#Msg"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.msgbase.Msg" title="Permalink to this definition">¶</a></dt>
+<dd><p>the Msg object is record spec for messages held in the msgbase.
+It contains many default properties to describe a conversation:</p>
+<p>&#8216;creationtime&#8217;, the time the message was initialized</p>
+<p>&#8216;author&#8217;, &#8216;recipient&#8217;, &#8216;subject&#8217;, and &#8216;body&#8217; are envelope parameters.</p>
+<p>&#8216;read&#8217; becomes a list of handles that have viewed a public message, or a
+single time the message was read by the addressed for private messages.</p>
+<p>&#8216;tags&#8217; is for use with message groupings, containing a list of strings that
+other messages may share in relation.</p>
+<p>&#8216;parent&#8217; points to the message this message directly refers to, and
+&#8216;threads&#8217; points to messages that refer to this message. &#8216;parent&#8217; must be
+explicitly set, but children are automaticly populated into &#8216;threads&#8217; of
+messages replied to through the send() method.</p>
+<dl class="attribute">
+<dt id="x84.bbs.msgbase.Msg.ctime">
+<tt class="descname">ctime</tt><a class="reference internal" href="_modules/x84/bbs/msgbase.html#Msg.ctime"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.msgbase.Msg.ctime" title="Permalink to this definition">¶</a></dt>
+<dd><p>M.ctime() &#8211;&gt; datetime</p>
+<p>Datetime message was instantiated</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.msgbase.Msg.save">
+<tt class="descname">save</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/msgbase.html#Msg.save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.msgbase.Msg.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save message in &#8216;Msgs&#8217; sqlite db, and record index in &#8216;tags&#8217; db.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.msgbase.Msg.stime">
+<tt class="descname">stime</tt><a class="reference internal" href="_modules/x84/bbs/msgbase.html#Msg.stime"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.msgbase.Msg.stime" title="Permalink to this definition">¶</a></dt>
+<dd><p>M.stime() &#8211;&gt; datetime</p>
+<p>Datetime message was saved to database</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.msgbase.get_msg">
+<tt class="descclassname">x84.bbs.msgbase.</tt><tt class="descname">get_msg</tt><big>(</big><em>idx=0</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/msgbase.html#get_msg"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.msgbase.get_msg" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return Msg record instance by index <tt class="docutils literal"><span class="pre">idx</span></tt>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.msgbase.list_msgs">
+<tt class="descclassname">x84.bbs.msgbase.</tt><tt class="descname">list_msgs</tt><big>(</big><em>tags=None</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/msgbase.html#list_msgs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.msgbase.list_msgs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return set of Msg keys matching 1 or more <tt class="docutils literal"><span class="pre">tags</span></tt>, or all.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.msgbase.list_tags">
+<tt class="descclassname">x84.bbs.msgbase.</tt><tt class="descname">list_tags</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/msgbase.html#list_tags"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.msgbase.list_tags" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return set of available tags.</p>
+</dd></dl>
+
+<span class="target" id="module-x84.bbs.editor"></span><p>editor package for x/84, <a class="reference external" href="https://github.com/jquast/x84">https://github.com/jquast/x84</a></p>
+<dl class="class">
+<dt id="x84.bbs.editor.LineEditor">
+<em class="property">class </em><tt class="descclassname">x84.bbs.editor.</tt><tt class="descname">LineEditor</tt><big>(</big><em>width=None</em>, <em>content=u''</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/editor.html#LineEditor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.LineEditor" title="Permalink to this definition">¶</a></dt>
+<dd><p>This unicode line editor is unaware of its (x, y) position and is great
+for prompting a quick phrase on any terminal, such as a login: prompt.</p>
+<dl class="attribute">
+<dt id="x84.bbs.editor.LineEditor.carriage_returned">
+<tt class="descname">carriage_returned</tt><a class="reference internal" href="_modules/x84/bbs/editor.html#LineEditor.carriage_returned"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.LineEditor.carriage_returned" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True when last keystroke caused carriage to be returned.
+(KEY_ENTER was pressed)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.editor.LineEditor.hidden">
+<tt class="descname">hidden</tt><a class="reference internal" href="_modules/x84/bbs/editor.html#LineEditor.hidden"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.LineEditor.hidden" title="Permalink to this definition">¶</a></dt>
+<dd><p>When not False, represents a single &#8216;mask&#8217; character to hide input
+with, such as a password prompt</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.editor.LineEditor.init_keystrokes">
+<tt class="descname">init_keystrokes</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/editor.html#LineEditor.init_keystrokes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.LineEditor.init_keystrokes" title="Permalink to this definition">¶</a></dt>
+<dd><p>This initializer sets keyboard keys for backspace/exit.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.editor.LineEditor.init_theme">
+<tt class="descname">init_theme</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/editor.html#LineEditor.init_theme"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.LineEditor.init_theme" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize colors[&#8216;highlight&#8217;].</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.editor.LineEditor.process_keystroke">
+<tt class="descname">process_keystroke</tt><big>(</big><em>keystroke</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/editor.html#LineEditor.process_keystroke"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.LineEditor.process_keystroke" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process the keystroke received by read method and take action.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.editor.LineEditor.quit">
+<tt class="descname">quit</tt><a class="reference internal" href="_modules/x84/bbs/editor.html#LineEditor.quit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.LineEditor.quit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns: True if a terminating or quit character was handled by
+process_keystroke(), such as the escape key, or &#8216;q&#8217; by default.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.editor.LineEditor.read">
+<tt class="descname">read</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/editor.html#LineEditor.read"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.LineEditor.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads input until the ENTER or ESCAPE key is pressed (Blocking).
+Allows backspacing. Returns unicode text, or None when cancelled.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.editor.LineEditor.refresh">
+<tt class="descname">refresh</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/editor.html#LineEditor.refresh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.LineEditor.refresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns unicode byts suitable for drawing line.
+No movement or positional sequences are returned.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.editor.LineEditor.width">
+<tt class="descname">width</tt><a class="reference internal" href="_modules/x84/bbs/editor.html#LineEditor.width"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.LineEditor.width" title="Permalink to this definition">¶</a></dt>
+<dd><p>When non-zero, represents the upperbound limit of characters to receive
+on input until no more characters are accepted.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="x84.bbs.editor.ScrollingEditor">
+<em class="property">class </em><tt class="descclassname">x84.bbs.editor.</tt><tt class="descname">ScrollingEditor</tt><big>(</big><em>width</em>, <em>yloc</em>, <em>xloc</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor" title="Permalink to this definition">¶</a></dt>
+<dd><p>A single line Editor fully aware of its (y, x).
+Infinite horizontal scrolling is enabled with the enable_scrolling
+property. When True, scrolling amount is limited using max_length.</p>
+<dl class="method">
+<dt id="x84.bbs.editor.ScrollingEditor.add">
+<tt class="descname">add</tt><big>(</big><em>u_chr</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.add"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.add" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns output sequence necessary to add a character to
+content buffer.  An empty content buffer is returned if
+no data could be inserted. Sequences for re-displaying
+the full input line are returned when the character
+addition caused the window to scroll horizontally.
+Otherwise, the input is simply returned to be displayed
+(&#8216;local echo&#8217;).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.editor.ScrollingEditor.backspace">
+<tt class="descname">backspace</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.backspace"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.backspace" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove character from end of content buffer,
+scroll as necessary.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.editor.ScrollingEditor.backword">
+<tt class="descname">backword</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.backword"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.backword" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete word behind cursor, using &#8216; &#8216; as boundary.
+in readline this is unix-word-rubout (C-w).</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.editor.ScrollingEditor.bell">
+<tt class="descname">bell</tt><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.bell"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.bell" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True when user nears margin and bell has been sounded and
+carriage has not yet been returned.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.editor.ScrollingEditor.carriage_returned">
+<tt class="descname">carriage_returned</tt><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.carriage_returned"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.carriage_returned" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True when last keystroke caused carriage to be returned.
+(KEY_ENTER was pressed)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.editor.ScrollingEditor.enable_scrolling">
+<tt class="descname">enable_scrolling</tt><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.enable_scrolling"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.enable_scrolling" title="Permalink to this definition">¶</a></dt>
+<dd><p>Enable horizontal scrolling of line editor.
+Otherwise, input is limited to visible width.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.editor.ScrollingEditor.eol">
+<tt class="descname">eol</tt><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.eol"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.eol" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return True when no more input can be accepted (end of line).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.editor.ScrollingEditor.fixate">
+<tt class="descname">fixate</tt><big>(</big><em>x_adjust=0</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.fixate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.fixate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return terminal sequence suitable for placing cursor at current
+position in window. Set x_adjust to -1 to position cursor &#8216;on&#8217;
+the last character, or 0 for &#8216;after&#8217; (default).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.editor.ScrollingEditor.init_keystrokes">
+<tt class="descname">init_keystrokes</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.init_keystrokes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.init_keystrokes" title="Permalink to this definition">¶</a></dt>
+<dd><p>This initializer sets glyphs and colors appropriate for a &#8220;theme&#8221;,
+override or inherit this method to create a common color and graphic
+set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.editor.ScrollingEditor.init_theme">
+<tt class="descname">init_theme</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.init_theme"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.init_theme" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize colors[&#8216;highlight&#8217;] as REVERSE and glyphs[&#8216;strip&#8217;] as &#8216;$ &#8216;.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.editor.ScrollingEditor.is_scrolled">
+<tt class="descname">is_scrolled</tt><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.is_scrolled"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.is_scrolled" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if the horizontal editor is in a scrolled state.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.editor.ScrollingEditor.margin_amt">
+<tt class="descname">margin_amt</tt><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.margin_amt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.margin_amt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns number of columns from right-edge that the horizontal editor
+signals bell=True, indicating that the end is near and the carriage
+should be soon returned. This also indicates the distance from margin
+a user may type into until ScrollingEditor horizontally shifts.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.editor.ScrollingEditor.margin_pct">
+<tt class="descname">margin_pct</tt><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.margin_pct"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.margin_pct" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of columns away from input length limit, as a percentage of its
+total visible width, that will alarm the bell. This simulates the bell
+of a typewriter as a signaling mechanism. Default is 20.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.editor.ScrollingEditor.max_length">
+<tt class="descname">max_length</tt><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.max_length"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.max_length" title="Permalink to this definition">¶</a></dt>
+<dd><p>Maximum line length. This also limits infinite scrolling when
+enable_scrolling is True. When unset, the maximum length is the
+visible width of the window.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.editor.ScrollingEditor.position">
+<tt class="descname">position</tt><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.position"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.position" title="Permalink to this definition">¶</a></dt>
+<dd><p>Tuple of shift amount and column position of line editor.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.editor.ScrollingEditor.process_keystroke">
+<tt class="descname">process_keystroke</tt><big>(</big><em>keystroke</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.process_keystroke"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.process_keystroke" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process the keystroke received by read method and take action.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.editor.ScrollingEditor.quit">
+<tt class="descname">quit</tt><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.quit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.quit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns: True if a terminating or quit character was handled by
+process_keystroke(), such as the escape key, or &#8216;q&#8217; by default.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.editor.ScrollingEditor.read">
+<tt class="descname">read</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.read"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads input until the ENTER or ESCAPE key is pressed (Blocking).
+Allows backspacing. Returns unicode text, or None when cancelled.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.editor.ScrollingEditor.refresh">
+<tt class="descname">refresh</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.refresh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.refresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return unicode sequence suitable for refreshing the entire
+line and placing the cursor.</p>
+<p>A strange by-product; if scrolling was not previously enabled,
+it is if wrapping must occur; this can happen if a
+non-scrolling editor was provided a very large .content
+buffer, then later .refresh()&#8217;d. &#8211; essentially enabling
+infinate scrolling</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.editor.ScrollingEditor.scroll_amt">
+<tt class="descname">scroll_amt</tt><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.scroll_amt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.scroll_amt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns number of columns horizontal editor will scroll, calculated by
+scroll_pct.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.editor.ScrollingEditor.scroll_pct">
+<tt class="descname">scroll_pct</tt><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.scroll_pct"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.scroll_pct" title="Permalink to this definition">¶</a></dt>
+<dd><p>Number of columns, as a percentage of its total visible width, that
+will be scrolled when a user reaches the margin and enable_scrolling
+is True. Default is 35.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.editor.ScrollingEditor.update">
+<tt class="descname">update</tt><big>(</big><em>ucs=u''</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/editor.html#ScrollingEditor.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.editor.ScrollingEditor.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace or reset content.</p>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-x84.bbs.ansiwin"></span><p>Ansi Windowing package for x/84, <a class="reference external" href="http://github.com/jquast/x84">http://github.com/jquast/x84</a></p>
+<dl class="class">
+<dt id="x84.bbs.ansiwin.AnsiWindow">
+<em class="property">class </em><tt class="descclassname">x84.bbs.ansiwin.</tt><tt class="descname">AnsiWindow</tt><big>(</big><em>height</em>, <em>width</em>, <em>yloc</em>, <em>xloc</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow" title="Permalink to this definition">¶</a></dt>
+<dd><p>The AnsiWindow base class provides position-relative window drawing
+routines to terminal interfaces, such as pager windows, editors, and
+lightbar lists.</p>
+<dl class="method">
+<dt id="x84.bbs.ansiwin.AnsiWindow.align">
+<tt class="descname">align</tt><big>(</big><em>text</em>, <em>width=None</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.align"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.align" title="Permalink to this definition">¶</a></dt>
+<dd><p>justify Ansi text alignment property and width. When None (default),
+the visible width after padding is used.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.ansiwin.AnsiWindow.alignment">
+<tt class="descname">alignment</tt><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.alignment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.alignment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Justification of text content. One of &#8216;left&#8217;, &#8216;right&#8217;, or &#8216;center&#8217;.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ansiwin.AnsiWindow.border">
+<tt class="descname">border</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.border"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.border" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a unicode sequence suitable for drawing a border of this window
+using self.colors &#8216;border&#8217;, &#8216;normal&#8217; and glyphs:
+&#8216;top-left&#8217;, &#8216;top-horiz&#8217;, &#8216;top-right&#8217;, &#8216;left-vert&#8217;, &#8216;right-vert&#8217;,
+&#8216;bot-left&#8217;, &#8216;bot-horiz&#8217;, and &#8216;bot-right&#8217;.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ansiwin.AnsiWindow.clear">
+<tt class="descname">clear</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.clear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.clear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a unicode sequence suitable for erasing
+the contents of this window (border remains).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ansiwin.AnsiWindow.erase">
+<tt class="descname">erase</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.erase"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.erase" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a unicode sequence suitable for erasing
+this window (includes border).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ansiwin.AnsiWindow.erase_border">
+<tt class="descname">erase_border</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.erase_border"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.erase_border" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a unicode sequence suitable for erasing
+the border of this window.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ansiwin.AnsiWindow.footer">
+<tt class="descname">footer</tt><big>(</big><em>ansi_text</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.footer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.footer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns sequence that positions and displays unicode sequence
+&#8216;ansi_text&#8217; at the bottom edge of the window.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ansiwin.AnsiWindow.init_theme">
+<tt class="descname">init_theme</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.init_theme"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.init_theme" title="Permalink to this definition">¶</a></dt>
+<dd><p>This initializer sets glyphs and colors appropriate for a &#8220;theme&#8221;,
+override this method to create a common color and graphic set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ansiwin.AnsiWindow.isinview">
+<tt class="descname">isinview</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.isinview"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.isinview" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if window is in view of the terminal window.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ansiwin.AnsiWindow.iswithin">
+<tt class="descname">iswithin</tt><big>(</big><em>win</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.iswithin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.iswithin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if our window is within the bounds of window</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.ansiwin.AnsiWindow.moved">
+<tt class="descname">moved</tt><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.moved"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.moved" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if movement has occured, can be reset to
+False by caller.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ansiwin.AnsiWindow.pos">
+<tt class="descname">pos</tt><big>(</big><em>yloc=None</em>, <em>xloc=None</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.pos"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.pos" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns terminal sequence to move cursor to window-relative position.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ansiwin.AnsiWindow.resize">
+<tt class="descname">resize</tt><big>(</big><em>height=None</em>, <em>width=None</em>, <em>yloc=None</em>, <em>xloc=None</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.resize"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.resize" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adjust window dimensions.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ansiwin.AnsiWindow.title">
+<tt class="descname">title</tt><big>(</big><em>ansi_text</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.title"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.title" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns sequence that positions and displays unicode sequence
+&#8216;ansi_text&#8217; at the title location of the window.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.ansiwin.AnsiWindow.visible_height">
+<tt class="descname">visible_height</tt><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.visible_height"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.visible_height" title="Permalink to this definition">¶</a></dt>
+<dd><p>The visible height of the editor window after vertical padding.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.ansiwin.AnsiWindow.visible_width">
+<tt class="descname">visible_width</tt><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.visible_width"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.visible_width" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visible width of lightbar after accounting for horizontal padding.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.ansiwin.AnsiWindow.willfit">
+<tt class="descname">willfit</tt><big>(</big><em>win</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.willfit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.willfit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if target window is within our bounds</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.ansiwin.AnsiWindow.xpadding">
+<tt class="descname">xpadding</tt><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.xpadding"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.xpadding" title="Permalink to this definition">¶</a></dt>
+<dd><p>Horizontal padding of window border</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.ansiwin.AnsiWindow.ypadding">
+<tt class="descname">ypadding</tt><a class="reference internal" href="_modules/x84/bbs/ansiwin.html#AnsiWindow.ypadding"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.ansiwin.AnsiWindow.ypadding" title="Permalink to this definition">¶</a></dt>
+<dd><p>Veritcal padding of window border</p>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-x84.bbs.selector"></span><p>Left/Right lightbar choice selector for x/84, <a class="reference external" href="https://github.com/jquast/x84">https://github.com/jquast/x84</a></p>
+<dl class="class">
+<dt id="x84.bbs.selector.Selector">
+<em class="property">class </em><tt class="descclassname">x84.bbs.selector.</tt><tt class="descname">Selector</tt><big>(</big><em>yloc</em>, <em>xloc</em>, <em>width</em>, <em>left</em>, <em>right</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/selector.html#Selector"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.selector.Selector" title="Permalink to this definition">¶</a></dt>
+<dd><p>A two-state horizontal lightbar interface.</p>
+<dl class="method">
+<dt id="x84.bbs.selector.Selector.init_keystrokes">
+<tt class="descname">init_keystrokes</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/selector.html#Selector.init_keystrokes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.selector.Selector.init_keystrokes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Merge curses-detected application keys into a VI_KEYSET-formatted
+keyset, for keys &#8216;refresh&#8217;, &#8216;left&#8217;, &#8216;right&#8217;, &#8216;enter&#8217;, and &#8216;exit&#8217;.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.selector.Selector.init_theme">
+<tt class="descname">init_theme</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/selector.html#Selector.init_theme"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.selector.Selector.init_theme" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize colors[&#8216;selected&#8217;] and colors[&#8216;unselected&#8217;].</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.selector.Selector.left">
+<tt class="descname">left</tt><a class="reference internal" href="_modules/x84/bbs/selector.html#Selector.left"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.selector.Selector.left" title="Permalink to this definition">¶</a></dt>
+<dd><p>Left-side value</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.selector.Selector.move_left">
+<tt class="descname">move_left</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/selector.html#Selector.move_left"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.selector.Selector.move_left" title="Permalink to this definition">¶</a></dt>
+<dd><p>Force state to left, returning unicode string suitable for refresh.
+If state is unchanged, an empty string is returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.selector.Selector.move_right">
+<tt class="descname">move_right</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/selector.html#Selector.move_right"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.selector.Selector.move_right" title="Permalink to this definition">¶</a></dt>
+<dd><p>Force state to right, returning unicode string suitable for refresh.
+If state is unchanged, an empty string is returned.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.selector.Selector.process_keystroke">
+<tt class="descname">process_keystroke</tt><big>(</big><em>keystroke</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/selector.html#Selector.process_keystroke"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.selector.Selector.process_keystroke" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process a keystroke, toggling self.selection and returning string
+suitable for refresh when changed.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.selector.Selector.quit">
+<tt class="descname">quit</tt><a class="reference internal" href="_modules/x84/bbs/selector.html#Selector.quit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.selector.Selector.quit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns: True if a terminating or quit character was handled by
+process_keystroke(), such as the escape key, or &#8216;q&#8217; by default.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.selector.Selector.read">
+<tt class="descname">read</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/selector.html#Selector.read"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.selector.Selector.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads input until the ENTER or ESCAPE key is pressed (Blocking).
+Allows backspacing. Returns unicode text, or None when cancelled.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.selector.Selector.refresh">
+<tt class="descname">refresh</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/selector.html#Selector.refresh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.selector.Selector.refresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return terminal sequence suitable for re-drawing left/right menubar.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.selector.Selector.right">
+<tt class="descname">right</tt><a class="reference internal" href="_modules/x84/bbs/selector.html#Selector.right"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.selector.Selector.right" title="Permalink to this definition">¶</a></dt>
+<dd><p>Right-side value</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.selector.Selector.selected">
+<tt class="descname">selected</tt><a class="reference internal" href="_modules/x84/bbs/selector.html#Selector.selected"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.selector.Selector.selected" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True when keyset[&#8216;enter&#8217;] key detected in process_keystroke</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.selector.Selector.selection">
+<tt class="descname">selection</tt><a class="reference internal" href="_modules/x84/bbs/selector.html#Selector.selection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.selector.Selector.selection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Current selection.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.selector.Selector.toggle">
+<tt class="descname">toggle</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/selector.html#Selector.toggle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.selector.Selector.toggle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Toggle selection and return unicode string suitable for refresh.</p>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-x84.bbs.lightbar"></span><p>lightbar package for x/84 BBS, <a class="reference external" href="http://github.com/jquast/x84">http://github.com/jquast/x84</a></p>
+<dl class="class">
+<dt id="x84.bbs.lightbar.Lightbar">
+<em class="property">class </em><tt class="descclassname">x84.bbs.lightbar.</tt><tt class="descname">Lightbar</tt><big>(</big><em>height</em>, <em>width</em>, <em>yloc</em>, <em>xloc</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar" title="Permalink to this definition">¶</a></dt>
+<dd><p>This Windowing class offers a classic &#8216;lightbar&#8217; interface.</p>
+<p>Instantiate with yloc, xloc, height, and width, then call the update method
+with a list of unicode strings. send keycodes to process_keystroke () to
+interactive with the &#8216;lightbar&#8217;.</p>
+<dl class="attribute">
+<dt id="x84.bbs.lightbar.Lightbar.at_bottom">
+<tt class="descname">at_bottom</tt><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.at_bottom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.at_bottom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if current selection is last in list</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.lightbar.Lightbar.at_top">
+<tt class="descname">at_top</tt><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.at_top"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.at_top" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True if current selection is first in list</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.lightbar.Lightbar.fixate">
+<tt class="descname">fixate</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.fixate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.fixate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reterm unicode terminal sequence for moving cursor to current
+selection.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.lightbar.Lightbar.goto">
+<tt class="descname">goto</tt><big>(</big><em>index</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.goto"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.goto" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move selection to index of lightbar content.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.lightbar.Lightbar.index">
+<tt class="descname">index</tt><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Selected index of self.content</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.lightbar.Lightbar.init_keystrokes">
+<tt class="descname">init_keystrokes</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.init_keystrokes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.init_keystrokes" title="Permalink to this definition">¶</a></dt>
+<dd><p>This initializer sets glyphs and colors appropriate for a &#8220;theme&#8221;,
+override or inherit this method to create a common color and graphic
+set.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.lightbar.Lightbar.init_theme">
+<tt class="descname">init_theme</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.init_theme"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.init_theme" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize color[&#8216;highlight&#8217;].</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.lightbar.Lightbar.last_index">
+<tt class="descname">last_index</tt><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.last_index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.last_index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Previously selected index of self.content</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.lightbar.Lightbar.move_down">
+<tt class="descname">move_down</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.move_down"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.move_down" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move selection down one row.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.lightbar.Lightbar.move_end">
+<tt class="descname">move_end</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.move_end"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.move_end" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move selection to the very last and final entry of the list.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.lightbar.Lightbar.move_home">
+<tt class="descname">move_home</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.move_home"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.move_home" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move selection to the very top and first entry of the list.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.lightbar.Lightbar.move_pagedown">
+<tt class="descname">move_pagedown</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.move_pagedown"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.move_pagedown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move selection down one page.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.lightbar.Lightbar.move_pageup">
+<tt class="descname">move_pageup</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.move_pageup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.move_pageup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move selection up one page.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.lightbar.Lightbar.move_up">
+<tt class="descname">move_up</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.move_up"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.move_up" title="Permalink to this definition">¶</a></dt>
+<dd><p>Move selection up one row.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.lightbar.Lightbar.position">
+<tt class="descname">position</tt><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.position"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.position" title="Permalink to this definition">¶</a></dt>
+<dd><p>Tuple pair (row, page). &#8216;row&#8217; is index from top of window,
+and &#8216;page&#8217; is number of page items scrolled.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.lightbar.Lightbar.process_keystroke">
+<tt class="descname">process_keystroke</tt><big>(</big><em>key</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.process_keystroke"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.process_keystroke" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process the keystroke received by run method and take action.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.lightbar.Lightbar.quit">
+<tt class="descname">quit</tt><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.quit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.quit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns: True if a terminating or quit character was handled by
+process_keystroke(), such as the escape key, or &#8216;q&#8217; by default.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.lightbar.Lightbar.read">
+<tt class="descname">read</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.read"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads input until the ENTER or ESCAPE key is pressed (Blocking).
+Allows backspacing. Returns unicode text, or None when cancelled.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.lightbar.Lightbar.refresh">
+<tt class="descname">refresh</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.refresh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.refresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Refresh full lightbar window contents</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.lightbar.Lightbar.refresh_quick">
+<tt class="descname">refresh_quick</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.refresh_quick"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.refresh_quick" title="Permalink to this definition">¶</a></dt>
+<dd><p>Redraw only the &#8216;dirty&#8217; portions after a &#8216;move&#8217; has occured;
+otherwise redraw entire contents (page has shifted).</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.lightbar.Lightbar.refresh_row">
+<tt class="descname">refresh_row</tt><big>(</big><em>row</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.refresh_row"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.refresh_row" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return unicode byte sequence suitable for moving to location ypos of
+window-relative row, and displaying any valid entry there, or using
+glyphs[&#8216;erase&#8217;] if out of bounds. Strings are ansi color safe, and
+will be trimmed using glyphs[&#8216;strip&#8217;] if their displayed width is
+wider than window.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.lightbar.Lightbar.selected">
+<tt class="descname">selected</tt><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.selected"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.selected" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns True when keyset[&#8216;enter&#8217;] key detected in process_keystroke</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.lightbar.Lightbar.selection">
+<tt class="descname">selection</tt><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.selection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.selection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Selected content of self.content by index</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.lightbar.Lightbar.update">
+<tt class="descname">update</tt><big>(</big><em>keyed_uchars=None</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Replace content of lightbar with iterable of aribitrary (key, unicode).
+unicode is displayed to the user, and key can be used for any
+programming purposes, such as sorting or identifying.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.lightbar.Lightbar.visible_bottom">
+<tt class="descname">visible_bottom</tt><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.visible_bottom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.visible_bottom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Visible bottom-most item of lightbar.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.lightbar.Lightbar.visible_content">
+<tt class="descname">visible_content</tt><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.visible_content"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.visible_content" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns content that is visible in window</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.lightbar.Lightbar.vitem_idx">
+<tt class="descname">vitem_idx</tt><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.vitem_idx"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.vitem_idx" title="Permalink to this definition">¶</a></dt>
+<dd><p>Index of selected item relative by index to only the length of the list
+that is visible, without accounting for scrolled content.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.lightbar.Lightbar.vitem_shift">
+<tt class="descname">vitem_shift</tt><a class="reference internal" href="_modules/x84/bbs/lightbar.html#Lightbar.vitem_shift"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.lightbar.Lightbar.vitem_shift" title="Permalink to this definition">¶</a></dt>
+<dd><p>Index of top-most item in viewable window, non-zero when scrolled.
+This value effectively represents the number of items not in view
+due to paging.</p>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-x84.bbs.cp437"></span><p>IBM Codepage 437 to Unicode mapping helper. A utf-8 terminal can be used to
+call this script directly with an ANSI art graphic filename as argument, and a
+UTF-8 encoded version of that art will be printed to standard out.</p>
+<dl class="function">
+<dt id="x84.bbs.cp437.from_cp437">
+<tt class="descclassname">x84.bbs.cp437.</tt><tt class="descname">from_cp437</tt><big>(</big><em>text</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/cp437.html#from_cp437"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.cp437.from_cp437" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a bytestring in IBM codepage 437, return a translated
+unicode string suitable for decoding to UTF-8.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="x84.bbs.cp437.run">
+<tt class="descclassname">x84.bbs.cp437.</tt><tt class="descname">run</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/cp437.html#run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.cp437.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>encode filepath of command-line argument 1 and display to stdout</p>
+</dd></dl>
+
+<span class="target" id="module-x84.bbs.dbproxy"></span><p>Database proxy helper for X/84.</p>
+<dl class="class">
+<dt id="x84.bbs.dbproxy.DBProxy">
+<em class="property">class </em><tt class="descclassname">x84.bbs.dbproxy.</tt><tt class="descname">DBProxy</tt><big>(</big><em>schema</em>, <em>table='unnamed'</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/dbproxy.html#DBProxy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.dbproxy.DBProxy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Provide dictionary-like object interface to a database. a database call,
+such as __len__() or keys() is issued as a command to the main engine,
+which spawns a thread to acquire a lock on the database and return the
+results via IPC pipe transfer.</p>
+<dl class="method">
+<dt id="x84.bbs.dbproxy.DBProxy.acquire">
+<tt class="descname">acquire</tt><big>(</big><em>blocking=False</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/dbproxy.html#DBProxy.acquire"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.dbproxy.DBProxy.acquire" title="Permalink to this definition">¶</a></dt>
+<dd><p>Acquire a fine-grained BBS-global lock, blocking or non-blocking.</p>
+<p>When invoked with the blocking argument set to True (the default),
+block until the lock is acquired, and return True.</p>
+<p>When invoked with the blocking argument set to False, do not block.
+Returns False if lock is not acquired.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.dbproxy.DBProxy.get">
+<tt class="descname">get</tt><big>(</big><em>k</em><span class="optional">[</span>, <em>d</em><span class="optional">]</span><big>)</big> &rarr; D[k] if k in D, else d.  d defaults to None.<a class="reference internal" href="_modules/x84/bbs/dbproxy.html#DBProxy.get"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.dbproxy.DBProxy.get" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.dbproxy.DBProxy.has_key">
+<tt class="descname">has_key</tt><big>(</big><em>k</em><big>)</big> &rarr; True if D has a key k, else False<a class="reference internal" href="_modules/x84/bbs/dbproxy.html#DBProxy.has_key"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.dbproxy.DBProxy.has_key" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.dbproxy.DBProxy.items">
+<tt class="descname">items</tt><big>(</big><big>)</big> &rarr; list of D's (key, value) pairs, as 2-tuples<a class="reference internal" href="_modules/x84/bbs/dbproxy.html#DBProxy.items"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.dbproxy.DBProxy.items" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.dbproxy.DBProxy.iteritems">
+<tt class="descname">iteritems</tt><big>(</big><big>)</big> &rarr; an iterator over the (key, value) items of D<a class="reference internal" href="_modules/x84/bbs/dbproxy.html#DBProxy.iteritems"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.dbproxy.DBProxy.iteritems" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.dbproxy.DBProxy.iterkeys">
+<tt class="descname">iterkeys</tt><big>(</big><big>)</big> &rarr; an iterator over the keys of D<a class="reference internal" href="_modules/x84/bbs/dbproxy.html#DBProxy.iterkeys"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.dbproxy.DBProxy.iterkeys" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.dbproxy.DBProxy.itervalues">
+<tt class="descname">itervalues</tt><big>(</big><big>)</big> &rarr; an iterator over the values of D<a class="reference internal" href="_modules/x84/bbs/dbproxy.html#DBProxy.itervalues"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.dbproxy.DBProxy.itervalues" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.dbproxy.DBProxy.keys">
+<tt class="descname">keys</tt><big>(</big><big>)</big> &rarr; list of D's keys<a class="reference internal" href="_modules/x84/bbs/dbproxy.html#DBProxy.keys"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.dbproxy.DBProxy.keys" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.dbproxy.DBProxy.pop">
+<tt class="descname">pop</tt><big>(</big><em>k</em><span class="optional">[</span>, <em>d</em><span class="optional">]</span><big>)</big> &rarr; v, remove specified key and return the corresponding value.<a class="reference internal" href="_modules/x84/bbs/dbproxy.html#DBProxy.pop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.dbproxy.DBProxy.pop" title="Permalink to this definition">¶</a></dt>
+<dd><p>If key is not found, d is returned if given, otherwise KeyError is raised</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.dbproxy.DBProxy.popitem">
+<tt class="descname">popitem</tt><big>(</big><big>)</big> &rarr; (k, v), remove and return some (key, value) pair as a<a class="reference internal" href="_modules/x84/bbs/dbproxy.html#DBProxy.popitem"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.dbproxy.DBProxy.popitem" title="Permalink to this definition">¶</a></dt>
+<dd><p>2-tuple; but raise KeyError if D is empty.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.dbproxy.DBProxy.proxy_iter">
+<tt class="descname">proxy_iter</tt><big>(</big><em>method</em>, <em>*args</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/dbproxy.html#DBProxy.proxy_iter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.dbproxy.DBProxy.proxy_iter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Iterable proxy for dictionary methods called over IPC pipe.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.dbproxy.DBProxy.proxy_method">
+<tt class="descname">proxy_method</tt><big>(</big><em>method</em>, <em>*args</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/dbproxy.html#DBProxy.proxy_method"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.dbproxy.DBProxy.proxy_method" title="Permalink to this definition">¶</a></dt>
+<dd><p>Proxy for dictionary methods called over IPC pipe.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.dbproxy.DBProxy.release">
+<tt class="descname">release</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/dbproxy.html#DBProxy.release"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.dbproxy.DBProxy.release" title="Permalink to this definition">¶</a></dt>
+<dd><p>Release bbs-global lock on database.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.dbproxy.DBProxy.setdefault">
+<tt class="descname">setdefault</tt><big>(</big><em>k</em><span class="optional">[</span>, <em>d</em><span class="optional">]</span><big>)</big> &rarr; D.get(k,d), also set D[k]=d if k not in D<a class="reference internal" href="_modules/x84/bbs/dbproxy.html#DBProxy.setdefault"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.dbproxy.DBProxy.setdefault" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.dbproxy.DBProxy.update">
+<tt class="descname">update</tt><big>(</big><span class="optional">[</span><em>E</em><span class="optional">]</span>, <em>**F</em><big>)</big> &rarr; None.  Update D from dict/iterable E and F.<a class="reference internal" href="_modules/x84/bbs/dbproxy.html#DBProxy.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.dbproxy.DBProxy.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>If E present and has a .keys() method, does:     for k in E: D[k] = E[k]
+If E present and lacks .keys() method, does:     for (k, v) in E: D[k] = v
+In either case, this is followed by: for k in F: D[k] = F[k]</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.dbproxy.DBProxy.values">
+<tt class="descname">values</tt><big>(</big><big>)</big> &rarr; list of D's values<a class="reference internal" href="_modules/x84/bbs/dbproxy.html#DBProxy.values"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.dbproxy.DBProxy.values" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-x84.bbs.pager"></span><p>Pager class for x/84, <a class="reference external" href="http://github.com/jquast/x84/">http://github.com/jquast/x84/</a></p>
+<dl class="class">
+<dt id="x84.bbs.pager.Pager">
+<em class="property">class </em><tt class="descclassname">x84.bbs.pager.</tt><tt class="descname">Pager</tt><big>(</big><em>height</em>, <em>width</em>, <em>yloc</em>, <em>xloc</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scrolling ansi viewert d</p>
+<dl class="method">
+<dt id="x84.bbs.pager.Pager.append">
+<tt class="descname">append</tt><big>(</big><em>ucs</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.append"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.append" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update content buffer with additional lines of ansi unicodes.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.pager.Pager.bottom">
+<tt class="descname">bottom</tt><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.bottom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.bottom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns bottom-most position that contains content</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.pager.Pager.init_keystrokes">
+<tt class="descname">init_keystrokes</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.init_keystrokes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.init_keystrokes" title="Permalink to this definition">¶</a></dt>
+<dd><p>This initializer sets keys appropriate for navigation.
+override or inherit this method to create a common keyset.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.pager.Pager.move_down">
+<tt class="descname">move_down</tt><big>(</big><em>num=1</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.move_down"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.move_down" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scroll down <tt class="docutils literal"><span class="pre">num</span></tt> rows.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.pager.Pager.move_end">
+<tt class="descname">move_end</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.move_end"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.move_end" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scroll to bottom.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.pager.Pager.move_home">
+<tt class="descname">move_home</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.move_home"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.move_home" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scroll to top.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.pager.Pager.move_pgdown">
+<tt class="descname">move_pgdown</tt><big>(</big><em>num=1</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.move_pgdown"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.move_pgdown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scroll down <tt class="docutils literal"><span class="pre">num</span></tt> pages.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.pager.Pager.move_pgup">
+<tt class="descname">move_pgup</tt><big>(</big><em>num=1</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.move_pgup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.move_pgup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scroll up <tt class="docutils literal"><span class="pre">num</span></tt> pages.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.pager.Pager.move_up">
+<tt class="descname">move_up</tt><big>(</big><em>num=1</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.move_up"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.move_up" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scroll up <tt class="docutils literal"><span class="pre">num</span></tt> rows.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.pager.Pager.position">
+<tt class="descname">position</tt><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.position"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.position" title="Permalink to this definition">¶</a></dt>
+<dd><p>Index of content buffer displayed at top of window.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.pager.Pager.position_last">
+<tt class="descname">position_last</tt><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.position_last"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.position_last" title="Permalink to this definition">¶</a></dt>
+<dd><p>Previous position before last move</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.pager.Pager.process_keystroke">
+<tt class="descname">process_keystroke</tt><big>(</big><em>keystroke</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.process_keystroke"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.process_keystroke" title="Permalink to this definition">¶</a></dt>
+<dd><p>Process the keystroke received by run method and return terminal
+sequence suitable for refreshing when that keystroke modifies the
+window.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.pager.Pager.quit">
+<tt class="descname">quit</tt><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.quit"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.quit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns: True if a terminating or quit character was handled by
+process_keystroke(), such as the escape key, or &#8216;q&#8217; by default.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.pager.Pager.read">
+<tt class="descname">read</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.read"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.read" title="Permalink to this definition">¶</a></dt>
+<dd><p>Reads input until ESCAPE key is pressed (Blocking).  Returns None.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.pager.Pager.refresh">
+<tt class="descname">refresh</tt><big>(</big><em>start_row=0</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.refresh"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.refresh" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return unicode string suitable for refreshing pager window from
+optional visible content row &#8216;start_row&#8217; and downward. This can be
+useful if only the last line is modified; or in an &#8216;insert&#8217; operation,
+only the last line need be refreshed.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.pager.Pager.refresh_row">
+<tt class="descname">refresh_row</tt><big>(</big><em>row</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.refresh_row"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.refresh_row" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return unicode string suitable for refreshing pager window at
+visible row.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="x84.bbs.pager.Pager.update">
+<tt class="descname">update</tt><big>(</big><em>ucs</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.update" title="Permalink to this definition">¶</a></dt>
+<dd><p>Update content buffer with &#8216;
+&#8216;-delimited lines of Ansi.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.pager.Pager.visible_bottom">
+<tt class="descname">visible_bottom</tt><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.visible_bottom"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.visible_bottom" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns bottom-most window row that contains content</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="x84.bbs.pager.Pager.visible_content">
+<tt class="descname">visible_content</tt><a class="reference internal" href="_modules/x84/bbs/pager.html#Pager.visible_content"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.pager.Pager.visible_content" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns content that is visible in window</p>
+</dd></dl>
+
+</dd></dl>
+
+<span class="target" id="module-x84.bbs.door"></span><p>ansiwin package for x/84 BBS <a class="reference external" href="http://github.com/jquast/x84">http://github.com/jquast/x84</a></p>
+<dl class="class">
+<dt id="x84.bbs.door.Door">
+<em class="property">class </em><tt class="descclassname">x84.bbs.door.</tt><tt class="descname">Door</tt><big>(</big><em>cmd='/bin/uname'</em>, <em>args=()</em>, <em>env_lang='en_US.UTF-8'</em>, <em>env_term=None</em>, <em>env_path=None</em>, <em>env_home=None</em><big>)</big><a class="reference internal" href="_modules/x84/bbs/door.html#Door"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.door.Door" title="Permalink to this definition">¶</a></dt>
+<dd><p>Spawns a subprocess and pipes input and output over bbs session.</p>
+<dl class="method">
+<dt id="x84.bbs.door.Door.run">
+<tt class="descname">run</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/x84/bbs/door.html#Door.run"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#x84.bbs.door.Door.run" title="Permalink to this definition">¶</a></dt>
+<dd><p>Begin door execution. pty.fork() is called, child process
+calls execvpe() while the parent process pipes telnet session
+IPC data to and from the slave pty until child process exits.</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="others.html"
+                        title="previous chapter">Other Telnet BBS Systems</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="default_api.html"
+                        title="next chapter">Default Board Documentation</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/bbs_api.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="default_api.html" title="Default Board Documentation"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="others.html" title="Other Telnet BBS Systems"
+             >previous</a> |</li>
+        <li><a href="index.html">x/84 1.0.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Jeff Quast.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

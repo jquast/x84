@@ -1,0 +1,16 @@
+Developer Environment
+`````````````````````
+
+For developing from git, simply clone and execute the ./x84/bin/dev-setup python script with the target interpreter, specifying a ``virtual env`` folder. Source the ``*virtual env*/bin/activate`` file so that subsequent *pip* commands affect only that specific environment. Target environment for x/84 is currently python 2.7.
+
+1. Clone the github repository::
+
+     git clone 'https://github.com/jquast/x84.git'``
+
+2. Use ``dev-setup.py`` to create a target virtualenv (virtualenv provided)::
+
+     python2.7 ./x84/bin/dev-setup.py ./x84-ENV26
+
+3. Launch x/84 using virtualenv::
+
+     ./x84/bin/x84-dev

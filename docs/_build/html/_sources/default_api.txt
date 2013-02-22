@@ -1,0 +1,5 @@
+Default Board Documentation
+===========================
+
+.. automodule:: x84.default
+   :members:

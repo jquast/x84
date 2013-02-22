@@ -1,0 +1,168 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Customizing your board &mdash; x/84 1.0.4 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '1.0.4',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="x/84 1.0.4 documentation" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="index.html">x/84 1.0.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="customizing-your-board">
+<h1>Customizing your board<a class="headerlink" href="#customizing-your-board" title="Permalink to this headline">¶</a></h1>
+<p>The <tt class="docutils literal"><span class="pre">default.ini</span></tt> option, <em>scriptpath</em>, of section <em>system</em>, defines folder <tt class="docutils literal"><span class="pre">'default/'</span></tt>, containing the scripts found here. This can be changed to a folder of your own chosing.</p>
+<p>By default, <a class="reference internal" href="#matrix-py">matrix.py</a> is called on-connect, which chains to <a class="reference internal" href="#nua-py">nua.py</a> for new account creation, <a class="reference internal" href="#top-py">top.py</a> when authenticated, and <a class="reference internal" href="#main-py">main.py</a> for a main menu.</p>
+<p>Copy the contents of the <tt class="docutils literal"><span class="pre">'default/'</span></tt> folder to a new folder, change the .ini file to point to it, and you can begin customizing your matrix, topscripts, and art files.</p>
+<div class="section" id="matrix-py">
+<h2>matrix.py<a class="headerlink" href="#matrix-py" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="docutils literal"><span class="pre">default.ini</span></tt> option, <em>script</em>, of section <em>matrix</em>, defines the path of a python program that is loaded when a telnet connection is complete. The purpose of this script is to otherwise approve connection for continuation to <em>topscript</em>, and is generally used for authentication.</p>
+<p>When the <tt class="docutils literal"><span class="pre">default.ini</span></tt> option, <em>enable_anonymous</em>, of section <em>matrix</em> is <tt class="docutils literal"><span class="pre">True</span></tt> (default is <tt class="docutils literal"><span class="pre">False</span></tt>), users may login with name &#8216;anonymous&#8217;, and <a class="reference internal" href="#top-py">top.py</a> is called with a handle value of <tt class="docutils literal"><span class="pre">None</span></tt>, and the user is presumed &#8216;anonymous&#8217;</p>
+</div>
+<div class="section" id="nua-py">
+<h2>nua.py<a class="headerlink" href="#nua-py" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="docutils literal"><span class="pre">default.ini</span></tt> option, <em>allow_apply</em>, of section <em>nua</em> is <tt class="docutils literal"><span class="pre">True</span></tt> by default, and users may create a new account by executing the <em>nua</em> script. The default <a class="reference internal" href="#nua-py">nua.py</a> script allows all new accounts without approval, and adds the first new user to the <tt class="docutils literal"><span class="pre">u'sysop'</span></tt> group.</p>
+</div>
+<div class="section" id="top-py">
+<h2>top.py<a class="headerlink" href="#top-py" title="Permalink to this headline">¶</a></h2>
+<p>After passing new account creation in <a class="reference internal" href="#nua-py">nua.py</a>, or authentication in <a class="reference internal" href="#matrix-py">matrix.py</a>, the <em>topscript</em>, of section <em>matrix</em> is called. This script generally checks for new messages, sets character encoding and preferences.</p>
+</div>
+<div class="section" id="charset-py">
+<h2>charset.py<a class="headerlink" href="#charset-py" title="Permalink to this headline">¶</a></h2>
+<p>Generally called from <a class="reference internal" href="#top-py">top.py</a>, provides an interface for the user to select a session encoding of <tt class="docutils literal"><span class="pre">u'utf8'</span></tt> or <tt class="docutils literal"><span class="pre">u'cp437'</span></tt>.</p>
+</div>
+<div class="section" id="lc-py">
+<h2>lc.py<a class="headerlink" href="#lc-py" title="Permalink to this headline">¶</a></h2>
+<p>A simple pager displaying artwork and a scrolling window of the most recent BBS callers.</p>
+</div>
+<div class="section" id="logoff-py">
+<h2>logoff.py<a class="headerlink" href="#logoff-py" title="Permalink to this headline">¶</a></h2>
+<p>A simple logoff script that allows users to leave a message for the next user.</p>
+</div>
+<div class="section" id="main-py">
+<h2>main.py<a class="headerlink" href="#main-py" title="Permalink to this headline">¶</a></h2>
+<p>Displays artwork and provides a hotkey interface to <tt class="docutils literal"><span class="pre">gosub()</span></tt> various scripts.</p>
+</div>
+<div class="section" id="news-py">
+<h2>news.py<a class="headerlink" href="#news-py" title="Permalink to this headline">¶</a></h2>
+<p>Displays artwork and a scrolling window of a <tt class="docutils literal"><span class="pre">data/news.txt</span></tt>.</p>
+</div>
+<div class="section" id="ol-py">
+<h2>ol.py<a class="headerlink" href="#ol-py" title="Permalink to this headline">¶</a></h2>
+<p>A oneliners script. To configure intra-BBS one-liners for use with <a class="reference external" href="http://bbs-scene.org/">bbs-scene</a>.org&#8217;s API, create a new section, <em>bbs-scene</em> in <tt class="docutils literal"><span class="pre">defaults.ini</span></tt>, with two options, <em>user</em> and <em>pass</em>.</p>
+</div>
+<div class="section" id="si-py">
+<h2>si.py<a class="headerlink" href="#si-py" title="Permalink to this headline">¶</a></h2>
+<p>Displays information about the BBS system ...</p>
+</div>
+<div class="section" id="speedhack-py">
+<h2>speedhack.py<a class="headerlink" href="#speedhack-py" title="Permalink to this headline">¶</a></h2>
+<p>An example door games menu interface.</p>
+</div>
+<div class="section" id="bbslist-py">
+<h2>bbslist.py<a class="headerlink" href="#bbslist-py" title="Permalink to this headline">¶</a></h2>
+<p>Users post and vote and leave comments for other bbs systems. Also allows this system to be used as a gateway to other systems, using <a href="#id1"><span class="problematic" id="id2">telnet.py_</span></a>.</p>
+</div>
+<div class="section" id="weather-py">
+<h2>weather.py<a class="headerlink" href="#weather-py" title="Permalink to this headline">¶</a></h2>
+<p>An example of using the various user interface elements to display the local weather report.</p>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Customizing your board</a><ul>
+<li><a class="reference internal" href="#matrix-py">matrix.py</a></li>
+<li><a class="reference internal" href="#nua-py">nua.py</a></li>
+<li><a class="reference internal" href="#top-py">top.py</a></li>
+<li><a class="reference internal" href="#charset-py">charset.py</a></li>
+<li><a class="reference internal" href="#lc-py">lc.py</a></li>
+<li><a class="reference internal" href="#logoff-py">logoff.py</a></li>
+<li><a class="reference internal" href="#main-py">main.py</a></li>
+<li><a class="reference internal" href="#news-py">news.py</a></li>
+<li><a class="reference internal" href="#ol-py">ol.py</a></li>
+<li><a class="reference internal" href="#si-py">si.py</a></li>
+<li><a class="reference internal" href="#speedhack-py">speedhack.py</a></li>
+<li><a class="reference internal" href="#bbslist-py">bbslist.py</a></li>
+<li><a class="reference internal" href="#weather-py">weather.py</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/customizing.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="index.html">x/84 1.0.4 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Jeff Quast.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

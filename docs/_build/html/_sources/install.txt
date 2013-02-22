@@ -1,0 +1,21 @@
+Install
+```````
+
+1. Install python_ 2.6 or 2.7
+
+2. Install pip_
+
+3. Ensure pip is up-to-date::
+
+     pip install --upgrade pip
+
+4. Install x/84::
+
+     pip install x84
+
+5. Upgrading::
+
+     pip install --upgrade x84
+
+.. _python: https:/www.python.org/
+.. _pip: http://guide.python-distribute.org/installation.html#installing-pip

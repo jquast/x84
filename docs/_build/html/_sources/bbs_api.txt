@@ -1,0 +1,38 @@
+API Documentation
+=================
+
+.. toctree::
+   :maxdepth: 2
+
+.. automodule:: x84.bbs
+   :members:
+
+.. automodule:: x84.bbs.userbase
+   :members:
+
+.. automodule:: x84.bbs.msgbase
+   :members:
+
+.. automodule:: x84.bbs.editor
+   :members:
+
+.. automodule:: x84.bbs.ansiwin
+   :members:
+
+.. automodule:: x84.bbs.selector
+   :members:
+
+.. automodule:: x84.bbs.lightbar
+   :members:
+
+.. automodule:: x84.bbs.cp437
+   :members:
+
+.. automodule:: x84.bbs.dbproxy
+   :members:
+
+.. automodule:: x84.bbs.pager
+   :members:
+
+.. automodule:: x84.bbs.door
+   :members:

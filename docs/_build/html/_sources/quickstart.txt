@@ -1,0 +1,29 @@
+Getting Started
+```````````````
+
+1. Launch the *x84.engine* python module::
+
+     x84
+
+   If the ``*x84`` helper script fails, try using the
+   python interpreter used by ``pip``::
+
+     python2.7 -m x84.engine
+
+
+2. Telnet to 127.0.0.1 6023, Assuming a *bsd telnet* client::
+
+     telnet -L localhost 6023
+
+   argument *-L* indicates *BINARY* 8-bit input.
+
+x84 Usage
+---------
+
+``x84`` is a wrapper for launching ``python -m x84.engine``
+
+Which takes optional command line arguments,
+
+   ``--config=`` alternate bbs configuration filepath
+
+   ``--logger=`` alternate logging configuration filepath
