@@ -57,7 +57,9 @@ def main():
         "pylint --rcfile=`dirname $0`/../.pylint x84"
         " | grep -v ': Locally disabling'\n"
         "find x84 -type f -name '*.py' "
-        "| xargs pychecker -F `dirname $0`/../.pycheckrc\n")
+        "| xargs pychecker -F `dirname $0`/../.pycheckrc\n"
+        "find x84 -type f -name '*.py' "
+        "| xargs pyflakes\n")
 
     os.chmod(path_tgtlint, 0755)
     if os.path.exists(path_lintsym) and os.path.islink(path_lintsym):
