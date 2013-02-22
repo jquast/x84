@@ -434,7 +434,7 @@ def read_messages(msgs, new):
         sent = msg.stime.strftime(TIME_FMT)
         to_attr = term.bold_green if (
             msg.recipient == session.user.handle) else term.underline
-        return u'\r\n'.join((
+        ucs = u'\r\n'.join((
             (u''.join((
                 term.yellow('fROM: '),
                 (u'%s' % term.bold(msg.author,)).rjust(len_author),
@@ -457,6 +457,7 @@ def read_messages(msgs, new):
                 (u'SUbj: %s' % (msg.subject,)).ljust(reader.visible_width)
             )),
             u'', (msg.body),))
+        return Ansi(ucs).wrap(min(80, term.width - 1))
 
     def get_selector_title(mbox, new):
         """
