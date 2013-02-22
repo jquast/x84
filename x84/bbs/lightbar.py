@@ -72,11 +72,16 @@ class Lightbar (AnsiWindow):
                 self.glyphs.get('erase', u' ') * self.visible_width,))
 
         def fit_row(ucs):
-            """ Strip a unicode row to fit window boundry """
-            strip_char = self.glyphs.get('strip', u' $')
-            ptr = self.visible_width - len(strip_char)
-            return ((Ansi(ucs).wrap(ptr).splitlines()[0]
-                     .ljust(ptr) + strip_char))
+            """ Strip a unicode row to fit window boundry, if necessary """
+            column = self.visible_width
+            wrapped = Ansi(ucs).wrap(column).splitlines()
+            if len(wrapped) > 1:
+                marker = self.glyphs.get('strip', u' $')
+                marker_column = self.visible_width - len(marker)
+                wrapped = Ansi(ucs).wrap(marker_column).splitlines()
+                ucs = Ansi(wrapped[0].rstrip()).ljust(marker_column) + marker
+                return ucs
+            return (Ansi(ucs).ljust(column))
 
         term = x84.bbs.session.getterminal()
         # allow ucs data with '\r\n', to accomidate soft and hardbreaks; just
