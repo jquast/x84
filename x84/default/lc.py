@@ -121,7 +121,7 @@ def get_lightbar(lcallers, lcalls):
     from x84.bbs import getterminal, Lightbar
     term = getterminal()
     width = min(50, max(10, term.width - 5))
-    height = max(4, min(term.height - 8, 10))
+    height = max(4, min(term.height - 8, 35))
     xloc = (term.width / 2) - (width / 2)
     yloc = term.height - height
     pager = Lightbar(height, width, yloc, xloc)
