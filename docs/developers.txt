@@ -14,3 +14,18 @@ For developing from git, simply clone and execute the ./x84/bin/dev-setup python
 3. Launch x/84 using virtualenv::
 
      ./x84/bin/x84-dev
+
+Tracking head branch with pip
+-----------------------------
+
+It is possible, without directly using git, to install the latest branch directly from github using pip::
+
+  pip install git+https://github.com/jquast/x84.git
+
+And then subsequently upgrade after any commits have been pushed::
+
+  pip install --upgrade git+https://github.com/jquast/x84.git
+
+You may then start x84 normally as you would if installed using pip::
+
+  sudo privbind -u nobody -g adm x84
