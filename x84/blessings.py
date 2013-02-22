@@ -114,6 +114,11 @@ class Terminal(object):
             (unichr(27) + u"[B", self.KEY_DOWN),
             (unichr(27) + u"[C", self.KEY_RIGHT),
             (unichr(27) + u"[D", self.KEY_LEFT),
+            (unichr(27) + u"[H", self.KEY_HOME),
+            (unichr(27) + u"[K", self.KEY_END),
+            (unichr(27) + u"[U", self.KEY_NPAGE),
+            (unichr(27) + u"[V", self.KEY_PPAGE),
+            (unichr(27) + u"[@", self.KEY_INSERT),
             (unichr(27) + u"A", self.KEY_UP),
             (unichr(27) + u"B", self.KEY_DOWN),
             (unichr(27) + u"C", self.KEY_RIGHT),
@@ -121,12 +126,7 @@ class Terminal(object):
             (unichr(27) + u"?x", self.KEY_UP),
             (unichr(27) + u"?r", self.KEY_DOWN),
             (unichr(27) + u"?v", self.KEY_RIGHT),
-            (unichr(27) + u"?t", self.KEY_LEFT),
-            (unichr(27) + u"[H", self.KEY_HOME),
-            (unichr(27) + u"[F", self.KEY_END),
-            (unichr(27) + u"[@", self._KEY_INSERT),
-            (unichr(27) + u"[U", self.KEY_NPAGE),
-            (unichr(27) + u"[V", self.KEY_PPAGE),])
+            (unichr(27) + u"?t", self.KEY_LEFT), ])
     # Sugary names for commonly-used capabilities, intended to help avoid trips
     # to the terminfo man page and comments in your code:
     _sugar = dict(
