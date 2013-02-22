@@ -399,7 +399,7 @@ def read_messages(msgs, new):
         pos = prev_sel.position if prev_sel is not None else (0, 0)
         sel = Lightbar(
             height=(term.height / 3
-                    if term.width < 140 else term.height - 2),
+                    if term.width < 140 else term.height - 3),
             width=len_preview,
             yloc=2, xloc=0)
         sel.glyphs['top-horiz'] = u''
