@@ -94,10 +94,14 @@ class Terminal(object):
             (curses.tigetstr('cuf1'), self.KEY_RIGHT),
             (curses.tigetstr('kcub1'), self.KEY_LEFT),
             (curses.tigetstr('knp'), self.KEY_NPAGE),
+            (curses.tigetstr('kind'), self.KEY_NPAGE),
             (curses.tigetstr('kpp'), self.KEY_PPAGE),
+            (curses.tigetstr('kri'), self.KEY_PPAGE),
             (curses.tigetstr('kent'), self.KEY_ENTER),
             (curses.tigetstr('kbs'), self.KEY_BACKSPACE),
-            (curses.tigetstr('kdch1'), self.KEY_BACKSPACE))
+            (curses.tigetstr('kdch1'), self.KEY_BACKSPACE),
+            (curses.tigetstr('kich1'), self.KEY_INSERT),
+            )
             if sequence is not None and 0 != len(sequence)])
 
         # add to this various NVT sequences
