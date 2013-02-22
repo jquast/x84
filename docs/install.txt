@@ -1,3 +1,10 @@
+Requirements
+============
+
+A Posix operating system is required, generally something unix-derived.  Alternative implementations of python may work. 
+
+Windows operating systems may not work because of the dependency on curses and a termcap library for detecting terminal capabilities.  A cygwin-based build may cope fine.
+
 Install instructions
 ====================
 
@@ -52,7 +59,27 @@ If you receive this error::
 
   warn    engine.py:95  - Python not built with wide unicode support!
 
-And you are concerned with very large unicode points, such as used in Thai or emoticons like hamsterface, 🐹, you will need to upgrade or rebuild your python interpreter so that it is build with *UCS4* support. Otherwise it may only be displayed, but input characters will often be decoded as '??'.
+And you are concerned with very large unicode points, such as used in Thai or emoticons like hamsterface, 🐹, you will need to upgrade or rebuild your python interpreter so that it is build with *UCS4* support.  Otherwise it may only be displayed, but input characters will often be decoded as '??'.
+
+Blowfish Encryption
+-------------------
+
+Blowfish encryption of user account passwords is *recommended*, but requires a C compiler to install the dependent module, *py-bcrypt*, thereby reducing the portability.  This will significantly reduce password encryption time on slower systems.
+
+Otherwise, a best-effort sha256 hash is implemented by default. 
+
+Privacy
+-------
+
+Telnet is not a secure protocol.
+
+This implementation of x/84 is without any encryption.  You should be aware that absolutely everything you type and read can be read by any intermiediate network between yourself and the server.
+
+You can always bind the telnet board only to localhost, where clients connect through telnet over ssh, creating a *Private* 'members only' board.  You can also use other ssl layering things, such as stunnel.
+
+Previous versions included ssh support through python twisted conch, and can be found in the earliest github revisions as ssh.py.  The twisted dependency was considered too 'heavyweight' and dropped.
+
+Telnet standards exist for encryption.  If bsd telnet provides some trivial level of encryption, patches to support it are welcomed.
 
 .. _python: https://www.python.org/
 .. _pip: http://guide.python-distribute.org/installation.html#installing-pip

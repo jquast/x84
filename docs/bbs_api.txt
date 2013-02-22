@@ -10,27 +10,59 @@ General functions
 .. autofunction:: x84.bbs.goto
 .. autofunction:: x84.bbs.gosub
 .. autofunction:: x84.bbs.disconnect
-.. autofunction:: x84.bbs.getsession
-.. autofunction:: x84.bbs.getterminal
 .. autofunction:: x84.bbs.getch
-.. autofunction:: x84.bbs.ropen
+.. autofunction:: x84.bbs.echo
+.. autofunction:: x84.bbs.timeago
 
-x84.bbs.door
-------------
 
-.. automodule:: x84.bbs.door
-   :members:
+Terminal
+````````
 
-x84.bbs.dbproxy
----------------
+.. autofunction:: x84.bbs.getterminal
+.. autoclass: x84.blessings.Terminal
 
-.. automodule:: x84.bbs.dbproxy
-   :members:
-
-Ansi, CP437 and Output
-``````````````````````
+CP437 and ANSI
+``````````````
 
 .. autofunction:: x84.bbs.showcp437
+.. autofunction:: x84.bbs.from_cp437
+.. autofunction:: x84.bbs.ropen
+.. autoclass: x84.bbs.Ansi
+.. autofunction:: x84.bbs.output.ansiwrap
+
+Session
+```````
+
+.. autofunction:: x84.bbs.getsession
+.. autoclass:: x84.bbs.session.Session
+
+Doors
+`````
+
+.. autoclass:: x84.bbs.Door
+
+Users & Groups
+``````````````
+
+userbase
+--------
+
+.. automodule:: x84.bbs.userbase
+   :members:
+
+
+Messages and Tags
+`````````````````
+
+messagebase
+-----------
+.. automodule:: x84.bbs.msgbase
+   :members:
+
+Database
+````````
+
+.. autoclass:: x84.bbs.DBProxy
 
 x84.bbs.cp437
 -------------
@@ -38,56 +70,44 @@ x84.bbs.cp437
 .. automodule:: x84.bbs.cp437
    :members:
 
-x84.bbs.output
---------------
-.. automodule:: x84.bbs.output
-   :members:
+Ansi UI Elements
+````````````````
 
-Users & Groups
-``````````````
+Pager
+-----
 
-x84.bbs.userbase
-----------------
+.. autoclass:: x84.bbs.pager.Pager
 
-.. automodule:: x84.bbs.userbase
-   :members:
+AnsiWindow
+----------
 
-x84.bbs.msgbase
+.. autoclass:: x84.bbs.ansiwin.AnsiWindow
+
+LineEditor
+----------
+
+.. autoclass:: x84.bbs.LineEditor
+
+ScrollingEditor
 ---------------
 
-.. automodule:: x84.bbs.msgbase
-   :members:
+.. autoclass:: x84.bbs.ScrollingEditor
 
-Ansi Window UI Widgets
-``````````````````````
+Selector
+--------
 
-x84.bbs.ansiwin
----------------
+.. autoclass:: x84.bbs.Selector
 
-.. automodule:: x84.bbs.ansiwin
-   :members:
+Lightbar
+--------
 
-x84.bbs.editor
---------------
+.. autoclass:: x84.bbs.Lightbar
 
-.. automodule:: x84.bbs.editor
-   :members:
+Keysets, Themes
+```````````````
 
-x84.bbs.selector
-----------------
-
-.. automodule:: x84.bbs.selector
-   :members:
-
-x84.bbs.lightbar
-----------------
-
-.. automodule:: x84.bbs.lightbar
-   :members:
-
-x84.bbs.pager
--------------
-
-.. automodule:: x84.bbs.pager
-   :members:
-
+.. autoattribute:: x84.bbs.editor.PC_KEYSET
+.. autoattribute:: x84.bbs.pager.VI_KEYSET
+.. autoattribute:: x84.bbs.selector.VI_KEYSET
+.. autoattribute:: x84.bbs.lightbar.NETHACK_KEYSET
+.. autoattribute:: x84.bbs.ansiwin.GLYPHSETS
