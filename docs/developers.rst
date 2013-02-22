@@ -43,19 +43,19 @@ Any changes to engine internals bump release majors. Scripts are encouraged to r
 engine.py
 ---------
 
-:: automodule:: x84.engine
+.. automodule:: x84.engine
    :members:
 
 terminal.py
 -----------
 
-:: automodule:: x84.terminal
+.. automodule:: x84.terminal
    :members:
 
 telnet.py
 ---------
 
-:: automodule:: x84.telnet
+.. automodule:: x84.telnet
    :members:
 
 Userland
@@ -66,29 +66,29 @@ Procedures not necessarily exposed that are internal to the child process execut
 wcswidth.py
 -----------
 
-:: automodule:: x84.bbs.wcswidth
-   :members:
+.. automodule:: x84.bbs.wcswidth
+  :members:
 
 log.py
 ------
 
-:: automodule:: x84.bbs.log
-   :members:
+.. automodule:: x84.bbs.log
+  :members:
 
 ipc.py
 ------
 
-:: automodule:: x84.bbs.ipc
-   :members:
+.. automodule:: x84.bbs.ipc
+  :members:
 
 ini.py
 ------
 
-:: automodule:: x84.bbs.ini
-   :members:
+.. automodule:: x84.bbs.ini
+  :members:
 
 exception.py
 ------------
 
-:: automodule:: x84.bbs.exception
+.. automodule:: x84.bbs.exception
    :members:
