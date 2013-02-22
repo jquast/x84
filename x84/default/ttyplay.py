@@ -50,7 +50,7 @@ def main(ttyfile=u'', peek=False):
         args += ('-p',)
     elif 'sysop' in session.user.groups:
         echo("\r\nPRESS '%s' tO PEEk (2)\b\b" % (
-            (term.green_underline,)))
+            (term.green_underline(u'p'),)))
         if getch(2) in (u'p', u'P'):
             peek = True
     args += (ttyfile,)
