@@ -122,7 +122,7 @@ class LineEditor(object):
         """
         self._quit = False
         if keystroke in self.keyset['refresh']:
-            return self.refresh()
+            return u'\b' * len(Ansi(self.content)) + self.refresh()
         elif keystroke in self.keyset['backspace']:
             if len(self.content) != 0:
                 len_toss = len(Ansi(self.content[-1]))

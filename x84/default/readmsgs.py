@@ -193,7 +193,7 @@ def prompt_tags(tags):
     #         Too many local variables
     #         Using the global statement
     from x84.bbs import DBProxy, echo, getterminal, getsession
-    from x84.bbs import Ansi, LineEditor
+    from x84.bbs import Ansi, LineEditor, getch
     session, term = getsession(), getterminal()
     tagdb = DBProxy('tags')
     global FILTER_PRIVATE
@@ -202,14 +202,24 @@ def prompt_tags(tags):
         #
         echo(u"\r\n\r\nENtER SEARCh %s, COMMA-dEliMitEd. " % (
             term.red('TAG(s)'),))
-        echo(u"OR '/list', %s:quit\r\n : " % (
-            term.yellow_underline('Escape'),))
+        echo(u"OR '/list', %s%s\r\n : " % (
+            (term.yellow_underline('^a') + u':utoscan '
+                ) if session.user.get('autoscan', False) else u'',
+            term.yellow_underline('Escape') + u':quit',))
         width = term.width - 6
         sel_tags = u', '.join(tags)
         while len(Ansi(sel_tags)) >= (width - 8):
             tags = tags[:-1]
             sel_tags = u', '.join(tags)
-        inp_tags = LineEditor(width, sel_tags).read()
+        lne = LineEditor(width, sel_tags)
+        while not lne.carriage_returned:
+            inp = getch()
+            if inp in (unichr(1),): # ^A:
+                inp_tags = session.user.get('autoscan', set())
+                break
+            else:
+                echo(lne.process_keystroke(inp))
+        inp_tags = lne.content
         if (inp_tags is None or 0 == len(inp_tags)
                 or inp_tags.strip().lower() == '/quit'):
             return None
@@ -220,9 +230,10 @@ def prompt_tags(tags):
             if 0 == len(all_tags):
                 echo(u'None !'.center(term.width / 2))
             else:
-                echo(Ansi(u', '.join(([u'%s(%d)' % (_key, len(_value),)
-                                       for (_key, _value) in all_tags]))
-                          ).wrap(term.width - 2))
+                echo(Ansi(u', '.join(([u'%s(%s)' % (
+                    term.red(tag),
+                    term.yellow(str(len(msgs))),)
+                        for (tag, msgs) in all_tags]))).wrap(term.width - 2))
             continue
         elif (inp_tags.strip().lower() == '/nofilter'
                 and 'sysop' in session.user.groups):
@@ -232,7 +243,7 @@ def prompt_tags(tags):
 
         echo(u'\r\n')
         # search input as valid tag(s)
-        tags = set([inp.strip().lower() for inp in inp_tags.split(',')])
+        tags = set([_tag.strip().lower() for _tag in inp_tags.split(',')])
         for tag in tags.copy():
             if not tag in tagdb:
                 tags.remove(tag)
