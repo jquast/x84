@@ -73,7 +73,7 @@ class Lightbar (AnsiWindow):
 
         def fit_row(ucs):
             """ Strip a unicode row to fit window boundry, if necessary """
-            column = self.visible_width
+            column = self.visible_width + 1
             wrapped = Ansi(ucs).wrap(column).splitlines()
             if len(wrapped) > 1:
                 marker = self.glyphs.get('strip', u' $')
