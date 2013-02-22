@@ -4,7 +4,7 @@
 # is not used, so each line causes a full screen fresh ..
 
 import time
-POLL_KEY = 0.05  # blocking ;; how often to poll keyboard
+POLL_KEY = 0.15  # blocking ;; how often to poll keyboard
 POLL_OUT = 0.25  # seconds elapsed before screen update, prevents flood
 
 CHANNEL = None
@@ -177,15 +177,23 @@ def get_pager(pager=None):
     width = int(term.width * .9)
     yloc = term.height - height - 1
     xloc = int(term.width / 2) - (width / 2)
-    content = pager and pager.content
     pager = Pager(height, width, yloc, xloc)
+    if pager is not None:
+        content = pager.content
+        # little hack to keep empty lines from re-importing
+        for row in range(len(content)):
+            ucs = content[row]
+            if ucs.startswith(u'\x1b(B'):
+                ucs = ucs[len(u'\x1b(B'):]
+            if ucs.endswith(u'\x1b[m'):
+                ucs = ucs[len(u'\x1b[m'):]
+            content[row] = ucs
+        pager.update('\r\n'.join(content))
     pager.enable_scrolling = True
     pager.colors['border'] = term.cyan
     pager.glyphs['right-vert'] = u'|'
     pager.glyphs['left-vert'] = u'|'
     pager.glyphs['bot-horiz'] = u''
-    if content:
-        pager.update('\n'.join(content))
     return pager
 
 
@@ -244,7 +252,7 @@ def main(channel=None, caller=None):
             pager.refresh(),
             ipb.refresh(),))
 
-    def cmd(pager, msg):
+    def process_cmd(pager, msg):
         """ Process command recieved and display result in chat window. """
         cmd, args = msg.split()[0], msg.split()[1:]
         # pylint: disable=W0603
@@ -336,7 +344,7 @@ def main(channel=None, caller=None):
         mesg = session.poll_event('global')
         if mesg is not None:
             otxt = process(mesg[1])
-            if otxt is not None:
+            if 0 != len(otxt):
                 echo(pager.append(otxt))
                 dirty = None if dirty is None else time.time()
 
@@ -354,7 +362,7 @@ def main(channel=None, caller=None):
             otxt = readline.process_keystroke(inp)
             if readline.carriage_returned:
                 if readline.content.startswith('/'):
-                    if cmd(pager, readline.content):
+                    if process_cmd(pager, readline.content):
                         pager = get_pager(pager)
                         echo(refresh(pager, readline, init=True))
                 elif (0 != len(readline.content.strip())

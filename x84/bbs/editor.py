@@ -506,14 +506,16 @@ class ScrollingEditor(AnsiWindow):
         Otherwise, the input is simply returned to be displayed
         ('local echo').
         """
+        from x84.bbs import getterminal
+        term = getterminal()
         if self.eol:
             # cannot input, at end of line!
             return u''
         # append to input
         self.content += u_chr
+        # return character appended as output, ensure .fixate() is used first!
+        self._horiz_pos += 1
         if self._horiz_pos >= (self.visible_width - self.margin_amt):
             # scrolling is required,
             return self.refresh()
-        # return character appended as output, ensure .fixate() is used first!
-        self._horiz_pos += 1
-        return u_chr
+        return term.normal + self.colors['highlight'] + u_chr
