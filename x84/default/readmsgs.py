@@ -418,7 +418,7 @@ def read_messages(msgs, new):
         reader_width = min(term.width - 1, min(term.width - reader_indent, 80))
         reader_ypos = ((term.height - 1 ) - reader_height if
                       (term.width - reader_width) < len_preview else 2)
-        reader_height = term.height - reader_ypos
+        reader_height = term.height - reader_ypos - 1
         msg_reader = Pager(
             height=reader_height,
             width=reader_width,
