@@ -31,4 +31,11 @@ Examples of these include PuTTy, SyncTerm, mtel, netrunner, linux/bsd console + 
 
 Some non-DOS terminal emulators may require installing a fontset, such as *Terminus_* to provide CP437 art.
 
+TCP Encryption
+--------------
+
+Telnet is not a secure protocol.  This implementation of x/84 is without any encryption. It is not secure from network eavesdropping. SSH works perfectly fine as an intermediary transport if eavesdropping is a concern.
+
+Previous versions included ssh support directly through twisted conch, and can be found in the earliest github revisions as ``ssh.py``.  The twisted dependency was considered too 'heavyweight' and dropped.
+
 .. _Terminus: http://terminus-font.sourceforge.net/

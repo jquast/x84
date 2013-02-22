@@ -9,9 +9,7 @@ Welcome to x/84's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 2
-   :titlesonly:
-   :glob:
+   :maxdepth: 3
 
    intro
    install
