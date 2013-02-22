@@ -1,4 +1,0 @@
-Support
-=======
-
-An irc channel, *#prsv* on efnet, is available for development discussion.
