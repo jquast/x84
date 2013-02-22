@@ -7,7 +7,7 @@ from x84.bbs.userbase import list_users, get_user, find_user, User, Group
 from x84.bbs.msgbase import list_msgs, get_msg, list_tags, Msg
 from x84.bbs.exception import Disconnected, Goto
 from x84.bbs.editor import LineEditor, ScrollingEditor
-from x84.bbs.output import echo, timeago, Ansi
+from x84.bbs.output import echo, timeago, Ansi, ansiwrap
 from x84.bbs.ansiwin import AnsiWindow
 from x84.bbs.selector import Selector
 from x84.bbs.lightbar import Lightbar
@@ -109,6 +109,6 @@ def showcp437(filepattern):
 __all__ = ['list_users', 'get_user', 'find_user', 'User', 'Group',
     'list_msgs', 'get_msg', 'list_tags', 'Msg', 'Disconnected', 'Goto',
     'LineEditor', 'ScrollingEditor', 'echo', 'timeago', 'Ansi',
-    'AnsiWindow', 'Selector', 'Lightbar', 'from_cp437', 'DBProxy',
-    'Pager', 'Door', 'goto', 'disconnect', 'getsession', 'getterminal',
-    'getch', 'gosub', 'ropen', 'showcp437',]
+    'ansiwrap', 'AnsiWindow', 'Selector', 'Lightbar', 'from_cp437',
+    'DBProxy', 'Pager', 'Door', 'goto', 'disconnect', 'getsession',
+    'getterminal', 'getch', 'gosub', 'ropen', 'showcp437',]
