@@ -1,21 +1,12 @@
 Requirements
-===================
+============
 
 A Posix operating system is required, generally something unix-derived.  Alternative implementations of python may work. 
 
 Windows operating systems may not work because of the dependency on curses and a termcap library for detecting terminal capabilities.  A cygwin-based build *may* cope fine, but is untested.
 
-UCS4 Support
-````````````
-
-If you receive this error::
-
-  warn    engine.py:95  - Python not built with wide unicode support!
-
-And you are concerned with very large unicode points, such as used in Thai or emoticons like hamsterface, 🐹, you will need to upgrade or rebuild your python interpreter so that it is build with *UCS4* support.  Otherwise it may only be displayed, but input characters will often be decoded as '??'.
-
-Python requirements
-```````````````````
+Python
+``````
 
 1. Install python_ 2.6 or 2.7
 
@@ -24,6 +15,16 @@ Python requirements
 3. Ensure pip is up-to-date::
 
      pip install --upgrade pip
+
+UCS4 Support
+------------
+
+If you receive this error::
+
+  warn    engine.py:95  - Python not built with wide unicode support!
+
+And you are concerned with very large unicode points, such as used in Thai or emoticons like hamsterface, 🐹, you will need to upgrade or rebuild your python interpreter so that it is build with *UCS4* support.  Otherwise it may only be displayed, but input characters will often be decoded as '??'.
+
 
 Installing
 ==========
@@ -34,13 +35,13 @@ Install using pip::
 
 
 Upgrading
----------
+`````````
 Upgrade using::
 
      pip install --upgrade x84
 
 Blowfish
-````````
+--------
 
 Blowfish encryption of user account passwords is *recommended*, but requires a C compiler to install the dependent module, *py-bcrypt*, thereby reducing the portability.  This will significantly reduce password encryption time on slower systems.
 
