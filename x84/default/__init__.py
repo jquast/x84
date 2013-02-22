@@ -1,1 +1,1 @@
-""" Default "bbs script" package for x/84, https://github.com/jquast/x84 """
+""" Default "bbs board" package for x/84, https://github.com/jquast/x84 """
