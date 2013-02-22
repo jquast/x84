@@ -25,7 +25,6 @@ x84/bbs/selector.py
 x84/bbs/session.py
 x84/bbs/userbase.py
 x84/bbs/wcswidth.py
-x84/default/README.rst
 x84/default/__init__.py
 x84/default/bbslist.py
 x84/default/charset.py
