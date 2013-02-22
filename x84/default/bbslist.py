@@ -75,8 +75,10 @@ class FetchUpdates(threading.Thread):
         # append elements into self.content (bbs_id, dict(attributes))
         for node in xml.etree.ElementTree.XML(buf).findall('node'):
             bbs_id = node.find('id').text.strip()
-            record = dict([(key, ((node.find(key).text or u'').strip()
-                                  if node.find(key) is not None else u'')) for key in DB_KEYS])
+            record = dict([(key,
+                ((node.find(key).text or u'').strip()
+                    if node.find(key) is not None else u''))
+                for key in DB_KEYS])
             self.content.append((bbs_id, record))
 
 
@@ -779,7 +781,9 @@ def main():
                 if t_val == 'dirty':
                     dirty = True
         if session.poll_event('bbslist_update'):
-            while session.poll_event('bbslist_update', 0.1):
+            while session.read_event('bbslist_update', 0.15):
+                # pylint: disable=W0104
+                #         Statement seems to have no effect
                 None
             dirty = True
 

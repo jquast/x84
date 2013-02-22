@@ -4,6 +4,7 @@ Write public or private posts for x/84, https://github.com/jquast/x84/
 
 
 def banner():
+    """ Display banner/art ... nothing for now """
     from x84.bbs import echo, getterminal
     term = getterminal()
     echo(u'\r\n\r\n')
@@ -122,7 +123,8 @@ def prompt_tags(msg):
     tagdb = DBProxy('tags')
     msg_onlymods = (u"\r\nONlY MEMbERS Of thE '%s' OR '%s' "
                     "GROUP MAY CREAtE NEW tAGS." % (
-                        term.bold_yellow('sysop'), term.bold_blue('moderator'),))
+                        term.bold_yellow('sysop'),
+                        term.bold_blue('moderator'),))
     msg_invalidtag = u"\r\n'%s' is not a valid tag."
     prompt_tags1 = u"ENtER %s, COMMA-dEliMitEd. " % (
         term.bold_red('TAG(s)'),)

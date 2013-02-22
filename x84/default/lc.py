@@ -77,7 +77,7 @@ def dummy_pager(last_callers):
                               if nick.lower().startswith(handle[:1].lower())]
                     if len(misses) > 0:
                         echo(u'%s:\r\n\r\n%s\r\n' % (msg_partial,
-                                                     Ansi(', '.join(misses)).wrap(term.width)))
+                            Ansi(', '.join(misses)).wrap(term.width)))
                     continue
             if inp in ('n', u'N'):
                 nonstop = True

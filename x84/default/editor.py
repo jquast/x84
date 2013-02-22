@@ -14,7 +14,12 @@ UNDOLEVELS = 9
 
 
 def save_draft(key, ucs):
+    """
+    Persist draft to database and stack changes to UNDO buffer
+    """
     save(key, ucs)
+    # pylint: disable=W0602
+    #         Using global for 'UNDO' but no assignment is done
     global UNDO
     UNDO.append(ucs)
     if len(UNDO) > UNDOLEVELS:
@@ -22,17 +27,27 @@ def save_draft(key, ucs):
 
 
 def save(key, ucs):
+    """
+    Persist message to user attrs database
+    """
     from x84.bbs import getsession
     getsession().user[key] = HARDWRAP.join(
         [softwrap_join(_ucs) for _ucs in ucs.split(HARDWRAP)])
 
 
 def get_help():
+    """
+    Returns help text.
+    """
     import os
-    return open(os.path.join(os.path.dirname(__file__), 'editor.txt')).read()
+    return open(os.path.join(
+        os.path.dirname(__file__), 'editor.txt')).read()
 
 
 def wrap_rstrip(value):
+    """
+    Remove hardwrap u'\r\n' and softwrap u'\n' from value
+    """
     if value[-len(HARDWRAP):] == HARDWRAP:
         value = value[:-len(HARDWRAP)]
     if value[-len(SOFTWRAP):] == SOFTWRAP:
@@ -41,14 +56,23 @@ def wrap_rstrip(value):
 
 
 def softwrap_join(value):
+    """
+    Return whitespace-joined string from value split by softwrap '\n'.
+    """
     return WHITESPACE.join(value.split(SOFTWRAP))
 
 
 def is_hardwrapped(ucs):
+    """
+    Returns true if string is hardwrapped with '\r\n'.
+    """
     return ucs[-(len(HARDWRAP)):] == HARDWRAP
 
 
 def is_softwrapped(ucs):
+    """
+    Returns true if string is softwrapped with '\n'.
+    """
     return ucs[-(len(SOFTWRAP)):] == SOFTWRAP
 
 
@@ -96,7 +120,7 @@ def set_lbcontent(lightbar, ucs):
             lightbar.visible_width).splitlines()
         for inner_lno, inner_line in enumerate(ucs_wrapped):
             content[lno] = u''.join((inner_line,
-                                     SOFTWRAP if inner_lno != len(ucs_wrapped) - 1 else u''))
+                SOFTWRAP if inner_lno != len(ucs_wrapped) - 1 else u''))
             lno += 1
         if 0 == len(ucs_wrapped):
             content[lno] = HARDWRAP
@@ -206,16 +230,13 @@ def main(save_key=u'draft'):
                          unichr(23), term.KEY_BACKSPACE,),
               }
 
-    def merge(newline=HARDWRAP):
+    def merge():
         """
         Merges line editor content as a replacement for the currently
         selected lightbar row. Returns True if text inserted caused
         additional rows to be appended, which is meaningful in a window
         refresh context.
         """
-        # merge line editor with pager window content. strange thing, we
-        # edit u'\r\n' to become u'\r\nHello world.', and move newlines to
-        # the right-most sideu, u'Hello world.\r\n'. This is just hackwork.
         lightbar.content[lightbar.index] = [
             lightbar.selection[0],
             softwrap_join(wrap_rstrip(lneditor.content))
@@ -247,11 +268,9 @@ def main(save_key=u'draft'):
                 u' ',
                 term.yellow_underline(u'?'), u':', term.bold(u'help'),
                 term.yellow(u' )-'),))
-#                    ) + keyset_cmd
             keyset_cmd = lightbar.pos(lightbar.height - 1,
-                                      max(0,
-                                          lightbar.width - (len(Ansi(keyset_cmd)) + 3))
-                                      ) + keyset_cmd
+                    max(0, lightbar.width - (len(Ansi(keyset_cmd)) + 3))
+                    ) + keyset_cmd
         return u''.join((
             lightbar.border(),
             keyset_cmd,
@@ -463,10 +482,9 @@ def main(save_key=u'draft'):
                 if lightbar.index + 1 < len(lightbar.content):
                     idx = lightbar.index
                     lightbar.content[idx] = (idx,
-                                             WHITESPACE.join((
-                                                             lightbar.content[
-                                                                 idx][1].rstrip(),
-                                                             lightbar.content[idx + 1][1].lstrip(),)))
+                            WHITESPACE.join((
+                                lightbar.content[idx][1].rstrip(),
+                                lightbar.content[idx + 1][1].lstrip(),)))
                     del lightbar.content[idx + 1]
                     prior_length = len(lightbar.content)
                     set_lbcontent(lightbar, get_lbcontent(lightbar))

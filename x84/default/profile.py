@@ -37,6 +37,8 @@ def process_keystroke(lightbar, inp, user):
         if lightbar.moved:
             return False
     assert is_self or 'sysop' in session.user.groups
+    # pylint: disable=W0311
+    #         Bad indentation. Found 12 spaces, expected 8
     if is_self and (
         inp in (u'c', u'C') or (inp == term.KEY_ENTER and
                                 lightbar is not None and
@@ -258,8 +260,8 @@ def dummy_pager(user):
                                          else 'diSAblEd')),
             '(m)%-20s - %s' % (u'ESG',
                                term.bold(u'[%s]' % ('y'
-                                                    if user.get(
-                                                        'mesg', True) else 'n',),)),
+                                   if user.get(
+                                       'mesg', True) else 'n',),)),
             '(.)%-20s - %s' % (u'PlAN filE', '%d bytes' % (
                 len(plan),) if plan else '(NO PlAN.)'),
             '(x)%-20s - %s' % (u'PERt MOdE',

@@ -58,7 +58,8 @@ def main():
     num_stars = int((term.width * term.height) * .002)
     stars = dict([(n, (random.choice('\\|/-'),
                        float(random.choice(range(term.width))),
-                       float(random.choice(range(term.height))))) for n in range(num_stars)])
+                       float(random.choice(range(term.height)))))
+                       for n in range(num_stars)])
     melting = {}
     show_star = False
     tm_out, tm_min, tm_max, tm_step = 0.08, 0.01, 2.0, .01
@@ -184,7 +185,8 @@ def main():
                 for num, line in enumerate(body):
                     while num > len(otxt):
                         otxt += [u'', ]
-                    otxt[num] = otxt[num][:int(term.width / 2.5)] + u' ' + line
+                    otxt[num] = (otxt[num][:int(term.width / 2.5)]
+                            + u' ' + line)
                 txt_x, txt_y = refresh()
                 continue
             inp = getch(tm_out)
@@ -198,16 +200,16 @@ def main():
                 if num_stars > 2:
                     num_stars = int(num_stars * .5)
                     stars = dict([(n, (random.choice('\\|/-'),
-                                       float(random.choice(range(term.width))),
-                                       float(random.choice(range(term.height)))))
-                                  for n in range(num_stars)])
+                        float(random.choice(range(term.width))),
+                        float(random.choice(range(term.height)))))
+                        for n in range(num_stars)])
             elif inp in (term.KEY_RIGHT, 'l'):
                 if num_stars < (term.width * term.height) / 4:
                     num_stars = int(num_stars * 1.5)
                     stars = dict([(n, (random.choice('\\|/-'),
-                                       float(random.choice(range(term.width))),
-                                       float(random.choice(range(term.height)))))
-                                  for n in range(num_stars)])
+                        float(random.choice(range(term.width))),
+                        float(random.choice(range(term.height)))))
+                        for n in range(num_stars)])
             elif inp in (u'*',) and not show_star:
                 show_star = True
             elif inp in (u'*',) and show_star:

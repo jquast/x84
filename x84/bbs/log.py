@@ -23,9 +23,10 @@ class ColoredConsoleHandler(logging.StreamHandler):
                             self.term.bold_red if record.levelno >= 40 else
                             self.term.bold_yellow if record.levelno >= 30 else
                             self.term.bold_white if record.levelno >= 20 else
-                            self.term.blue)('%-5s' % (record.levelname.title()
-                                                      if record.levelname.lower() != 'warning'
-                                                      else 'warn',))
+                            self.term.blue)('%-5s' % (
+                                record.levelname.title()
+                                if record.levelname.lower() != 'warning'
+                                else 'warn',))
         return record
 
     def transform(self, src_record):

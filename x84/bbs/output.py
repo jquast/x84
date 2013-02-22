@@ -305,13 +305,13 @@ class Ansi(unicode):
                 rstr += u' ' * (Ansi(self[idx:]).anspadd())
             elif seq_left and Ansi(self[idx:]).is_movement():
                 ptr = idx + seq_left
-                match = ANSI_COLOR.match(self[idx:])
-                if match:
-                    # http://wiki.mysticbbs.com/mci_codes
-                    value = int(self[match.start():match.end() + 1]) - 30
-                    assert value >= 0 and value <= 60, ('illegal sgr: %r' % (
-                        self[idx:],))
-                    rstr += u'|%02d' % (value,)
+                if encode_pipe:
+                    match = ANSI_COLOR.match(self[idx:])
+                    if match:
+                        # http://wiki.mysticbbs.com/mci_codes
+                        value = int(self[match.start():match.end() + 1]) - 30
+                        if value >= 0 and value <= 60:
+                            rstr += u'|%02d' % (value,)
             elif ptr <= idx:
                 rstr += self[idx]
         return rstr

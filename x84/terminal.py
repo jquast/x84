@@ -47,6 +47,13 @@ def mkipc_rlog(out_queue):
 
 
 class TerminalProcess():
+    """
+    Class record for tracking global processes and their
+    various attributes. These are stored using register() and unregister(),
+    and retrieved using terminals().
+    """
+    # pylint: disable=R0903
+    #         Too few public methods
     def __init__(self, client, iqueue, oqueue, lock):
         self.client = client
         self.iqueue = iqueue
@@ -55,10 +62,8 @@ class TerminalProcess():
 
     @property
     def sid(self):
+        """ Returns session id. """
         return self.client.addrport()
-
-    def session_fileno(self):
-        return self.oqueue.fileno()
 
 
 def register(tty):
@@ -110,6 +115,8 @@ def terminals():
     return TERMINALS.items()
 
 
+# pylint: disable=R0913
+#         Too many arguments (6/5)
 def start_process(inp_queue, out_queue, sid, env, lock, binary=False):
     """
     A multiprocessing.Process target. Arguments:
@@ -153,7 +160,7 @@ def on_naws(client):
     to the 'userland', but should indicate also that the window sizes are
     checked`.
     """
-    for sid, tty in terminals():
+    for _sid, tty in terminals():
         if client == tty.client:
             columns = int(client.env['COLUMNS'])
             rows = int(client.env['LINES'])

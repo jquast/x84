@@ -4,6 +4,9 @@ Weather retriever for x/84 https://github.com/jquast/x84
 from xml.etree import cElementTree as ET
 import requests
 
+# sorry this isn't doing celcius, etc., its just how the data comes,
+# conversions were done in previous versions, but removed when rewritten
+# for brevity.
 
 def disp_msg(msg):
     """ Display unicode string ``msg`` in yellow. """
@@ -347,8 +350,8 @@ def disp_weather(weather):
     term = getterminal()
     rstr = u''.join((u'At ',
                      term.yellow(u'%s%s' % (weather.get('City'),
-                                            u', %s' % (weather['State'],) if ('State' in weather
-                                                                              and 0 != len(weather['State'])) else u'',)),
+                         u', %s' % (weather['State'],) if ('State' in weather
+                             and 0 != len(weather['State'])) else u'',)),
                      term.bold(u': '),
                      u'%s. ' % (
                      term.yellow_underline(weather.get('WeatherText')),),

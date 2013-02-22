@@ -8,6 +8,9 @@ TIME_FMT = '%A %b-%d, %Y at %r'
 
 
 def quote_body(msg, width=79, quote_txt=u'> ', hardwrap=u'\r\n'):
+    """
+    Given a message, return new string suitable for quoting it.
+    """
     from x84.bbs import Ansi
     ucs = u''
     for line in msg.body.splitlines():
@@ -96,9 +99,10 @@ def msg_filter(msgs):
 
         returns (msgs), (new). new contains redundant msgs
     """
-    # pylint: disable=R0914,R0912
+    # pylint: disable=R0914,R0912,R0915
     #         Too many local variables
     #         Too many branches
+    #         Too many statements
     from x84.bbs import list_msgs, echo, getsession, getterminal, get_msg, Ansi
     session, term = getsession(), getterminal()
     public_msgs = list_msgs(('public',))
@@ -239,12 +243,13 @@ def prompt_tags(tags):
 
 def main(autoscan_tags=None):
     """ Main procedure. """
+    # pylint: disable=W0603,R0912
+    #         Using the global statement
+    #         Too many branches
     from x84.bbs import getsession, getterminal, echo, getch
     from x84.bbs import list_msgs
     session, term = getsession(), getterminal()
     echo(banner())
-    # pylint: disable=W0603
-    #         Using the global statement
     global ALREADY_READ, SEARCH_TAGS, DELETED
     if autoscan_tags is not None:
         SEARCH_TAGS = autoscan_tags
@@ -320,12 +325,13 @@ def read_messages(msgs, new):
     Provide message reader UI given message list ``msgs``,
     with new messages in list ``new``.
     """
-    # pylint: disable=R0914,R0912
+    # pylint: disable=R0914,R0912,R0915
     #         Too many local variables
     #         Too many branches
+    #         Too many statements
     from x84.bbs import timeago, get_msg, getterminal, echo, gosub
     from x84.bbs import ini, Pager, getsession, getch, Ansi, Msg
-    from writemsg import prompt_tags
+    import x84.default.writemsg
     session, term = getsession(), getterminal()
 
     # build header
@@ -344,8 +350,9 @@ def read_messages(msgs, new):
         """
         import datetime
         msg_list = list()
-        thread_indent = lambda depth: (
-            ((indent * depth) + indent_end) if depth else u'')
+        thread_indent = lambda depth: (term.red(
+            (indent_start + (indent * depth) + indent_end))
+            if depth else u'')
 
         def head(msg, depth=0, maxdepth=reply_depth):
             """ This recursive routine finds the 'head' message
@@ -361,6 +368,8 @@ def read_messages(msgs, new):
             msg = get_msg(idx)
             author, subj = msg.author, msg.subject
             tm_ago = (datetime.datetime.now() - msg.stime).total_seconds()
+            # pylint: disable=W0631
+            #         Using possibly undefined loop variable 'idx'
             attr = lambda arg: (
                 term.bold_green(arg) if (
                     not idx in ALREADY_READ
@@ -379,7 +388,7 @@ def read_messages(msgs, new):
             msg_list.append((head(msg), idx, row_txt, subj))
         msg_list.sort()
         return [(idx, row_txt + thread_indent(depth) + subj)
-                for (thread_id, depth), idx, row_txt, subj in msg_list]
+                for (_threadid, depth), idx, row_txt, subj in msg_list]
 
     def get_selector(mailbox, prev_sel=None):
         """
@@ -584,7 +593,7 @@ def read_messages(msgs, new):
         elif inp in (u't',) and allow_tag(idx):
             echo(term.move(term.height, 0))
             msg = get_msg(idx)
-            if prompt_tags(msg):
+            if x84.default.writemsg.prompt_tags(msg):
                 msg.save()
             dirty = 2
 

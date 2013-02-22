@@ -67,9 +67,10 @@ def redraw(pager):
     footer = u''.join((u'-[ ',
                        term.blue_underline(u'Escape'), '/',
                        term.blue_underline(u'q'), term.bold_blue(u'uit '),
-                     ((u'- ' + term.blue_underline(u'e') + term.bold_blue(u'dit '))
-                      if 'sysop' in session.user.groups else u''),
-        u']-',
+                       ((u'- ' + term.blue_underline(u'e')
+                           + term.bold_blue(u'dit ')) if (
+                               'sysop' in session.user.groups) else u''),
+                           u']-',
     ))
     return u''.join((u'\r\n\r\n',
                      '\r\n'.join(
@@ -79,7 +80,8 @@ def redraw(pager):
                               pager.refresh(),
                               pager.border(),
                               pager.title(title),
-                              pager.footer(footer),)) if pager is not None else u'',))
+                              pager.footer(footer),)
+                              ) if pager is not None else u'',))
 
 
 def main():

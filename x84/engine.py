@@ -106,7 +106,7 @@ def _loop(telnetd):
         If no session matches a telnet client,
             (None, None, None, None) is returned.
         """
-        for sid, tty in terminals():
+        for _sid, tty in terminals():
             if client == tty.client:
                 return tty
         return None
@@ -146,8 +146,7 @@ def _loop(telnetd):
                 try:
                     tty.client.socket_send()
                 except Disconnected as err:
-                    logger.debug('%s Disconnected: %s.',
-                                 client.addrport(), err)
+                    logger.debug('%s Disconnected: %s.', sid, err)
                     # client.sock.fileno() can raised 'bad file descriptor',
                     # so, to remove it from the recv_list, reverse match by
                     # instance saved with its FD as a key for telnetd.clients!
@@ -189,10 +188,17 @@ def _loop(telnetd):
 
     @timeout_alarm(timeout_ipc, False)
     def f_send_event(iqueue, event, data):
+        """
+        Send event to subprocess, signaling an alarm timeout if blocked.
+        """
         iqueue.send((event, data))
         return True
 
     def send_input(client, iqueue):
+        """
+        Send tcp input to subprocess as 'input' event,
+        signaling an alarm timeout and re-buffering input if blocked.
+        """
         inp = client.get_input()
         retval = f_send_event(iqueue, 'input', inp)
         # if timeout occured, re-buffer input
@@ -219,7 +225,7 @@ def _loop(telnetd):
                 # with a signal alarm timeout; raising a warning if exceeded.
                 if not send_input(tty.client, tty.iqueue):
                     logger.warn('%s input buffer exceeded', sid)
-                    client.deactivate()
+                    tty.client.deactivate()
 
     def handle_lock(tty, event, data):
         """
@@ -262,12 +268,12 @@ def _loop(telnetd):
         """
 
         disp_handle = lambda handle: ((handle + u' ')
-                                      if handle is not None and 0 != len(handle)
-                                      else u'')
+                                      if handle is not None
+                                      and 0 != len(handle) else u'')
         disp_origin = lambda client: client.addrport().split(':', 1)[0]
 
         for sid, tty in terminals():
-            while tty.oqueue.poll():
+            while tty.oqueue.fileno() in fds and tty.oqueue.poll():
                 # receive data from pipe, unregister if any error,
                 try:
                     event, data = tty.oqueue.recv()
@@ -343,7 +349,7 @@ def _loop(telnetd):
             client.sock.close()
 
             # signal exit to any matching session
-            for sid, tty in terminals():
+            for _sid, tty in terminals():
                 if client == tty.client:
                     send_event = 'exception'
                     send_data = Disconnected('deactivated')
@@ -357,7 +363,7 @@ def _loop(telnetd):
         fds = telnet_send([fileno_telnetd] + telnetd.clients.keys())
 
         # extend fd list with all session Pipes
-        fds.extend([tty.oqueue.fileno() for sid, tty in terminals()])
+        fds.extend([tty.oqueue.fileno() for _sid, tty in terminals()])
 
         try:
             fds = select.select(fds, [], [], 0.1)[0]
@@ -379,27 +385,38 @@ def _loop(telnetd):
 
 
 def timeout_alarm(timeout_time, default):
-    # http://pguides.net/python-tutorial/python-timeout-a-function/
+    """
+    Call a function using signal handler, return False if it did not
+    return within duration of ``timeout_time``.
+
+    http://pguides.net/python-tutorial/python-timeout-a-function/
+    """
     import signal
 
     class TimeoutException(Exception):
+        """ Exception thrown when alarm is caught. """
         pass
 
-    def timeout_function(f, *args):
-        def f2(*args):
-            def timeout_handler(signum, frame):
+    # pylint: disable=W0613
+    #         Unused argument 'args'
+    def timeout_function(func, *args):
+        """ decorator """
+        def func2(*args):
+            """ function wrapper for decorator """
+            def timeout_handler(_signum, _frame):
+                """ Raises timeout exception. """
                 raise TimeoutException()
             old_handler = signal.signal(signal.SIGALRM, timeout_handler)
             signal.alarm(timeout_time)
             try:
-                retval = f(*args)
+                retval = func(*args)
             except TimeoutException:
                 return default
             finally:
                 signal.signal(signal.SIGALRM, old_handler)
             signal.alarm(0)
             return retval
-        return f2
+        return func2
     return timeout_function
 
 

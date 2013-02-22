@@ -69,9 +69,10 @@ class Lightbar (AnsiWindow):
         if entry >= len(self.content):
             # out-of-bounds;
             return u''.join((pos,
-                             self.glyphs.get('erase', u' ') * self.visible_width,))
+                self.glyphs.get('erase', u' ') * self.visible_width,))
 
         def fit_row(ucs):
+            """ Strip a unicode row to fit window boundry """
             strip_char = self.glyphs.get('strip', u' $')
             ptr = self.visible_width - len(strip_char)
             return ((Ansi(ucs).wrap(ptr).splitlines()[0]

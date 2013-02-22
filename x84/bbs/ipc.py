@@ -46,6 +46,8 @@ class IPCStream(object):
     Connect blessings 'stream' to 'child' output multiprocessing.Queue
     only write() is called by blessings.
     """
+    # pylint: disable=R0903
+    #         Too few public methods
     def __init__(self, out_queue, lock):
         self.oqueue = out_queue
         self.lock = lock
