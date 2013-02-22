@@ -89,7 +89,7 @@ def main():
             u'\r\n\r\n',
             sel.refresh(),))
 
-    selector = get_selector('utf8')
+    selector = get_selector(session.encoding)
     echo(refresh(selector))
     while True:
         inp = getch(1)
