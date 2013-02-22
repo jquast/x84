@@ -1,5 +1,6 @@
 """ ttyplay door for x/84, https://github.com/jquast/x84 """
 
+
 def main(ttyfile=u'', peek=False):
     """ Main procedure. """
     # pylint: disable=R0914,R0915
@@ -7,7 +8,8 @@ def main(ttyfile=u'', peek=False):
     #         Too many statements
     from x84.bbs import getsession, getterminal, echo, getch
     from x84.bbs import Door, ini, Lightbar
-    import os, re
+    import os
+    import re
     ttyplay_exe = ini.CFG.get('ttyplay', 'exe')
     if not os.path.exists(ttyplay_exe):
         echo(u'\r\n%s NOt iNStAllEd.\r\n' % (ttyplay_exe,))
@@ -20,9 +22,9 @@ def main(ttyfile=u'', peek=False):
         #         Access to a protected member _ttyrec_folder of a client class
         folder = os.path.dirname(ttyfile) or session._ttyrec_folder
         files = sorted([fn for fn in os.listdir(session._ttyrec_folder)
-                if fn.endswith('.ttyrec')])
+                        if fn.endswith('.ttyrec')])
         echo(u'\r\n' * term.height)
-        sel = Lightbar(term.height -1, term.width -1, 0, 0)
+        sel = Lightbar(term.height - 1, term.width - 1, 0, 0)
         sel.colors['border'] = term.bold_green
         echo(sel.border() + sel.title('-  SElECt A RECORdiNG  -'))
         sel.update([(fname, fname) for fname in files])

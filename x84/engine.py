@@ -187,12 +187,10 @@ def _loop(telnetd):
         except socket.error as err:
             logger.error('accept error %d:%s', err[0], err[1],)
 
-
     @timeout_alarm(timeout_ipc, False)
     def f_send_event(iqueue, event, data):
         iqueue.send((event, data))
         return True
-
 
     def send_input(client, iqueue):
         inp = client.get_input()
@@ -201,7 +199,6 @@ def _loop(telnetd):
         if not retval:
             client.recv_buffer.fromstring(inp)
         return retval
-
 
     def session_send():
         """
@@ -234,26 +231,25 @@ def _loop(telnetd):
                 locks[event] = time.time()
                 tty.iqueue.send((event, True,))
                 logger.debug('[%s] %r granted.',
-                        tty.sid, (event, data))
+                             tty.sid, (event, data))
             elif (stale is not None
                     and time.time() - locks[event] > stale):
                 tty.iqueue.send((event, True,))
                 logger.warn('[%s] %r stale %fs.',
-                        tty.sid, (event, data),
-                        time.time() - locks[event])
+                            tty.sid, (event, data),
+                            time.time() - locks[event])
             else:
                 tty.iqueue.send((event, False,))
                 logger.warn('[%s] %r not acquired.',
-                        tty.sid, (event, data))
+                            tty.sid, (event, data))
         elif method == 'release':
             if not event in locks:
                 logger.error('[%s] %r failed: no match',
-                        tty.sid, (event, data))
+                             tty.sid, (event, data))
             else:
                 del locks[event]
                 logger.debug('[%s] %r removed.',
-                        tty.sid, (event, data))
-
+                             tty.sid, (event, data))
 
     def session_recv(fds):
         """
@@ -266,9 +262,9 @@ def _loop(telnetd):
         """
 
         disp_handle = lambda handle: ((handle + u' ')
-                if handle is not None and 0 != len(handle)
-                else u'')
-        disp_origin = lambda client: client.addrport().split(':',1)[0]
+                                      if handle is not None and 0 != len(handle)
+                                      else u'')
+        disp_origin = lambda client: client.addrport().split(':', 1)[0]
 
         for sid, tty in terminals():
             while tty.oqueue.poll():
@@ -288,9 +284,9 @@ def _loop(telnetd):
                 elif event == 'logger':
                     # prefix message with 'ip:port/nick '
                     data.msg = '%s[%s] %s' % (
-                            disp_handle(data.handle),
-                            disp_origin(tty.client),
-                            data.msg)
+                        disp_handle(data.handle),
+                        disp_origin(tty.client),
+                        data.msg)
                     logger.handle(data)
                 # 'output' event, buffer for tcp socket
                 elif event == 'output':
@@ -302,7 +298,7 @@ def _loop(telnetd):
                         if send_to == _sid:
                             send_event = 'exception'
                             send_val = Disconnected(
-                                    'remote-disconnect by %s' % (sid,))
+                                'remote-disconnect by %s' % (sid,))
                             tty.iqueue.send((send_event, send_val))
                             unregister(tty)
                             break
@@ -337,8 +333,8 @@ def _loop(telnetd):
 
         # shutdown, close & delete inactive sockets,
         for fileno, client in [(_fno, _client)
-                for (_fno, _client) in telnetd.clients.items()
-                if not _client.active]:
+                               for (_fno, _client) in telnetd.clients.items()
+                               if not _client.active]:
             logger.info('close %s', telnetd.clients[fileno].addrport(),)
             try:
                 client.sock.shutdown(socket.SHUT_RDWR)
@@ -381,11 +377,14 @@ def _loop(telnetd):
         # send any session input data, poll timeout
         session_send()
 
+
 def timeout_alarm(timeout_time, default):
     # http://pguides.net/python-tutorial/python-timeout-a-function/
     import signal
+
     class TimeoutException(Exception):
         pass
+
     def timeout_function(f, *args):
         def f2(*args):
             def timeout_handler(signum, frame):

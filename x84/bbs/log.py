@@ -6,6 +6,7 @@ import copy
 import sys
 from x84.blessings import Terminal
 
+
 class ColoredConsoleHandler(logging.StreamHandler):
     """
     A stream handler that colors the levelname, thats all.
@@ -19,12 +20,12 @@ class ColoredConsoleHandler(logging.StreamHandler):
     def color_levelname(self, record):
         """ Modify levelname field to include terminal color sequences.  """
         record.levelname = (self.term.bold_red if record.levelno >= 50 else
-             self.term.bold_red if record.levelno >= 40 else
-             self.term.bold_yellow if record.levelno >= 30 else
-             self.term.bold_white if record.levelno >= 20 else
-             self.term.blue)('%-5s' % (record.levelname.title()
-                 if record.levelname.lower() != 'warning'
-                 else 'warn',))
+                            self.term.bold_red if record.levelno >= 40 else
+                            self.term.bold_yellow if record.levelno >= 30 else
+                            self.term.bold_white if record.levelno >= 20 else
+                            self.term.blue)('%-5s' % (record.levelname.title()
+                                                      if record.levelname.lower() != 'warning'
+                                                      else 'warn',))
         return record
 
     def transform(self, src_record):

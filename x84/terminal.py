@@ -9,6 +9,7 @@ import re
 
 TERMINALS = dict()
 
+
 def init_term(out_queue, lock, env):
     """
     curses is initialized using the value of 'TERM' of dictionary env,
@@ -26,9 +27,9 @@ def init_term(out_queue, lock, env):
         # http://wiki.synchro.net/install:nix?s[]=termcap#terminal_capabilities
         env['TERM'] = ini.CFG.get('system', 'termcap-ansi')
     return BTerminal(env.get('TERM', 'unknown'),
-                    IPCStream(out_queue, lock),
-                    int(env.get('LINES', '24')),
-                    int(env.get('COLUMNS', '80'),))
+                     IPCStream(out_queue, lock),
+                     int(env.get('LINES', '24')),
+                     int(env.get('COLUMNS', '80'),))
 
 
 def mkipc_rlog(out_queue):
@@ -136,7 +137,7 @@ def start_process(inp_queue, out_queue, sid, env, lock, binary=False):
         encoding = 'utf8'
     # spawn and begin a new session
     session = x84.bbs.session.Session(
-            term, inp_queue, out_queue, sid, env, lock, encoding)
+        term, inp_queue, out_queue, sid, env, lock, encoding)
     # copy session ptr to logger handler for 'handle' emit logging
     hdlr.session = session
     # run session
@@ -165,7 +166,7 @@ class ConnectTelnet (threading.Thread):
     Accept new Telnet Connection and negotiate options.
     """
     TIME_NEGOTIATE = 1.00
-    TIME_WAIT_SILENT = 0.60 # wait 60ms after silence
+    TIME_WAIT_SILENT = 0.60  # wait 60ms after silence
     TIME_WAIT_STAGE = 1.90  # wait 190ms foreach negotiation
     TIME_POLL = 0.0625
     TTYPE_UNDETECTED = 'unknown'
@@ -202,15 +203,14 @@ class ConnectTelnet (threading.Thread):
         out_recv, out_send = Pipe(duplex=False)
         lock = Lock()
         is_binary = (self.client.check_local_option(BINARY)
-                and self.client.check_remote_option(BINARY))
+                     and self.client.check_remote_option(BINARY))
         child_args = (inp_recv, out_send, self.client.addrport(),
-                self.client.env, lock, is_binary)
+                      self.client.env, lock, is_binary)
         logger.debug('starting session')
         proc = Process(target=start_process, args=child_args)
         proc.start()
         tty = TerminalProcess(self.client, inp_send, out_recv, lock)
         register(tty)
-
 
     def banner(self):
         """
@@ -263,8 +263,8 @@ class ConnectTelnet (threading.Thread):
 
         # this is totally useless, but informitive debugging information for
         # unknown unix clients ..
-        #self._try_xtitle()
-        #if not self.client.active:
+        # self._try_xtitle()
+        # if not self.client.active:
         #    return
 
     def run(self):
@@ -353,7 +353,7 @@ class ConnectTelnet (threading.Thread):
         if not self.client.active:
             return
         logger.debug('failed: negotiate about window size')
-        #self._try_cornerquery()
+        # self._try_cornerquery()
 
     def _try_xtitle(self):
         """
@@ -389,7 +389,7 @@ class ConnectTelnet (threading.Thread):
             logger.debug('failed: xterm-title')
             return
         self.client.env['_xtitle'] = match.group(1).decode(
-                'utf8', 'replace')
+            'utf8', 'replace')
         logger.info('window title: %s', self.client.env['_xtitle'])
         self.client.send_str(chr(27) + '[20t')
         self.client.socket_send()  # push
@@ -400,7 +400,7 @@ class ConnectTelnet (threading.Thread):
             re.escape(chr(27)),
             re.escape('\\'),)))
         st_time = time.time()
-        while (self.client.idle() < self.TIME_WAIT_SILENT*2
+        while (self.client.idle() < self.TIME_WAIT_SILENT * 2
                and self._timeleft(st_time)
                and self.client.active):
             time.sleep(self.TIME_POLL)
@@ -412,9 +412,8 @@ class ConnectTelnet (threading.Thread):
             logger.debug('failed: xterm-icon')
             return
         self.client.env['_xicon'] = match.group(1).decode(
-                'utf8', 'replace')
+            'utf8', 'replace')
         logger.info('window icon: %s', self.client.env['_xicon'])
-
 
     def _try_cornerquery(self):
         """

@@ -112,7 +112,7 @@ def main(handle):
             echo(term.bold_green(msg_verified))
             break
         logger.warn("failed passkey for user '%s': '%s', tried '%s')",
-                handle, passkey, try_passkey)
+                    handle, passkey, try_passkey)
         echo(term.bold_red(msg_wrong))
 
     set_password(user)

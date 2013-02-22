@@ -8,6 +8,8 @@ from x84.bbs.dbproxy import DBProxy
 #        Invalid name "logger" for type constant
 logger = logging.getLogger()
 digestpw = None
+GROUPDB = 'groupbase'
+USERDB = 'userbase'
 
 
 def list_users():
@@ -15,14 +17,14 @@ def list_users():
     Returns all user handles.
     """
     return [handle.decode('utf8')
-            for handle in DBProxy('userbase').keys()]
+            for handle in DBProxy(USERDB).keys()]
 
 
 def get_user(handle):
     """
     Returns User record, keyed by handle.
     """
-    return DBProxy('userbase')[handle]
+    return DBProxy(USERDB)[handle]
 
 
 def find_user(handle):
@@ -30,7 +32,7 @@ def find_user(handle):
     Given handle, discover and return matching database key case insensitively.
     The returned value may not be equal to the argument, or None if not found.
     """
-    for key in DBProxy('userbase').keys():
+    for key in DBProxy(USERDB).keys():
         if handle.lower() == key.decode('utf8').lower():
             return key
 
@@ -140,19 +142,19 @@ class Group(object):
         """
         Save group record to database.
         """
-        DBProxy('groupbase')[self.name] = self
+        DBProxy(GROUPDB)[self.name] = self
 
     def delete(self):
         """
         Delete group record from database, and from .groups of any users.
         """
-        udb = DBProxy('userbase')
+        udb = DBProxy(USERDB)
         for chk_user in self.members:
             user = udb[chk_user]
             if self.name in user.groups:
                 user.group_del(self.name)
                 user.save()
-        del DBProxy('groupbase')[self.name]
+        del DBProxy(GROUPDB)[self.name]
 
 
 class User(object):
@@ -233,7 +235,10 @@ class User(object):
     def __setitem__(self, key, value):
         # pylint: disable=C0111,
         #        Missing docstring
-        adb = DBProxy('userbase', 'attrs')
+        if self.handle == 'anonymous':
+            logger.debug("set attr %r not possible for 'anonymous'", key)
+            return
+        adb = DBProxy(USERDB, 'attrs')
         adb.acquire()
         if not self.handle in adb:
             adb[self.handle] = dict([(key, value), ])
@@ -248,7 +253,7 @@ class User(object):
     def get(self, key, default=None):
         # pylint: disable=C0111,
         #        Missing docstring
-        adb = DBProxy('userbase', 'attrs')
+        adb = DBProxy(USERDB, 'attrs')
         adb.acquire()
         if not self.handle in adb:
             logger.debug(
@@ -263,8 +268,8 @@ class User(object):
                 logger.debug('%r GET %r%s.' % (
                     self.handle, key,
                     ' (size: %d)' % (len(attrs[key]),)
-                        if hasattr(attrs[key], '__len__')
-                        else '(1)'))
+                    if hasattr(attrs[key], '__len__')
+                    else '(1)'))
                 val = attrs[key]
         adb.release()
         return val
@@ -273,13 +278,13 @@ class User(object):
     def __getitem__(self, key):
         # pylint: disable=C0111,
         #        Missing docstring
-        return DBProxy('userbase', 'attrs')[self.handle][key]
+        return DBProxy(USERDB, 'attrs')[self.handle][key]
     __getitem__.__doc__ = dict.__getitem__.__doc__
 
     def __delitem__(self, key):
         # pylint: disable=C0111,
         #        Missing docstring
-        uadb = DBProxy('userbase', 'attrs')
+        uadb = DBProxy(USERDB, 'attrs')
         uadb.acquire()
         attrs = uadb[self.handle]
         if key in attrs:
@@ -319,19 +324,19 @@ class User(object):
         assert len(self._handle) > 0, ('handle must be non-zero length')
         assert (None, None) != self._password, ('password must be set')
         assert self._handle != u'anonymous', (
-                'anonymous user my not be saved.')
-        udb = DBProxy('userbase')
+            'anonymous user my not be saved.')
+        udb = DBProxy(USERDB)
         udb.acquire()
         if 0 == len(udb) and self.is_sysop is False:
             logger.warn('%s: First new user becomes sysop.', self.handle)
             self.group_add(u'sysop')
         udb[self.handle] = self
-        adb = DBProxy('userbase', 'attrs')
+        adb = DBProxy(USERDB, 'attrs')
         adb.acquire()
         if not self.handle in adb:
             adb[self.handle] = dict()
         adb.release()
-        self._apply_groups(DBProxy('groupbase'))
+        self._apply_groups(DBProxy(GROUPDB))
         udb.release()
         logger.info("saved user '%s'.", self.handle)
 
@@ -339,13 +344,13 @@ class User(object):
         """
         Remove user record from database, and as a member of any groups.
         """
-        gdb = DBProxy('groupbase')
+        gdb = DBProxy(GROUPDB)
         for gname in self._groups:
             group = gdb[gname]
             if self.handle in group.members:
                 group.remove(self.handle)
                 group.save()
-        del DBProxy('userbase')[self.handle]
+        del DBProxy(USERDB)[self.handle]
         logger.info("deleted user '%s'.", self.handle)
 
     @property

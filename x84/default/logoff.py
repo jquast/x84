@@ -1,5 +1,6 @@
 """ logoff script with 'automsg' for x/84, https://github.com/jquast/x84 """
 
+
 def main():
     """ Main procedure. """
     # pylint: disable=R0914,R0912
@@ -8,19 +9,20 @@ def main():
     from x84.bbs import DBProxy, getsession, getterminal, echo
     from x84.bbs import ini, LineEditor, timeago, Ansi, showcp437
     from x84.bbs import disconnect, getch
-    import time, os
+    import time
+    import os
     session, term = getsession(), getterminal()
     session.activity = 'logging off'
     handle = session.handle if (
-            session.handle is not None
-            ) else 'anonymous'
+        session.handle is not None
+    ) else 'anonymous'
     max_user = ini.CFG.getint('nua', 'max_user')
     prompt_msg = u'[spnG]: ' if session.user.get('expert', False) else (
-            u'%s:AY SOMEthiNG %s:REViOUS %s:EXt %s:Et thE fUCk Off !\b' % (
-                term.bold_blue_underline(u's'), term.blue_underline(u'p'),
-                term.blue_underline(u'n'), term.red_underline(u'Escape/g'),))
+        u'%s:AY SOMEthiNG %s:REViOUS %s:EXt %s:Et thE fUCk Off !\b' % (
+        term.bold_blue_underline(u's'), term.blue_underline(u'p'),
+        term.blue_underline(u'n'), term.red_underline(u'Escape/g'),))
     prompt_say = u''.join((term.bold_blue(handle),
-        term.blue(u' SAYS WhAt'), term.bold(': '),))
+                           term.blue(u' SAYS WhAt'), term.bold(': '),))
     boards = (('1984.ws', 'x/84 dEfAUlt bOARd', 'dingo',),
               ('hysteriabbs.com', 'Hysteria', 'Netsurge',),
               ('pharcyde.ath.cx', 'Pharcyde BBS', 'Access Denied',),
@@ -45,11 +47,11 @@ def main():
             u'back to the mundane world...'),
         u'\r\n',))
     commit_msg = term.bold_blue(
-            u'-- !  thANk YOU fOR YOUR CONtRibUtiON, bROthER  ! --')
+        u'-- !  thANk YOU fOR YOUR CONtRibUtiON, bROthER  ! --')
     write_msg = term.red_reverse(
-            u'bURNiNG tO ROM, PlEASE WAiT ...')
+        u'bURNiNG tO ROM, PlEASE WAiT ...')
     db_firstrecord = ((time.time() - 1984,
-        u'B. b.', u'bEhAVE YOURSElVES ...'),)
+                       u'B. b.', u'bEhAVE YOURSElVES ...'),)
     automsg_len = 40
     artfile = os.path.join(os.path.dirname(__file__), 'art', '1984.asc')
 
@@ -71,17 +73,17 @@ def main():
         tm_ago, handle, msg = automsgs[idx]
         asc_ago = u'%s ago' % (timeago(time.time() - tm_ago))
         disp = (u''.join(('\r\n\r\n',
-            term.bold(handle.rjust(max_user)),
-            term.bold_blue(u'/'),
-            term.blue(u'%*d' % (len('%d'%(dblen,)), idx,)),
-            term.bold_blue(u':'),
-            term.blue_reverse(msg.ljust(automsg_len)),
-            term.bold(u'\\'),
-            term.blue(asc_ago),)))
+                          term.bold(handle.rjust(max_user)),
+                          term.bold_blue(u'/'),
+                          term.blue(u'%*d' % (len('%d' % (dblen,)), idx,)),
+                          term.bold_blue(u':'),
+                          term.blue_reverse(msg.ljust(automsg_len)),
+                          term.bold(u'\\'),
+                          term.blue(asc_ago),)))
         echo(u''.join((
             u'\r\n\r\n',
             Ansi(disp).wrap(term.width),
-            )))
+        )))
         return idx
 
     def refresh_all(idx=None):

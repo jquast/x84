@@ -1,10 +1,11 @@
 """ Who's online script for X/84, https://github.com/jquast/x84 """
 import time
 SELF_ID = -1
-POLL_KEY = 0.05 # blocking ;; how often to poll keyboard
-POLL_INF = 2.00 # seconds elapsed until re-ask clients for more details
-POLL_AYT = 4.00 # seconds elapsed until global 'are you there?' is checked,
-POLL_OUT = 0.30 # seconds elapsed before screen updates
+POLL_KEY = 0.05  # blocking ;; how often to poll keyboard
+POLL_INF = 2.00  # seconds elapsed until re-ask clients for more details
+POLL_AYT = 4.00  # seconds elapsed until global 'are you there?' is checked,
+POLL_OUT = 0.30  # seconds elapsed before screen updates
+
 
 def request_info(sid):
     """ Send info-req event to target session id ``sid``. """
@@ -35,18 +36,18 @@ def describe(sessions):
     session, term = getsession(), getterminal()
     max_user = ini.CFG.getint('nua', 'max_user')
     return u'\r\n'.join(([u''.join((
-            u'%*d' % (4 + slen(sessions), node),
-            u'%4is' % (attrs.get('idle', 0),), u' ',
-            (term.bold_green(u'%-*s' % (max_user, (
-                u'** diSCONNECtEd' if 'delete' in attrs
-                else attrs.get('handle', u'** CONNECtiNG')),)
-                ) if attrs.get('handle', u'') != session.user.handle
-                else term.green(u'%-*s' % (max_user, session.user.handle))),
-            term.green(u' - '),
-            term.bold_green((attrs.get('activity', u''))
-                if attrs.get('sid') != session.sid else
-                term.bold_black(session.activity)),
-            )) for node, (_sid, attrs) in get_nodes(sessions)]))
+        u'%*d' % (4 + slen(sessions), node),
+        u'%4is' % (attrs.get('idle', 0),), u' ',
+        (term.bold_green(u'%-*s' % (max_user, (
+        u'** diSCONNECtEd' if 'delete' in attrs
+        else attrs.get('handle', u'** CONNECtiNG')),)
+        ) if attrs.get('handle', u'') != session.user.handle
+            else term.green(u'%-*s' % (max_user, session.user.handle))),
+        term.green(u' - '),
+        term.bold_green((attrs.get('activity', u''))
+                        if attrs.get('sid') != session.sid else
+                        term.bold_black(session.activity)),
+    )) for node, (_sid, attrs) in get_nodes(sessions)]))
 
 
 def get_nodes(sessions):
@@ -64,13 +65,14 @@ def heading(sessions):
     max_user = ini.CFG.getint('nua', 'max_user')
     return u'\r\n'.join((
         u'\r\n'.join([pline.center(term.width)
-            for pline in prompt().splitlines()]),
+                      for pline in prompt().splitlines()]),
         u'\r\n',
         term.green_underline(u''.join((
             'node'.rjust(4 + slen(sessions)),
             'idle'.rjust(5),
             ' handle'.ljust(max_user + 3),
             'activity',))),))
+
 
 def prompt():
     """
@@ -83,7 +85,7 @@ def prompt():
         u')', term.reverse_green(desc.split()[0]), u' ',
         u' '.join(desc.split()[1:]), u' ',))
     return Ansi(u''.join((
-        u' '*2,
+        u' ' * 2,
         term.green_reverse(':keys'), u' ',
         decorate('c', 'hAt USR'),
         decorate('s', 'ENd MSG'),
@@ -96,7 +98,7 @@ def prompt():
         u' ',)) if 'sysop' in session.user.groups else u''),
         decorate('Escape/q', 'Uit'),
         decorate('Spacebar', 'REfRESh'),
-        ))).wrap(int(term.width * .7), indent=u' '*8)
+    ))).wrap(int(term.width * .7), indent=u' ' * 8)
 
 
 def get_node(sessions):
@@ -164,7 +166,7 @@ def chat(sessions):
         # page other user,
         channel = tgt_session['sid']
         sender = (session.user.handle
-                if not 'sysop' in session.user.groups else -1)
+                  if not 'sysop' in session.user.groups else -1)
         session.send_event('route', (
             tgt_session['sid'], 'page', channel, sender))
         gosub('chat', tgt_session['sid'])
@@ -187,7 +189,7 @@ def view(sessions):
                 term.bold_green(':'),
                 term.green(str(value)),)
                 for key, value in sorted(tgt_session.items())]),
-            )))
+        )))
         return True
 
 
@@ -226,6 +228,7 @@ def main():
     from x84.bbs import getsession, getterminal, getch, echo
     session, term = getsession(), getterminal()
     ayt_lastfresh = 0
+
     def broadcast_ayt(last_update):
         """ Globally boradcast 'are-you-there' request. """
         if time.time() - last_update > POLL_AYT:

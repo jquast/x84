@@ -2,12 +2,14 @@
 Write public or private posts for x/84, https://github.com/jquast/x84/
 """
 
+
 def banner():
     from x84.bbs import echo, getterminal
     term = getterminal()
     echo(u'\r\n\r\n')
     echo(term.bold_black(u'art needed ../'.center(term.width).rstrip()))
     echo(u'\r\n\r\n')
+
 
 def display_msg(msg):
     """ Refresh screen, level indicates up to which step """
@@ -17,8 +19,8 @@ def display_msg(msg):
     echo(u'    AUthOR: ' + term.bold_yellow(msg.author) + u'\r\n\r\n')
     echo(u'   RECiPiENt: ')
     echo(term.yellow(msg.recipient
-        if msg.recipient is not None
-        else u'<(None)=All users>'))
+                     if msg.recipient is not None
+                     else u'<(None)=All users>'))
     echo(u'\r\n\r\n')
     echo(u'     SUBjECt: ')
     echo(term.yellow(msg.subject))
@@ -31,7 +33,7 @@ def display_msg(msg):
     echo(u'\r\n' + term.underline(u''.ljust(term.width - 1)))
     echo(u'\r\n\r\n')
     session.activity = 'Constructing a %s message' % (
-            u'public' if u'public' in msg.tags else u'private',)
+        u'public' if u'public' in msg.tags else u'private',)
     return
 
 
@@ -43,7 +45,7 @@ def prompt_recipient(msg):
     from x84.bbs import Selector
     import difflib
     term = getterminal()
-    echo (u"ENtER %s, OR '%s' tO AddRESS All. %s to exit" % (
+    echo(u"ENtER %s, OR '%s' tO AddRESS All. %s to exit" % (
         term.bold_yellow(u'hANdlE'),
         term.bold_yellow(u'None'),
         term.bold_yellow_underline('Escape'),))
@@ -63,8 +65,8 @@ def prompt_recipient(msg):
         for match in difflib.get_close_matches(recipient, userlist):
             blurb = u'did YOU MEAN: %s ?' % (match,)
             inp = Selector(yloc=term.height - 1,
-                          xloc=term.width - 22,
-                          width=20, left=u'YES', right=u'NO')
+                           xloc=term.width - 22,
+                           width=20, left=u'YES', right=u'NO')
             echo(u''.join((
                 u'\r\n',
                 term.move(inp.yloc, inp.xloc - len(blurb)),
@@ -80,8 +82,8 @@ def prompt_recipient(msg):
     else:
         blurb = u' NO RECiPiENT; POSt tO PUbliC? '
         inp = Selector(yloc=term.height - 1,
-                      xloc=term.width - 22,
-                      width=20, left=u'YES', right=u'NO')
+                       xloc=term.width - 22,
+                       width=20, left=u'YES', right=u'NO')
         echo(u''.join((
             u'\r\n',
             term.move(inp.yloc, inp.xloc - len(blurb)),
@@ -119,13 +121,13 @@ def prompt_tags(msg):
     session, term = getsession(), getterminal()
     tagdb = DBProxy('tags')
     msg_onlymods = (u"\r\nONlY MEMbERS Of thE '%s' OR '%s' "
-            "GROUP MAY CREAtE NEW tAGS." % (
-                term.bold_yellow('sysop'), term.bold_blue('moderator'),))
+                    "GROUP MAY CREAtE NEW tAGS." % (
+                        term.bold_yellow('sysop'), term.bold_blue('moderator'),))
     msg_invalidtag = u"\r\n'%s' is not a valid tag."
     prompt_tags1 = u"ENtER %s, COMMA-dEliMitEd. " % (
-            term.bold_red('TAG(s)'),)
+        term.bold_red('TAG(s)'),)
     prompt_tags2 = u"OR '/list', %s:quit\r\n : " % (
-            term.bold_yellow_underline('Escape'),)
+        term.bold_yellow_underline('Escape'),)
     while True:
         # Accept user input for multiple 'tag's, or /list command
         echo(u'\r\n\r\n')
@@ -148,8 +150,8 @@ def prompt_tags(msg):
                 echo(u'None !'.center(term.width / 2))
             else:
                 echo(Ansi(u', '.join(([u'%s(%d)' % (_key, len(_value),)
-                    for (_key, _value) in all_tags]))
-                    ).wrap(term.width - 2))
+                                       for (_key, _value) in all_tags]))
+                          ).wrap(term.width - 2))
             continue
         echo(u'\r\n')
 
@@ -183,9 +185,9 @@ def prompt_public(msg):
         # msg is addressed to nobody, force tag as 'public' or cancel,
         blurb = u"POStS AddRESSEd tO 'None' MUSt bE PUbliC!"
         inp = Selector(yloc=term.height - 1,
-                      xloc=term.width - 22,
-                      width=20,
-                      left=u'Ok', right=u'CANCEl')
+                       xloc=term.width - 22,
+                       width=20,
+                       left=u'Ok', right=u'CANCEl')
         echo(term.move(inp.yloc, inp.xloc - len(blurb)) + term.clear_eol)
         echo(term.bold_red(blurb))
         selection = inp.read()
@@ -197,9 +199,9 @@ def prompt_public(msg):
     else:
         # not specified; you don't want this msg public? confirm,
         inp = Selector(yloc=term.height - 1,
-                      xloc=term.width - 22,
-                      width=20,
-                      left=u'PUbliC', right=u'PRiVAtE')
+                       xloc=term.width - 22,
+                       width=20,
+                       left=u'PUbliC', right=u'PRiVAtE')
         blurb = u'PUbliC OR PRiVAtE POSt?'
         echo(term.move(inp.yloc, inp.xloc - len(blurb)))
         echo(term.bold_yellow(blurb))
@@ -221,9 +223,9 @@ def prompt_body(msg):
     term = getterminal()
     session = getsession()
     inp = Selector(yloc=term.height - 1,
-                  xloc=term.width - 22,
-                  width=20,
-                  left=u'CONtiNUE', right=u'CANCEl')
+                   xloc=term.width - 22,
+                   width=20,
+                   left=u'CONtiNUE', right=u'CANCEl')
     blurb = u'CONtiNUE tO Edit MESSAGE bOdY'
     echo(u'\r\n\r\n')
     echo(term.move(inp.yloc, inp.xloc - len(blurb)))
@@ -234,9 +236,9 @@ def prompt_body(msg):
         return False
     if 0 != len(session.user.get('draft', u'')):
         inp = Selector(yloc=term.height - 1,
-                      xloc=term.width - 22,
-                      width=20,
-                      left=u'REStORE', right=u'ERASE')
+                       xloc=term.width - 22,
+                       width=20,
+                       left=u'REStORE', right=u'ERASE')
         blurb = u'CONtiNUE PREViOUSlY SAVEd dRAft ?'
         echo(u'\r\n\r\n')
         echo(term.move(inp.yloc, inp.xloc - len(blurb)))
@@ -260,9 +262,9 @@ def prompt_send():
     from x84.bbs import echo, Selector, getterminal
     term = getterminal()
     inp = Selector(yloc=term.height - 1,
-                  xloc=term.width - 22,
-                  width=20,
-                  left=u'CONtiNUE', right=u'CANCEl')
+                   xloc=term.width - 22,
+                   width=20,
+                   left=u'CONtiNUE', right=u'CANCEl')
     blurb = u'CONtiNUE tO SENd MESSAGE'
     echo(term.move(inp.yloc, inp.xloc - len(blurb)))
     echo(term.bold_yellow(blurb))
@@ -278,9 +280,9 @@ def prompt_abort():
     from x84.bbs import echo, Selector, getterminal
     term = getterminal()
     inp = Selector(yloc=term.height - 1,
-                  xloc=term.width - 22,
-                  width=20,
-                  left=u'CONtiNUE', right=u'AbORt')
+                   xloc=term.width - 22,
+                   width=20,
+                   left=u'CONtiNUE', right=u'AbORt')
     blurb = u'CONtiNUE MESSAGE?'
     echo(u'\r\n\r\n')
     echo(term.move(inp.yloc, inp.xloc - len(blurb)))
@@ -302,7 +304,7 @@ def main(msg=None):
     banner()
     while True:
         session.activity = 'Constructing a %s message' % (
-                u'public' if u'public' in msg.tags else u'private',)
+            u'public' if u'public' in msg.tags else u'private',)
         if not prompt_recipient(msg):
             break
         if not prompt_subject(msg):

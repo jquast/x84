@@ -142,7 +142,6 @@ class Pager(AnsiWindow):
                 else x84.bbs.session.getterminal().keyname(keystroke))
         return rstr
 
-
     def read(self):
         """
         Reads input until ESCAPE key is pressed (Blocking).  Returns None.
@@ -154,7 +153,6 @@ class Pager(AnsiWindow):
         echo(self.refresh())
         while not self.quit:
             echo(self.process_keystroke(session.read_event('input')))
-
 
     def move_home(self):
         """
@@ -232,9 +230,9 @@ class Pager(AnsiWindow):
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
         return u''.join(
-                [term.normal] + [self.refresh_row(row) for
-                    row in range(start_row, len(self.visible_content))]
-                + [term.normal])
+            [term.normal] + [self.refresh_row(row) for
+                             row in range(start_row, len(self.visible_content))]
+            + [term.normal])
 
     def update(self, ucs):
         """

@@ -42,7 +42,7 @@ class Session(object):
     _decoder = None
 
     def __init__(self, terminal, inp_queue, out_queue,
-            sid, env, lock, encoding='utf8'):
+                 sid, env, lock, encoding='utf8'):
         """
         Instantiate a Session instanance, only one session may be instantiated
         per process. Arguments:
@@ -69,7 +69,7 @@ class Session(object):
         self._script_stack = [(ini.CFG.get('matrix', 'script'),)]
         self._tap_input = ini.CFG.getboolean('session', 'tap_input')
         self._tap_output = ini.CFG.getboolean('session', 'tap_output')
-        self._tap_events =  ini.CFG.getboolean('session', 'tap_events')
+        self._tap_events = ini.CFG.getboolean('session', 'tap_events')
         self._ttyrec_folder = ini.CFG.get('system', 'ttyrecpath')
         self._record_tty = ini.CFG.getboolean('session', 'record_tty')
         self._show_traceback = ini.CFG.getboolean('system', 'show_traceback')
@@ -239,7 +239,6 @@ class Session(object):
             # continuing or exiting, esp. exiting, otherwise
             # STOP message is not often fully received
             time.sleep(2)
-
 
     def run(self):
         """
@@ -515,9 +514,9 @@ class Session(object):
             return (event, data)
         stime = time.time()
         timeleft = lambda cmp_time: (
-                float('inf') if timeout is None else
-                timeout if timeout < 0 else
-                timeout - (time.time() - cmp_time))
+            float('inf') if timeout is None else
+            timeout if timeout < 0 else
+            timeout - (time.time() - cmp_time))
         waitfor = timeleft(stime)
         while waitfor > 0:
             poll = None if waitfor == float('inf') else waitfor
@@ -580,7 +579,7 @@ class Session(object):
         value = script.main(*args)
         toss = self._script_stack.pop()
         logger.info("script '%s' returned%s.", toss[0],
-                ' %r' % (value,) if value is not None else u'')
+                    ' %r' % (value,) if value is not None else u'')
         return value
 
     def close(self):

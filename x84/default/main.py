@@ -22,20 +22,20 @@ def refresh():
         echo(line)
     echo(u'\r\n\r\n')
     entries = (
-            ('b', 'bS NEXUS'),
-            ('l', 'ASt CAllS'),
-            ('o', 'NE liNERS'),
-            ('w', "hO'S ONliNE"),
-            ('n', 'EWS'),
-            ('c', 'hAt'),
-            ('!', 'ENCOdiNG'),
-            ('t', 'EtRiS'),
-            ('s', 'YS. iNfO'),
-            ('f', 'ORECASt'),
-            ('e', 'dit PROfilE'),
-            ('p', 'OSt A MSG'),
-            ('r', 'EAd All MSGS'),
-            ('g', 'OOdbYE /lOGOff'),)
+        ('b', 'bS NEXUS'),
+        ('l', 'ASt CAllS'),
+        ('o', 'NE liNERS'),
+        ('w', "hO'S ONliNE"),
+        ('n', 'EWS'),
+        ('c', 'hAt'),
+        ('!', 'ENCOdiNG'),
+        ('t', 'EtRiS'),
+        ('s', 'YS. iNfO'),
+        ('f', 'ORECASt'),
+        ('e', 'dit PROfilE'),
+        ('p', 'OSt A MSG'),
+        ('r', 'EAd All MSGS'),
+        ('g', 'OOdbYE /lOGOff'),)
     if 'sysop' in session.user.groups:
         entries += (('v', 'idEO CASSEttE'),)
     buf_str = u''

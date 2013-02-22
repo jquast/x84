@@ -84,9 +84,9 @@ def showcp437(filepattern):
     import sauce
     session, term = getsession(), getterminal()
     msg_cancel = u''.join((term.normal,
-        term.bold_blue(u'--'),
-        u'CANCEllEd bY iNPUt ',
-        term.bold_blue(u'--'),))
+                           term.bold_blue(u'--'),
+                           u'CANCEllEd bY iNPUt ',
+                           term.bold_blue(u'--'),))
     msg_notfound = u''.join((
         term.bold_red(u'--'),
         u'no files matching %s' % (filepattern,),

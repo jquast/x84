@@ -17,8 +17,8 @@ import math
 import os
 
 DB_KEYS = ('bbsname', 'sysop', 'software',
-            'address', 'port', 'location',
-            'notes', 'timestamp', 'ansi')
+           'address', 'port', 'location',
+           'notes', 'timestamp', 'ansi')
 XML_REQNOTNULL = ('bbsname', 'sysop', 'software',
                   'address', 'location', 'notes')
 
@@ -76,7 +76,7 @@ class FetchUpdates(threading.Thread):
         for node in xml.etree.ElementTree.XML(buf).findall('node'):
             bbs_id = node.find('id').text.strip()
             record = dict([(key, ((node.find(key).text or u'').strip()
-                if node.find(key) is not None else u'')) for key in DB_KEYS])
+                                  if node.find(key) is not None else u'')) for key in DB_KEYS])
             self.content.append((bbs_id, record))
 
 
@@ -178,7 +178,7 @@ def view_ansi(key):
     term = getterminal()
     ansiurl = DBProxy('bbslist')[key]['ansi']
     logger = logging.getLogger()
-    echo (u'\r\n\r\n')
+    echo(u'\r\n\r\n')
     if ansiurl is not None and 0 != len(ansiurl) and ansiurl != 'NONE':
         usernm = ini.CFG.get('bbs-scene', 'user')
         passwd = ini.CFG.get('bbs-scene', 'pass')
@@ -216,7 +216,7 @@ def get_bbsinfo(key, active=True):
     """
     given a bbs key, fetch detailed information for use in pager
     """
-    #pylint: disable=R0914
+    # pylint: disable=R0914
     #        Too many local variables.
     from x84.bbs import getterminal, DBProxy, timeago
     rstr = u''
@@ -380,7 +380,7 @@ def banner():
     return u''.join((
         u'\r\n\r\n',
         u'\r\n'.join([line.center(term.width)[:term.width].rstrip()
-            for line in open(artfile)]) if os.path.exists(artfile)
+                      for line in open(artfile)]) if os.path.exists(artfile)
         else u'',))
 
 
@@ -399,7 +399,7 @@ def redraw_pager(pager, selection, active=True):
     if key is None:
         output += get_swinfo((entry or u'?').strip(), pager)
         output += pager.footer(u'-'
-                + fancy_green('a', 'dd') + u' -')
+                               + fancy_green('a', 'dd') + u' -')
     else:
         # describe bbs in pager
         bbsname = DBProxy('bbslist')[key]['bbsname']
@@ -411,10 +411,10 @@ def redraw_pager(pager, selection, active=True):
         if ansiurl != 'NONE' and 0 != len(ansiurl):
             ans = u'.' + fancy_green('v', 'ansi')
         output += pager.footer(u'- '
-            + fancy_green('a', 'dd') + u'.'
-            + fancy_green('t', 'ElNEt') + u'.'
-            + fancy_green('c', 'OMNt') + u'.'
-            + fancy_green('r', 'AtE') + ans + u' -')
+                               + fancy_green('a', 'dd') + u'.'
+                               + fancy_green('t', 'ElNEt') + u'.'
+                               + fancy_green('c', 'OMNt') + u'.'
+                               + fancy_green('r', 'AtE') + ans + u' -')
         output += pager.pos(pager.height - 2, pager.width - 4)
     # pager scroll indicator ..
     output += pager.pos(pager.height - 2, pager.width - 4)
@@ -505,11 +505,12 @@ def more(cont=False):
                     continue
                 process_keystroke(inp, key)
 
+
 def dummy_pager():
     """
     Provide interface without pager/lightbar.
     """
-    #pylint: disable=R0912
+    # pylint: disable=R0912
     #        Too many branches
     from x84.bbs import getterminal, echo, getch, Ansi
     term = getterminal()
@@ -555,7 +556,7 @@ def add_bbs():
     """
     Prompt user for details and to add bbs to list.
     """
-    #pylint: disable=R0914,R0915
+    # pylint: disable=R0914,R0915
     #        Too many local variables
     #        Too many statements
     from x84.bbs import getsession, getterminal, echo, LineEditor, DBProxy, ini
@@ -623,7 +624,7 @@ def add_bbs():
         if req.status_code != 200:
             echo(u'\r\n\r\nrequest failed,\r\n')
             echo(u'%r' % (req.content,))
-            echo(u'\r\n\r\n(code : %s).\r\n' %(req.status_code,))
+            echo(u'\r\n\r\n(code : %s).\r\n' % (req.status_code,))
             echo(u'\r\nPress any key ..')
             logger.warn('bbs post failed: %s' % (posturl,))
             getch()
@@ -668,7 +669,7 @@ def process_keystroke(inp, key=None):
 
 def add_comment(key):
     """ Prompt user to add a comment about a bbs. """
-    #pylint: disable=R0914
+    # pylint: disable=R0914
     #        Too many local variables.
     from x84.bbs import getsession, getterminal, echo, DBProxy, LineEditor
     from x84.bbs import getch
@@ -702,7 +703,7 @@ def add_comment(key):
 
 def rate_bbs(key):
     """ Prompt user to rate a bbs. """
-    #pylint: disable=R0914
+    # pylint: disable=R0914
     #        Too many local variables
     from x84.bbs import getsession, getterminal, echo, LineEditor, DBProxy
     from x84.bbs import getch
@@ -744,7 +745,7 @@ def rate_bbs(key):
 
 def main():
     """ Main procedure. """
-    #pylint: disable=R0914,R0912,R0915
+    # pylint: disable=R0914,R0912,R0915
     #        Too many local variables
     #        Too many branches
     #        Too many statements
@@ -764,7 +765,7 @@ def main():
         session.activity = u'bbs lister'
 
     dirty = True
-    #session.buffer_event('refresh', ('init',))
+    # session.buffer_event('refresh', ('init',))
     leftright = 0  # 'left'
 
     while True:

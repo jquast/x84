@@ -29,7 +29,7 @@ class IPCLogHandler(logging.Handler):
                 #         Statement seems to have no effect
                 dummy  # pflakes ;/
             record.handle = (self.session.handle
-                    if self.session is not None else None)
+                             if self.session is not None else None)
             if self.session is not None:
                 self.session.lock.acquire()
             self.oqueue.send(('logger', record))

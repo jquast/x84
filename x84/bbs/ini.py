@@ -12,6 +12,7 @@ CFG = None
 #         Too many branches
 #         Using the global statement
 
+
 def init(lookup_bbs, lookup_log):
     """
     Initialize global 'CFG' variable, a singleton to contain bbs properties and

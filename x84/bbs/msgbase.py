@@ -133,12 +133,13 @@ class Msg(object):
         if self.parent is not None:
             parent_msg = get_msg(self.parent)
             if not hasattr(parent_msg, 'children'):
-                parent_msg.children = set() # intermediary conversion; deleteme
+                parent_msg.children = set(
+                )  # intermediary conversion; deleteme
             parent_msg.children.add(self.idx)
             parent_msg.save()
 
         logger.info(u"saved %s%s%s, addressed to '%s'.",
-                'new ' if new else u'',
-                'public ' if 'public' in self.tags else u'',
-                'message ' if self.parent is None else u'reply ',
-                self.recipient,)
+                    'new ' if new else u'',
+                    'public ' if 'public' in self.tags else u'',
+                    'message ' if self.parent is None else u'reply ',
+                    self.recipient,)

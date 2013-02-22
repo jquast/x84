@@ -4,12 +4,13 @@
 # is not used, so each line causes a full screen fresh ..
 
 import time
-POLL_KEY = 0.05 # blocking ;; how often to poll keyboard
-POLL_OUT = 0.25 # seconds elapsed before screen update, prevents flood
+POLL_KEY = 0.05  # blocking ;; how often to poll keyboard
+POLL_OUT = 0.25  # seconds elapsed before screen update, prevents flood
 
 CHANNEL = None
 NICKS = dict()
 EXIT = False
+
 
 def show_help():
     """ return string suitable for response to /help. """
@@ -20,6 +21,7 @@ def show_help():
         u'   /quit [reason]',
         u'   /users',
         u'   /whois handle',))
+
 
 def process(mesg):
     """
@@ -77,7 +79,7 @@ def show_join(handle, sid, chan):
         term.blue('-'), u'!', term.blue('-'),
         u' ', term.bold_cyan(handle), u' ',
         (u''.join((term.bold_black('['),
-            term.cyan(sid), term.bold_black(']'), u' ',))
+                   term.cyan(sid), term.bold_black(']'), u' ',))
             if 'sysop' in session.user.groups else u''),
         'has joined ',
         term.bold(chan),))
@@ -92,11 +94,12 @@ def show_part(handle, sid, chan, reason):
         term.blue('-'), u'!', term.blue('-'),
         u' ', term.bold_cyan(handle), u' ',
         (u''.join((term.bold_black('['),
-            term.cyan(sid), term.bold_black(']'), u' ',))
+                   term.cyan(sid), term.bold_black(']'), u' ',))
             if 'sysop' in session.user.groups else u''),
         'has left ',
         term.bold(chan),
         u' (%s)' % (reason,) if reason and 0 != len(reason) else u'',))
+
 
 def show_whois(attrs):
     """ return terminal sequence for /whois result. """
@@ -107,7 +110,7 @@ def show_whois(attrs):
         term.blue('-'), u'!', term.blue('-'),
         u' ', term.bold(attrs['handle']), u' ',
         (u''.join((term.bold_black('['),
-            term.cyan(attrs['sid']), term.bold_black(']'), u' ',))
+                   term.cyan(attrs['sid']), term.bold_black(']'), u' ',))
             if 'sysop' in session.user.groups else u''), u'\n',
         time.strftime('%H:%M'), u' ',
         term.blue('-'), u'!', term.blue('-'),
@@ -118,7 +121,8 @@ def show_whois(attrs):
         term.blue('-'), u'!', term.blue('-'),
         u' ', term.bold(u'idlE: '),
         term.bold_cyan(timeago(time.time() - attrs['idle'])), u'\n',
-        ))
+    ))
+
 
 def show_nicks(handles):
     """ return terminal sequence for /users result. """
@@ -130,6 +134,7 @@ def show_nicks(handles):
         u' ', term.bold_cyan('%d' % (len(handles))), u' ',
         u'user%s: ' % (u's' if len(handles) > 1 else u''),
         u', '.join(handles) + u'\n',))
+
 
 def show_say(handle, tgt_channel, mesg):
     """ return terminal sequence for /say performed by handle. """
@@ -149,6 +154,7 @@ def show_say(handle, tgt_channel, mesg):
         term.bold_black(u'>'), u' ',
         mesg,))
 
+
 def get_inputbar(pager):
     """ Return ScrollingEditor for use as inputbar. """
     from x84.bbs import getterminal, ScrollingEditor
@@ -161,6 +167,7 @@ def get_inputbar(pager):
     ibar.max_length = 512
     ibar.colors['highlight'] = term.cyan_reverse
     return ibar
+
 
 def get_pager(pager=None):
     """ Return Pager for use as chat window. """
@@ -206,7 +213,7 @@ def main(channel=None, caller=None):
             term.bold(u'['),
             term.bold_green_underline(u'yn'),
             term.bold(u']'),
-            )))
+        )))
         while True:
             inp = getch()
             if inp in (u'y', u'Y'):
@@ -217,19 +224,19 @@ def main(channel=None, caller=None):
     def refresh(pager, ipb, init=False):
         """ Returns terminal sequence suitable for refreshing screen. """
         session.activity = 'Chatting in %s' % (
-                CHANNEL if not CHANNEL.startswith('#')
-                and not 'sysop' in session.user.groups
-                else u'PRiVAtE ChANNEl',) if CHANNEL is not None else (
-                        u'WAitiNG fOR ChAt')
+            CHANNEL if not CHANNEL.startswith('#')
+            and not 'sysop' in session.user.groups
+            else u'PRiVAtE ChANNEl',) if CHANNEL is not None else (
+                u'WAitiNG fOR ChAt')
         pager.move_end()
         return u''.join((
             u''.join((u'\r\n', term.clear_eol,
-                u'\r\n', term.clear_eol,
-                term.bold_cyan(u'//'),
-                u' CitZENS bANd'.center(term.width).rstrip(),
-                term.clear_eol,
-                (u'\r\n' + term.clear_eol) * (pager.height + 2),
-                pager.border())) if init else u'',
+                      u'\r\n', term.clear_eol,
+                      term.bold_cyan(u'//'),
+                      u' CitZENS bANd'.center(term.width).rstrip(),
+                      term.clear_eol,
+                       (u'\r\n' + term.clear_eol) * (pager.height + 2),
+                      pager.border())) if init else u'',
             pager.title(u''.join((
                 term.bold_cyan(u']- '),
                 CHANNEL if CHANNEL is not None else u'',

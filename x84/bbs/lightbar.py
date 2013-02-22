@@ -10,7 +10,7 @@ NETHACK_KEYSET = {'home': [u'y', '0'],
                   'up': [u'k'],
                   'down': [u'j'],
                   'enter': [u'\r'],
-                  'exit': [u'q', u'Q', unichr(27),],
+                  'exit': [u'q', u'Q', unichr(27), ],
                   }
 
 
@@ -68,14 +68,14 @@ class Lightbar (AnsiWindow):
         entry = self.vitem_shift + row
         if entry >= len(self.content):
             # out-of-bounds;
-            return u''.join(( pos,
-                self.glyphs.get('erase', u' ') * self.visible_width,))
+            return u''.join((pos,
+                             self.glyphs.get('erase', u' ') * self.visible_width,))
 
         def fit_row(ucs):
             strip_char = self.glyphs.get('strip', u' $')
             ptr = self.visible_width - len(strip_char)
             return ((Ansi(ucs).wrap(ptr).splitlines()[0]
-                        .ljust(ptr) + strip_char))
+                     .ljust(ptr) + strip_char))
 
         term = x84.bbs.session.getterminal()
         # allow ucs data with '\r\n', to accomidate soft and hardbreaks; just
@@ -88,19 +88,19 @@ class Lightbar (AnsiWindow):
             ucs = Ansi(ucs).seqfill()
             if len(Ansi(ucs)) > self.visible_width:
                 ucs = fit_row(ucs)
-            return u''.join(( pos,
-                self.colors.get('highlight', u''),
-                self.align(ucs),
-                term.normal,))
+            return u''.join((pos,
+                             self.colors.get('highlight', u''),
+                             self.align(ucs),
+                             term.normal,))
         # unselected entry; retain ansi sequences, decode any pipe characters,
         # trim and append '$ ' if it cannot fit
         ucs = Ansi(ucs).decode_pipe()
         if len(Ansi(ucs)) > self.visible_width:
             ucs = fit_row(ucs)
-        return u''.join(( pos,
-            self.colors.get('lowlight', u''),
-            self.align(ucs),
-            term.normal,))
+        return u''.join((pos,
+                         self.colors.get('lowlight', u''),
+                         self.align(ucs),
+                         term.normal,))
 
     def fixate(self):
         """
@@ -108,7 +108,7 @@ class Lightbar (AnsiWindow):
         selection.
         """
         return self.pos(self.ypadding + self.vitem_idx,
-                self.xpadding + self.visible_width)
+                        self.xpadding + self.visible_width)
 
     def refresh(self):
         """
@@ -141,7 +141,7 @@ class Lightbar (AnsiWindow):
         """
         from x84.bbs.session import getterminal
         self.colors['highlight'] = getterminal().reverse_green
-        self.glyphs['strip'] = u' $' # indicates content was stripped
+        self.glyphs['strip'] = u' $'  # indicates content was stripped
         AnsiWindow.init_theme(self)
 
     def init_keystrokes(self):
@@ -281,7 +281,6 @@ class Lightbar (AnsiWindow):
         self.vitem_idx, self.vitem_shift = pos_tuple
         self._chk_bounds()
 
-
     @property
     def visible_content(self):
         """
@@ -378,7 +377,6 @@ class Lightbar (AnsiWindow):
             self.vitem_shift += 1
         return self.refresh_quick()
 
-
     def goto(self, index):
         """
         Move selection to index of lightbar content.
@@ -397,7 +395,6 @@ class Lightbar (AnsiWindow):
                 shift -= 1
         self.position = row, shift
         return self.refresh_quick()
-
 
     def move_up(self):
         """

@@ -132,7 +132,7 @@ class Door(object):
             this utf8 byte must really be the last for a while.
             """
             return (self.master_fd in
-                    select.select([self.master_fd,], (), (), 0)[0])
+                    select.select([self.master_fd, ], (), (), 0)[0])
         import codecs
         from x84.bbs import getsession, getterminal, echo
         from x84.bbs.cp437 import CP437
@@ -156,7 +156,7 @@ class Door(object):
                     decoded = list()
                     for num, byte in enumerate(data):
                         final = ((num + 1) == len(data)
-                                and not masterfd_isready())
+                                 and not masterfd_isready())
                         ucs = utf8_decoder.decode(byte, final)
                         if ucs is not None:
                             decoded.append(ucs)
@@ -168,9 +168,9 @@ class Door(object):
 
             if event == 'refresh' and data[0] == 'refresh':
                 logger.debug('send TIOCSWINSZ: %dx%d',
-                        term.width, term.height)
+                             term.width, term.height)
                 fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ,
-                        struct.pack('HHHH', term.height, term.width, 0, 0))
+                            struct.pack('HHHH', term.height, term.width, 0, 0))
             elif event == 'input':
                 # hmm.. what to send, depending on TERM? interesting ..
                 n_written = os.write(self.master_fd, data)

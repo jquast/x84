@@ -2,6 +2,7 @@
 # this also allows viewing of '.plan' attribute string when set by user,
 # or 'e'diting a user when executed by sysop -- gosub('profile', user)
 
+
 def pak():
     """ Press any key prompt. """
     from x84.bbs import echo, getch
@@ -29,20 +30,20 @@ def dummy_pager(last_callers):
     from x84.bbs import LineEditor, Ansi, list_users, get_user, gosub
     session, term = getsession(), getterminal()
     msg_prompt = (
-            u'\r\n%sONtiNUE, %stOP, %sON-StOP %siEW .PlAN%s ?\b\b' % (
-                term.bold(u'[c]'),
-                term.bold(u'[s]'),
-                term.bold(u'n'),
-                term.bold(u'[v]'),
-                u' [e]dit USR' if (
-                    'sysop' in session.user.groups) else u'',))
+        u'\r\n%sONtiNUE, %stOP, %sON-StOP %siEW .PlAN%s ?\b\b' % (
+        term.bold(u'[c]'),
+        term.bold(u'[s]'),
+        term.bold(u'n'),
+        term.bold(u'[v]'),
+        u' [e]dit USR' if (
+        'sysop' in session.user.groups) else u'',))
     msg_partial = u'PARtiAl MAtChES'
     msg_prompt_handle = u'ViEW .PlAN ::- ENtER hANdlE: '
 
     redraw()
     echo(u'\r\n\r\n')
     nonstop = False
-    row = 10 # after-art,
+    row = 10  # after-art,
     for txt in last_callers:
         echo(Ansi(txt).ljust(term.width / 2).center(term.width))
         echo(u'\r\n')
@@ -65,7 +66,7 @@ def dummy_pager(last_callers):
                 handle = handle.strip()
                 if handle.lower() in [nick.lower() for nick in list_users()]:
                     user = get_user((nick for nick in usrlist
-                        if nick.lower() == handle.lower()).next())
+                                     if nick.lower() == handle.lower()).next())
                     if 'sysop' in session.user.groups and (
                             inp in (u'e', u'E')):
                         gosub('profile', user.handle)
@@ -73,15 +74,16 @@ def dummy_pager(last_callers):
                         view_plan(user.handle)
                 else:
                     misses = [nick for nick in usrlist.keys()
-                        if nick.lower().startswith(handle[:1].lower())]
+                              if nick.lower().startswith(handle[:1].lower())]
                     if len(misses) > 0:
                         echo(u'%s:\r\n\r\n%s\r\n' % (msg_partial,
-                            Ansi(', '.join(misses)).wrap(term.width)))
+                                                     Ansi(', '.join(misses)).wrap(term.width)))
                     continue
             if inp in ('n', u'N'):
                 nonstop = True
             echo(u'\r\n\r\n')
     pak()
+
 
 def refresh_opts(pager, handle):
     """ Refresh pager border with command keys available. """
@@ -99,9 +101,9 @@ def refresh_opts(pager, handle):
     return pager.border() + pager.footer(u''.join((
         term.bold_red(u'- '),
         decorate(u'Escape/q', 'Uit'),
-        decorate(u'v','iEW .PLAN') if has_plan else u'',
-        decorate(u'e','dit USR') if 'sysop' in session.user.groups else u'',
-        )))
+        decorate(u'v', 'iEW .PLAN') if has_plan else u'',
+        decorate(u'e', 'dit USR') if 'sysop' in session.user.groups else u'',
+    )))
 
 
 def get_lightbar(lcallers, lcalls):
@@ -127,6 +129,7 @@ def get_lightbar(lcallers, lcalls):
                   for (n, txt) in enumerate(lcalls.split('\n'))])
     return pager
 
+
 def get_art(fname):
     """ Return ansi art center-aligned. """
     from x84.bbs import getterminal
@@ -138,6 +141,7 @@ def get_art(fname):
         width = max(len(art_line), width)
         buf.append(art_line)
     return [line.center(width) for line in buf]
+
 
 def redraw(pager=None):
     """ Returns unicode sequence suitable for redrawing screen. """
@@ -159,6 +163,7 @@ def redraw(pager=None):
         u'\r\n' * (pager.height if pager is not None else 0),
         pager.border() if pager is not None else u'',
         pager.refresh() if pager is not None else u'',))
+
 
 def lc_retrieve():
     """
@@ -182,7 +187,7 @@ def lc_retrieve():
     for ((tm_lc, handle), (_nc, origin)) in (reversed(sorted(udb.items()))):
         is_sysop = 'sysop' in get_user(handle).groups
         rstr += (term.bold_red(u'@') if is_sysop else u''
-                )+(handle.ljust(padd_handle - (2 if is_sysop else 1)))
+                 ) + (handle.ljust(padd_handle - (2 if is_sysop else 1)))
         rstr += term.red(origin.ljust(padd_origin))
         rstr += timeago(time.time() - tm_lc)
         rstr += u'\n'

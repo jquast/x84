@@ -35,21 +35,21 @@ def main(host, port=None, encoding='cp437'):
             elif opt == telnetlib.TTYPE:
                 socket.sendall(telnetlib.IAC + telnetlib.WILL + opt)
                 socket.sendall(telnetlib.IAC + telnetlib.SB
-                        + telnetlib.TTYPE + IS + session.env.get('TERM')
-                        + chr(0) + telnetlib.IAC + telnetlib.SE)
+                               + telnetlib.TTYPE + IS + session.env.get('TERM')
+                               + chr(0) + telnetlib.IAC + telnetlib.SE)
             elif opt == telnetlib.NAWS:
                 socket.sendall(telnetlib.IAC + telnetlib.WILL + opt)
                 socket.sendall(telnetlib.IAC + telnetlib.SB
-                        + telnetlib.NAWS
-                        + struct.pack('!HH', term.width, term.height)
-                        + telnetlib.IAC + telnetlib.SE)
+                               + telnetlib.NAWS
+                               + struct.pack('!HH', term.width, term.height)
+                               + telnetlib.IAC + telnetlib.SE)
             else:
                 socket.sendall(telnetlib.IAC + telnetlib.WONT + opt[0])
         elif cmd == telnetlib.SB:
             if opt[0] == telnetlib.TTYPE and opt[1] == SEND:
                 socket.sendall(telnetlib.IAC + telnetlib.SB
-                        + telnetlib.TTYPE + IS + session.env.get('TERM')
-                        + chr(0) + telnetlib.IAC + telnetlib.SE)
+                               + telnetlib.TTYPE + IS + session.env.get('TERM')
+                               + chr(0) + telnetlib.IAC + telnetlib.SE)
     telnet_client.set_option_negotiation_callback(callback_cmdopt)
 
     echo(u"\r\n\r\nEscape character is 'ctrl-^.'")
@@ -77,8 +77,8 @@ def main(host, port=None, encoding='cp437'):
     while True:
         try:
             unistring = (from_cp437(telnet_client.read_very_eager())
-                    if encoding == 'cp437' else
-                    telnet_client.read_very_eager().decode('utf8'))
+                         if encoding == 'cp437' else
+                         telnet_client.read_very_eager().decode('utf8'))
             if 0 != len(unistring):
                 echo(unistring)
             if inp == unichr(30):  # ctrl-^

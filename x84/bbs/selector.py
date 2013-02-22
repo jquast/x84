@@ -33,7 +33,7 @@ class Selector(AnsiWindow):
         self._moved = False
         self._quit = False
         self._selected = False
-        AnsiWindow.__init__(self, 1, width, yloc, xloc) # height is 1
+        AnsiWindow.__init__(self, 1, width, yloc, xloc)  # height is 1
         self.init_theme()
         self.keyset = VI_KEYSET
         self.init_keystrokes()
@@ -163,11 +163,11 @@ class Selector(AnsiWindow):
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
         attr_l = (self.colors.get('selected', u'')
-                if self.selection == self.left
-                else self.colors.get('unselected'))
+                  if self.selection == self.left
+                  else self.colors.get('unselected'))
         attr_r = (self.colors.get('selected', u'')
-                if self.selection == self.right
-                else self.colors.get('unselected'))
+                  if self.selection == self.right
+                  else self.colors.get('unselected'))
         return u''.join((
             self.pos(0, 0), term.normal, attr_l,
             self.left.center(int(math.ceil(float(self.width) / 2))),

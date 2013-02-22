@@ -16,6 +16,7 @@ ANSI_CODEPAGE = re.compile(r'\033[\(\)][AB012]')
 ANSI_WILLMOVE = re.compile(r'\033\[[HJuABCDEF]')
 ANSI_WONTMOVE = re.compile(r'\033\[[sm]')
 
+
 class AnsiWrapper(textwrap.TextWrapper):
     # pylint: disable=C0111
     #         Missing docstring
@@ -56,11 +57,13 @@ class AnsiWrapper(textwrap.TextWrapper):
         return lines
 AnsiWrapper.__doc__ = textwrap.TextWrapper.__doc__
 
+
 def ansiwrap(ucs, width=70, **kwargs):
     """Wrap a single paragraph of Unicode Ansi sequences,
     returning a list of wrapped lines.
     """
     return AnsiWrapper(width=width, **kwargs).wrap(ucs)
+
 
 def echo(ucs):
     """
@@ -307,7 +310,7 @@ class Ansi(unicode):
                     # http://wiki.mysticbbs.com/mci_codes
                     value = int(self[match.start():match.end() + 1]) - 30
                     assert value >= 0 and value <= 60, ('illegal sgr: %r' % (
-                                self[idx:],))
+                        self[idx:],))
                     rstr += u'|%02d' % (value,)
             elif ptr <= idx:
                 rstr += self[idx]
@@ -450,6 +453,3 @@ class Ansi(unicode):
             return 0
         # unknown...
         return 0
-
-
-

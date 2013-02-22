@@ -379,7 +379,7 @@ class Terminal(object):
         logger = logging.getLogger()
         decoded = list()
         for num, byte in enumerate(text):
-            final = False #(num + 1) == len(text)
+            final = False  # (num + 1) == len(text)
             try:
                 ucs = decoder.decode(byte, final)
             except UnicodeDecodeError as err:

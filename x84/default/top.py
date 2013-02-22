@@ -7,18 +7,18 @@ and assigned to the session.
 
 # generated using lolcat ..
 BADGE256 = unichr(27).join((u'',
-    u'[38;5;49m2', u'[0m', u'[38;5;48m5', u'[0m',
-    u'[38;5;48m6', u'[0m', u'[38;5;48m-', u'[0m',
-    u'[38;5;48mC', u'[0m', u'[38;5;84mO', u'[0m',
-    u'[38;5;83ml', u'[0m', u'[38;5;83mO', u'[0m',
-    u'[38;5;83mr', u'[0m', u'[38;5;83m ', u'[0m',
-    u'[38;5;83mb', u'[0m', u'[38;5;119mA', u'[0m',
-    u'[38;5;118md', u'[0m', u'[38;5;118mG', u'[0m',
-    u'[38;5;118mE', u'[0m', u'[38;5;118m ', u'[0m',
-    u'[38;5;154mA', u'[0m', u'[38;5;154mW', u'[0m',
-    u'[38;5;154mA', u'[0m', u'[38;5;154mR', u'[0m',
-    u'[38;5;154mD', u'[0m', u'[38;5;184mE', u'[0m',
-    u'[38;5;184md', u'[0m', u'[38;5;184m!', u'[0m',))
+                            u'[38;5;49m2', u'[0m', u'[38;5;48m5', u'[0m',
+                            u'[38;5;48m6', u'[0m', u'[38;5;48m-', u'[0m',
+                            u'[38;5;48mC', u'[0m', u'[38;5;84mO', u'[0m',
+                            u'[38;5;83ml', u'[0m', u'[38;5;83mO', u'[0m',
+                            u'[38;5;83mr', u'[0m', u'[38;5;83m ', u'[0m',
+                            u'[38;5;83mb', u'[0m', u'[38;5;119mA', u'[0m',
+                            u'[38;5;118md', u'[0m', u'[38;5;118mG', u'[0m',
+                            u'[38;5;118mE', u'[0m', u'[38;5;118m ', u'[0m',
+                            u'[38;5;154mA', u'[0m', u'[38;5;154mW', u'[0m',
+                            u'[38;5;154mA', u'[0m', u'[38;5;154mR', u'[0m',
+                            u'[38;5;154mD', u'[0m', u'[38;5;184mE', u'[0m',
+                            u'[38;5;184md', u'[0m', u'[38;5;184m!', u'[0m',))
 
 
 def display_intro():
@@ -28,7 +28,7 @@ def display_intro():
     term = getterminal()
     # display random artwork ..
     artfile = os.path.join(os.path.dirname(__file__), 'art',
-            '*.ans' if term.number_of_colors != 0 else '*.asc')
+                           '*.ans' if term.number_of_colors != 0 else '*.asc')
     echo(u'\r\n\r\n')
     for line in showcp437(artfile):
         echo(line)
@@ -59,11 +59,11 @@ def redraw_quicklogin(ynbar):
     prompt_ql = u' QUiCk lOGiN ?! '
     term = getterminal()
     return u''.join((
-            term.move(ynbar.yloc - 1, ynbar.xloc),
-            term.normal,
-            term.bold_blue(prompt_ql),
-            ynbar.refresh(),
-            ))
+        term.move(ynbar.yloc - 1, ynbar.xloc),
+        term.normal,
+        term.bold_blue(prompt_ql),
+        ynbar.refresh(),
+    ))
 
 
 def main(handle=None):

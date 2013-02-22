@@ -3,6 +3,7 @@ NEWS_ART = None
 NEWSAGE = 0
 NEWS = None
 
+
 def dummy_pager(news_txt):
     """
     Given news_txt as unicode string, display using a dummy pager.
@@ -10,7 +11,7 @@ def dummy_pager(news_txt):
     from x84.bbs import getterminal, echo, getch
     term = getterminal()
     prompt_msg = u'\r\n[%s]ontinue, [%s]top, [%s]on-stop  ?\b\b' % (
-            term.bold_blue('c'), term.bold_blue('s'), term.bold_blue('n'),)
+        term.bold_blue('c'), term.bold_blue('s'), term.bold_blue('n'),)
     nonstop = False
     echo(redraw(None))
     for row in range(len(news_txt)):
@@ -61,23 +62,24 @@ def redraw(pager):
         NEWS_ART = [line for line in open(artfile)]
     # left-align, center, strip, and trim each line of ascii art
     ladjust = lambda line: (
-            line.rstrip().center(term.width)[:term.width].rstrip())
-    title = u''.join(( u']- ', term.bold_blue('PARtY NEWS'), ' [-',))
-    footer = u''.join(( u'-[ ',
-            term.blue_underline(u'Escape'), '/',
-            term.blue_underline(u'q'), term.bold_blue(u'uit '),
-            ((u'- ' + term.blue_underline(u'e') + term.bold_blue(u'dit '))
-                if 'sysop' in session.user.groups else u''),
-            u']-',
-            ))
-    return u''.join(( u'\r\n\r\n',
-        '\r\n'.join((ladjust(line) for line in NEWS_ART)), u'\r\n',
-        u''.join((
-            u'\r\n' * pager.height,
-            pager.refresh(),
-            pager.border(),
-            pager.title(title),
-            pager.footer(footer),)) if pager is not None else u'',))
+        line.rstrip().center(term.width)[:term.width].rstrip())
+    title = u''.join((u']- ', term.bold_blue('PARtY NEWS'), ' [-',))
+    footer = u''.join((u'-[ ',
+                       term.blue_underline(u'Escape'), '/',
+                       term.blue_underline(u'q'), term.bold_blue(u'uit '),
+                     ((u'- ' + term.blue_underline(u'e') + term.bold_blue(u'dit '))
+                      if 'sysop' in session.user.groups else u''),
+        u']-',
+    ))
+    return u''.join((u'\r\n\r\n',
+                     '\r\n'.join(
+                         (ladjust(line) for line in NEWS_ART)), u'\r\n',
+                     u''.join((
+                              u'\r\n' * pager.height,
+                              pager.refresh(),
+                              pager.border(),
+                              pager.title(title),
+                              pager.footer(footer),)) if pager is not None else u'',))
 
 
 def main():
@@ -95,7 +97,6 @@ def main():
     if not os.path.exists(newsfile):
         echo(u'\r\n\r\nNo news.')
         return
-
 
     pager = None
     dirty = True
@@ -121,7 +122,7 @@ def main():
                 if gosub('editor', 'news'):
                     NEWS = session.user['news'].splitlines()
                     codecs.open(newsfile, 'wb', 'utf8').write(
-                            u'\r\n'.join(NEWS))
+                        u'\r\n'.join(NEWS))
                 dirty = True
             else:
                 echo(pager.process_keystroke(inp))

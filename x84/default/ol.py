@@ -74,7 +74,7 @@ def wait_for(thread):
             echo(u'%2d%s' % (WAIT_FETCH - num - 1, '\b' * 2,))
             if not thread.is_alive():
                 return
-            thread.join(1) # block 1 second on thread
+            thread.join(1)  # block 1 second on thread
             if getch(0) == u'q':
                 return     # allow cancel using 'q'
 
@@ -146,7 +146,7 @@ def get_oltxt():
             term.bold_black(u'/'), onel['bbsname'],
             term.bold_white(u')'), color(u': '),
             Ansi(onel['oneliner']).decode_pipe(),
-            )))
+        )))
     return output[(BUF_HISTORY * -1):]
 
 
@@ -271,12 +271,13 @@ def saysomething(dumb=True):
         return None
     return post_bbs_scene(oneliner, dumb)
 
+
 def post_bbs_scene(oneliner, dumb=True):
     """
     Prompt for posting to bbs-scene.org oneliners API,
     returning thread if posting occured.
     """
-    #pylint: disable=R0914
+    # pylint: disable=R0914
     #        Too many local variables
     import logging
     import xml.etree.ElementTree
@@ -326,7 +327,7 @@ def post_bbs_scene(oneliner, dumb=True):
     if (req.status_code != 200 or
             (xml.etree.ElementTree.XML(req.content)
                 .find('success').text != 'true')):
-        echo(u'\r\n\r\n%srequest failed,\r\n' %(term.clear_eol,))
+        echo(u'\r\n\r\n%srequest failed,\r\n' % (term.clear_eol,))
         echo(u'%r' % (req.content,))
         echo(u'\r\n\r\n%s(code: %s).\r\n' % (
             term.clear_eol, req.status_code,))
@@ -351,7 +352,7 @@ def post_bbs_scene(oneliner, dumb=True):
 
 def main():
     """ Main procedure. """
-    #pylint: disable=R0912
+    # pylint: disable=R0912
     #        Too many branches
     from x84.bbs import getsession, getterminal, ini, echo, getch
     session, term = getsession(), getterminal()

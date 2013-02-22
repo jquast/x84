@@ -7,10 +7,11 @@ editor script for X/84, https://github.com/jquast/x84
 # that drives a LineEditor and a Lightbar.
 
 WHITESPACE = u' '
-SOFTWRAP=u'\n'
-HARDWRAP=u'\r\n'
+SOFTWRAP = u'\n'
+HARDWRAP = u'\r\n'
 UNDO = list()
 UNDOLEVELS = 9
+
 
 def save_draft(key, ucs):
     save(key, ucs)
@@ -19,15 +20,17 @@ def save_draft(key, ucs):
     if len(UNDO) > UNDOLEVELS:
         del UNDO[0]
 
+
 def save(key, ucs):
     from x84.bbs import getsession
     getsession().user[key] = HARDWRAP.join(
-            [softwrap_join(_ucs) for _ucs in ucs.split(HARDWRAP)])
+        [softwrap_join(_ucs) for _ucs in ucs.split(HARDWRAP)])
 
 
 def get_help():
     import os
     return open(os.path.join(os.path.dirname(__file__), 'editor.txt')).read()
+
 
 def wrap_rstrip(value):
     if value[-len(HARDWRAP):] == HARDWRAP:
@@ -36,14 +39,18 @@ def wrap_rstrip(value):
         value = value[:-len(SOFTWRAP)]
     return value
 
+
 def softwrap_join(value):
     return WHITESPACE.join(value.split(SOFTWRAP))
+
 
 def is_hardwrapped(ucs):
     return ucs[-(len(HARDWRAP)):] == HARDWRAP
 
+
 def is_softwrapped(ucs):
     return ucs[-(len(SOFTWRAP)):] == SOFTWRAP
+
 
 def get_lbcontent(lightbar):
     """
@@ -86,10 +93,10 @@ def set_lbcontent(lightbar, ucs):
             continue
         ucs_joined = WHITESPACE.join(ucs_line.split(SOFTWRAP))
         ucs_wrapped = Ansi(ucs_joined).wrap(
-                lightbar.visible_width).splitlines()
+            lightbar.visible_width).splitlines()
         for inner_lno, inner_line in enumerate(ucs_wrapped):
             content[lno] = u''.join((inner_line,
-                SOFTWRAP if inner_lno != len(ucs_wrapped) - 1 else u''))
+                                     SOFTWRAP if inner_lno != len(ucs_wrapped) - 1 else u''))
             lno += 1
         if 0 == len(ucs_wrapped):
             content[lno] = HARDWRAP
@@ -114,8 +121,8 @@ def yes_no(lightbar, msg, prompt_msg='are you sure? ', attr=None):
         lightbar.pos(lightbar.height, lightbar.xpadding),
         msg, u' ', prompt_msg,)))
     sel = Selector(yloc=lightbar.yloc + lightbar.height - 1,
-                  xloc=term.width - 21, width=18,
-                  left='Yes', right=' No ')
+                   xloc=term.width - 21, width=18,
+                   left='Yes', right=' No ')
     sel.colors['selected'] = term.reverse_red if attr is None else attr
     sel.keyset['left'].extend(keyset['yes'])
     sel.keyset['right'].extend(keyset['no'])
@@ -131,6 +138,7 @@ def yes_no(lightbar, msg, prompt_msg='are you sure? ', attr=None):
                 or inp in keyset['no']):
             # selected 'no'
             return False
+
 
 def get_lightbar(ucs):
     """
@@ -148,6 +156,7 @@ def get_lightbar(ucs):
     lightbar.colors['highlight'] = term.yellow_reverse
     set_lbcontent(lightbar, ucs)
     return lightbar
+
 
 def get_lneditor(lightbar):
     """
@@ -194,8 +203,8 @@ def main(save_key=u'draft'):
               'insert-after': (u'o',),
               'join': (u'J',),
               'rubout': (unichr(8), unichr(127),
-                  unichr(23), term.KEY_BACKSPACE,),
-            }
+                         unichr(23), term.KEY_BACKSPACE,),
+              }
 
     def merge(newline=HARDWRAP):
         """
@@ -208,9 +217,9 @@ def main(save_key=u'draft'):
         # edit u'\r\n' to become u'\r\nHello world.', and move newlines to
         # the right-most sideu, u'Hello world.\r\n'. This is just hackwork.
         lightbar.content[lightbar.index] = [
-                lightbar.selection[0],
-                softwrap_join(wrap_rstrip(lneditor.content))
-                + HARDWRAP]
+            lightbar.selection[0],
+            softwrap_join(wrap_rstrip(lneditor.content))
+            + HARDWRAP]
         prior_length = len(lightbar.content)
         prior_position = lightbar.position
         set_lbcontent(lightbar, get_lbcontent(lightbar))
@@ -240,8 +249,9 @@ def main(save_key=u'draft'):
                 term.yellow(u' )-'),))
 #                    ) + keyset_cmd
             keyset_cmd = lightbar.pos(lightbar.height - 1,
-                    max(0, lightbar.width - (len(Ansi(keyset_cmd)) + 3))
-                    ) + keyset_cmd
+                                      max(0,
+                                          lightbar.width - (len(Ansi(keyset_cmd)) + 3))
+                                      ) + keyset_cmd
         return u''.join((
             lightbar.border(),
             keyset_cmd,
@@ -260,17 +270,16 @@ def main(save_key=u'draft'):
                         int((float(lightbar.index + 1)
                             / max(1, len(lightbar.content))) * 100)),
                     term.yellow(u' )-'),)),
-                lightbar.title(u''.join((
-                        term.red('-] '),
-                        term.bold(u'Escape'),
-                        u':', term.bold_red(u'command mode'),
-                        term.red(' [-'),)
-                        ) if edit else u''.join((
-                            term.yellow('-( '),
-                            term.bold(u'Enter'),
-                            u':', term.bold_yellow(u'edit mode'),
-                            term.yellow(' )-'),))),))
-
+            lightbar.title(u''.join((
+            term.red('-] '),
+            term.bold(u'Escape'),
+            u':', term.bold_red(u'command mode'),
+            term.red(' [-'),)
+            ) if edit else u''.join((
+                                    term.yellow('-( '),
+                                    term.bold(u'Enter'),
+                                    u':', term.bold_yellow(u'edit mode'),
+                                    term.yellow(' )-'),))),))
 
     def redraw_lneditor(lightbar, lneditor):
         """
@@ -282,14 +291,13 @@ def main(save_key=u'draft'):
             lneditor.border(),
             lneditor.refresh()))
 
-
     def get_ui(ucs, lightbar=None):
         """
         Returns Lightbar and ScrollingEditor instance.
         """
         lbr = get_lightbar(ucs)
         lbr.position = (lightbar.position
-                if lightbar is not None else (0, 0))
+                        if lightbar is not None else (0, 0))
         lne = get_lneditor(lbr)
         return lbr, lne
 
@@ -311,7 +319,7 @@ def main(save_key=u'draft'):
             term.normal,
             redraw_lightbar(lightbar),
             redraw_lneditor(lightbar, lneditor) if edit else u'',
-            ))
+        ))
 
     def redraw_lightbar(lightbar):
         """ Returns ucs suitable for redrawing Lightbar. """
@@ -401,7 +409,7 @@ def main(save_key=u'draft'):
         elif not edit and inp in keyset['insert']:
             for _count in count_repeat():
                 lightbar.content.insert(lightbar.index,
-                        (lightbar.index, HARDWRAP,))
+                                       (lightbar.index, HARDWRAP,))
                 set_lbcontent(lightbar, get_lbcontent(lightbar))
             save_draft(save_key, get_lbcontent(lightbar))
             dirty = True
@@ -417,7 +425,7 @@ def main(save_key=u'draft'):
         # command mode; insert-before (switch to edit mode)
         elif not edit and inp in keyset['insert-before']:
             lightbar.content.insert(lightbar.index,
-                    (lightbar.index, HARDWRAP,))
+                                   (lightbar.index, HARDWRAP,))
             set_lbcontent(lightbar, get_lbcontent(lightbar))
             edit = dirty = True
             # switched to edit mode, save draft,
@@ -429,7 +437,7 @@ def main(save_key=u'draft'):
         # command mode; insert-after (switch to edit mode)
         elif not edit and inp in keyset['insert-after']:
             lightbar.content.insert(lightbar.index + 1,
-                    (lightbar.index + 1, HARDWRAP,))
+                                   (lightbar.index + 1, HARDWRAP,))
             set_lbcontent(lightbar, get_lbcontent(lightbar))
             edit = dirty = True
             # switched to edit mode, save draft,
@@ -455,9 +463,10 @@ def main(save_key=u'draft'):
                 if lightbar.index + 1 < len(lightbar.content):
                     idx = lightbar.index
                     lightbar.content[idx] = (idx,
-                            WHITESPACE.join((
-                                lightbar.content[idx][1].rstrip(),
-                                lightbar.content[idx + 1][1].lstrip(),)))
+                                             WHITESPACE.join((
+                                                             lightbar.content[
+                                                                 idx][1].rstrip(),
+                                                             lightbar.content[idx + 1][1].lstrip(),)))
                     del lightbar.content[idx + 1]
                     prior_length = len(lightbar.content)
                     set_lbcontent(lightbar, get_lbcontent(lightbar))
@@ -470,25 +479,24 @@ def main(save_key=u'draft'):
             if dirty:
                 save_draft(save_key, get_lbcontent(lightbar))
 
-
         # command mode, basic cmds & movement
         elif not edit and inp is not None:
             if inp in (u'a', u'A',):
                 if yes_no(lightbar, term.yellow(u'- ')
-                        + term.bold_red(u'AbORt')
-                        + term.yellow(u' -')):
+                          + term.bold_red(u'AbORt')
+                          + term.yellow(u' -')):
                     return False
                 dirty = True
             elif inp in (u's', u'S',):
                 if yes_no(lightbar, term.yellow(u'- ')
-                        + term.bold_green(u'SAVE')
-                        + term.yellow(u' -'), term.reverse_green):
+                          + term.bold_green(u'SAVE')
+                          + term.yellow(u' -'), term.reverse_green):
                     save(save_key, get_lbcontent(lightbar))
                     return True
                 dirty = True
             elif inp in (u'?',):
                 pager = Pager(lightbar.height, lightbar.width,
-                        lightbar.yloc, lightbar.xloc)
+                              lightbar.yloc, lightbar.xloc)
                 pager.update(get_help())
                 pager.colors['border'] = term.bold_blue
                 echo(pager.border() + pager.title(u''.join((
@@ -513,7 +521,7 @@ def main(save_key=u'draft'):
             merge()
             if inp in (u'\r', term.KEY_ENTER,):
                 lightbar.content.insert(lightbar.index + 1,
-                        [lightbar.selection[0] + 1, u''])
+                                        [lightbar.selection[0] + 1, u''])
                 inp = term.KEY_DOWN
                 dirty = True
             ucs = lightbar.process_keystroke(inp)

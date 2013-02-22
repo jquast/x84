@@ -12,6 +12,7 @@ are used to "switch" terminals from one mode to another -- do any work?
 
 import os
 
+
 def get_selector(selection):
     """
     Instantiate a new selector, dynamicly for the window size.
@@ -29,7 +30,7 @@ def get_selector(selection):
 
 def main():
     """ Main procedure. """
-    #pylint: disable=R0912
+    # pylint: disable=R0912
     #        Too many branches
     from x84.bbs import getsession, getterminal, echo, getch, Ansi, from_cp437
     session, term = getsession(), getterminal()
@@ -60,7 +61,7 @@ def main():
         return
 
     art = (from_cp437(open(artfile).read()).splitlines()
-            if os.path.exists(artfile) else [u''])
+           if os.path.exists(artfile) else [u''])
 
     def refresh(sel):
         """ Refresh art and yes/no prompt, ``sel``. """

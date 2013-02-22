@@ -11,10 +11,11 @@ ABOUT_DOT_PLAN = (u'The .plan file is a throwback to early Unix '
                   + u'greetz, etc.')
 
 ABOUT_TERM = (u'This only sets TERM for new processes, such as doors. '
-        + u'Your bbs session itself discovers TERM only once during '
-        + u'telnet negotiation on-connect.')
+              + u'Your bbs session itself discovers TERM only once during '
+              + u'telnet negotiation on-connect.')
 
 EXIT = False
+
 
 def process_keystroke(lightbar, inp, user):
     """ Process keystroke, ``inp``, for target ``user``. """
@@ -38,13 +39,13 @@ def process_keystroke(lightbar, inp, user):
     assert is_self or 'sysop' in session.user.groups
     if is_self and (
         inp in (u'c', u'C') or (inp == term.KEY_ENTER and
-                                   lightbar is not None and
-                                   lightbar.selection[0] == u'c')):
+                                lightbar is not None and
+                                lightbar.selection[0] == u'c')):
             gosub('charset')
     elif is_self and (
         inp in (u't', u'T') or (inp == term.KEY_ENTER and
-                                     lightbar is not None and
-                                     lightbar.selection[0] == u't')):
+                                lightbar is not None and
+                                lightbar.selection[0] == u't')):
             echo(term.move(term.height - 1, 0))
             echo(ABOUT_TERM + u'\r\n')
             echo(u'\r\ntERMiNAl tYPE: ')
@@ -59,8 +60,8 @@ def process_keystroke(lightbar, inp, user):
                     break
     elif is_self and (
         inp in (u'w', u'W') or (inp == term.KEY_ENTER and
-                                     lightbar is not None and
-                                     lightbar.selection[0] == u'w')):
+                                lightbar is not None and
+                                lightbar.selection[0] == u'w')):
             echo(u'\r\ntERMiNAl Width: ')
             width = LineEditor(3, str(term.width)).read()
             try:
@@ -81,8 +82,8 @@ def process_keystroke(lightbar, inp, user):
                     break
     elif is_self and (
             inp in (u'h', u'H') or (inp == term.KEY_ENTER and
-                lightbar is not None and
-                lightbar.selection[0] == u'h')):
+                                    lightbar is not None and
+                                    lightbar.selection[0] == u'h')):
             echo(u'\r\ntERMiNAl hEiGht: ')
             height = LineEditor(3, str(term.height)).read()
             try:
@@ -102,9 +103,9 @@ def process_keystroke(lightbar, inp, user):
                 elif inp2 in (u'n', u'N'):
                     break
     elif ('sysop' in session.user.groups and (
-                inp in (u'd', u'D',) or (inp == term.KEY_ENTER and
-                    lightbar is not None and
-                    lightbar.selection[0] == u'd'))):
+        inp in (u'd', u'D',) or (inp == term.KEY_ENTER and
+                                 lightbar is not None and
+                                 lightbar.selection[0] == u'd'))):
         echo(u"\r\n\r\ndElEtE %s ? [yn]" % (user.handle,))
         while True:
             inp2 = getch()
@@ -116,8 +117,8 @@ def process_keystroke(lightbar, inp, user):
         EXIT = True
     elif 'sysop' in session.user.groups and (
             inp in (u's', u'S',) or (inp == term.KEY_ENTER and
-                lightbar is not None and
-                lightbar.selection[0] == u's')):
+                                     lightbar is not None and
+                                     lightbar.selection[0] == u's')):
         sysop = not 'sysop' in user.groups
         echo(u"\r\n\r\n%s SYSOP ACCESS? [yn]" % (
             'ENAblE' if sysop else 'diSAblE',))
@@ -133,8 +134,8 @@ def process_keystroke(lightbar, inp, user):
             elif inp2 in (u'n', u'N'):
                 break
     elif inp in (u'p',) or (inp == term.KEY_ENTER and
-                           lightbar is not None and
-                           lightbar.selection[0] == u'p'):
+                            lightbar is not None and
+                            lightbar.selection[0] == u'p'):
         from x84.default.nua import set_password
         set_password(user)
         echo(u"\r\n\r\nSEt PASSWORd ? [yn]")
@@ -146,8 +147,8 @@ def process_keystroke(lightbar, inp, user):
             elif inp2 in (u'n', u'N'):
                 break
     elif inp in (u'.',) or (inp == term.KEY_ENTER and
-                           lightbar is not None and
-                           lightbar.selection[0] == u'.'):
+                            lightbar is not None and
+                            lightbar.selection[0] == u'.'):
         echo(term.move(0, 0) + term.normal + term.clear)
         echo(term.move(int(term.height * .8), 0))
         for line in Ansi(ABOUT_DOT_PLAN).wrap(
@@ -224,8 +225,8 @@ def process_keystroke(lightbar, inp, user):
             elif inp2 in (u'n', u'N'):
                 break
     elif inp in (u'q', u'Q',) or (inp == term.KEY_ENTER and
-                           lightbar is not None and
-                           lightbar.selection[0] == u'q'):
+                                  lightbar is not None and
+                                  lightbar.selection[0] == u'q'):
         EXIT = True
     else:
         return False
@@ -256,8 +257,9 @@ def dummy_pager(user):
                                          if 'sysop' in user.groups
                                          else 'diSAblEd')),
             '(m)%-20s - %s' % (u'ESG',
-                                term.bold(u'[%s]' % ('y'
-                                    if user.get('mesg', True) else 'n',),)),
+                               term.bold(u'[%s]' % ('y'
+                                                    if user.get(
+                                                        'mesg', True) else 'n',),)),
             '(.)%-20s - %s' % (u'PlAN filE', '%d bytes' % (
                 len(plan),) if plan else '(NO PlAN.)'),
             '(x)%-20s - %s' % (u'PERt MOdE',
@@ -316,8 +318,8 @@ def main(handle=None):
     from x84.bbs import Lightbar, get_user
     session, term = getsession(), getterminal()
     user = session.user if (
-            'sysop' not in session.user.groups) or (handle is None
-            ) else get_user(handle)
+        'sysop' not in session.user.groups) or (handle is None
+                                                ) else get_user(handle)
     lightbar = None
     dirty = True
     global EXIT
@@ -331,9 +333,9 @@ def main(handle=None):
                 dirty = dummy_pager(user)
             else:
                 lightbar = Lightbar(height=height,
-                        width=wide,
-                        yloc=term.height - height,
-                        xloc=(term.width / 2) - (wide / 2))
+                                    width=wide,
+                                    yloc=term.height - height,
+                                    xloc=(term.width / 2) - (wide / 2))
                 lightbar.alignment = 'center'
                 lightbar.ypadding = 2
                 lightbar.glyphs['right-vert'] = u''
@@ -351,6 +353,7 @@ def main(handle=None):
                 dirty = process_keystroke(lightbar, inp, user)
                 if lightbar.moved:
                     echo(lborder(lightbar, user))
+
 
 def lborder(lightbar, user):
     """ Display value of ``lightbar`` selection in border region. """
@@ -385,11 +388,11 @@ def lborder(lightbar, user):
         val = u'ENAblEd' if 'sysop' in user.groups else (u'diSABlEd')
     elif sel == 'x':
         val = u'ENAblEd' if user.get('expert', False) else (
-                u'diSABlEd')
+            u'diSABlEd')
     return u''.join((lightbar.border(),
-            lightbar.title(u'- USER PROfilE EditOR -'),
-            lightbar.footer(''.join((
-                u'- ',
-                val[:lightbar.visible_width - 4],
-                u' -',))),
-            ))
+                     lightbar.title(u'- USER PROfilE EditOR -'),
+                     lightbar.footer(''.join((
+                                             u'- ',
+                                             val[:lightbar.visible_width - 4],
+                                             u' -',))),
+                     ))

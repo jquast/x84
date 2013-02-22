@@ -22,7 +22,7 @@ def set_handle(user):
     """
     Prompt for a user.handle, minumum length.
     """
-    #pylint: disable=R0914
+    # pylint: disable=R0914
     #        Too many local variables
     from x84.bbs import getterminal, echo, ini, LineEditor, find_user
     import os  # os.path.sep not allowed in nicks
@@ -90,7 +90,7 @@ def set_password(user):
     """
     Prompt for user.password, minimum length.
     """
-    #pylint: disable=R0914
+    # pylint: disable=R0914
     #        Too many local variables
     from x84.bbs import getterminal, echo, ini, LineEditor
     term = getterminal()
@@ -132,6 +132,7 @@ def prompt_ok():
     prompt_confirm = u'EVERYthiNG lOOk Ok ?'
     prompt_continue = u'YES (CONtiNUE)'
     prompt_chg = u'NO! (ChANGE)'
+
     def prompt_ok_dumb():
         """ Dummy terminal prompt for confirm/cancel. """
         echo('\r\n\r\n%s\r\n' % (prompt_confirm,))
@@ -161,7 +162,7 @@ def prompt_ok():
 
 def main(handle=u''):
     """ Main procedure. """
-    #pylint: disable=R0914
+    # pylint: disable=R0914
     #        Too many local variables
     from x84.bbs import getsession, getterminal, echo, ini, User, goto
     from x84.bbs import showcp437

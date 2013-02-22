@@ -5,6 +5,7 @@ __license__ = 'Public Domain'
 # Single player tetris, originally written for The Progressive (prsv)
 # Copyright (C) 2007-2013 Johannes Lundberg
 
+
 def main():
     from x84.bbs import getsession, getterminal
     session, term = getsession(), getterminal()
@@ -53,10 +54,10 @@ def show_scores(my_score):
     # pre-fesh pager border before fetch
     echo(pager.border() + pager.title(pager_title))
     highscores = sorted(
-            [(_score, _level, _handle.decode('utf8'))
-                for (_handle, (_score, _level, _lines))
-                in allscores],
-            reverse=True)
+        [(_score, _level, _handle.decode('utf8'))
+         for (_handle, (_score, _level, _lines))
+         in allscores],
+        reverse=True)
     pager.append(score_fmt % (
         term.bold_blue_underline('No'.ljust(len_pos)),
         term.bold_blue_underline('SCORE'.ljust(len_score)),
@@ -77,14 +78,14 @@ def show_scores(my_score):
                 _handle.rjust(len_handle),))
     # append additional empty slot rows
     while len(pager.content) < pager.visible_height:
-        pos+=1
+        pos += 1
         pager.append(score_fmt % (
-                term.bold_blue(str(pos + 1).ljust(len_pos)),
-                term.bold_black(u'.'.ljust(len_score)),
-                term.bold_black(u'.'.ljust(len_level)),
-                term.bold_black(u'.'.rjust(len_handle)),))
+            term.bold_blue(str(pos + 1).ljust(len_pos)),
+            term.bold_black(u'.'.ljust(len_score)),
+            term.bold_black(u'.'.ljust(len_level)),
+            term.bold_black(u'.'.rjust(len_handle)),))
 
-    dirty = 2 # 2=do not refresh border & title
+    dirty = 2  # 2=do not refresh border & title
     while not pager.quit:
         # 1=full refresh
         dirty = 1 if session.poll_event('refresh') else dirty
@@ -97,7 +98,7 @@ def show_scores(my_score):
                 pager.footer(u''.join((
                     term.underline_blue('q'),
                     term.bold_blue('uit')))),
-                )))
+            )))
             dirty = 0
         echo(pager.process_keystroke(getch(1)))
 
@@ -191,61 +192,61 @@ def play():
                 [0, 0, 0],
                 [1, 1, 1],
                 [1, 0, 0],
-    ],
             ],
-    #   #
-    #   #
-    #  ##
-    [
+        ],
+        #   #
+        #   #
+        #  ##
+        [
             [
                 [0, 1, 0],
                 [0, 1, 0],
                 [1, 1, 0],
-                ],
+            ],
             [
                 [0, 0, 0],
                 [1, 1, 1],
                 [0, 0, 1],
-                ],
+            ],
             [
                 [0, 1, 1],
                 [0, 1, 0],
                 [0, 1, 0],
-                ],
+            ],
             [
                 [1, 0, 0],
                 [1, 1, 1],
                 [0, 0, 0],
-                ],
             ],
-    #  ##
-    #   ##
-    [
+        ],
+        #  ##
+        #   ##
+        [
             [
                 [0, 1, 0],
                 [1, 1, 0],
                 [1, 0, 0],
-                ],
+            ],
             [
                 [0, 0, 0],
                 [1, 1, 0],
                 [0, 1, 1],
-                ],
             ],
-    #   ##
-    #  ##
-    [
+        ],
+        #   ##
+        #  ##
+        [
             [
                 [0, 1, 0],
                 [0, 1, 1],
                 [0, 0, 1],
-                ],
+            ],
             [
                 [0, 0, 0],
                 [0, 1, 1],
                 [1, 1, 0],
-                ],
             ],
+        ],
     ]
 
     fieldx1 = 32
@@ -298,7 +299,7 @@ def play():
         u'REAdY YOUR tERMiNAl %s ' % (term.bold_blue('(!)'),),
         u'\r\n\r\n',
         u'%s PRESS ANY kEY' % (term.bold_black('...'),),
-        )))
+    )))
     getch()
     artfile = os.path.join(os.path.dirname(__file__), 'tetris.ans')
     echo_unbuffered(u'\r\n' * term.height)  # cls
@@ -437,7 +438,7 @@ def play():
             for c in line:
                 try:
                     if c:
-                        if ((y+row) >= 0 and field[y + row][x + col]
+                        if ((y + row) >= 0 and field[y + row][x + col]
                                 or (x + col) < 0 or (x + col) > 9):
                             return 0
                 except IndexError:
@@ -507,7 +508,7 @@ def play():
         # hidepiece()
         if key is not None:
             if key in (u'q', u'Q'):
-                return (0,0,0)
+                return (0, 0, 0)
             elif key in (term.KEY_LEFT, u'h',):
                 xpos, ypos, r, m = movepiece(xpos - 1, ypos, r)
             elif key in (term.KEY_RIGHT, u'l',):
@@ -536,13 +537,13 @@ def play():
                 # Is the player dead?
                 if ypos <= -len(layout[p][0]):
                     death_win = AnsiWindow(height=6, width=40,
-                        yloc=fieldy1 + 10 / 2, xloc=fieldx1 - 11)
+                                           yloc=fieldy1 + 10 / 2, xloc=fieldx1 - 11)
                     death_win.colors['border'] = term.bold_black
                     echo_unbuffered(death_win.clear() + death_win.border())
                     echo_unbuffered(
                         term.move(fieldy1 + 10 / 2 + 1, fieldx1 - 11))
                     echo_unbuffered((
-                      u'!! gAME OVeR!! Score was: %i' % (score,)).center(40))
+                                    u'!! gAME OVeR!! Score was: %i' % (score,)).center(40))
                     echo_unbuffered(
                         term.move(fieldy1 + 10 / 2 + 3, fieldx1 - 11))
                     echo_unbuffered(u'press RETURN'.center(40))

@@ -10,8 +10,8 @@ def disp_msg(msg):
     from x84.bbs import getterminal, echo
     term = getterminal()
     echo(u''.join((u'\r\n\r\n',
-        term.bold_yellow('%s ' % (msg,),),
-        term.yellow_reverse_bold(u'...'),)))
+                   term.bold_yellow('%s ' % (msg,),),
+                   term.yellow_reverse_bold(u'...'),)))
 
 
 def disp_notfound():
@@ -19,9 +19,9 @@ def disp_notfound():
     from x84.bbs import getsession, getterminal, echo, getch
     term = getterminal()
     echo(u''.join((u'\r\n\r\n',
-        term.bold(u'bAd REQUESt'),
-        term.bold_red(' -/- '),
-        term.bold('NOt fOUNd.',),)))
+                   term.bold(u'bAd REQUESt'),
+                   term.bold_red(' -/- '),
+                   term.bold('NOt fOUNd.',),)))
     if not getsession().user.get('expert', False):
         getch(1.7)
 
@@ -31,9 +31,10 @@ def disp_found(num):
     from x84.bbs import getterminal, echo
     term = getterminal()
     echo(u''.join((u'\r',
-        term.bold_white(u'%d' % (num,)),
-        term.yellow(u' lOCAtiON%s diSCOVEREd ' % (u's' if num > 1 else u'')),
-        term.bold_black(u'...'),)))
+                   term.bold_white(u'%d' % (num,)),
+                   term.yellow(u' lOCAtiON%s diSCOVEREd ' %
+                               (u's' if num > 1 else u'')),
+                   term.bold_black(u'...'),)))
 
 
 def disp_search_help():
@@ -41,15 +42,15 @@ def disp_search_help():
     from x84.bbs import getterminal, echo
     term = getterminal()
     msg_enterzip = (
-            term.yellow(u'ENtER US '),
-            term.bold_yellow(u'POStAl COdE'),
-            term.yellow(u', OR NEARESt '),
-            term.bold_yellow(u'iNtERNAtiONAl CitY. '),
-            term.bold_yellow(u'('),
-            term.underline_yellow('Escape'),
-            term.bold_white(u':'),
-            term.yellow('EXit'),
-            term.bold_yellow(u')'),)
+        term.yellow(u'ENtER US '),
+        term.bold_yellow(u'POStAl COdE'),
+        term.yellow(u', OR NEARESt '),
+        term.bold_yellow(u'iNtERNAtiONAl CitY. '),
+        term.bold_yellow(u'('),
+        term.underline_yellow('Escape'),
+        term.bold_white(u':'),
+        term.yellow('EXit'),
+        term.bold_yellow(u')'),)
     echo(u''.join((u'\r\n\r\n', term.normal,) + msg_enterzip))
 
 
@@ -62,8 +63,8 @@ def do_fetch(postal):
     term = getterminal()
     disp_msg('fEtChiNG')
     resp = requests.get(u'http://apple.accuweather.com'
-            + u'/adcbin/apple/Apple_Weather_Data.asp',
-            params=(('zipcode', postal),))
+                        + u'/adcbin/apple/Apple_Weather_Data.asp',
+                        params=(('zipcode', postal),))
     if resp is None:
         disp_notfound()
         return None
@@ -89,8 +90,8 @@ def do_search(search):
     from x84.bbs import echo, getch
     disp_msg('SEARChiNG')
     resp = requests.get(u'http://apple.accuweather.com'
-            + u'/adcbin/apple/Apple_find_city.asp',
-            params=(('location', search),))
+                        + u'/adcbin/apple/Apple_find_city.asp',
+                        params=(('location', search),))
     locations = list()
     if resp is None:
         disp_notfound()
@@ -103,8 +104,8 @@ def do_search(search):
     else:
         xml_stream = StringIO.StringIO(resp.content)
         locations = list([dict(elem.attrib.items())
-            for _event, elem in ET.iterparse(xml_stream)
-            if elem.tag == 'location'])
+                          for _event, elem in ET.iterparse(xml_stream)
+                          if elem.tag == 'location'])
         if 0 == len(locations):
             disp_notfound()
         else:
@@ -149,9 +150,9 @@ def get_zipsearch(zipcode=u''):
     from x84.bbs import getterminal, LineEditor, echo
     term = getterminal()
     echo(u''.join((u'\r\n\r\n',
-        term.bold_yellow(u'  -'),
-        term.reverse_yellow(u':'),
-        u' ')))
+                   term.bold_yellow(u'  -'),
+                   term.reverse_yellow(u':'),
+                   u' ')))
     return LineEditor(width=min(30, term.width - 5), content=zipcode).read()
 
 
@@ -162,17 +163,18 @@ def chose_location_dummy(locations):
     from x84.bbs import getterminal, echo, getch, LineEditor
     term = getterminal()
     msg_enteridx = (
-            term.bold_yellow(u'('),
-            term.underline_yellow(u'0'),
-            term.yellow(u'-'),
-            term.underline_yellow(u'%d' % (len(locations) - 1,)),
-            term.yellow(u','),
-            term.underline_yellow('Escape'),
-            term.bold_white(u':'),
-            term.yellow('EXit'),
-            term.bold_yellow(u')'), u' ',
-            term.reverse_yellow(':'),)
+        term.bold_yellow(u'('),
+        term.underline_yellow(u'0'),
+        term.yellow(u'-'),
+        term.underline_yellow(u'%d' % (len(locations) - 1,)),
+        term.yellow(u','),
+        term.underline_yellow('Escape'),
+        term.bold_white(u':'),
+        term.yellow('EXit'),
+        term.bold_yellow(u')'), u' ',
+        term.reverse_yellow(':'),)
     max_nwidth = len('%d' % (len(locations) - 1,))
+
     def disp_entry(num, loc):
         """ Display City, State.  """
         return u''.join((
@@ -247,7 +249,7 @@ def chose_location_lightbar(locations):
     choice = lightbar.read()
     echo(lightbar.erase())
     return ((loc for loc in locations if choice == loc['postal']
-        ).next() if choice is not None else choice)
+             ).next() if choice is not None else choice)
 
 
 def chose_location(locations):
@@ -257,11 +259,11 @@ def chose_location(locations):
     from x84.bbs import getterminal, getsession, echo
     session, term = getsession(), getterminal()
     assert len(locations) > 0, (
-            u'Cannot chose from empty list')
+        u'Cannot chose from empty list')
     msg_chosecity = (
-            term.yellow(u'ChOSE A'),
-            term.bold_yellow('CitY'),
-            term.yellow_reverse(':'), u' ',)
+        term.yellow(u'ChOSE A'),
+        term.bold_yellow('CitY'),
+        term.yellow_reverse(':'), u' ',)
     echo(u'\r\n\r\n')
     echo(u' '.join(msg_chosecity))
     if (session.user.get('expert', False) or 0 == term.number_of_colors):
@@ -276,19 +278,20 @@ def location_prompt(location, msg='WEAthER'):
     from x84.bbs import getterminal, echo, getch
     term = getterminal()
     echo(u''.join((u'\r\n\r\n',
-        term.yellow(u'diSPlAY %s fOR ' % (msg,)),
-        term.bold('%(city)s, %(state)s' % location),
-        term.yellow(' ? '),
-        term.bold_yellow(u'['),
-        term.underline_yellow(u'yn'),
-        term.bold_yellow(u']'),
-        u': '),))
+                   term.yellow(u'diSPlAY %s fOR ' % (msg,)),
+                   term.bold('%(city)s, %(state)s' % location),
+                   term.yellow(' ? '),
+                   term.bold_yellow(u'['),
+                   term.underline_yellow(u'yn'),
+                   term.bold_yellow(u']'),
+                   u': '),))
     while True:
         inp = getch()
         if inp is None or inp in (u'n', u'N', 'q', 'Q', term.KEY_EXIT):
             return False
         if inp in (u'y', u'Y', u' ', term.KEY_ENTER):
             return True
+
 
 def disp_forecast(forecast):
     """ Display weather forecast.  """
@@ -301,12 +304,12 @@ def disp_forecast(forecast):
         rstr = u''.join((
             term.bold_yellow_underline(fcast['DayCode']),
             u', ',
-            term.yellow('/'.join(fcast['ObsDate'].split('/',3)[0:2])),
+            term.yellow('/'.join(fcast['ObsDate'].split('/', 3)[0:2])),
             term.bold(u': '),
-        u'%s. ' % (
+            u'%s. ' % (
                 term.yellow_underline(
                     fcast.get('TXT_Long', fcast.get('TXT_Short', u''))),),
-        u'hiGH Of %s, lOW Of %s. ' % (
+            u'hiGH Of %s, lOW Of %s. ' % (
                 fcast.get('High_Temperature'),
                 fcast.get('Low_Temperature'),),))
         if 0 != len(fcast.get('WindDirection', u'')):
@@ -343,28 +346,28 @@ def disp_weather(weather):
     from x84.bbs import getterminal, echo, Ansi
     term = getterminal()
     rstr = u''.join((u'At ',
-        term.yellow(u'%s%s' % (weather.get('City'),
-            u', %s' % (weather['State'],) if ('State' in weather
-                and 0 != len(weather['State'])) else u'',)),
-            term.bold(u': '),
-        u'%s. ' % (
-            term.yellow_underline(weather.get('WeatherText')),),
-        u'ThE tEMPERAtURE WAS %s dEGREES, ' % (
-            term.bold_yellow_underline(weather.get('Temperature')),),
-        u'RElAtiVE hUMiditY WAS %s. ' % (
-            term.bold_yellow(weather.get('Humidity')),),
-        u'ThE WiNd WAS %s At %s MPh' % (
-            term.bold_yellow(weather.get('WindDirection')),
-            term.bold_yellow(weather.get('WindSpeed'))),
-        u', PROdUCiNG A WiNdCHill Of %s dEGREES. ' % (
-            term.bold_yellow_underline(weather.get('RealFeel')),)
-        if (weather.get('RealFeel', weather.get('Temperature'))
-              != weather.get('Temperature'))
-        else u'. ',
-        u'ThE PRESSURE WAS %s iNChES ANd %s.' % (
-            term.bold_yellow(weather.get('Pressure')),
-            term.bold_yellow(weather.get('Pressure-state')),
-            ),))
+                     term.yellow(u'%s%s' % (weather.get('City'),
+                                            u', %s' % (weather['State'],) if ('State' in weather
+                                                                              and 0 != len(weather['State'])) else u'',)),
+                     term.bold(u': '),
+                     u'%s. ' % (
+                     term.yellow_underline(weather.get('WeatherText')),),
+                     u'ThE tEMPERAtURE WAS %s dEGREES, ' % (
+                     term.bold_yellow_underline(weather.get('Temperature')),),
+                     u'RElAtiVE hUMiditY WAS %s. ' % (
+                     term.bold_yellow(weather.get('Humidity')),),
+                     u'ThE WiNd WAS %s At %s MPh' % (
+                     term.bold_yellow(weather.get('WindDirection')),
+                     term.bold_yellow(weather.get('WindSpeed'))),
+                     u', PROdUCiNG A WiNdCHill Of %s dEGREES. ' % (
+                     term.bold_yellow_underline(weather.get('RealFeel')),)
+                     if (weather.get('RealFeel', weather.get('Temperature'))
+                         != weather.get('Temperature'))
+                     else u'. ',
+                     u'ThE PRESSURE WAS %s iNChES ANd %s.' % (
+                     term.bold_yellow(weather.get('Pressure')),
+                     term.bold_yellow(weather.get('Pressure-state')),
+                     ),))
     echo(u'\r\n\r\n')
     echo(Ansi(rstr).wrap(min(60, int(term.width * .8))))
 
@@ -382,11 +385,11 @@ def main():
         disp_search_help()
         search = get_zipsearch(search)
         if search is None or 0 == len(search):
-            return # exit
+            return  # exit
         locations = do_search(search)
         if 0 != len(locations):
             location = (locations.pop() if 1 == len(locations)
-                    else chose_location(locations) or dict())
+                        else chose_location(locations) or dict())
         root = do_fetch(location.get('postal'))
         if root is None:
             return
@@ -406,11 +409,11 @@ def main():
     if (sorted(location.items())
             != sorted(session.user.get('location', dict()).items())):
         echo(u''.join((u'\r\n\r\n',
-            term.yellow(u'SAVE lOCAtION'),
-            term.bold_yellow(' ('),
-            term.bold_black(u'PRiVAtE'),
-            term.bold_yellow(') '),
-            term.yellow('? '),
+                       term.yellow(u'SAVE lOCAtION'),
+                       term.bold_yellow(' ('),
+                       term.bold_black(u'PRiVAtE'),
+                       term.bold_yellow(') '),
+                       term.yellow('? '),
             term.bold_yellow(u'['),
             term.underline_yellow(u'yn'),
             term.bold_yellow(u']'),
@@ -422,5 +425,3 @@ def main():
             if inp in (u'y', u'Y', u' ', term.KEY_ENTER):
                 session.user['location'] = location
                 break
-
-

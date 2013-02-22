@@ -276,6 +276,7 @@ _AMBIGUOUS = [
 # the traditional terminal character-width behaviour. It is not
 # otherwise recommended for general use.
 
+
 def wcwidth_cjk(ucs):
     """ As wcwidth above, but spacing characters in the East Asian
     Ambiguous (A) category as defined in Unicode Technical Report #11

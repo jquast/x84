@@ -156,13 +156,13 @@ def main():
     session.activity = u'Logging in'
     handle = (session.env.get('USER', '').decode('iso8859-1', 'replace'))
     anon_allowed_msg = u"'%s' login enabled.\r\n" % (
-            term.bold_cyan('anonymous',))
+        term.bold_cyan('anonymous',))
     # pylint: disable=E1103
     #         Instance of '_Chainmap' has no 'split' member
     #         (but some types could not be inferred)
     newcmds = ini.CFG.get('matrix', 'newcmds').split()
     apply_msg = u"'%s' to create new account.\r\n" % (
-            term.bold_cyan(newcmds[0]),)
+        term.bold_cyan(newcmds[0]),)
     allow_apply = ini.CFG.getboolean('nua', 'allow_apply')
     enable_anonymous = ini.CFG.getboolean('matrix', 'enable_anonymous')
     enable_pwreset = ini.CFG.getboolean('matrix', 'enable_pwreset')
@@ -190,7 +190,7 @@ def main():
         u'\r\n\r\n',
         anon_allowed_msg if enable_anonymous else u'',
         apply_msg if allow_apply else u'',
-        )))
+    )))
     # http://www.termsys.demon.co.uk/vtansi.htm
     # disable line-wrapping
     echo(unichr(27) + u'[7l')
