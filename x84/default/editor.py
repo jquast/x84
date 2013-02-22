@@ -376,7 +376,9 @@ def main(save_key=u'draft'):
         inp = getch(1)
 
         # buffer keystrokes for repeat
-        if inp is not None and type(inp) is not int and inp.isdigit():
+        if (not edit and inp is not None
+                and type(inp) is not int
+                and inp.isdigit()):
             digbuf += inp
             if len(digbuf) > 10:
                 # overflow,
@@ -534,9 +536,9 @@ def main(save_key=u'draft'):
                 if moved:
                     echo(statusline(lightbar))
 
-        # edit mode
+        # edit mode; movement
         elif edit and inp in movement:
-            merge()
+            dirty = merge()
             if inp in (u'\r', term.KEY_ENTER,):
                 lightbar.content.insert(lightbar.index + 1,
                                         [lightbar.selection[0] + 1, u''])
