@@ -4,6 +4,13 @@ API Documentation
 .. toctree::
    :maxdepth: 2
 
+Listed here are general functions and classes that a script would use to interactive as a bbs board. An example of importing from "Userland" would look be::
+
+  def main():
+     from x84.bbs import getsession, getterminal, echo
+     session, term = getsession(), getterminal()
+     echo((u"Hello, " + session.user.handle).center(term.width))
+
 General functions
 `````````````````
 

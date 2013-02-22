@@ -203,8 +203,7 @@ tetris.py
 
 A terminal game of tetris with ANSI art blocks by jojo. High scores are persisted and compared with other players. This script helps demonstrate low intra-process latency, good tcp response, and proper telnet supress go-ahead negotiation.
 
-.. automodule:: x84.default.tetris
-   :members:
+.. autofunction:: x84.default.tetris.main
 
 ttyplay.py
 ----------
