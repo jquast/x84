@@ -87,23 +87,29 @@ def dummy_pager(last_callers):
 
 def refresh_opts(pager, handle):
     """ Refresh pager border with command keys available. """
-    from x84.bbs import getsession, getterminal, get_user, find_user
+    from x84.bbs import getsession, getterminal, get_user, find_user, Ansi
     session, term = getsession(), getterminal()
     if not handle or not find_user(handle):
         has_plan = 0
     else:
         has_plan = 0 != len(get_user(handle).get('.plan', u'').strip())
     decorate = lambda key, desc: u''.join((
-        term.bold(u'('), term.red_underline(key,),
-        term.bold(u')'), term.bold_red(desc.split()[0]),
+        term.red_underline(key,),
+        u':',
+        term.yellow(desc.split()[0]), u' ',
         u' '.join(desc.split()[1:]),
-        term.bold_red(u' -'),))
-    return pager.border() + pager.footer(u''.join((
-        term.bold_red(u'- '),
+        u' ' if len(desc.split()) > 1 else u'',))
+    statusline = u''.join((
+        term.bold_yellow(u'- '),
         decorate(u'Escape/q', 'Uit'),
         decorate(u'v', 'iEW .PLAN') if has_plan else u'',
         decorate(u'e', 'dit USR') if 'sysop' in session.user.groups else u'',
-    )))
+        term.bold_yellow(u'-'),
+    ))
+    if len(Ansi(statusline)) < (pager.visible_width - 4):
+        return pager.border() + pager.footer(statusline)
+    else:
+        return pager.border() + pager.footer(term.bold_red('q') + u':uit')
 
 
 def get_lightbar(lcallers, lcalls):
@@ -114,9 +120,8 @@ def get_lightbar(lcallers, lcalls):
     """
     from x84.bbs import getterminal, Lightbar
     term = getterminal()
-    assert term.height >= 10 and term.width >= 50
-    width = max(min(term.width - 5, 50), 50)
-    height = max(min(term.height - 13, 10), 10)
+    width = min(50, max(10, term.width - 5))
+    height = max(4, min(term.height - 8, 10))
     xloc = (term.width / 2) - (width / 2)
     yloc = term.height - height
     pager = Lightbar(height, width, yloc, xloc)
