@@ -7,56 +7,87 @@ API Documentation
 General functions
 `````````````````
 
-.. automodule:: x84.bbs
+.. autofunction:: x84.bbs.goto
+.. autofunction:: x84.bbs.gosub
+.. autofunction:: x84.bbs.disconnect
+.. autofunction:: x84.bbs.getsession
+.. autofunction:: x84.bbs.getterminal
+.. autofunction:: x84.bbs.getch
+.. autofunction:: x84.bbs.ropen
+
+x84.bbs.door
+------------
+
+.. automodule:: x84.bbs.door
    :members:
+
+x84.bbs.dbproxy
+---------------
+
+.. automodule:: x84.bbs.dbproxy
+   :members:
+
+Ansi, CP437 and Output
+``````````````````````
+
+.. autofunction:: x84.bbs.showcp437
+
+x84.bbs.cp437
+-------------
 
 .. automodule:: x84.bbs.cp437
    :members:
 
-User & Messagebase
-``````````````````
+x84.bbs.output
+--------------
+.. automodule:: x84.bbs.output
+   :members:
+
+Users & Groups
+``````````````
+
+x84.bbs.userbase
+----------------
+
 .. automodule:: x84.bbs.userbase
    :members:
+
+x84.bbs.msgbase
+---------------
 
 .. automodule:: x84.bbs.msgbase
    :members:
 
-Ansi Window interfaces
+Ansi Window UI Widgets
 ``````````````````````
+
+x84.bbs.ansiwin
+---------------
+
 .. automodule:: x84.bbs.ansiwin
    :members:
 
-.. automodule:: x84.bbs.output
-   :members:
-
-Editing
--------
+x84.bbs.editor
+--------------
 
 .. automodule:: x84.bbs.editor
    :members:
 
-Selecting
----------
+x84.bbs.selector
+----------------
 
 .. automodule:: x84.bbs.selector
    :members:
 
+x84.bbs.lightbar
+----------------
+
 .. automodule:: x84.bbs.lightbar
    :members:
 
-Reading
--------
+x84.bbs.pager
+-------------
 
 .. automodule:: x84.bbs.pager
    :members:
 
-External door support
-`````````````````````
-.. automodule:: x84.bbs.door
-   :members:
-
-Database access
-```````````````
-
-.. automodule:: x84.bbs.dbproxy
-   :members:
