@@ -1,10 +1,7 @@
 Requirements
-============
+===================
 
 A Posix operating system is required, generally something unix-derived.  Alternative implementations of python may work. 
-
-Windows
-```````
 
 Windows operating systems may not work because of the dependency on curses and a termcap library for detecting terminal capabilities.  A cygwin-based build *may* cope fine, but is untested.
 
