@@ -19,7 +19,7 @@ If a script fails due to import or runtime error, the exception is caught, optio
 
 If a script returns, and was called by ``gosub``, the return value is returned by ``gosub``.
 
-If a script was returns, and was called by ``goto``, the session ends and the client is disconnected.
+If a script returns, and was called by ``goto``, the session ends and the client is disconnected.
 
 The default 'bbs board'
 =======================
