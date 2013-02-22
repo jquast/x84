@@ -64,7 +64,7 @@ class FetchUpdates(threading.Thread):
 def wait_for(thread):
     """
     for dummy or small terminals, wait until a request thread has
-    gotten content before continuing, *up to t WAIT_FETCH seconds.
+    gotten content before continuing, up to t WAIT_FETCH seconds.
     """
     from x84.bbs import echo, getch
     if thread.is_alive():

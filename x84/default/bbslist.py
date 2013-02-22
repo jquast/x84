@@ -206,7 +206,7 @@ def view_ansi(key):
 
 
 def calc_rating(ratings, outof=4):
-    """ Given set of ratings, return ucs of '***' star rating. """
+    """ Given set of ratings, return ucs \*, of 1 to *outouf*, star rating. """
     if 0 == len(ratings):
         return u'-'
     total = sum([_rating for (_handle, _rating) in ratings])
