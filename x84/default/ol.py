@@ -379,8 +379,7 @@ def main():
             dirty = True
         if chk_thread(thread):
             thread = None
-        if session.poll_event('oneliner_update'):
-            # echo (banner())
+        while session.read_event('oneliner_update', 0.15):
             dirty = True
         if dirty and (session.env.get('TERM') != 'unknown'
                       and not session.user.get('expert', False)
