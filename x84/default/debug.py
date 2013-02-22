@@ -12,7 +12,9 @@ def main():
     # but this is a great way to make data manipulations,
     # exampled here is importing of a .csv import of
     # a mystic recordbase.
-    # return merge_mystic()
+    #return merge_mystic()
+
+    #return tygerofdantye_fix()
 
 
 def nothing():
@@ -20,6 +22,14 @@ def nothing():
     from x84.bbs import echo, getch
     echo(u'Nothing to do.')
     getch(3)
+
+def tygerofdantye_fix():
+    """ This user was too long! """
+    from x84.bbs import DBProxy
+    user = DBProxy('userbase')['tygerofdanyte']
+    user.delete()
+    user.handle = u'tygerdanyte'
+    user.save()
 
 
 def merge_mystic():
