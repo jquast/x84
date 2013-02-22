@@ -145,6 +145,7 @@ def init_bbs_ini():
     cfg_bbs.set('session', 'tap_input', 'no')
     cfg_bbs.set('session', 'tap_output', 'no')
     cfg_bbs.set('session', 'tap_events', 'no')
+    cfg_bbs.set('session', 'tap_db', 'no')
     cfg_bbs.set('session', 'default_encoding', 'utf8')
 
     cfg_bbs.add_section('irc')

@@ -37,6 +37,7 @@ class DBHandler(threading.Thread):
         self.cmd = data[1]
         self.args = data[2]
         folder = x84.bbs.ini.CFG.get('system', 'datapath')
+        self._tap_db = x84.bbs.ini.CFG.getboolean('session', 'tap_db')
         self.filepath = os.path.join(folder, '%s.sqlite3' % (self.schema,),)
         threading.Thread.__init__(self)
 
@@ -58,8 +59,9 @@ class DBHandler(threading.Thread):
         func = getattr(dictdb, self.cmd)
         assert callable(func), (
             "'%(cmd)s' not a valid method of <type 'dict'>" % self)
-        logger.debug('%s/%s%s', self.schema, self.cmd,
-                     '(*%d)' % (len(self.args)) if len(self.args) else '()')
+        if self._tap_db:
+            logger.debug('%s/%s%s', self.schema, self.cmd,
+                    '(*%d)' % (len(self.args)) if len(self.args) else '()')
 
         # single value result,
         if not self.iterable:
