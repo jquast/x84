@@ -281,120 +281,16 @@ def dummy_pager(user):
     return process_keystroke(None, getch(), user)
 
 
-def is_dumb(session, term):
-    """ Returns true if a dummy pager should be used. """
-    return (session.env.get('TERM') == 'unknown'
-            or session.user.get('expert', False)
-            or term.width < 60)
-
-
-def refresh(lightbar):
-    """ Refresh display. """
-    from x84.bbs import getterminal, echo
-    term = getterminal()
-    lightbar.update(((u'c', u'C.hARACtER ENCOdiNG',),
-                     (u't', u't.ERMiNAl tYPE',),
-                     (u'h', u'h.EiGht',),
-                     (u'w', u'W.idth',),
-                     (u'l', u'l.OCAtiON',),
-                     (u'p', u'p.ASSWORd',),
-                     (u'e', u'E.MAil',),
-                     (u's', u'S.YSOP ACCESS',),
-                     (u'm', u'M.ESG',),
-                     (u'.', u'..PlAN',),
-                     (u'x', u'X.PERt MOdE',),
-                     (u'q', u'Q.Uit',)))
-    echo(u'\r\n\r\n')
-    echo(u'art ?!?'.center(term.width))
-    echo(u'\r\n\r\n')
-    echo(term.bold_blue_underline(u'// '))
-    echo(u'\r\n' * lightbar.height)
-    echo(lightbar.refresh())
-
-
 def main(handle=None):
     """ Main procedure. """
     # pylint: disable=W0603
     #         Using the global statement
-    from x84.bbs import getsession, getterminal, echo, getch
-    from x84.bbs import Lightbar, get_user
-    session, term = getsession(), getterminal()
-    user = session.user if (
-        'sysop' not in session.user.groups) or (handle is None
-                                                ) else get_user(handle)
-    lightbar = None
-    dirty = True
-    global EXIT
-    EXIT = False
-    while not EXIT:
-        if session.poll_event('refresh') or dirty:
-            session.activity = 'User profile editor'
-            wide = min(40, term.width - 5)
-            height = 15
-            if is_dumb(session, term):
-                dirty = dummy_pager(user)
-            else:
-                lightbar = Lightbar(height=height,
-                                    width=wide,
-                                    yloc=term.height - height,
-                                    xloc=(term.width / 2) - (wide / 2))
-                lightbar.alignment = 'center'
-                lightbar.ypadding = 2
-                lightbar.glyphs['right-vert'] = u''
-                lightbar.glyphs['left-vert'] = u''
-                lightbar.colors['border'] = term.bold_blue
-                lightbar.colors['highlight'] = term.blue_reverse
-                refresh(lightbar)
-                echo(lborder(lightbar, user))
-                dirty = False
-        inp = getch(1)
-        if inp is not None:
-            if is_dumb(session, term):
-                dirty = process_keystroke(None, inp, user)
-            else:
-                dirty = process_keystroke(lightbar, inp, user)
-                if lightbar.moved:
-                    echo(lborder(lightbar, user))
-
-
-def lborder(lightbar, user):
-    """ Display value of ``lightbar`` selection in border region. """
     from x84.bbs import getsession, getterminal
+    from x84.bbs import get_user
     session, term = getsession(), getterminal()
-    is_self = bool(user.handle == session.user.handle)
-    assert 'sysop' in session.user.groups or is_self
-    sel = lightbar.selection[0]
-    val = u''
-    if sel == 'c':
-        val = session.encoding if is_self else user.get('charset', u'x')
-    elif sel == 't':
-        val = session.env.get('TERM', 'unknown') if is_self else u'x'
-    elif sel == 'h':
-        val = str(term.height) if is_self else u'x'
-    elif sel == 'w':
-        val = str(term.width) if is_self else u'x'
-    elif sel == 'l':
-        val = user.location.strip()
-        if 'sysop' in session.user.groups:
-            postal = user.get('location', dict()).get('postal', u'')
-            if 0 != len(postal):
-                val += ' - %s' % (postal,)
-    elif sel == 'e':
-        val = user.email
-    elif sel == 'm':
-        val = u'y' if user.get('mesg', True) else 'n'
-    elif sel == '.':
-        plan = user.get('.plan', False)
-        val = u'%d bytes' % (len(plan),) if plan else u''
-    elif sel == 's':
-        val = u'ENAblEd' if 'sysop' in user.groups else (u'diSABlEd')
-    elif sel == 'x':
-        val = u'ENAblEd' if user.get('expert', False) else (
-            u'diSABlEd')
-    return u''.join((lightbar.border(),
-                     lightbar.title(u'- USER PROfilE EditOR -'),
-                     lightbar.footer(''.join((
-                                             u'- ',
-                                             val[:lightbar.visible_width - 4],
-                                             u' -',))),
-                     ))
+    user = session.user if ('sysop' not in session.user.groups
+            ) or (handle is None) else get_user(handle)
+    global EXIT
+    while not EXIT:
+        session.activity = 'User profile editor'
+        dummy_pager(user)
