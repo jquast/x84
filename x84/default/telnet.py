@@ -81,18 +81,19 @@ def main(host, port=None, encoding='cp437'):
                          telnet_client.read_very_eager().decode('utf8'))
             if 0 != len(unistring):
                 echo(unistring)
-            if inp == unichr(30):  # ctrl-^
-                telnet_client.close()
-                echo(u'\r\n' + term.clear_el + term.normal)
-                break
-            elif not carriage_returned and inp in (u'\r', u'\n'):
-                telnet_client.write('\r')
-                carriage_returned = True
-            elif carriage_returned and inp in (u'\n', unichr(0)):
-                carriage_returned = False
-            elif inp is not None:
-                telnet_client.write(inp)
-                carriage_returned = False
+            if inp is not None:
+                if inp in (unichr(30),):  # ctrl-^
+                    telnet_client.close()
+                    echo(u'\r\n' + term.clear_el + term.normal)
+                    break
+                elif not carriage_returned and inp in (u'\r', u'\n'):
+                    telnet_client.write('\r')
+                    carriage_returned = True
+                elif carriage_returned and inp in (u'\n', unichr(0)):
+                    carriage_returned = False
+                elif inp is not None:
+                    telnet_client.write(inp)
+                    carriage_returned = False
         except Exception as err:
             echo(term.bold_red('%s\r\n%s\r\n' % (
                 term.normal, err,)))
