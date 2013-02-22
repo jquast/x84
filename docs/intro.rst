@@ -7,9 +7,7 @@ x/84 supplies a scripting engine for developing **MUD** or **BBS** engines.  Tec
 
 Asynchronous inter-process communication between sessions is provided through an event queuing framework, for scripting of 'shared' experiences. Several examples of these are provided, such as *chat.py*. The default board provides several activities.
 
-A Posix operating system is required. Alternative implementations of python may work. Blowfish encryption of user account passwords is recommended, but requires a C compiler to install the dependent module, *py-bcrypt*. Otherwise, a best-effort sha256 hash is implemented by default.
-
-Portability is as equal to python, and has been tested on Raspberry Pi, Android, Mac, OpenBSD, Solaris, etc.
+A Posix operating system is required. Alternative implementations of python may work.  Portability is as equal to python, and has been tested on Raspberry Pi, Android, Mac, OpenBSD, Solaris, etc.
 
 **ANSI Art**, such as found on ACiD_ *dark domains* DVD, is translated for reasonably accurate reproductions for both UTF-8 and IBM CP437 terminals. This allows classic DOS art to be used on modern terminals such as Terminal.app, or classic emulating terminals such as syncterm_. Artwork with Sauce_ records are also supported.
 
