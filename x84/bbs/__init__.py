@@ -2,6 +2,7 @@
 x/84 bbs module, https://github.com/jquast/x84
 """
 
+
 from x84.bbs.userbase import list_users, get_user, find_user, User, Group
 from x84.bbs.msgbase import list_msgs, get_msg, list_tags, Msg
 from x84.bbs.exception import Disconnected, Goto
@@ -103,3 +104,11 @@ def showcp437(filepattern):
             yield u'\r\n' + msg_cancel + u'\r\n'
             return
         yield line + u'\r\n'
+
+
+__all__ = ['list_users', 'get_user', 'find_user', 'User', 'Group',
+    'list_msgs', 'get_msg', 'list_tags', 'Msg', 'Disconnected', 'Goto',
+    'LineEditor', 'ScrollingEditor', 'echo', 'timeago', 'Ansi',
+    'AnsiWindow', 'Selector', 'Lightbar', 'from_cp437', 'DBProxy',
+    'Pager', 'Door', 'goto', 'disconnect', 'getsession', 'getterminal',
+    'getch', 'gosub', 'ropen', 'showcp437',]
