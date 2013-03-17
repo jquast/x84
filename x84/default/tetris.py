@@ -86,6 +86,7 @@ def show_scores(my_score):
             term.bold_black(u'.'.rjust(len_handle)),))
 
     dirty = 2  # 2=do not refresh border & title
+    pager.move_home()
     while not pager.quit:
         # 1=full refresh
         dirty = 1 if session.poll_event('refresh') else dirty
