@@ -14,12 +14,14 @@
     |11a|07: abort
     |11o|07: append new line after current and edit
     |11O|07: insert new line before current and edit
-    |11<n>*|07: repeat next command <n> times
-    |11<n>j|07: join current line with next
-    |11<n>k|07: kill current line
-    |11<n>u|07: undo
-    |11<n>G|07: goto line, or end of file without <n>
-    |11<n><movement>|07: any of pg/up/down/home/end
+
+  |10<n>*|07: repeat next command |10<n>|07 times, any of:
+
+    |11j|07: join current line with next
+    |11K|07: kill current line
+    |11u|07: undo
+    |11G|07: goto line, or end of file without <n>
+    |11<movement>|07: any of pg/up/down/home/end
     
 Limited formatting is possible with ANSI Pipe codes:
 
