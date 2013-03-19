@@ -62,8 +62,10 @@ def main():
         "| xargs pyflakes\n")
 
     os.chmod(path_tgtlint, 0755)
-    if os.path.exists(path_lintsym) and os.path.islink(path_lintsym):
+    if os.path.islink(path_lintsym):
         os.unlink(path_lintsym)
+    if os.path.exists(path_lintsym):
+        sys.stderr.write('warning: %s already exists\n' % (path_lintsym,))
     os.symlink(os.path.abspath(path_tgtlint), path_lintsym)
 
     # write out shell script that calls the virtualenv-python
@@ -72,17 +74,23 @@ def main():
         ". `dirname $(readlink $0)`/activate\n"
         "python -m x84.engine $*\n")
     os.chmod(path_tgtbin, 0755)
-    if os.path.exists(path_x84sym) and os.path.islink(path_x84sym):
+    if os.path.islink(path_x84sym):
         os.unlink(path_x84sym)
+    if os.path.exists(path_x84sym):
+        sys.stderr.write('warning: %s already exists\n' % (path_x84sym,))
     os.symlink(os.path.abspath(path_tgtbin), path_x84sym)
 
-    if os.path.exists(path_x84sym2) and os.path.islink(path_x84sym2):
+    if os.path.islink(path_x84sym2):
         os.unlink(path_x84sym2)
+    if os.path.exists(path_x84sym2):
+        sys.stderr.write('warning: %s already exists\n' % (path_x84sym2,))
     os.symlink(os.path.abspath(path_tgtbin), path_x84sym2)
 
     sys.stdout.write('Installation complete, to launch x/84, run:\n\n')
-    sys.stdout.write('    %s\n\n' % (path_x84sym,))
-    sys.stdout.write('    %s\n\n' % (path_x84sym2,))
+    sys.stdout.write('    %s, %s\n' % (
+        path_x84sym, os.path.relpath(path_x84sym),))
+    sys.stdout.write('    %s, %s\n\n' % (
+        path_x84sym2, os.path.relpath(path_x84sym2),))
 
 
 if __name__ == '__main__':
