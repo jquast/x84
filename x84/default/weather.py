@@ -307,34 +307,48 @@ def disp_forecast(forecast):
         rstr = u''.join((
             term.bold_yellow_underline(fcast['DayCode']),
             u', ',
-            term.yellow('/'.join(fcast['ObsDate'].split('/', 3)[0:2])),
-            term.bold(u': '),
+            u'/'.join(fcast['ObsDate'].split('/', 3)[0:2]),
+            term.bold_underline(u':'), u' ',
             u'%s. ' % (
-                term.yellow_underline(
+                term.bold(
                     fcast.get('TXT_Long', fcast.get('TXT_Short', u''))),),
-            u'hiGH Of %s, lOW Of %s. ' % (
-                fcast.get('High_Temperature'),
-                fcast.get('Low_Temperature'),),))
+            u'hiGH Of %sF, lOW Of %sF. ' % (
+                term.bold(fcast.get('High_Temperature')),
+                term.bold(fcast.get('Low_Temperature')),),))
+        if 0.0 != float(fcast.get('Snow_Amount', '0.0')):
+            rstr += u'SNOW AMOUNt %s iN., ' % (
+                    term.yellow(fcast.get('Snow_Amount')),)
+        if 0.0 != float(fcast.get('Rain_Amount', '0.0')):
+            rstr += u'RAiN AMOUNt %s iN., ' % (
+                    term.yellow(fcast.get('Snow_Amount')),)
+        if 0.0 != float(fcast.get('Precip_Amount', '0.0')):
+            rstr += u'PRECiPiTAtiON %s iN., ' % (
+                    term.yellow(fcast.get('Precip_Amount')),)
+        if 0 != int(fcast.get('TStorm_Prob', '0')):
+            rstr += u'thUNdERStORM PRObAbilitY: %s, ' % (
+                    term.yellow(fcast.get('TStorm_Prob')),)
+
         if 0 != len(fcast.get('WindDirection', u'')):
-            rstr += 'WiNdS %s ' % (
-                    term.bold_yellow(fcast.get('WindDirection')),)
+            rstr += u'WiNdS %s ' % (
+                    term.yellow(fcast.get('WindDirection')),)
         if 0 != len(fcast.get('WindSpeed', u'')):
             rstr += u'At %sMPh, ' % (
-                    term.bold_yellow(fcast.get('WindSpeed')),)
+                    term.yellow(fcast.get('WindSpeed')),)
         if 0 != len(fcast.get('WindGust', u'')):
             rstr += u'GUStS Of %sMPh. ' % (
-                    term.bold_yellow(fcast.get('WindGust')),)
+                    term.yellow(fcast.get('WindGust')),)
             if 0 != len(fcast.get('Real_Feel_High', u'')):
                 rstr += u'PROdUCiNG '
         if 0 != len(fcast.get('Real_Feel_High', u'')):
-            rstr += u'A WiNdCHill Of %s/%s HiGh/lOW. ' % (
-                    term.bold_yellow_underline(
+            rstr += u'A WiNdCHill HiGh Of %sF, lOW %sF. ' % (
+                    term.yellow(
                         fcast.get('Real_Feel_High')),
-                    term.bold_yellow_underline(
+                    term.yellow(
                         fcast.get('Real_Feel_Low', u'?')),)
         echo(u'\r\n')
         lno += 1
-        for line in Ansi(rstr).wrap(term.width).splitlines():
+        lines = Ansi(rstr).wrap(min(60, int(term.width * .8))).splitlines()
+        for line in lines:
             lno += 1
             echo(line + u'\r\n')
             if 0 == lno % (term.height - 1):
@@ -349,27 +363,27 @@ def disp_weather(weather):
     from x84.bbs import getterminal, echo, Ansi
     term = getterminal()
     rstr = u''.join((u'At ',
-                     term.yellow(u'%s%s' % (weather.get('City'),
+                     term.bold(u'%s%s' % (weather.get('City'),
                          u', %s' % (weather['State'],) if ('State' in weather
                              and 0 != len(weather['State'])) else u'',)),
-                     term.bold(u': '),
+                     term.underline(u':'), u' ',
                      u'%s. ' % (
-                     term.yellow_underline(weather.get('WeatherText')),),
-                     u'ThE tEMPERAtURE WAS %s dEGREES, ' % (
-                     term.bold_yellow_underline(weather.get('Temperature')),),
-                     u'RElAtiVE hUMiditY WAS %s. ' % (
-                     term.bold_yellow(weather.get('Humidity')),),
-                     u'ThE WiNd WAS %s At %s MPh' % (
-                     term.bold_yellow(weather.get('WindDirection')),
-                     term.bold_yellow(weather.get('WindSpeed'))),
-                     u', PROdUCiNG A WiNdCHill Of %s dEGREES. ' % (
-                     term.bold_yellow_underline(weather.get('RealFeel')),)
+                     term.bold_yellow(weather.get('WeatherText')),),
+                     u'tEMPERAtURE Of %sF, ' % (
+                     term.bold(weather.get('Temperature')),),
+                     u'RElAtiVE hUMiditY %s. ' % (
+                     term.yellow(weather.get('Humidity')),),
+                     u'WiNdS %s At %s MPh' % (
+                     term.yellow(weather.get('WindDirection')),
+                     term.yellow(weather.get('WindSpeed'))),
+                     u', PROdUCiNG A WiNdCHill Of %sF. ' % (
+                     term.yellow(weather.get('RealFeel')),)
                      if (weather.get('RealFeel', weather.get('Temperature'))
                          != weather.get('Temperature'))
                      else u'. ',
                      u'ThE PRESSURE WAS %s iNChES ANd %s.' % (
-                     term.bold_yellow(weather.get('Pressure')),
-                     term.bold_yellow(weather.get('Pressure-state')),
+                     term.yellow(weather.get('Pressure')),
+                     term.yellow(weather.get('Pressure-state')),
                      ),))
     echo(u'\r\n\r\n')
     echo(Ansi(rstr).wrap(min(60, int(term.width * .8))))
@@ -397,8 +411,8 @@ def main():
         if root is None:
             return
         weather = parse_weather(root)
-        if False == location_prompt(location, 'WEAthER'):
-            break
+        #if False == location_prompt(location, 'WEAthER'):
+        #    break
         disp_weather(weather)
         if False == location_prompt(location, 'fORECASt'):
             break

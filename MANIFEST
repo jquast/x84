@@ -42,6 +42,7 @@ x84/default/nua.py
 x84/default/ol.ans
 x84/default/ol.py
 x84/default/online.py
+x84/default/productive.py
 x84/default/profile.py
 x84/default/pwreset.py
 x84/default/readmsgs.py

@@ -172,4 +172,8 @@ def main(handle=None):
     gosub('ol')
     session.activity = 'top'
 
+    # 9. weather
+    if session.user.get('location', None):
+        gosub('weather')
+
     goto('main')
