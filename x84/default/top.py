@@ -79,6 +79,10 @@ def main(handle=None):
     session, term = getsession(), getterminal()
     session.activity = 'top'
     logger = logging.getLogger()
+
+    # 0. just a gimmicky example,
+    gosub('productive')
+
     # 1. determine & assign user record,
     if handle in (None, u'', 'anonymous',):
         logger.info('anonymous login by %s.', session.sid)
