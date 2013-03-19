@@ -1,4 +1,3 @@
 sqlitedict
-xmodem
 sauce
 requests
