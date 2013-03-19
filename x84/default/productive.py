@@ -56,6 +56,7 @@ def remaining(date):
 def main():
     from x84.bbs import echo
     now = datetime.now()
+    echo(u'\r\n\r\n')
     if not productive(now):
       echo(msg_rest % (rest(now),))
     echo(msg_productivity % (remaining(now),))
