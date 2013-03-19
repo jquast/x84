@@ -19,7 +19,7 @@ def main(handle):
     #         Too many return statements
     # by request from midget; a password reset form
     session, term = getsession(), getterminal()
-    session.activity = 'resetting passwd for %s' % (handle,)
+    session.activity = 'resetting password for %s' % (handle,)
     user = get_user(handle)
     logger = logging.getLogger()
 
@@ -110,6 +110,7 @@ def main(handle):
 
         if passkey == try_passkey:
             echo(term.bold_green(msg_verified))
+            echo(u'\r\n\r\n')
             break
         logger.warn("failed passkey for user '%s': '%s', tried '%s')",
                     handle, passkey, try_passkey)
