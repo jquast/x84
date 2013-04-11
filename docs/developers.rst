@@ -58,6 +58,13 @@ telnet.py
 .. automodule:: x84.telnet
    :members:
 
+db.py
+-----
+
+.. automodule:: x84.db
+   :members:
+
+
 Userland
 ````````
 
