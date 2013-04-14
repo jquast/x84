@@ -170,7 +170,7 @@ def main():
     artfile = os.path.join(os.path.dirname(__file__), 'art', '1984.asc')
     max_tries = 10
     session.flush_event('refresh')
-    uname()
+    #uname()
     # display banner
     echo(u''.join((
         term.normal, u'\r\n',
