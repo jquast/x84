@@ -1,5 +1,16 @@
-|12Thu Feb 21 01:19:47 EST 2013.
-|08=============================
+|12Mon Apr 15 12:37:08 EDT 2013
+|08============================
+
+I've been contributing significant terminal fixes and enhancements upstream to the python 'blessings' project. They should become apart of a blessings v1.6 release. With these features, much of the x/84 codebase may be stripped and cleaned up, and several improvements to general readability.
+
+I wrote a pong game, and another "Newton's Nightmare" for keyboard and mouse test input. The mousewheel can be used to move the Pong paddle, and who knows, maybe we'll have 2-player Pong on the BBS soon :-)
+
+An early preview can be found at:
+
+  |11https://github.com/jquast/blessings
+
+|12Thu Feb 21 01:19:47 EST 2013
+|08============================
 
 x/84 version 1.0.4 has been released to pypi, to install:
 
