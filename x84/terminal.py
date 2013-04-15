@@ -128,6 +128,11 @@ def start_process(inp_queue, out_queue, sid, env, lock, binary=False):
     import x84.bbs.ini
     import x84.bbs.session
     # terminals of these types are forced to 'cp437' encoding,
+    # we could also more safely assume iso8859-1, which is the
+    # correct default encoding of those terminals, but we explicitly
+    # send the 'set graphics character code' attribute for cp437.
+    #
+    # If they don't honor it, they don't get to see the art correctly.
     cp437_ttypes = ('unknown', 'ansi', 'ansi-bbs', 'vt100',)
 
     # root handler has dangerously forked file descriptors.
@@ -140,6 +145,8 @@ def start_process(inp_queue, out_queue, sid, env, lock, binary=False):
     encoding = x84.bbs.ini.CFG.get('session', 'default_encoding')
     if env.get('TERM', 'unknown') in cp437_ttypes:
         encoding = 'cp437'
+    elif env.get('TERM', 'unknown').startswith('vt'):
+        encodnig = 'cp437'
     elif binary:
         encoding = 'utf8'
     # spawn and begin a new session
@@ -181,6 +188,33 @@ class ConnectTelnet (threading.Thread):
         ('vt100', ('\x1b[6n'), re.compile(chr(27) + r"\[(\d+);(\d+)R")),
         ('sun', ('\x1b[18t'), re.compile(chr(27) + r"\[8;(\d+);(\d+)t"))
     )  # see: xresize.c from X11.org
+    DA_REPLIES = (
+        ('\x1b[?1;0c', 'vt100', ''),
+        ('\x1b[?1;1c', 'vt100', 'STP'),
+        ('\x1b[?1;3c', 'vt100', 'STP;AVO'),
+        ('\x1b[?1;4c', 'vt100', 'GPO'),
+        ('\x1b[?1;5c', 'vt100', 'STP;GPO'),
+        ('\x1b[?1;6c', 'vt100', 'AVO;GPO'),
+        ('\x1b[?1;7c', 'vt100', 'STP;AVO;GPO'),
+        ('\x1b[?1;11c', 'vt100', 'PP;AVO'),
+        ('\x1b[?1;15c', 'vt100', 'PP;GPO;AVO'),
+        ('\x1b[?4;2c', 'vt132', 'AVO'),
+        ('\x1b[?4;3c', 'vt132', 'AVO;STP'),
+        ('\x1b[?4;6c', 'vt132', 'GPO;AVO'),
+        ('\x1b[?4;7c', 'vt132', 'GPO;AVO;STP'),
+        ('\x1b[?4;11c', 'vt132', 'PP;AVO'),
+        ('\x1b[?4;15c', 'vt132', 'PP;GPO;AVO'),
+        ('\x1b[?6c', 'vt102', ''),
+        ('\x1b[?1;2c', 'vt102', 'AVO'),
+        ('\x1b[?7c', 'vt131', ''),
+        ('\x1b[?12;5c', 'vt125', ''),
+        ('\x1b[?12;7c', 'vt125', 'AVO'),
+        ('\x1b[?62;1;2;4;6;8;9;15c', 'vt220', ''),
+        ('\x1b[?63;1;2;8;9c', 'vt320', ''),
+        ('\x1b[?63;1;2;4;6;8;9;15c', 'vt320', ''),
+    ) # see: report.c from vttest
+
+
 
     def __init__(self, client):
         """
@@ -222,8 +256,9 @@ class ConnectTelnet (threading.Thread):
     def banner(self):
         """
         This method is called after the connection is initiated.
-        self.client.active is checked periodically to return early.
-        This prevents attempting to negotiate with network scanners, etc.
+
+        This routine happens to communicate with a wide variety of network
+        scanners when listening on the default port on a public IP address.
         """
         logger = logging.getLogger()
         # According to Roger Espel Llima (espel@drakkar.ens.fr), you can
@@ -254,16 +289,24 @@ class ConnectTelnet (threading.Thread):
             return
         logger.debug('negotiating options')
         self._try_env()
-        if not self.client.active:
-            return
         # this will set Term.kind if -still- undetected,
-        # or otherwise overwrite it if it is detected different,
+        # or otherwise overwrite it if it is detected different.
+        # First, telnet TTYPE is explicitly requested. If no
+        # reply is found, then a dec terminal attributes
+        # request is made, and a vt* terminal type is set.
         self._try_ttype()
         if not self.client.active:
             return
 
-        # this will set TERM to vt100 or sun if --still-- undetected,
-        # this will set .rows, .columns if not LINES and COLUMNS
+        # If this fails, or response is amiguous ('vt100'), try for
+        # extended dec types. If not, just get them anyway.
+        self._try_device_attributes()
+        if not self.client.active:
+            return
+
+        # explicitly request naws. This will set TERM to vt100
+        # or sun if the terminal is --still-- undetected.
+        # Otherwise sets LINES and COLUMNS env variables to response.
         self._try_naws()
         if not self.client.active:
             return
@@ -360,7 +403,7 @@ class ConnectTelnet (threading.Thread):
         if not self.client.active:
             return
         logger.debug('failed: negotiate about window size')
-        # self._try_cornerquery()
+        self._try_cornerquery()
 
     def _try_xtitle(self):
         """
@@ -424,7 +467,7 @@ class ConnectTelnet (threading.Thread):
 
     def _try_cornerquery(self):
         """
-        This is akin to X11's 'xresize', move the cursor to the corner of the
+        This is akin to X11's 'resize', move the cursor to the corner of the
         terminal (999,999) and request the terminal to report their cursor
         position.
         """
@@ -438,6 +481,7 @@ class ConnectTelnet (threading.Thread):
         self.client.send_str('\x1b[s')
         for kind, query_seq, response_pattern in self.WINSIZE_TRICK:
             logger.debug('move-to corner & query for %s', kind)
+            # crashes syncterm with 999; changed to 255.
             self.client.send_str('\x1b[255;255')
             self.client.send_str(query_seq)
             self.client.socket_send()  # push
@@ -492,9 +536,60 @@ class ConnectTelnet (threading.Thread):
                and self.client.active):
             time.sleep(self.TIME_POLL)
         if detected():
-            logger.debug('terminal type: %s (negotiated)' %
+            logger.debug('terminal type: %s (negotiated by ttype)' %
                          (self.client.env['TERM'],))
             return
         if not self.client.active:
             return
-        logger.warn('%r TERM undetermined.', self.client.addrport())
+        logger.warn('%r TERM not determined by TTYPE.', self.client.addrport())
+
+    def _try_device_attributes(self):
+        """
+        Try to identify the type of DEC terminal. reports.c of vttest
+        includes all the valid responses!
+        """
+        logger = logging.getLogger()
+        logger.debug('request-device-attributes')
+        query_seq = bytes('\x1b[0c')
+        self.client.send_str(query_seq)
+        self.client.socket_send()  # push
+        st_time = time.time()
+        while (self.client.idle() < self.TIME_WAIT_SILENT
+               and self._timeleft(st_time)
+               and self.client.active):
+            time.sleep(self.TIME_POLL)
+        if not self.client.active:
+            return
+        inp = self.client.get_input()
+        matched = False
+        for p in range(len(inp)):
+            for pattern, ttype, attrs in self.DA_REPLIES:
+                if inp[p:].startswith(pattern):
+                    matched = (inp[p:p+len(pattern)], ttype, attrs)
+                    break
+            if matched:
+                break
+        if matched:
+            sequence, ttype, attrs = matched
+            if matched != inp:
+                # if we received more bytes than just the sequence, we
+                # don't really care to rewind and buffer the rest for
+                # later interpretation.
+                logger.warn("threw out during da reply: %r", inp)
+                self.client.env['DA'] = matched
+            if (self.client.env.get('TERM', 'unknown')
+                    in ('unknown', 'vt100', 'sun')):
+                    logger.debug("%r terminal type: %s by da",
+                            self.client.addrport(), ttype)
+                    self.client.env['TERM'] = ttype
+                    # custom environment variable, we worked so hard to get it,
+                    self.client.env['TERM_ATTRS'] = attrs  # why throw it away?
+            else:
+                logger.info('%r adheres to %s;%s',
+                        self.client.addrport(), ttype, attrs)
+                self.client.env['TERM_ALT'] = ttype
+                self.client.env['TERM_ATTRS'] = attrs
+        else:
+            logger.warn('%r no DEC VT response.', self.client.addrport())
+            return
+
