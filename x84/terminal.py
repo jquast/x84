@@ -182,7 +182,7 @@ class ConnectTelnet (threading.Thread):
     Accept new Telnet Connection and negotiate options.
     """
     TIME_NEGOTIATE = 1.00
-    TIME_WAIT_SILENT = 0.60  # wait 60ms after silence
+    TIME_WAIT_SILENT = 0.60  # wait 600ms after silence
     TIME_WAIT_STAGE = 1.90  # wait 190ms foreach negotiation
     TIME_POLL = 0.0625
     TTYPE_UNDETECTED = 'unknown'
@@ -556,9 +556,7 @@ class ConnectTelnet (threading.Thread):
         self.client.send_str(query_seq)
         self.client.socket_send()  # push
         st_time = time.time()
-        while (self.client.idle() < self.TIME_WAIT_SILENT
-               and self._timeleft(st_time)
-               and self.client.active):
+        while (self._timeleft(st_time) and self.client.active):
             time.sleep(self.TIME_POLL)
         if not self.client.active:
             return

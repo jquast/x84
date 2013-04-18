@@ -80,6 +80,7 @@ def do_fetch(postal):
         echo(u'\r\n\r\n' + 'PRESS ANY kEY')
         getch()
         return None
+    print resp.content
     xml_stream = StringIO.StringIO(resp.content)
     tree = ET.parse(xml_stream)
     return tree.getroot()
@@ -105,6 +106,7 @@ def do_search(search):
         echo(u'\r\n\r\n' + 'PRESS ANY kEY')
         getch()
     else:
+        print resp.content
         xml_stream = StringIO.StringIO(resp.content)
         locations = list([dict(elem.attrib.items())
                           for _event, elem in ET.iterparse(xml_stream)
