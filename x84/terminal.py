@@ -26,6 +26,12 @@ def init_term(out_queue, lock, env):
         # translate 'ansi' -> 'ansi-bbs'
         # http://wiki.synchro.net/install:nix?s[]=termcap#terminal_capabilities
         env['TERM'] = ini.CFG.get('system', 'termcap-ansi')
+    if (env.get('TERM', 'unknown') == 'unknown'
+            and ini.CFG.get('system', 'termcap-unknown', u'no') != 'no'):
+        # instead of using 'unknown' as a termcap definition, try to use
+        # the most broadly capable termcap possible, 'vt100', configurable with
+        # default.ini
+        env['TERM'] = ini.CFG.get('system', 'termcap-unknown')
     return BTerminal(env.get('TERM', 'unknown'),
                      IPCStream(out_queue, lock),
                      int(env.get('LINES', '24')),
