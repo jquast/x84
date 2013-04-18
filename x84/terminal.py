@@ -571,11 +571,14 @@ class ConnectTelnet (threading.Thread):
                 break
         if matched:
             sequence, ttype, attrs = matched
-            if matched != inp:
+            if len(sequence) != len(inp):
                 # if we received more bytes than just the sequence, we
                 # don't really care to rewind and buffer the rest for
                 # later interpretation.
-                logger.warn("threw out during da reply: %r", inp)
+                toss_left = inp[:inp.find(sequence)] 
+                toss_right = inp[inp.find(sequence) + len(sequence):]
+                logger.warn("threw out during da reply: %r, <DA>, %r.",
+                        toss_left, toss_right)
                 self.client.env['DA'] = matched
             if (self.client.env.get('TERM', 'unknown')
                     in ('unknown', 'vt100', 'sun')):
