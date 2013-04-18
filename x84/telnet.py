@@ -347,12 +347,20 @@ class TelnetClient(object):
         self.ENV_REQUESTED = True
         self.send_str(rstr)
 
-    def request_ttype(self):
+    def request_do_ttype(self):
         """
         Begins TERMINAL-TYPE negotiation
         """
-        self._iac_do(TTYPE)
-        self._note_reply_pending(TTYPE, True)
+        if self.check_remote_option(TTYPE) in (False, UNKNOWN):
+            self._iac_do(TTYPE)
+            self._note_reply_pending(TTYPE, True)
+
+    def request_ttype(self):
+        """
+        Sends IAC SB TTYPE SEND IAC SE
+        """
+        self.send_str(bytes(''.join((
+            IAC, SB, TTYPE, SEND, IAC, SE))))
 
     def send_ready(self):
         """
@@ -709,8 +717,7 @@ class TelnetClient(object):
         elif option == TTYPE:
             if self.check_remote_option(TTYPE) in (False, UNKNOWN):
                 self._note_remote_option(TTYPE, True)
-                self.send_str(bytes(''.join((
-                    IAC, SB, TTYPE, SEND, IAC, SE))))
+                self.request_ttype()
         else:
             logger.warn('%s: unhandled will: %r (ignored).',
                         self.addrport(), name_option(option))

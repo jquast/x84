@@ -181,10 +181,10 @@ class ConnectTelnet (threading.Thread):
     """
     Accept new Telnet Connection and negotiate options.
     """
-    TIME_NEGOTIATE = 1.00
+    TIME_NEGOTIATE = 1.25
     TIME_WAIT_SILENT = 0.60  # wait 600ms after silence
     TIME_WAIT_STAGE = 1.90  # wait 190ms foreach negotiation
-    TIME_POLL = 0.0625
+    TIME_POLL = 0.15
     TTYPE_UNDETECTED = 'unknown'
     WINSIZE_TRICK = (
         ('vt100', ('\x1b[6n'), re.compile(chr(27) + r"\[(\d+);(\d+)R")),
@@ -275,28 +275,39 @@ class ConnectTelnet (threading.Thread):
         # add DO & WILL BINARY, for utf8 input/output.
         self.client.request_do_binary()
         self.client.request_will_binary()
+        self.client.request_do_ttype()
         if not self.client.active:
             return
-
-        # wait for some bytes to be received, and if we get any bytes,
-        # at least make sure to get some more, and then -- wait a bit!
+        # wait at least 1.25s for the client to speak. If it doesn't,
+        # we try only TTYPE. If it fails to report that, we forget
+        # the rest.
+        mrk_bytes = self.client.bytes_received
         logger.debug('pausing for negotiation')
         st_time = time.time()
-        mrk_bytes = self.client.bytes_received
-        while ((0 == mrk_bytes or mrk_bytes == self.client.bytes_received)
-               and time.time() - st_time < self.TIME_NEGOTIATE
+        while ((0 == self.client.bytes_received
+            or mrk_bytes == self.client.bytes_received)
+               or time.time() - st_time < self.TIME_NEGOTIATE
                and self.client.active):
+            self.client.send_str(chr(0))  # send NUL; keep scanners with us,
+            self.client.socket_send()  # push
             time.sleep(self.TIME_POLL)
         if not self.client.active:
             return
-        logger.debug('negotiating options')
+        self._try_ttype()
+        if 0 == self.client.bytes_received:
+            # having not received a single byte, we opt out of the
+            # negotiation program. Usually, the connecting client is
+            # a scanner; the equivalent of:
+            #  (printf "root\n"; sleep 5) | nc host > log.txt
+            logger.info('Dumb terminal detected; no further negotiation.')
+            return
+
         self._try_env()
         # this will set Term.kind if -still- undetected,
         # or otherwise overwrite it if it is detected different.
         # First, telnet TTYPE is explicitly requested. If no
         # reply is found, then a dec terminal attributes
         # request is made, and a vt* terminal type is set.
-        self._try_ttype()
         if not self.client.active:
             return
 
@@ -531,9 +542,10 @@ class ConnectTelnet (threading.Thread):
                          (self.client.env['TERM'],))
             return
         logger.debug('request-terminal-type')
-        self.client.request_ttype()
-        self.client.socket_send()  # push
         st_time = time.time()
+        if not detected():
+            self.client.request_ttype()
+            self.client.socket_send()  # push
         while (not detected() and self._timeleft(st_time)
                and self.client.active):
             time.sleep(self.TIME_POLL)
