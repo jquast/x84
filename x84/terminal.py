@@ -269,6 +269,7 @@ class ConnectTelnet (threading.Thread):
         scanners when listening on the default port on a public IP address.
         """
         logger = logging.getLogger()
+        mrk_bytes = self.client.bytes_received
         # According to Roger Espel Llima (espel@drakkar.ens.fr), you can
         #   have your server send a sequence of control characters:
         # (0xff 0xfb 0x01) (0xff 0xfb 0x03) (0xff 0xfd 0x0f3).
@@ -287,7 +288,6 @@ class ConnectTelnet (threading.Thread):
         # wait at least 1.25s for the client to speak. If it doesn't,
         # we try only TTYPE. If it fails to report that, we forget
         # the rest.
-        mrk_bytes = self.client.bytes_received
         logger.debug('pausing for negotiation')
         st_time = time.time()
         while ((0 == self.client.bytes_received
@@ -297,10 +297,13 @@ class ConnectTelnet (threading.Thread):
             self.client.send_str(chr(0))  # send NUL; keep scanners with us,
             self.client.socket_send()  # push
             time.sleep(self.TIME_POLL)
+        mrk_bytes = self.client.bytes_received
         if not self.client.active:
             return
         self._try_ttype()
-        if 0 == self.client.bytes_received:
+        if ((0 == self.client.bytes_received
+                  or mrk_bytes == self.client.bytes_received)
+                or self.client.env.get('TERM', 'unknown')):
             # having not received a single byte, we opt out of the
             # negotiation program. Usually, the connecting client is
             # a scanner; the equivalent of:
