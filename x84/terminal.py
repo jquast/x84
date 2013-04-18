@@ -55,10 +55,12 @@ class TerminalProcess():
     # pylint: disable=R0903
     #         Too few public methods
     def __init__(self, client, iqueue, oqueue, lock):
+        from x84.bbs.ini import CFG
         self.client = client
         self.iqueue = iqueue
         self.oqueue = oqueue
         self.lock = lock
+        self.timeout = CFG.getint('system', 'timeout')
 
     @property
     def sid(self):

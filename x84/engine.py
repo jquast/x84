@@ -94,7 +94,6 @@ def _loop(telnetd):
     if sys.maxunicode == 65535:
         logger.warn('Python not built with wide unicode support!')
     logger.info('listening %s/tcp', telnetd.port)
-    timeout = CFG.getint('system', 'timeout')
     timeout_ipc = CFG.getint('system', 'timeout_ipc')
     fileno_telnetd = telnetd.server_socket.fileno()
     locks = dict()
@@ -186,7 +185,7 @@ def _loop(telnetd):
         except socket.error as err:
             logger.error('accept error %d:%s', err[0], err[1],)
 
-    @timeout_alarm(timeout_ipc, False)
+    @timeout_alarm(timeout_ipc, False)   # REMOVEME
     def f_send_event(iqueue, event, data):
         """
         Send event to subprocess, signaling an alarm timeout if blocked.
@@ -198,6 +197,8 @@ def _loop(telnetd):
         """
         Send tcp input to subprocess as 'input' event,
         signaling an alarm timeout and re-buffering input if blocked.
+
+        The reasons for the input buffer to block are vaugue
         """
         inp = client.get_input()
         retval = f_send_event(iqueue, 'input', inp)
@@ -215,7 +216,7 @@ def _loop(telnetd):
         # accept session event i/o, such as output
         for sid, tty in terminals():
             # poll about and kick off idle users
-            if tty.client.idle() > timeout:
+            if tty.client.idle() > tty.timeout:
                 send_event = 'exception'
                 send_data = Disconnected('timeout: %ds' % (tty.client.idle()))
                 tty.iqueue.send((send_event, send_data))
@@ -322,6 +323,10 @@ def _loop(telnetd):
                     for _sid, _tty in terminals():
                         if sid != _sid:
                             _tty.iqueue.send((event, data,))
+                # 'set-timeout': set user-preferred timeout
+                elif event == 'set-timeout':
+                    logger.debug('set-timeout %d', data)
+                    tty.timeout = data
                 # 'db*': access DBProxy API for shared sqlitedict
                 elif event.startswith('db'):
                     thread = DBHandler(tty.iqueue, event, data)

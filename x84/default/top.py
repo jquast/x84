@@ -6,7 +6,8 @@ and assigned to the session.
 """
 
 # generated using lolcat ..
-BADGE256 = unichr(27).join((u'',
+
+BADGE256 = u'\x1b'.join((u'',
                             u'[38;5;49m2', u'[0m', u'[38;5;48m5', u'[0m',
                             u'[38;5;48m6', u'[0m', u'[38;5;48m-', u'[0m',
                             u'[38;5;48mC', u'[0m', u'[38;5;84mO', u'[0m',
@@ -90,6 +91,11 @@ def main(handle=None):
     else:
         logger.debug('%r logged in.', handle)
         session.user = get_user(handle)
+        timeout = session.user.get('timeout', None)
+        if timeout is not None:
+            echo(u'\r\n\r\nUsing preferred timeout of %ss.\r\n' % (
+                timeout,))
+            session.send_event('set-timeout', timeout)
 
     # 2. update call records
     session.user.calls += 1
