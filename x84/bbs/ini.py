@@ -52,12 +52,12 @@ def init(lookup_bbs, lookup_log):
         if not os.path.isdir(os.path.dirname(cfg_logfile)):
             try:
                 os.mkdir(os.path.dirname(cfg_logfile))
-            except OSError, err:
+            except OSError as err:
                 root.warn('%s', err)
         try:
             write_cfg(cfg_log, cfg_logfile)
             root.info('Saved %s' % (cfg_logfile,))
-        except IOError, err:
+        except IOError as err:
             root.error('%s', err)
         logging.config.fileConfig(cfg_logfile)
 
@@ -76,12 +76,12 @@ def init(lookup_bbs, lookup_log):
         if not os.path.isdir(os.path.dirname(cfg_bbsfile)):
             try:
                 os.mkdir(os.path.dirname(cfg_bbsfile))
-            except OSError, err:
+            except OSError as err:
                 root.warn('%s', err)
         try:
             write_cfg(cfg_bbs, cfg_bbsfile)
             root.info('Saved %s' % (cfg_bbsfile,))
-        except IOError, err:
+        except IOError as err:
             root.error('%s', err)
 
     global CFG
@@ -119,6 +119,8 @@ def init_bbs_ini():
     cfg_bbs.set('system', 'mail_smtphost', 'localhost')
     # change 'ansi' termcaps to 'ansi-bbs', for SynchoTerm
     cfg_bbs.set('system', 'termcap-ansi', 'ansi-bbs')
+    # change 'unknown' termcaps to 'vt220', for dumb terminals
+    cfg_bbs.set('system', 'termcap-unknown', 'vt220')
     # could be information leak to sensitive sysops
     cfg_bbs.set('system', 'show_traceback', 'no')
     # store passwords in uppercase, facebook and mystic bbs does this ..
