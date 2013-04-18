@@ -412,7 +412,8 @@ class TelnetClient(object):
             # connection cannot proceed without input from the other end),
             # the process must transmit the TELNET Go Ahead (GA) command.
             if (not self.input_ready()
-                    and self.check_local_option(SGA) in (False, UNKNOWN)):
+                    and self.check_local_option(SGA) is False
+                    and not self._check_reply_pending(SGA)):
                 sent += send(bytes(''.join((IAC, GA))))
         return sent
 
