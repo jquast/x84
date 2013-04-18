@@ -286,7 +286,7 @@ class ConnectTelnet (threading.Thread):
         st_time = time.time()
         while ((0 == self.client.bytes_received
             or mrk_bytes == self.client.bytes_received)
-               or time.time() - st_time < self.TIME_NEGOTIATE
+               and time.time() - st_time < self.TIME_NEGOTIATE
                and self.client.active):
             self.client.send_str(chr(0))  # send NUL; keep scanners with us,
             self.client.socket_send()  # push
