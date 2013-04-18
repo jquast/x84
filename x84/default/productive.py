@@ -59,7 +59,9 @@ def main():
     echo(u'\r\n\r\n')
     if not productive(now):
       echo(msg_rest % (rest(now),))
+      echo(u'\r\n')
     echo(msg_productivity % (remaining(now),))
+    echo(u'\r\n')
 
 if __name__ == '__main__':
   now = datetime.now()
