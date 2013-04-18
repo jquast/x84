@@ -84,7 +84,7 @@ class TelnetServer(object):
         try:
             self.server_socket.bind(address_pair)
             self.server_socket.listen(self.LISTEN_BACKLOG)
-        except socket.error, err:
+        except socket.error as err:
             logger.error('Unable to bind: %s', err)
             exit(1)
 
@@ -385,10 +385,10 @@ class TelnetClient(object):
             """
             try:
                 return self.sock.send(send_bytes)
-            except socket.error, err:
+            except socket.error as err:
                 if err[0] == 11:
-                    logger.warn('%s: %s (bandwidth exceed)',
-                                self.addrport(), err[1],)
+                    warnings.warn('%s: %s (bandwidth exceed)' % (
+                                self.addrport(), err[1],), RuntimeWarning, 2)
                 else:
                     raise Disconnected(
                         'socket send %d: %s' % (err[0], err[1],))
@@ -422,7 +422,7 @@ class TelnetClient(object):
             recv = len(data)
             if 0 == recv:
                 raise Disconnected('Closed by client')
-        except socket.error, err:
+        except socket.error as err:
             raise Disconnected('socket errno %d: %s' % (err[0], err[1],))
         self.bytes_received += recv
         self.last_input_time = time.time()
