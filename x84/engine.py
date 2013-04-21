@@ -247,7 +247,7 @@ def _loop(telnetd):
                             time.time() - locks[event])
             else:
                 tty.iqueue.send((event, False,))
-                logger.warn('[%s] %r not acquired.',
+                logger.debug('[%s] %r not acquired.',
                             tty.sid, (event, data))
         elif method == 'release':
             if not event in locks:

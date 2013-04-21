@@ -48,7 +48,7 @@ class DBProxy(object):
         session.send_event(event, (self.table, method, args))
         return session.read_event(event)
 
-    def acquire(self, blocking=False):
+    def acquire(self, blocking=True, stale=2.0):
         """
         Acquire a fine-grained BBS-global lock, blocking or non-blocking.
 
@@ -57,16 +57,18 @@ class DBProxy(object):
 
         When invoked with the blocking argument set to False, do not block.
         Returns False if lock is not acquired.
+
+        If the engine has held the lock longer than ``stale`` seconds, the
+        lock is granted anyway.
         """
         import x84.bbs.session
         event = 'lock-%s/%s' % (self.schema, self.table)
         session = x84.bbs.session.getsession()
         while True:
-            session.send_event(event, ('acquire', True))
-            if session.read_event(event):
-                return True
-            if not blocking:
-                return False
+            session.send_event(event, ('acquire', stale))
+            data = session.read_event(event)
+            if data is True or not blocking:
+                return data
             time.sleep(0.1)
 
     def release(self):
