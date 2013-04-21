@@ -6,13 +6,13 @@ from distutils.core import setup
 import os
 
 setup(name='x84',
-      version='1.0.4p2',
+      version='1.0.4p3',
       description="Telnet server for UTF-8 and cp437 terminals.",
       long_description=open(os.path.join(os.path.dirname(__file__),
                                          'README.txt')).read(),
       author='Jeff Quast',
       author_email='contact@jeffquast.com',
-      url='http://github.com/jquast/x84/',
+      url='http://x84.rtfd.org/',
       keywords='telnet, terminal, server, ansi, bbs, mud, curses, utf8, cp437',
       license='ISC',
       packages=['x84', 'x84.default', 'x84.default.art', 'x84.bbs'],
