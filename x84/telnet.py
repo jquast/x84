@@ -784,9 +784,9 @@ class TelnetClient(object):
             self._sb_ttype(buf[2:].tostring())
         elif (XDISPLOC, IS) == (buf[0], buf[1]):
             self._sb_xdisploc(buf[2:].tostring())
-        elif (NEW_ENVIRON, IS) == (buf[0], buf[1],):
+        elif (NEW_ENVIRON, IS) == (buf[0], buf[1]):
             self._sb_env(buf[2:].tostring())
-        elif (NAWS,) == (buf[0],):
+        elif NAWS == buf[0]:
             self._sb_naws(buf)
         elif (STATUS, SEND) == (buf[0], buf[1]):
             self._send_status()
