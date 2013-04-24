@@ -216,7 +216,7 @@ def _loop(telnetd):
         # accept session event i/o, such as output
         for sid, tty in terminals():
             # poll about and kick off idle users
-            if tty.client.idle() > tty.timeout:
+            if tty.timeout and tty.client.idle() > tty.timeout:
                 send_event = 'exception'
                 send_data = Disconnected('timeout: %ds' % (tty.client.idle()))
                 tty.iqueue.send((send_event, send_data))
