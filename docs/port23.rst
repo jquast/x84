@@ -6,9 +6,9 @@ X/84 does not require privileged access, and its basic configuration binds to po
 Linux
 -----
 
-using privbind_, run the BBS as user 'bbs', group 'adm'::
+using privbind_, run the BBS as user 'nobody', group 'nogroup'::
 
-  sudo privbind -u bbs -g adm x84
+  sudo privbind -u nobody -g nogroup x84
 
 Solaris 10
 ----------

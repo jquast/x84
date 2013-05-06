@@ -49,8 +49,18 @@ class DBHandler(threading.Thread):
         import sqlitedict
         logger = logging.getLogger(__name__)
         FILELOCK.acquire()
+        # if the bbs is run as root, file ownerships become read-only
+        # and db transactions will throw 'read-only database' errors,
+        # exit earlier if we know that file permissions are to blame
         if not os.path.exists(os.path.dirname(self.filepath)):
             os.makedirs(os.path.dirname(self.filepath))
+        assert os.access(os.path.dirname(self.filepath), os.F_OK|os.R_OK), (
+                'Must have read+write+execute access to "%s" for database' % (
+                    os.path.dirname(self.filepath),))
+        if os.path.exists(self.filepath):
+            assert os.access(self.filepath, os.F_OK|os.R_OK), (
+                    'Must have read+write access to %s" for database' % (
+                        self.filepath,))
         dictdb = sqlitedict.SqliteDict(
             filename=self.filepath, tablename=self.table, autocommit=True)
         FILELOCK.release()
