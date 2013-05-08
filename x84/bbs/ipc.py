@@ -53,9 +53,11 @@ class IPCStream(object):
         self.lock = lock
         self.is_a_tty = True
 
-    def write(self, ucs, encoding):
+    def write(self, ucs, encoding='ascii'):
         """
-        Sends unicode text to Pipe.
+        Sends unicode text to Pipe. Default encoding is 'ascii',
+        which is unset only when used with blessings, which rarely
+        writes directly to the stream.
         """
         self.lock.acquire()
         self.oqueue.send(('output', (ucs, encoding)))
