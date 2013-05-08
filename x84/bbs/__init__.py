@@ -48,13 +48,23 @@ def getterminal():
     return x84.bbs.session.getterminal()
 
 
+# temporary hacks until blessings updates with term.inkey() upstream ..
 def getch(timeout=None):
     """
     Retrieve a keystroke from 'input' queue, blocking forever or, when
     specified, None when timeout has elapsed.
-    """
-    return getsession().read_event('input', timeout)
 
+    upstream blessings has better 'keycode' evaluation (none of this
+    duck typing, its always unicode, but has .is_sequence bool test,
+    and a .value test for keycode comparison). we workaround for legacy
+    behavior unless upstream blessings accepts our impl. in some form ..
+    """
+    keystroke = getterminal().inkey(timeout)
+    if keystroke is None:
+        return None
+    if keystroke.is_sequence:
+        return keystroke.code
+    return keystroke
 
 def gosub(*arg):
     """
