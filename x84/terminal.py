@@ -326,15 +326,15 @@ class ConnectTelnet (threading.Thread):
         if not self.client.active:
             return
         self._try_ttype()
-        if ((0 == self.client.bytes_received
-                  or mrk_bytes == self.client.bytes_received)
-                or self.client.env.get('TERM', 'unknown')):
-            # having not received a single byte, we opt out of the
-            # negotiation program. Usually, the connecting client is
-            # a scanner; the equivalent of:
-            #  (printf "root\n"; sleep 5) | nc host > log.txt
-            logger.info('Dumb terminal detected; no further negotiation.')
-            return
+        #if ((0 == self.client.bytes_received
+        #          or mrk_bytes == self.client.bytes_received)
+        #        or self.client.env.get('TERM', 'unknown')):
+        #    # having not received a single byte, we opt out of the
+        #    # negotiation program. Usually, the connecting client is
+        #    # a scanner; the equivalent of:
+        #    #  (printf "root\n"; sleep 5) | nc host > log.txt
+        #    logger.info('Dumb terminal detected; no further negotiation.')
+        #    return
 
         self._try_env()
         # this will set Term.kind if -still- undetected,

@@ -164,12 +164,15 @@ def get_bbslist(max_len=23):
                 continue
             by_group[grp].append((key, bbs))
         return by_group.items()
-
+    def strip_name(key):
+        if len(key) >= max_len:
+            key = key[:(max_len - 2)] + ' $'
+        return key
     output = list()
     for _grp, _value in sorted(get_bysoftware()):
         output.append((None, term.blue(_grp.rjust(max_len))))
         for key, bbs in sorted(_value):
-            output.append((key, bbs['bbsname']))
+            output.append((key, strip_name(bbs['bbsname'])))
     return output
 
 
