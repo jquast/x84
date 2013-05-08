@@ -158,6 +158,7 @@ class LineEditor(object):
         Reads input until the ENTER or ESCAPE key is pressed (Blocking).
         Allows backspacing. Returns unicode text, or None when cancelled.
         """
+        from x84.bbs import getch
         from x84.bbs.output import echo
         from x84.bbs.session import getsession, getterminal
         session, term = getsession(), getterminal()
@@ -165,7 +166,7 @@ class LineEditor(object):
         self._quit = False
         echo(self.refresh())
         while not (self.quit or self.carriage_returned):
-            inp = session.read_event('input')
+            inp = getch()
             echo(self.process_keystroke(inp))
         echo(term.normal)
         if not self.quit:
@@ -391,14 +392,13 @@ class ScrollingEditor(AnsiWindow):
         Reads input until the ENTER or ESCAPE key is pressed (Blocking).
         Allows backspacing. Returns unicode text, or None when cancelled.
         """
-        from x84.bbs.session import getsession
+        from x84.bbs import getch
         from x84.bbs.output import echo
-        session = getsession()
         echo(self.refresh())
         self._quit = False
         self._carriage_returned = False
         while not (self.quit or self.carriage_returned):
-            inp = session.read_event('input')
+            inp = getch()
             echo(self.process_keystroke(inp))
         if not self.quit:
             return self.content
