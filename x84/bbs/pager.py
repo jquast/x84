@@ -146,13 +146,14 @@ class Pager(AnsiWindow):
         """
         Reads input until ESCAPE key is pressed (Blocking).  Returns None.
         """
+        from x84.bbs import getch
         from x84.bbs.session import getsession
         from x84.bbs.output import echo
         session = getsession()
         self._quit = False
         echo(self.refresh())
         while not self.quit:
-            echo(self.process_keystroke(session.read_event('input')))
+            echo(self.process_keystroke(getch()))
 
     def move_home(self):
         """
