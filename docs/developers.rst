@@ -28,7 +28,7 @@ And then subsequently upgrade after any commits have been pushed::
 
 You may then start x84 normally as you would if installed using pip::
 
-  sudo privbind -u nobody -g adm x84
+  sudo privbind -u nobody -g nobody x84
 
 Engine internals
 ================
