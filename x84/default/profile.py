@@ -195,6 +195,7 @@ def process_keystroke(inp, user):
             inp2 = getch()
             if inp2 in (u'y', u'Y'):
                 user['timeout'] = timeout
+                session.send_event('set-timeout', timeout)
                 break
             elif inp2 in (u'n', u'N'):
                 break
