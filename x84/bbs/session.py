@@ -425,40 +425,18 @@ class Session(object):
 
     def buffer_input(self, data):
         """
-        Update idle time, and decode input using session encoding.
-        When enable_keycodes is True (default), yield single atoms
-        for any detected multibyte sequences, these are of type int.
-
-        The unfortunate side-effect is something might appear as an
-        equivalent KEY_SEQUENCE that is better described as it was
-        to traditional getch() users, '\r'(^J) and '\b'(^H) as
-        term.KEY_ENTER and term.KEY_BACKSPACE, for example.
-
-        When ^L/KEY_REFRESH in getch() stream as detected,
-        a refresh event is buffered.
+        Update idle time, buffering raw bytes received from telnet client via event queue
         """
         self._last_input_time = time.time()
         ctrl_l = self.terminal.KEY_REFRESH
 
         logger = logging.getLogger()
         if self._tap_input and logger.isEnabledFor(logging.DEBUG):
-            logger.debug('<-- %r.', data)
+            logger.debug('<-- (%d): %r.', len(data), data)
 
-        if not self.enable_keycodes:
-            # send keyboard bytes in as-is (no decoding!)
-            for keystroke in data:
-                self._buffer['input'].insert(0, keystroke)
-            return
-
-        # perform keycode translation with modified blessings/curses
-        for keystroke in self.terminal.trans_input(data, self._decoder):
-            if self._tap_input and logger.isEnabledFor(logging.DEBUG):
-                logger.debug('<== %r.', keystroke)
-            if keystroke in (unichr(12), ctrl_l):
-                self._buffer['input'].insert(0, ctrl_l)
-                self._buffer['refresh'] = list((('input', ctrl_l),))
-                continue
+        for keystroke in data:
             self._buffer['input'].insert(0, keystroke)
+        return
 
     def send_event(self, event, data):
         """
@@ -528,7 +506,7 @@ class Session(object):
                                  'caught' if event in events else
                                  'handled' if retval is not None else
                                  'buffered',)
-                if event in events:
+                if event in events and event:
                     return (event, self._event_pop(event))
             elif timeout == -1:
                 return (None, None)
@@ -539,7 +517,8 @@ class Session(object):
         """
         S._event_pop (event) --> data
 
-        Returns foremost item buffered for event.
+        Returns foremost item buffered for event. When event is ``input``,
+        an artificial pause is used for decoding of MBS when received multipart
         """
         return self._buffer[event].pop()
 

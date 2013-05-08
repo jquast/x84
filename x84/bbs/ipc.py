@@ -51,6 +51,7 @@ class IPCStream(object):
     def __init__(self, out_queue, lock):
         self.oqueue = out_queue
         self.lock = lock
+        self.is_a_tty = True
 
     def write(self, ucs, encoding):
         """

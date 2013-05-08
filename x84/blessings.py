@@ -1,39 +1,50 @@
-"""
-(c) 2012 Erik Rose
-MIT Licensed
-https://github.com/erikrose/blessings
-"""
+from contextlib import contextmanager
+import curses
 import curses.has_key
-import contextlib
-import platform
-import termios
-import logging
-import struct
-import fcntl
-import sys
-
-
+import curses.ascii
+from curses import tigetstr, tigetnum, setupterm, tparm
 try:
-    # pylint: disable=W0611
-    #         Unused import IOUnsupportedOperation
     from io import UnsupportedOperation as IOUnsupportedOperation
 except ImportError:
     class IOUnsupportedOperation(Exception):
-        """
-        dummy exception to take of Python 3's ``io.UnsupportedOperation`` in
-        Python 2.
-        """
+        """A dummy exception to take the place of Python 3's ``io.UnsupportedOperation`` in Python 2"""
+import os
+from platform import python_version_tuple
+import textwrap
+import codecs
+import locale
+import struct
+import time
+import math
+import sys
+import re
 
+import termios
+import select
+import fcntl
+import tty
 
 __all__ = ['Terminal']
 
 
-if ('3', '0', '0') <= platform.python_version_tuple() < ('3', '2', '2+'):
-    # Good till 3.2.10
+if ('3', '0', '0') <= python_version_tuple() < ('3', '2', '2+'):  # Good till 3.2.10
     # Python 3.x < 3.2.3 has a bug in which tparm() erroneously takes a string.
     raise ImportError('Blessings needs Python 3.2.3 or greater for Python 3 '
                       'support due to http://bugs.python.org/issue10570.')
 
+MMODE_X10 = 9
+MMODE_VT200 = 1000
+MMODE_VT200_HIGHLIGHT = 1001
+MMODE_BTN_EVENT = 1002
+MMODE_ANY_EVENT = 1003
+MMODE_FOCUS_EVENT = 1004
+MMODE_EXT_MODE = 1005
+MMODE_SGR_EXT_MODE = 1006
+MMODE_URXVT_EXT_MODE = 1015
+MMODE_ALTERNATE_SCROLL = 1007
+MMODE_XTERM_262 = 262
+MMODE_URXVT_910 = 910
+MMODE_DEFAULT = MMODE_URXVT_910
 
 class Terminal(object):
     """An abstraction around terminal capabilities
@@ -50,8 +61,11 @@ class Terminal(object):
         around with the terminal; it's almost always needed when the terminal
         is and saves sticking lots of extra args on client functions in
         practice.
+      ``encoding``
+        The encoding used for keyboard input in the ``inkey()`` method; by
+        default it is the preferred encoding of the environment locale.
     """
-    def __init__(self, kind=None, stream=None, rows=24, columns=79):
+    def __init__(self, kind=None, stream=None, force_styling=False):
         """Initialize the terminal.
 
         If ``stream`` is not a tty, I will default to returning an empty
@@ -64,76 +78,104 @@ class Terminal(object):
             the value of the ``TERM`` environment variable.
         :arg stream: A file-like object representing the terminal. Defaults to
             the original value of stdout, like ``curses.initscr()`` does.
+        :arg force_styling: Whether to force the emission of capabilities, even
+            if we don't seem to be in a terminal. This comes in handy if users
+            are trying to pipe your output through something like ``less -r``,
+            which supports terminal codes just fine but doesn't appear itself
+            to be a terminal. Just expose a command-line option, and set
+            ``force_styling`` based on it. Terminal initialization sequences
+            will be sent to ``stream`` if it has a file descriptor and to
+            ``sys.__stdout__`` otherwise. (``setupterm()`` demands to send them
+            somewhere, and stdout is probably where the output is ultimately
+            headed. If not, stderr is probably bound to the same terminal.)
+
+            If you want to force styling to not happen, pass
+            ``force_styling=None``.
+
         """
-        self.kind = kind if kind is not None else 'unknown'
+        # any desire for passing in a 'virtual keyboard' input stream??
+        i_stream = sys.__stdin__
         if stream is None:
-            stream = sys.__stdout__
-        self.stream = stream
-        self.rows = rows
-        self.columns = columns
-        curses.setupterm(kind, 0)
+            o_stream = sys.__stdout__
+        else:
+            o_stream = stream
+        # for StringIO's and such, a file descriptor is not necessarily
+        # always available for the output stream; that is ok, though, as
+        # long as the stream offers a .write method.
+        try:
+            o_fd = (o_stream.fileno() if hasattr(o_stream, 'fileno')
+                    and callable(o_stream.fileno) else None)
+        except IOUnsupportedOperation:
+            o_fd = None
 
-        # curses capability names are inherited (for comparison)
-        for attr in (a for a in dir(curses) if a.startswith('KEY_')):
-            setattr(self, attr, getattr(curses, attr))
+        # os.isatty returns True if output stream is an open file
+        # descriptor connected to the slave end of a terminal.
+        self._is_a_tty = o_fd is not None and os.isatty(o_fd)
+        self._do_styling = ((self.is_a_tty or force_styling) and
+                            force_styling is not None)
 
-        # pylint: disable=W0212,E1101
-        # Access to a protected member _capability_names of a client class
-        # Function 'has_key' has no '_capability_names' member
-        capabilities = curses.has_key._capability_names.iteritems()
-        self._keymap = dict([(curses.tigetstr(cap).decode('utf8'), keycode)
-                             for (keycode, cap) in capabilities
-                             if curses.tigetstr(cap) is not None])
+        # an open file descriptor of some sort is necessary for setupterm(),
+        # even though it goes unused when an alternative stream is specified.
+        self.o_fd = sys.__stdout__.fileno() if o_fd is None else o_fd
 
-        # not complete, but pretty close ..
-        self._keymap.update([(sequence, key) for (sequence, key) in (
-            (curses.tigetstr('khome'), self.KEY_HOME),
-            (curses.tigetstr('kend'), self.KEY_END),
-            (curses.tigetstr('kcuu1'), self.KEY_UP),
-            (curses.tigetstr('kcud1'), self.KEY_DOWN),
-            (curses.tigetstr('cuf1'), self.KEY_RIGHT),
-            (curses.tigetstr('kcub1'), self.KEY_LEFT),
-            (curses.tigetstr('knp'), self.KEY_NPAGE),
-            (curses.tigetstr('kind'), self.KEY_NPAGE),
-            (curses.tigetstr('kpp'), self.KEY_PPAGE),
-            (curses.tigetstr('kri'), self.KEY_PPAGE),
-            (curses.tigetstr('kent'), self.KEY_ENTER),
-            (curses.tigetstr('kbs'), self.KEY_BACKSPACE),
-            (curses.tigetstr('kdch1'), self.KEY_BACKSPACE),
-            (curses.tigetstr('kich1'), self.KEY_INSERT),
-            )
-            if sequence is not None and 0 != len(sequence)])
+        if self.do_styling:
+            # curses.setupterm is the foot in the water, providing access to
+            # the extensive terminal capabilities database so necessary for
+            # blessings.
+            # Note: we go through great lengths to prevent diving into curses
+            # fully by avoiding a call to curses.initscr().
+            # Prefer the stream file descriptor if available, using stdout as a
+            # a fallback. Even though it is unused, it is required by setuperm.
+            setupterm(kind or os.environ.get('TERM', 'unknown'), self.o_fd)
 
-        # add to this various NVT sequences
-        self._keymap.update([
-            (unichr(10), self.KEY_ENTER),
-            (unichr(13), self.KEY_ENTER),
-            (unichr(8), self.KEY_BACKSPACE),
-            (unichr(127), self.KEY_BACKSPACE),
-            (unichr(27) + u"OA", self.KEY_UP),
-            (unichr(27) + u"OB", self.KEY_DOWN),
-            (unichr(27) + u"OC", self.KEY_RIGHT),
-            (unichr(27) + u"OD", self.KEY_LEFT),
-            (unichr(27) + u"OH", self.KEY_LEFT),
-            (unichr(27) + u"OF", self.KEY_END),
-            (unichr(27) + u"[A", self.KEY_UP),
-            (unichr(27) + u"[B", self.KEY_DOWN),
-            (unichr(27) + u"[C", self.KEY_RIGHT),
-            (unichr(27) + u"[D", self.KEY_LEFT),
-            (unichr(27) + u"[H", self.KEY_HOME),
-            (unichr(27) + u"[F", self.KEY_END),
-            (unichr(27) + u"[K", self.KEY_END),
-            (unichr(27) + u"[U", self.KEY_NPAGE),
-            (unichr(27) + u"[V", self.KEY_PPAGE),
-            (unichr(27) + u"[@", self.KEY_INSERT),
-            (unichr(27) + u"A", self.KEY_UP),
-            (unichr(27) + u"B", self.KEY_DOWN),
-            (unichr(27) + u"C", self.KEY_RIGHT),
-            (unichr(27) + u"D", self.KEY_LEFT),
-            (unichr(27) + u"?x", self.KEY_UP),
-            (unichr(27) + u"?r", self.KEY_DOWN),
-            (unichr(27) + u"?v", self.KEY_RIGHT),
-            (unichr(27) + u"?t", self.KEY_LEFT), ])
+        self.stream = o_stream
+        self.i_stream = i_stream
+
+        # a beginning state of echo ON and canonical mode is assumed.
+        self._state_echo = True
+        self._state_canonical = True
+
+        # dictionary of multibyte sequences to be paired with key codes
+        self._keymap = {}
+        # list of key code names
+        self._keycodes = []
+
+        # Inherit curses keycap capability names, such as KEY_DOWN, to be
+        # used with Keystroke ``code`` property values for comparison to the
+        # Terminal class instance it was received on.
+        max_int = 256 # curses keycode values begin beyond 8-bit range
+        for keycode in [kc for kc in dir(curses) if kc.startswith('KEY_')]:
+            value = getattr(curses, keycode)
+            self._keycodes.append(keycode)
+            setattr(self, keycode, value)
+            max_int = max(max_int, value)
+        # Holy smokes; I made this up! Ctrl+Space sends \x00.
+        # Ctrl+Space is used in interfaces fe. midnight commander.
+        self.KEY_CSPACE = max_int + 1
+
+        if self.is_a_tty:
+            # determine encoding of input stream. Only used for keyboard
+            # input on posix systems. win32 systems use getwche which returns
+            # unicode, and does not require decoding.
+            locale.setlocale(locale.LC_ALL, '')
+            self.encoding = locale.getpreferredencoding()
+            if sys.platform != 'win32':
+                self._idecoder = codecs.getincrementaldecoder(self.encoding)()
+            self.i_buf = []
+
+            # create lookup dictionary for multibyte keyboard input sequences
+            self._init_keystrokes()
+
+        # Friendly mnemonics for 'KEY_DELETE', 'KEY_INSERT', 'KEY_PGUP',
+        # and 'KEY_PGDOWN', 'KEY_SPGUP', 'KEY_SPGDOWN'.
+        self.KEY_DELETE = self.KEY_DC
+        self.KEY_INSERT = self.KEY_IC
+        self.KEY_PGUP = self.KEY_PPAGE
+        self.KEY_PGDOWN = self.KEY_NPAGE
+        self.KEY_SUP = self.KEY_SR  # scroll reverse (shift+pgup)
+        self.KEY_SDOWN = self.KEY_SF  # scroll forward (shift+pgdown)
+        self.KEY_ESCAPE = self.KEY_EXIT
+
     # Sugary names for commonly-used capabilities, intended to help avoid trips
     # to the terminfo man page and comments in your code:
     _sugar = dict(
@@ -182,6 +224,69 @@ class Terminal(object):
         underline='smul',
         no_underline='rmul')
 
+    def _init_keystrokes(self):
+        # curses.has_key._capability_names is a dictionary keyed by termcap
+        # capabilities, with integer values to be paired with KEY_ names;
+        # using this dictionary, we query for the terminal sequence of the
+        # terminal capability, and, if any result is found, store the sequence
+        # in the _keymap lookup table with the integer valued to be paired by
+        # key codes.
+        for i_val, capability in curses.has_key._capability_names.iteritems():
+            seq = curses.tigetstr(capability)
+            if seq is not None:
+                self._keymap[seq.decode('iso8859-1')] = i_val
+
+        # monkey-patch non-destructive space as KEY_RIGHT,
+        # in 'xterm-256color' 'kcuf1' is '\x1bOC' and 'cuf1' = '\x1b[C'.
+        # xterm sends '\x1b[C'
+        ndsp = curses.tigetstr('cuf1')
+        if ndsp is not None:
+            self._keymap[ndsp.decode('iso8859-1')] = self.KEY_RIGHT
+
+        # ... as well as a list of general NVT sequences you would
+        # expect to receive from any remote terminals. Notably the
+        # variables of ENTER (^J and ^M), backspace (^H), delete (127),
+        # and common sequencess across putty, rxvt, kermit, minicom,
+        # SyncTerm, windows telnet, HyperTerminal, netrunner ...
+        self._keymap.update([
+            (unichr(10), self.KEY_ENTER), (unichr(13), self.KEY_ENTER),
+            (unichr(8), self.KEY_BACKSPACE),
+            (u"\x1bOA", self.KEY_UP),    (u"\x1bOB", self.KEY_DOWN),
+            (u"\x1bOC", self.KEY_RIGHT), (u"\x1bOD", self.KEY_LEFT),
+            (u"\x1bOH", self.KEY_LEFT),
+            (u"\x1bOF", self.KEY_END),
+            (u"\x1b[A", self.KEY_UP),    (u"\x1b[B", self.KEY_DOWN),
+            (u"\x1b[C", self.KEY_RIGHT), (u"\x1b[D", self.KEY_LEFT),
+            (u"\x1b[U", self.KEY_NPAGE), (u"\x1b[V", self.KEY_PPAGE),
+            (u"\x1b[H", self.KEY_HOME),  (u"\x1b[F", self.KEY_END),
+            (u"\x1b[K", self.KEY_END),
+            (u"\x1bA", self.KEY_UP),     (u"\x1bB", self.KEY_DOWN),
+            (u"\x1bC", self.KEY_RIGHT),  (u"\x1bD", self.KEY_LEFT),
+            (u"\x1b?x", self.KEY_UP),    (u"\x1b?r", self.KEY_DOWN),
+            (u"\x1b?v", self.KEY_RIGHT), (u"\x1b?t", self.KEY_LEFT),
+            (u"\x1b[@", self.KEY_IC),  # insert
+            (unichr(127), self.KEY_BACKSPACE),  # ^? is backspace (int 127)
+        ])
+
+        # windows 'multibyte' translation, not tested.
+        if sys.platform == 'win32':
+            # http://msdn.microsoft.com/en-us/library/aa299374%28VS.60%29.aspx
+            self._keymap.update([
+                (u'\xe0\x48', self.KEY_UP),    (u'\xe0\x50', self.KEY_DOWN),
+                (u'\xe0\x4D', self.KEY_RIGHT), (u'\xe0\x4B', self.KEY_LEFT),
+                (u'\xe0\x51', self.KEY_NPAGE), (u'\xe0\x49', self.KEY_PPAGE),
+                (u'\xe0\x47', self.KEY_HOME),  (u'\xe0\x4F', self.KEY_END),
+                (u'\xe0\x3B', self.KEY_F1),    (u'\xe0\x3C', self.KEY_F2),
+                (u'\xe0\x3D', self.KEY_F3),    (u'\xe0\x3E', self.KEY_F4),
+                (u'\xe0\x3F', self.KEY_F5),    (u'\xe0\x40', self.KEY_F6),
+                (u'\xe0\x41', self.KEY_F7),    (u'\xe0\x42', self.KEY_F8),
+                (u'\xe0\x43', self.KEY_F9),    (u'\xe0\x44', self.KEY_F10),
+                (u'\xe0\x85', self.KEY_F11),   (u'\xe0\x86', self.KEY_F12),
+                (u'\xe0\x4C', self.KEY_B2),  # center
+                (u'\xe0\x52', self.KEY_IC),  # insert
+                (u'\xe0\x53', self.KEY_DC),  # delete
+            ])
+
     def __getattr__(self, attr):
         """Return parametrized terminal capabilities, like bold.
 
@@ -199,24 +304,39 @@ class Terminal(object):
         Return values are always Unicode.
 
         """
-        # Cache capability codes.
-        resolution = self._resolve_formatter(attr)
-        setattr(self, attr, resolution)
+        resolution = (self._resolve_formatter(attr) if self.do_styling
+                      else NullCallableString())
+        setattr(self, attr, resolution)  # Cache capability codes.
         return resolution
 
-    def keyname(self, keycode):
-        """
-        Return any matching keycode name for a given keycode.
-        """
-        for key in (attr for attr in dir(self)
-                    if attr.startswith('KEY_')
-                    and keycode == getattr(self, attr)):
-            return key
-        return str(None)
+    @property
+    def do_styling(self):
+        """Wether the terminal will attempt to output sequences for
+        all styling attributes, such as term.bold(). When False, a
+        null string ('') is used for all styling attributes, this behavior
+        is forced when force_styling=None, or when the output is not a tty.
+           """
+        return self._do_styling
+
+    @property
+    def is_a_tty(self):
+        """Wether the stream is connected to the slave end of a Terminal.
+        This property is used to identify if the terminal can be interacted
+        with, for instance, with the ``inkey()`` method.  """
+        return self._is_a_tty
 
     @property
     def height(self):
         """The height of the terminal in characters
+
+        If no stream or a stream not representing a terminal was passed in at
+        construction, return the dimension of the controlling terminal so
+        piping to things that eventually display on the terminal (like ``less
+        -R``) work. If a stream representing a terminal was passed in, return
+        the dimensions of that terminal. If there somehow is no controlling
+        terminal, return ``None``. (Thus, you should check that ``is_a_tty`` is
+        true before doing any math on the result.)
+
         """
         return self._height_and_width()[0]
 
@@ -229,19 +349,223 @@ class Terminal(object):
         """
         return self._height_and_width()[1]
 
+    def _height_and_width_win32(self):
+        # based on anatoly techtonik's work from pager.py, MIT/Pub Domain.
+        # completely untested ... please report !!
+        # WIN32_I_FD = -10
+        WIN32_O_FD = -11
+        from ctypes import windll, Structure, byref
+        from ctypes.wintypes import SHORT, WORD, DWORD
+        console_handle = windll.kernel32.GetStdHandle(WIN32_O_FD)
+            # CONSOLE_SCREEN_BUFFER_INFO Structure
+
+        class COORD(Structure):
+            _fields_ = [("X", SHORT), ("Y", SHORT)]
+
+        class SMALL_RECT(Structure):
+            _fields_ = [("Left", SHORT), ("Top", SHORT),
+                        ("Right", SHORT), ("Bottom", SHORT)]
+
+        class CONSOLE_SCREEN_BUFFER_INFO(Structure):
+            _fields_ = [("dwSize", COORD),
+                        ("dwCursorPosition", COORD),
+                        ("wAttributes", WORD),
+                        ("srWindow", SMALL_RECT),
+                        ("dwMaximumWindowSize", DWORD)]
+        sbi = CONSOLE_SCREEN_BUFFER_INFO()
+        ret = windll.kernel32.GetConsoleScreenBufferInfo(
+            console_handle, byref(sbi))
+        if ret != 0:
+            return (sbi.srWindow.Right - sbi.srWindow.Left + 1,
+                    sbi.srWindow.Bottom - sbi.srWindow.Top + 1)
+        return None, None
+
     def _height_and_width(self):
-        """Return a tuple of (terminal height, terminal width)."""
-        if self.stream == sys.__stdout__:
+        """Return a tuple of (terminal height, terminal width).
+           Returns (None, None) if terminal window size is indeterminate.
+       """
+        # tigetnum('lines') and tigetnum('cols') update only if we call
+        # setupterm() again.
+        buf = struct.pack('HHHH', 0, 0, 0, 0)
+        if sys.platform == 'win32':
+            value = self._height_and_width_win32()
+            if value is not None:
+                return value
+        for fd in self.o_fd, sys.__stdout__.fileno():
             try:
-                return struct.unpack(
-                    'hhhh', fcntl.ioctl(sys.__stdout__, termios.TIOCGWINSZ,
-                                        chr(0) * 8))[0:2]
+                value = fcntl.ioctl(fd, termios.TIOCGWINSZ, buf)
+                return struct.unpack('hhhh', value)[0:2]
             except IOError:
                 pass
-        return (self.rows, self.columns)
+        # throw a hail mairy for environment values
+        lines, cols = (os.environ.get('LINES', None),
+                       os.environ.get('COLUMNS', None))
+        if None not in (lines, cols):
+            return lines, cols
+        # ! should never be reached
+        return None, None
 
-    @contextlib.contextmanager
-    def location(self, xloc=None, yloc=None):
+    def kbhit(self, timeout=0):
+        """ Returns True if a keypress has been detected on input.
+        A subsequent call to getch() will not block on cbreak mode.
+        A timeout of 0 returns immediately (default), A timeout of
+        ``None`` blocks indefinitely. A timeout of non-zero blocks
+        until timeout seconds elapsed. """
+        fds = select.select([self.i_stream.fileno()], [], [], timeout)[0]
+        return self.i_stream.fileno() in fds
+
+    def getch(self):
+        """ Read a single byte from input stream. """
+        return os.read(self.i_stream.fileno(), 1)
+
+    def inkey(self, timeout=None, esc_delay=0.35):
+        """ Read a single keystroke from input up to timeout in seconds,
+        translating special application keys, such as KEY_LEFT.
+
+        Ensure you use 'cbreak mode', by using the ``cbreak`` context
+        manager, otherwise input is not received until return is pressed!
+
+        When ``timeout`` is None (default), block until input is available.
+        If ``timeout`` is 0, this function is non-blocking and None is
+        returned if no input is available.  If ``timeout`` is non-zero,
+        None is returned after ``timeout`` seconds have elapsed without input.
+
+        This method differs from using kbhit in combination with getch in that
+        Multibyte sequences are translated to key code values, and string
+        sequence of length greater than 1 may be returned.
+
+        The result is a unicode-typed instance of the Keystroke class, with
+        additional properties ``is_sequence`` (bool), ``name`` (str),
+        and ``value`` (int). esc_delay defines the time after which
+        an escape key is pressed that the stream awaits a multibyte sequence.
+
+        with term.cbreak():
+            inp = None
+            while inp not in (u'q', u'Q'):
+                inp = term.inkey(3)
+                if inp is None:
+                    print 'timeout after 3 seconds'
+                elif inp.code == term.KEY_UP:
+                        print 'moving up!'
+                else:
+                    print 'pressed', 'sequence' if inp.is_sequence else 'ascii'
+                    print 'key:', inp, inp.code
+        """
+        assert self.is_a_tty, u'stream is not a a tty.'
+        esc = curses.ascii.ESC  # posix multibyte sequence (MBS) start mark
+        wsb = ord('\xe0')       # win32 MBS start mark
+
+        # return keystrokes buffered by previous calls immediately,
+        # regardless of timeout
+        if len(self.i_buf):
+            return self.i_buf.pop()
+
+        # returns time-relative remaining for user-specified timeout
+        timeleft = lambda cmp_time: (
+            None if timeout is None else
+            timeout - (time.time() - cmp_time)
+            if timeout != 0 else 0)
+
+        # returns True if byte appears to mark the beginning of a MBS
+        chk_start = lambda char: (ord(char) == esc or (
+            sys.platform == 'win32' and ord(char) == wsb))
+
+        stime = time.time()
+        ready = self.kbhit(timeleft(stime))
+        if not ready:
+            return None
+        byte = self.getch()
+        buf = [byte, ]
+        # check for MSB; or just buffer for a rapidly firing input stream
+        # TODO: meta sends escape", where alt+1 would send '\x1b1' may be imposed
+        # a performance hit by the multibyte sequence decoder. It must be made
+        # aware.
+        while True:
+            if chk_start(buf[0]):
+                if (len(buf) == 1 and self.kbhit(esc_delay)) or self.kbhit():
+                    byte = self.getch()
+                    buf.append(byte)
+                    detect = self.resolve_mbs(self._decode_istream(buf)).next()
+                    if (detect.is_sequence and detect.code != self.KEY_EXIT):
+                        # end of MBS,
+                        break
+                else:
+                    # a poll for a 2nd+ byte failed; simple old ASCII escape.
+                    break
+            elif self.kbhit():
+                # more still immediately available; buffer. this also catches
+                # utf-8, I would suppose, as its not caught by chk_start().
+                byte = self.getch()
+                buf.append(byte)
+            else:
+                # no more bytes available in 'check for multibyte seq' loop
+                break
+        for keystroke in self.resolve_mbs(self._decode_istream(buf)):
+            self.i_buf.insert(0, keystroke)
+        item = self.i_buf.pop()
+        return item
+
+    @contextmanager
+    def mouse_tracking(self, mode=MMODE_DEFAULT):
+        """ Return a context manager for sending the DEC control sequence
+        for entering the specified mouse tracking mode. The default mode is
+        the urxvt extension found in xterm, urxvt, iTerm2, and gnome-terminal."""
+        # this guy egmot made a push to get this mode in all utf-8 terminals,
+        # http://www.midnight-commander.org/ticket/2662
+        # http://www.xfree86.org/current/ctlseqs.html#Mouse%20Tracking
+        # https://bugzilla.gnome.org/show_bug.cgi?id=662423
+        # http://web.fis.unico.it/public/rxvt/refer.html#Mouse
+        if mode == MMODE_XTERM_262:
+            self.stream.write('\x1b[?%dh' % (MMODE_VT200,))
+            self.stream.write('\x1b[?%dh' % (MMODE_EXT_MODE,))
+        elif mode == MMODE_URXVT_910:
+            self.stream.write('\x1b[?%dh' % (MMODE_VT200,))
+            self.stream.write('\x1b[?%dh' % (MMODE_URXVT_EXT_MODE,))
+        else:
+            self.stream.write('\x1b[?%dh' % (mode,))
+        self.stream.flush()
+        try:
+            yield
+        finally:
+            if mode in (MMODE_XTERM_262, MMODE_URXVT_910):
+                self.stream.write('\x1b[?%dl' % (MMODE_VT200,))
+            else:
+                self.stream.write('\x1b[?%dl' % (mode,))
+
+
+    @contextmanager
+    def cbreak(self):
+        """Return a context manager for entering 'cbreak' mode.
+
+        This is anagolous to calling python's tty.setcbreak(), except
+        that a finally clause restores the terminal state.
+
+        In cbreak mode (sometimes called "rare" mode) normal tty line
+        buffering is turned off and characters are available to be read
+        one by one by ``getch()``. echo of input is also disabled, the
+        application must explicitly copy-out any input received.
+
+        More information can be found in the manual page for curses.h,
+           http://www.openbsd.org/cgi-bin/man.cgi?query=cbreak
+        Or the python manual for curses,
+           http://docs.python.org/2/library/curses.html
+        Note also that setcbreak sets VMIN = 1 and VTIME = 0,
+           http://www.unixwiz.net/techtips/termios-vmin-vtime.html
+
+        This is anagolous to the curses.wrapper() helper function, and
+        the python standard module tty.setcbreak(), with the exception
+        that the original terminal mode is restored when leaving context.
+        """
+        assert self.is_a_tty, u'stream is not a a tty.'
+        mode = termios.tcgetattr(self.i_stream.fileno())
+        tty.setcbreak(self.i_stream.fileno(), termios.TCSANOW)
+        try:
+            yield
+        finally:
+            termios.tcsetattr(self.i_stream.fileno(), termios.TCSAFLUSH, mode)
+
+    @contextmanager
+    def location(self, x=None, y=None):
         """Return a context manager for temporarily moving the cursor.
 
         Move the cursor to a certain position on entry, let you print stuff
@@ -261,37 +585,31 @@ class Terminal(object):
 
         """
         # Save position and move to the requested column, row, or both:
-        self.stream.write(self.save, 'iso8859-1')
-        if xloc is not None and yloc is not None:
-            self.stream.write(self.move(yloc, xloc), 'iso8859-1')
-        elif xloc is not None:
-            self.stream.write(self.move_x(xloc), 'iso8859-1')
-        elif yloc is not None:
-            self.stream.write(self.move_y(yloc), 'iso8859-1')
+        self.stream.write(self.save)
+        if x is not None and y is not None:
+            self.stream.write(self.move(y, x))
+        elif x is not None:
+            self.stream.write(self.move_x(x))
+        elif y is not None:
+            self.stream.write(self.move_y(y))
         yield
 
         # Restore original cursor position:
-        self.stream.write(self.restore, 'iso8859-1')
+        self.stream.write(self.restore)
 
-    @contextlib.contextmanager
+    @contextmanager
     def fullscreen(self):
-        """
-        Return a context manager that enters fullscreen mode while inside it
-        and restores normal mode on leaving.
-        """
-        self.stream.write(self.enter_fullscreen, 'iso8859-1')
+        """Return a context manager that enters fullscreen mode while inside it and restores normal mode on leaving."""
+        self.stream.write(self.enter_fullscreen)
         yield
-        self.stream.write(self.exit_fullscreen, 'iso8859-1')
+        self.stream.write(self.exit_fullscreen)
 
-    @contextlib.contextmanager
+    @contextmanager
     def hidden_cursor(self):
-        """
-        Return a context manager that hides the cursor while inside it and
-        makes it visible on leaving.
-        """
-        self.stream.write(self.hide_cursor, 'iso8859-1')
+        """Return a context manager that hides the cursor while inside it and makes it visible on leaving."""
+        self.stream.write(self.hide_cursor)
         yield
-        self.stream.write(self.normal_cursor, 'iso8859-1')
+        self.stream.write(self.normal_cursor)
 
     @property
     def color(self):
@@ -306,6 +624,26 @@ class Terminal(object):
 
         """
         return ParametrizingString(self._foreground_color, self.normal)
+
+    def wrap(self, ucs, width=None, **kwargs):
+        """
+        A.wrap(S, [width=None, indent=u'']) -> unicode
+
+        Like textwrap.wrap, but honor existing linebreaks and understand
+        printable length of a unicode string that contains ANSI sequences,
+        such as colors, bold, etc. if width is not specified, the terminal
+        width is used.
+        """
+        if width is None:
+            width = self.width
+        lines = []
+        for line in ucs.splitlines():
+            if line.strip():
+                for wrapped in ansiwrap(line, width, **kwargs):
+                    lines.append(wrapped)
+            else:
+                lines.append(u'')
+        return lines
 
     @property
     def on_color(self):
@@ -330,22 +668,20 @@ class Terminal(object):
 
         We also return 0 if the terminal won't tell us how many colors it
         supports, which I think is rare.
+
         """
-        # pylint: disable=R0201
-        #        Method could be a function
         # This is actually the only remotely useful numeric capability. We
         # don't name it after the underlying capability, because we deviate
         # slightly from its behavior, and we might someday wish to give direct
         # access to it.
-        colors = curses.tigetnum('colors')
         # Returns -1 if no color support, -2 if no such cap.
+        colors = tigetnum('colors')
+        # self.__dict__['colors'] = ret  # Cache it. It's not changing.
+        # (Doesn't work.)
         return colors if colors >= 0 else 0
 
     def _resolve_formatter(self, attr):
-        """
-        Resolve a sugary or plain capability name, color, or compound
-        formatting function name into a callable capability.
-        """
+        """Resolve a sugary or plain capability name, color, or compound formatting function name into a callable capability."""
         if attr in COLORS:
             return self._resolve_color(attr)
         elif attr in COMPOUNDABLES:
@@ -363,73 +699,107 @@ class Terminal(object):
                 return ParametrizingString(self._resolve_capability(attr))
 
     def _resolve_capability(self, atom):
-        """
-        Return a terminal code for a capname or a sugary name, or an empty
-        Unicode.
+        """Return a terminal code for a capname or a sugary name, or an empty Unicode.
 
         The return value is always Unicode, because otherwise it is clumsy
         (especially in Python 3) to concatenate with real (Unicode) strings.
 
         """
-        code = curses.tigetstr(self._sugar.get(atom, atom))
+        code = tigetstr(self._sugar.get(atom, atom))
         if code:
             # We can encode escape sequences as UTF-8 because they never
             # contain chars > 127, and UTF-8 never changes anything within that
             # range..
-            return code.decode('utf8')
+            return code.decode('utf-8')
         return u''
 
-    def trans_input(self, text, decoder):
+    def _decode_istream(self, buf, end=True):
+        """ T._decode_istream(buf, end=True)
+
+        Incrementaly decode input byte buffer, ``buf``, using the encoding
+        specified by ``.encoding``. By default, encoding is the locale's
+        preferred encoding detected into Unicode.
         """
-        Yield either a unicode byte or a curses key constant as integer.
-        If data is a bytestring, it is converted to unicode using incremental
-        decoder, a result from codecs.getincrementaldecoder(encoding).
-        """
-        logger = logging.getLogger()
-        decoded = list()
-        for byte in text:
-            final = False
-            try:
-                ucs = decoder.decode(byte, final)
-            except UnicodeDecodeError as err:
-                logger.warn(err)
-                ucs = None
+
+        decoded = []
+        for num, byte in enumerate(buf):
+            is_final = end and num == (len(buf) - 1)
+            ucs = self._idecoder.decode(byte, final=is_final)
             if ucs is not None:
                 decoded.append(ucs)
-        data = u''.join(decoded)
+        return u''.join(decoded)
 
-        def scan_keymap(text):
+    def resolve_mbs(self, ucs):
+        """ T._resolve_mbs(ucs) -> Keystroke
+
+        This generator yields unicode sequences with additional
+        ``.is_sequence``, ``.name``, and ``.code`` properties that
+        describle matching multibyte input sequences to keycode
+        translations (if any) detected in input unicode buffer, ``ucs``.
+
+        For win32 systems, the input buffer is a list of unicode values
+        received by getwch. For Posix systems, the input buffer is a list
+        of bytes recieved by sys.stdin.read(1), to be decoded to Unicode by
+        the preferred locale.
+        """
+        CR_NVT = u'\r\x00'  # NVT return (telnet, etc.)
+        CR_LF = u'\r\n'    # carriage return + newline
+        CR_CHAR = u'\n'    # returns only '\n' when return is detected.
+        esc = curses.ascii.ESC
+
+        def resolve_keycode(integer):
             """
-            Return sequence and keycode if text begins with any known sequence.
+            Returns printable string to represent matched multibyte sequence,
+            such as 'KEY_LEFT'. For purposes of __repr__ or __str__ ?
+            """
+            assert type(integer) is int
+            for keycode in self._keycodes:
+                if getattr(self, keycode) == integer:
+                    return keycode
+
+        def scan_keymap(ucs):
+            """
+            Return sequence and keycode if ucs begins with any known sequence.
             """
             for (keyseq, keycode) in self._keymap.iteritems():
-                if text.startswith(keyseq):
-                    return (keyseq, keycode)
-            return (None, None)  # no match
+                if ucs.startswith(keyseq):
+                    return (keyseq, resolve_keycode(keycode), keycode)
+            return (None, None, None)  # no match
 
-        while len(data):
-            if data[:2] in (u'\r\x00', u'\r\n'):
-                # skip beyond nul (nvt telnet), or \n (putty, SyncTerm)
-                yield self.KEY_ENTER
-                data = data[2:]
+        # special care is taken to pass over the ineveitably troublesome
+        # carriage return, which is a multibyte sequence issue of its own;
+        # expect to receieve any of '\r\00', '\r\n', '\r', or '\n', but
+        # yield only a single byte, u'\n'.
+        while len(ucs):
+            if ucs[:2] in (CR_NVT, CR_LF):  # telnet return or dos CR+LF
+                yield Keystroke(CR_CHAR, ('KEY_ENTER', self.KEY_ENTER))
+                ucs = ucs[2:]
                 continue
-            elif data[:1] in (u'\r', u'\n'):
-                yield self.KEY_ENTER
-                data = data[1:]
+            elif ucs[:1] in (u'\r', u'\n'):  # single-byte CR
+                yield Keystroke(CR_CHAR, ('KEY_ENTER', self.KEY_ENTER))
+                ucs = ucs[1:]
                 continue
-            keyseq, keycode = scan_keymap(data)
-            # keymap KEY_ sequence
-            if (keyseq, keycode) != (None, None):
-                yield keycode
-                data = data[len(keyseq):]
+            elif 1 == len(ucs) and ucs == unichr(esc):
+                yield Keystroke(ucs[0], ('KEY_ESCAPE', self.KEY_ESCAPE))
+                break
+            elif 1 == len(ucs) and ucs == unichr(0):
+                # null byte isn't; actually is ctrl+spacebar;
+                yield Keystroke(ucs[0], ('KEY_CSPACE', self.KEY_CSPACE))
+                break
+            keyseq, keyname, keycode = scan_keymap(ucs)
+            if (keyseq, keyname, keycode) == (None, None, None):
+                yield Keystroke(ucs[0], None)
+                ucs = ucs[1:]
             else:
-                yield data[0]
-                data = data[1:]
+                yield Keystroke(keyseq, (keyname, keycode))
+                ucs = ucs[len(keyseq):]
 
     def _resolve_color(self, color):
-        """
-        Resolve a color like red or on_bright_green into a callable capability.
-        """
+        """Resolve a color like red or on_bright_green into a callable capability."""
+        # TODO: Does curses automatically exchange red and blue and cyan and
+        # yellow when a terminal supports setf/setb rather than setaf/setab?
+        # I'll be blasted if I can find any documentation. The following
+        # assumes it does.
         color_cap = (self._background_color if 'on_' in color else
                      self._foreground_color)
         # curses constants go up to only 7, so add an offset to get at the
@@ -441,20 +811,45 @@ class Terminal(object):
 
     @property
     def _foreground_color(self):
-        """ Return ANSI or non-ANSI foreground attribute."""
         return self.setaf or self.setf
 
     @property
     def _background_color(self):
-        """ Return ANSI or non-ANSI background attribute."""
         return self.setab or self.setb
 
     def _formatting_string(self, formatting):
-        """
-        Return a new ``FormattingString`` which implicitly receives my notion
-        of "normal".
-        """
+        """Return a new ``FormattingString`` which implicitly receives my notion of "normal"."""
         return FormattingString(formatting, self.normal)
+
+    def ljust(self, ucs, width=None, fillchar=u' '):
+        """T.ljust(ucs, [width], [fillchar]) -> string
+
+        Return ucs left-justified in a string of length width. Padding is
+        done using the specified fill character (default is a space).
+        Default width is terminal width. ucs is escape sequence safe."""
+        if width is None:
+            width = self.width
+        return AnsiString(ucs).ljust(width, fillchar)
+
+    def rjust(self, ucs, width=None, fillchar=u' '):
+        """T.rjust(ucs, [width], [fillchar]) -> string
+
+        Return ucs right-justified in a string of length width. Padding is
+        done using the specified fill character (default is a space)
+        Default width is terminal width. ucs is escape sequence safe."""
+        if width is None:
+            width = self.width
+        return AnsiString(ucs).rjust(width, fillchar)
+
+    def center(self, ucs, width=None, fillchar=u' '):
+        """T.center(ucs, [width], [fillchar]) -> string
+
+        Return ucs centered in a string of length width. Padding is
+        done using the specified fill character (default is a space).
+        Default width is terminal width. ucs is escape sequence safe."""
+        if width is None:
+            width = self.width
+        return AnsiString(ucs).center(width, fillchar)
 
 
 def derivative_colors(colors):
@@ -464,8 +859,8 @@ def derivative_colors(colors):
                [('on_bright_' + c) for c in colors])
 
 
-COLORS = set(['black', 'red', 'green', 'yellow', 'blue',
-              'magenta', 'cyan', 'white'])
+COLORS = set(['black', 'red', 'green',
+             'yellow', 'blue', 'magenta', 'cyan', 'white'])
 COLORS.update(derivative_colors(COLORS))
 COMPOUNDABLES = (COLORS |
                  set(['bold', 'underline', 'reverse', 'blink', 'dim', 'italic',
@@ -473,14 +868,7 @@ COMPOUNDABLES = (COLORS |
 
 
 class ParametrizingString(unicode):
-    """
-    A Unicode string which can be called to parametrize it as a terminal
-    capability.
-    """
-    # pylint: disable=R0904,R0924
-    #        Too many public methods (40/20)
-    #        Badly implemented Container, implements __getitem__, __len__
-    #          but not __delitem__, __setitem__
+    """A Unicode string which can be called to parametrize it as a terminal capability"""
     def __new__(cls, formatting, normal=None):
         """Instantiate.
 
@@ -489,8 +877,6 @@ class ParametrizingString(unicode):
             "normal" capability.
 
         """
-        # pylint: disable=W0212
-        #        Access to a protected member _normal of a client class
         new = unicode.__new__(cls, formatting)
         new._normal = normal
         return new
@@ -500,8 +886,7 @@ class ParametrizingString(unicode):
             # Re-encode the cap, because tparm() takes a bytestring in Python
             # 3. However, appear to be a plain Unicode string otherwise so
             # concats work.
-            lookup = self.encode('utf8')
-            parametrized = curses.tparm(lookup, *args).decode('utf8')
+            parametrized = tparm(self.encode('utf-8'), *args).decode('utf-8')
             return (parametrized if self._normal is None else
                     FormattingString(parametrized, self._normal))
         except curses.error:
@@ -513,7 +898,7 @@ class ParametrizingString(unicode):
         except TypeError:
             # If the first non-int (i.e. incorrect) arg was a string, suggest
             # something intelligent:
-            if len(args) == 1 and isinstance(args[0], basestring):
+            if len(args) >= 1 and isinstance(args[0], basestring):
                 raise TypeError(
                     'A native or nonexistent capability template received '
                     '%r when it was expecting ints. You probably misspelled a '
@@ -525,18 +910,8 @@ class ParametrizingString(unicode):
 
 
 class FormattingString(unicode):
-    """
-    A Unicode string which can be called upon a piece of text to wrap it in
-    formatting.
-    """
-    # pylint: disable=R0904,R0924
-    #        Too many public methods (40/20)
-    #        Badly implemented Container, implements __getitem__, __len__
-    #          but not __delitem__, __setitem__
-
+    """A Unicode string which can be called upon a piece of text to wrap it in formatting"""
     def __new__(cls, formatting, normal):
-        # pylint: disable=W0212
-        #        Access to a protected member _normal of a client class
         new = unicode.__new__(cls, formatting)
         new._normal = normal
         return new
@@ -553,20 +928,13 @@ class FormattingString(unicode):
 
 
 class NullCallableString(unicode):
-    """
-    A dummy class to stand in for ``FormattingString`` and
-    ``ParametrizingString``.
+    """A dummy class to stand in for ``FormattingString`` and ``ParametrizingString``
 
     A callable bytestring that returns an empty Unicode when called with an int
     and the arg otherwise. We use this when there is no tty and so all
     capabilities are blank.
 
     """
-    # pylint: disable=R0904,R0924
-    #        Too many public methods (40/20)
-    #        Badly implemented Container, implements __getitem__, __len__
-    #          but not __delitem__, __setitem__
-
     def __new__(cls):
         new = unicode.__new__(cls, u'')
         return new
@@ -574,7 +942,40 @@ class NullCallableString(unicode):
     def __call__(self, arg):
         if isinstance(arg, int):
             return u''
-        return arg
+        return arg  # TODO: Force even strs in Python 2.x to be unicodes? Nah. How would I know what encoding to use to convert it?
+
+
+class Keystroke(unicode):
+    """ A unicode-derived class for matched multibyte input sequences.  If the
+    unicode string is a multibyte input sequence, then the ``is_sequence``
+    property is True, and the ``name`` and ``value`` properties return a
+    string and integer value.
+    """
+    def __new__(cls, ucs, keystroke=None):
+        new = unicode.__new__(cls, ucs)
+        new._keystroke = keystroke
+        return new
+
+    @property
+    def is_sequence(self):
+        """ Returns True if value represents a multibyte sequence. """
+        return self._keystroke is not None
+
+    @property
+    def name(self):
+        """ Returns string name of multibyte sequence, such as 'KEY_HOME'."""
+        if self._keystroke is None:
+            return str(None)
+        return self._keystroke[0]
+
+    @property
+    def code(self):
+        """ Returns curses integer value of multibyte sequence, such as 323."""
+        if self._keystroke is not None:
+            return self._keystroke[1]
+        assert 1 == len(self), (
+            'No integer value available for multibyte sequence')
+        return ord(self)
 
 
 def split_into_formatters(compound):
@@ -587,9 +988,311 @@ def split_into_formatters(compound):
     merged_segs = []
     # These occur only as prefixes, so they can always be merged:
     mergeable_prefixes = ['on', 'bright', 'on_bright']
-    for spx in compound.split('_'):
+    for s in compound.split('_'):
         if merged_segs and merged_segs[-1] in mergeable_prefixes:
-            merged_segs[-1] += '_' + spx
+            merged_segs[-1] += '_' + s
         else:
-            merged_segs.append(spx)
+            merged_segs.append(s)
     return merged_segs
+
+
+class AnsiWrapper(textwrap.TextWrapper):
+    # pylint: disable=C0111
+    #         Missing docstring
+    def _wrap_chunks(self, chunks):
+        """
+        ANSI-safe varient of wrap_chunks, with exception of movement seqs!
+        """
+        lines = []
+        if self.width <= 0:
+            raise ValueError("invalid width %r (must be > 0)" % self.width)
+        chunks.reverse()
+        while chunks:
+            cur_line = []
+            cur_len = 0
+            if lines:
+                indent = self.subsequent_indent
+            else:
+                indent = self.initial_indent
+            width = self.width - len(indent)
+            if (not hasattr(self, 'drop_whitespace') or self.drop_whitespace
+                    ) and (chunks[-1].strip() == '' and lines):
+                del chunks[-1]
+            while chunks:
+                chunk_len = len(AnsiString(chunks[-1]))
+                if cur_len + chunk_len <= width:
+                    cur_line.append(chunks.pop())
+                    cur_len += chunk_len
+                else:
+                    break
+            if chunks and len(AnsiString(chunks[-1])) > width:
+                self._handle_long_word(chunks, cur_line, cur_len, width)
+            if (not hasattr(self, 'drop_whitespace') or self.drop_whitespace
+                    ) and (cur_line and cur_line[-1].strip() == ''):
+                del cur_line[-1]
+            if cur_line:
+                lines.append(indent + u''.join(cur_line))
+        return lines
+
+
+def ansiwrap(ucs, width=70, **kwargs):
+    """ Wrap a single paragraph of Unicode terminal sequences,
+    returning a list of wrapped lines. ucs is ANSI-color safe.
+    """
+    assert ('break_long_words' not in kwargs
+            or not kwargs['break_long_words']), (
+                'break_long_words is not sequence-safe')
+    kwargs['break_long_words'] = False
+    return AnsiWrapper(width=width, **kwargs).wrap(ucs)
+
+_ANSI_COLOR = re.compile(r'\033\[(\d{2,3})m')
+_ANSI_RIGHT = re.compile(r'\033\[(\d{1,4})C')
+_ANSI_CODEPAGE = re.compile(r'\033[\(\)][AB012]')
+_ANSI_WILLMOVE = re.compile(r'\033\[[HuABCDEFG]')
+_ANSI_WONTMOVE = re.compile(r'\033\[[smJK]')
+
+class AnsiString(unicode):
+    """
+    This unicode variation understands the effect of ANSI sequences of
+    printable length, allowing a properly implemented .rjust(), .ljust(),
+    .center(), and .len() with bytes using terminal sequences
+
+    Other ANSI helper functions also provided as methods.
+    """
+    # this is really bad; kludge dating as far back as 2002
+    def __new__(cls, ucs):
+        new = unicode.__new__(cls, ucs)
+        return new
+
+    def ljust(self, width, fillchar=u' '):
+        return self + fillchar * (max(0, width - self.__len__()))
+
+    def rjust(self, width, fillchar=u' '):
+        return fillchar * (max(0, width - self.__len__())) + self
+
+    def center(self, width, fillchar=u' '):
+        split = max(0.0, float(width) - self.__len__()) / 2
+        return (fillchar * (max(0, int(math.floor(split)))) + self
+                + fillchar * (max(0, int(math.ceil(split)))))
+
+    def __len__(self):
+        """
+        Return the printed length of a string that contains (some types) of
+        ANSI sequences. Although accounted for, strings containing sequences
+        such as cls() will not give accurate returns (0). backspace, delete,
+        and double-wide east-asian characters are accounted for.
+        """
+        # 'nxt' points to first *ch beyond current ansi sequence, if any.
+        # 'width' is currently estimated display length.
+        nxt, width = 0, 0
+
+        def get_padding(ucs):
+            """
+             get_padding(S) -> integer
+
+            Returns int('nn') in CSI sequence \\033[nnC for use with replacing
+            ansi.right(nn) with printable characters. prevents bleeding when
+            used with scrollable art. Otherwise 0 if not \033[nnC sequence.
+            Needed to determine the 'width' of art that contains this padding.
+            """
+            right = _ANSI_RIGHT.match(ucs)
+            if right is not None:
+                return int(right.group(1))
+            return 0
+        for idx in range(0, unicode.__len__(self)):
+            width += get_padding(self[idx:])
+            if idx == nxt:
+                nxt = idx + _seqlen(self[idx:])
+            if nxt <= idx:
+                # 'East Asian Fullwidth' and 'East Asian Wide' characters
+                # can take 2 cells, see http://www.unicode.org/reports/tr11/
+                # and http://www.gossamer-threads.com/lists/python/bugs/972834
+                # TODO: could use wcswidth, but i've ommitted it -jq
+                width += 1
+                nxt = idx + _seqlen(self[idx:]) + 1
+        return width
+
+
+def _is_movement(ucs):
+    """
+    _is_movement(ucs) -> bool
+
+    Returns True if ucs begins with a terminal sequence that is
+    "unhealthy for padding", that is, it has effects on the
+    cursor position that are indeterminate.
+    """
+    # pylint: disable=R0911,R09120
+    #        Too many return statements (20/6)
+    #        Too many branches (23/12)
+    # this isn't the best, perhaps for readability a giant REGEX can and
+    # probably and already has been made.
+    esc = curses.ascii.ESC
+    slen = unicode.__len__(ucs)
+    if 0 == slen:
+        return False
+    elif ucs[0] in u'\r\n\b':
+        return True
+    elif ucs[0] != unichr(esc):
+        return False
+    elif slen > 1 and ucs[1] == u'c':
+        # reset
+        return True
+    elif slen < 3:
+        # unknown
+        return False
+    elif _ANSI_CODEPAGE.match(ucs):
+        return False
+    elif (ucs[0], ucs[1], ucs[2]) == (u'\x1b', u'#', u'8'):
+        # 'fill the screen'
+        return True
+    elif _ANSI_WILLMOVE.match(ucs):
+        return True
+    elif _ANSI_WONTMOVE.match(ucs):
+        return False
+    elif slen < 4:
+        # unknown
+        return False
+    elif ucs[2] == '?':
+        # DEC private modes
+        # http://web.fis.unico.it/public/rxvt/refer.html#PrivateModes
+        # fe., show/hide cursor is CSI + '?25[hl]'
+        ptr2 = 3
+        while (ucs[ptr2].isdigit()):
+            ptr2 += 1
+        if not ucs[ptr2] in u'tsrhl': # toggle,save,restore,set,reset
+            return False
+        return False
+    elif ucs[2] in ('(', ')'):
+        # CSI + '\([AB012]' # set G0/G1
+        assert ucs[3] in (u'A', 'B', '0', '1', '2',)
+        return False
+    elif not ucs[2].isdigit():
+        # illegal nondigit in seq
+        return False
+    ptr2 = 2
+    while (ucs[ptr2].isdigit()):
+        ptr2 += 1
+    # multi-attribute SGR '[01;02(..)'(m|H)
+    n_tries = 0
+    while ptr2 < slen and ucs[ptr2] == ';' and n_tries < 64:
+        n_tries += 1
+        ptr2 += 1
+        try:
+            while (ucs[ptr2].isdigit()):
+                ptr2 += 1
+            if ucs[ptr2] == 'H':
+                # 'H' pos,
+                return True
+            elif ucs[ptr2] == 'm':
+                # 'm' color;attr
+                return False
+            elif ucs[ptr2] == ';':
+                # multi-attribute SGR
+                continue
+        except IndexError:
+            # out-of-range in multi-attribute SGR
+            return False
+        # illegal multi-attribtue SGR
+        return False
+    if ptr2 >= slen:
+        # unfinished sequence, hrm ..
+        return False
+    elif ucs[ptr2] in u'ABCD':
+        # numeric up, down, right, left
+        return True
+    elif ucs[ptr2] in u'KJ':
+        # clear_bol is 1K; clear_eos is 2J
+        return False
+    elif ucs[ptr2] == 'm':
+        # normal
+        return False
+    # illegal single value, UNKNOWN
+    return False
+
+
+def _seqlen(ucs):
+    """
+    _seqlen(S) -> integer
+
+    Returns non-zero for string S that begins with an ansi sequence, with
+    value of bytes until sequence is complete. Use as a 'next' pointer to
+    skip past sequences.
+    """
+    # pylint: disable=R0911,R0912
+    #        Too many return statements (19/6)
+    #        Too many branches (22/12)
+    # it is regretable that this duplicates much of is_movement, but
+    # they do serve different means .. again, more REGEX would help
+    # readability.
+    slen = unicode.__len__(ucs)
+    esc = curses.ascii.ESC
+    if 0 == slen:
+        return 0  # empty string
+    elif ucs[0] != unichr(esc):
+        return 0  # not a sequence
+    elif 1 == slen:
+        return 0  # just esc,
+    elif ucs[1] == u'c':
+        return 2  # reset
+    elif 2 == slen:
+        return 0  # not a sequence
+    elif (ucs[1], ucs[2]) == (u'#', u'8'):
+        return 3  # fill screen (DEC)
+    elif _ANSI_CODEPAGE.match(ucs) or _ANSI_WONTMOVE.match(ucs):
+        return 3
+    elif _ANSI_WILLMOVE.match(ucs):
+        return 3
+    elif ucs[1] == '[':
+        # all sequences are at least 4 (\033,[,0,m)
+        if slen < 4:
+            # not a sequence !?
+            return 0
+        elif ucs[2] == '?':
+            # CSI + '?25(h|l)' # show|hide
+            ptr2 = 3
+            while (ucs[ptr2].isdigit()):
+                ptr2 += 1
+                if (ucs[ptr2]) == ';':
+                    # u'\x1b[?12;25h' cvvis
+                    ptr2 += 1
+            if not ucs[ptr2] in u'hl':
+                # ? followed illegaly, UNKNOWN
+                return 0
+            return ptr2 + 1
+        # SGR
+        elif ucs[2].isdigit() or ucs[2] == ';':
+            ptr2 = 2
+            while (ucs[ptr2].isdigit()):
+                ptr2 += 1
+                if ptr2 == unicode.__len__(ucs):
+                    return 0
+
+            # multi-attribute SGR '[01;02(..)'(m|H)
+            while ucs[ptr2] == ';':
+                ptr2 += 1
+                if ptr2 == unicode.__len__(ucs):
+                    return 0
+                try:
+                    while (ucs[ptr2].isdigit()):
+                        ptr2 += 1
+                except IndexError:
+                    return 0
+                if ucs[ptr2] in u'Hm':
+                    return ptr2 + 1
+                elif ucs[ptr2] == ';':
+                    # multi-attribute SGR
+                    continue
+                # 'illegal multi-attribute sgr'
+                return 0
+            # single attribute SGT '[01(A|B|etc)'
+            if ucs[ptr2] in u'ABCDEFGJKSTHm':
+                # single attribute,
+                # up/down/right/left/bnl/bpl,pos,cls,cl,
+                # pgup,pgdown,color,attribute.
+                return ptr2 + 1
+            # illegal single value
+            return 0
+        # illegal nondigit
+        return 0
+    # unknown...
+    return 0

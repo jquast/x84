@@ -7,8 +7,34 @@ import socket
 import time
 import re
 
+from x84.blessings import Terminal as BlessingsTerminal
+
 TERMINALS = dict()
 
+class Terminal(BlessingsTerminal):
+    def __init__(self, kind, stream, rows, columns):
+        self.rows = rows
+        self.columns = columns
+        BlessingsTerminal.__init__(self, kind, stream)
+
+    def kbhit(self, timeout=0):
+        from x84.bbs import getsession
+        val = getsession().read_event('input', timeout)
+        if val is not None:
+            getsession()._buffer['input'].append(val)
+            return True
+        return False
+
+    def getch(self):
+        from x84.bbs import getsession
+        return getsession().read_event('input')
+
+    def _height_and_width(self):
+        return (self.rows, self.columns)
+
+    @property
+    def is_a_tty(self):
+        return True
 
 def init_term(out_queue, lock, env):
     """
@@ -19,7 +45,6 @@ def init_term(out_queue, lock, env):
     """
     from x84.bbs import ini
     from x84.bbs.ipc import IPCStream
-    from x84.blessings import Terminal as BTerminal
     if (env.get('TERM', 'unknown') == 'ansi'
             and ini.CFG.get('system', 'termcap-ansi', u'no') != 'no'):
         # special workaround for systems with 'ansi-bbs' termcap,
@@ -32,10 +57,10 @@ def init_term(out_queue, lock, env):
         # the most broadly capable termcap possible, 'vt100', configurable with
         # default.ini
         env['TERM'] = ini.CFG.get('system', 'termcap-unknown')
-    return BTerminal(env.get('TERM', 'unknown'),
-                     IPCStream(out_queue, lock),
-                     int(env.get('LINES', '24')),
-                     int(env.get('COLUMNS', '80'),))
+    stream = IPCStream(out_queue, lock)
+    return Terminal(env.get('TERM', 'unknown'), stream,
+            int(env.get('LINES', '24')),
+            int(env.get('COLUMNS', '80'),))
 
 
 def mkipc_rlog(out_queue):
@@ -154,7 +179,7 @@ def start_process(inp_queue, out_queue, sid, env, lock, binary=False):
     if env.get('TERM', 'unknown') in cp437_ttypes:
         encoding = 'cp437'
     elif env.get('TERM', 'unknown').startswith('vt'):
-        encodnig = 'cp437'
+        encoding = 'cp437'
     elif binary:
         encoding = 'utf8'
     # spawn and begin a new session
