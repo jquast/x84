@@ -70,39 +70,33 @@ def main(host, port=None, encoding='cp437'):
     # disable keyboard translation .. so special accomidations are
     # made with carriage_return to handle \r\n to just \r, for one.
     session.enable_keycodes = False
-    inp = session.poll_event('input')
+    echo(u'\r\n... ')
+    inp = session.read_event('input', timeout=0)
     echo(u'\r\nConnected to %s.' % (host,))
     session.activity = 'connected to %s' % (host,)
     carriage_returned = False
     while True:
-        try:
-            unistring = (from_cp437(telnet_client.read_very_eager()
-                .decode('cp437', 'replace')) if encoding == 'cp437'
-                else telnet_client.read_very_eager().decode('utf8', 'replace'))
-            if 0 != len(unistring):
-                echo(unistring)
-            if inp is not None:
-                if inp in (unichr(30),):  # ctrl-^
-                    telnet_client.close()
-                    echo(u'\r\n' + term.clear_el + term.normal)
-                    break
-                elif not carriage_returned and inp in (u'\r', u'\n'):
-                    telnet_client.write('\r')
-                    carriage_returned = True
-                elif carriage_returned and inp in (u'\n', unichr(0)):
-                    carriage_returned = False
-                elif inp is not None:
-                    # hack
-                    telnet_client.write(inp.decode('iso8859-1'))
-                    carriage_returned = False
-        except Exception as err:
-            echo(term.bold_red('%s\r\n%s\r\n' % (
-                term.normal, err,)))
-            echo('press "q" to continue')
-            while(getch() != 'q'):
-                pass
-            raise err
-        inp = getch(timeout=KEY_POLL)
+        if encoding == 'cp437':
+            unistring = from_cp437(
+                    telnet_client.read_very_eager().decode('iso8859-1'))
+        else:
+            unistring = telnet_client.read_very_eager().decode('utf8')
+        if 0 != len(unistring):
+            echo(unistring)
+        if inp is not None:
+            if inp == bytes([30]):  # ctrl-^
+                telnet_client.close()
+                echo(u'\r\n' + term.clear_el + term.normal)
+                break
+            elif not carriage_returned and inp in (b'\x0d', b'\x0a'):
+                telnet_client.write(b'\x0d')
+                carriage_returned = True
+            elif carriage_returned and inp in (b'\x0a', b'\x00'):
+                carriage_returned = False
+            elif inp is not None:
+                telnet_client.write(inp)
+                carriage_returned = False
+        inp = session.read_event('input', timeout=KEY_POLL)
     echo(u'\r\nConnection closed.\r\n')
     echo(u''.join(('\r\n\r\n', term.clear_el, term.normal, 'press any key')))
     session.flush_event('input')
