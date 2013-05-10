@@ -31,7 +31,7 @@ class Door(object):
         """
         cmd, args = argv[0], argv[1:]
         lang, term, and env_path become LANG, TERM, and PATH environment
-        variables. When term is None, the session terminal type is used.  When
+        variables. When env_term is None, the session terminal type is used.  When
         env_path is None, the .ini 'env_path' value of section [door] is used.
         When env_home is None, $HOME of the main process is used.
         """
