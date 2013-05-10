@@ -29,6 +29,7 @@ def refresh():
         ('n', 'EWS'),
         ('c', 'hAt'),
         ('!', 'ENCOdiNG'),
+        ('#', 'PlAY lORd'), 
         ('t', 'EtRiS'),
         ('s', 'YS. iNfO'),
         ('f', 'ORECASt'),
@@ -90,6 +91,8 @@ def main():
             gosub('weather')
         elif inp == u'e':
             gosub('profile')
+        elif inp == u'#':
+            gosub('lord')
         elif inp == u't':
             gosub('tetris')
         elif inp == u'c':
