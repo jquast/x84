@@ -92,12 +92,16 @@ def main(host, port=None, encoding='cp437'):
                 elif carriage_returned and inp in (u'\n', unichr(0)):
                     carriage_returned = False
                 elif inp is not None:
-                    telnet_client.write(inp)
+                    # hack
+                    telnet_client.write(inp.decode('iso8859-1'))
                     carriage_returned = False
         except Exception as err:
             echo(term.bold_red('%s\r\n%s\r\n' % (
                 term.normal, err,)))
-            break
+            echo('press "q" to continue')
+            while(getch() != 'q'):
+                pass
+            raise err
         inp = getch(timeout=KEY_POLL)
     echo(u'\r\nConnection closed.\r\n')
     echo(u''.join(('\r\n\r\n', term.clear_el, term.normal, 'press any key')))
