@@ -76,9 +76,9 @@ def main(host, port=None, encoding='cp437'):
     carriage_returned = False
     while True:
         try:
-            unistring = (from_cp437(telnet_client.read_very_eager())
-                         if encoding == 'cp437' else
-                         telnet_client.read_very_eager().decode('utf8'))
+            unistring = (from_cp437(telnet_client.read_very_eager()
+                .decode('cp437', 'replace')) if encoding == 'cp437'
+                else telnet_client.read_very_eager().decode('utf8', 'replace'))
             if 0 != len(unistring):
                 echo(unistring)
             if inp is not None:
