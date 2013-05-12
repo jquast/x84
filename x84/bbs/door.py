@@ -1,14 +1,245 @@
 """
-ansiwin package for x/84 BBS http://github.com/jquast/x84
+Door package for x/84 BBS http://github.com/jquast/x84
 """
+import resource
 import termios
 import logging
 import select
 import struct
+import time
 import fcntl
 import pty
 import sys
 import os
+
+class Dropfile(object):
+    (DOORSYS, DOOR32, CALLINFOBBS, DORINFO) = range(4)
+    DOORSYS_GM = 'GR' # graphics mode
+
+    def __init__(self, filetype=None):
+        assert filetype in (self.DOORSYS, self.DOOR32,
+                self.CALLINFOBBS, self.DORINFO)
+        self.filetype = filetype
+
+    def save(self, folder):
+        """ Save dropfile to folder """
+        fp = open(os.path.join(folder, self.filename), 'w')
+        fp.write(self.__str__())
+        fp.close()
+
+    @property
+    def node(self):
+        from x84.bbs import getsession
+        return getsession().node
+
+    @property
+    def location(self):
+        from x84.bbs import getsession
+        return getsession().user.location
+
+    @property
+    def fullname(self):
+        from x84.bbs import getsession
+        return '%s %s' % (
+                getsession().user.handle,
+                getsession().user.handle,)
+
+    @property
+    def securitylevel(self):
+        from x84.bbs import getsession
+        return 100 if getsession().user.is_sysop else 30
+
+    @property
+    def numcalls(self):
+        from x84.bbs import getsession
+        return getsession().user.calls
+
+    @property
+    def lastcall_date(self):
+        from x84.bbs import getsession
+        return time.strftime('%m/%d/%y',
+                time.localtime(getsession().user.lastcall))
+
+    @property
+    def lastcall_time(self):
+        from x84.bbs import getsession
+        return time.strftime('%H:%M',
+                time.localtime(getsession().user.lastcall))
+
+    @property
+    def time_used(self):
+        from x84.bbs import getsession
+        return int(time.time() - getsession().connect_time)
+
+    @property
+    def remaining_secs(self):
+        return 256 * 60
+
+    @property
+    def remaining_mins(self):
+        return 256
+
+    @property
+    def comport(self):
+        return 'COM1'
+
+    @property
+    def comspeed(self):
+        return 57600
+
+    @property
+    def comtype(self):
+        return 0 ## Line 1 : Comm type (0=local, 1=serial, 2=telnet)
+
+    @property
+    def comhandle(self):
+        return 0 ## Line 2 : Comm or socket handle
+
+    @property
+    def parity(self):
+        return 8
+
+    @property
+    def password(self):
+        return '<encrypted>'
+
+    @property
+    def pageheight(self):
+        from x84.bbs import getterminal
+        return getterminal().height
+
+    @property
+    def systemname(self):
+        from x84.bbs import ini
+        return ini.CFG.get('system', 'software')
+
+    @property
+    def xferprotocol(self):
+        return 'X' # x-modem for now, we don't have any xfer code/prefs
+
+    @property
+    def usernum(self):
+        from x84.bbs import getsession
+        from x84.bbs.userbase import list_users
+        try:
+            return list_users().index(getsession().user.handle)
+        except ValueError:
+            return 999
+
+    @property
+    def sysopname(self):
+        from x84.bbs import ini
+        return ini.CFG.get('system', 'sysop')
+
+    @property
+    def alias(self):
+        from x84.bbs import getsession
+        return getsession().user.handle
+
+    @property
+    def filename(self):
+        if self.filetype == self.DOORSYS:
+            return 'DOOR.SYS'
+        elif self.filetype == self.DOOR32:
+            return 'DOOR32.SYS'
+        elif self.filetype == self.CALLINFOBBS:
+            return 'CALLINFO.BBS'
+        elif self.filetype == self.DORINFO:
+            return 'DORINFO%d.DEF' % (self.node,)
+        else:
+            raise ValueError('filetype is unknown')
+
+    def __str__(self):
+        if self.filetype == self.DOORSYS:
+            return self.get_doorsys()
+        elif self.filetype == self.DOOR32:
+            return self.get_door32()
+        elif self.filetype == self.CALLINFOBBS:
+            return self.get_callinfo()
+        elif self.filetype == self.DORINFO:
+            return self.get_dorinfo()
+        else:
+            raise ValueError('filetype is unknown')
+
+    def get_doorsys():
+        return ('%s:\r\n%d\r\n'  # comport, comspeed
+                '%d\r\n%d\r\n'  # parity, node
+                '%d\r\nY\r\n'  # comspeed, screen?
+                'Y\r\nY\r\nY\r\n'  # printer? pager alarm? caller alarm?
+                '%s\r\n%s\r\n'  # fullname, location
+                '123-456-7890\r\n123-456-7890\r\n'  # phone numbers
+                '%s\r\n%d\r\n%d\r\n'  # password, security level, numcalls
+                '%d\r\n%d\r\n%d\r\n'  # lastcall, remaining (mins, secs)
+                'NG\r\n%d\r\nN\r\n'  # graphics mode, page length, expert mode
+                '1,2,3,4,5,6,7\r\n1\r\n'  # conferences, conf. sel, exp. date
+                '01/01/99\r\n'  # exp. date
+                '%s\r\n%s\r\n%s\r\n'  # user number, def. xfer protocol,
+                '0\r\n0\r\n'  # total #u/l, total #d/l
+                '0\r\n9999999\r\n'  # daily d/l limit return val/write val
+                '01/01/2001\r\n'  # birthdate
+                'C:\\XXX\r\nC:\\XXX\r\n'  # filepaths to bbs files ...
+                '%s\r\n%s\r\n'  # sysop's name, user's alias
+                '00:05\r\nY\r\n'  # "event time"?, error-correcting connection
+                'Y\r\nY\r\n'  # is ANSI in NG mode? Use record locking?
+                '7\r\n%d\r\n'  # default color .. time credits in minutes
+                '09/09/99\r\n%s\r\n'  # last new file scan, time of call,
+                '%s\r\n9999\r\n'  # time of last call, max daily files
+                '0\r\n0\r\n0\r\n' # files, u/l Kb, d/l Kb today
+                'None\r\n0\r\n0\n' # user comment, doors opened, msgs left
+                % (
+                    self.comport, self.comspeed, self.parity, self.node,
+                    self.comspeed, self.fullname, self.location,
+                    self.password, self.securitylevel, self.numcalls,
+                    self.lastcall_date, self.remaining_secs,
+                    self.remaining_mins, self.pageheight, self.usernum,
+                    self.xferprotocol, self.sysopname, self.alias,
+                    self.remaining_mins, self.lastcall_time,
+                    self.lastcall_time))
+
+    def get_door32():
+        return ('%d\r\n%d\r\n%d\r\n'  # comm type, handle, speed
+                '%s\r\n%d\r\n%s\r\n'  # system name, user num, real name
+                '%s\r\n%d\r\n%d\r\n'  # alias, security level, mins remain,
+                '1\r\n%d\n'  # emulation ('ansi'), current node num,
+                % (
+                    self.comtype, self.comhandle, self.comspeed,
+                    self.systemname, self.usernum, self.fullname,
+                    self.alias, self.securitylevel, self.remaining_mins,
+                    self.node))
+    def get_callinfo():
+        return ('%s\r\n%d\r\n%s\r\n'  # user name, comspeed, location
+                '%d\r\n%d\r\nCOLOR\r\n' # security level, mins remain, ansi?
+                '%s\r\n%d\r\n%d\r\n'  # password, usernum, time_used,
+                '01:23\r\n01:23 01/02/90\r\n'
+                'ABCDEFGH\r\n0\r\n'
+                '99\r\n0\r\n'
+                '9999\r\n'  # 7 unknown fields,
+                '123-456-7890\r\n01/01/90 02:34\r\n' # phone, unknown
+                'NOVICE\r\n%s\r\n'  # expert mode, xfer protocol
+                '01/01/90\r\n%d\r\n' # unknown, number of calls,
+                '%d\r\n0\r\n' # lines per screen, ptr to new msgs?
+                '0\r\n0\r\n' # total u/l, d/l
+                '8  { Databits }\r\n' #  who knows
+                'REMOTE\r\n%s\r\n' # LOCAL|REMOTE, comport,
+                '%d\r\nFALSE\r\n' # comspeed, unknown,
+                'Normal Connection\r\n' # unknown,
+                '01/02/94 01:20\r\n0\r\n1\n' # unknown, "task #", "door #"
+                % (self.alias, self.comspeed, self.location,
+                    self.securitylevel, self.remaining_mins, self.password,
+                    self.usernum, self.time_used, self.xferprotocol,
+                    self.numcalls, self.pageheight, self.comspeed, ))
+
+    def get_dorinfo(self):
+        return ('%s\r\n%s\r\n%s\r\n' # software, sysop fname, sysop lname,
+                '%s\r\n%d\r\n0\r\n'  # com port, bps, "networked"?
+                '%s\r\n%s\r\n%s\r\n' # user fname, user lname, user location
+                '1\r\n%d\r\n%d\r\n' # term (ansi), security level, mins remain
+                '-1\n'  # fossil (-1 = "using external serial driver"..)
+                % (
+                    self.systemname, self.sysopname, self.sysopname,
+                    self.comport, self.comspeed,
+                    self.alias, self.alias, self.location,
+                    self.securitylevel, self.remaining_mins,))
 
 
 class Door(object):
@@ -22,18 +253,17 @@ class Door(object):
     blocksize = 7680
     timeout = 1984
     master_fd = None
-    decode_cp437 = False
 
     def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
-                 env_term=None, env_path=None, env_home=None):
+                 env_term=None, env_path=None, env_home=None, cp437=False):
         # pylint: disable=R0913
         #        Too many arguments (7/5)
         """
         cmd, args = argv[0], argv[1:]
         lang, term, and env_path become LANG, TERM, and PATH environment
-        variables. When env_term is None, the session terminal type is used.  When
-        env_path is None, the .ini 'env_path' value of section [door] is used.
-        When env_home is None, $HOME of the main process is used.
+        variables. When env_term is None, the session terminal type is used.
+        When env_path is None, the .ini 'env_path' value of section [door] is
+        used.  When env_home is None, $HOME of the main process is used.
         """
         from x84.bbs import getsession, ini
         # pylint: disable=R0913
@@ -53,6 +283,8 @@ class Door(object):
             self.env_home = os.getenv('HOME')
         else:
             self.env_home = env_home
+        self.env = None # add additional env variables ...
+        self.cp437 = cp437
 
     def run(self):
         """
@@ -63,28 +295,41 @@ class Door(object):
         from x84.bbs import getsession, getterminal
         session, term = getsession(), getterminal()
         logger = logging.getLogger()
+        env = dict() if self.env is None else self.env
+        env.update({'LANG': self.env_lang,
+               'TERM': self.env_term,
+               'PATH': self.env_path,
+               'HOME': self.env_home,
+               'LINES': '%s' % (term.height,),
+               'COLUMNS': '%s' % (term.width,)})
+        logger.debug('os.execvpe(cmd=%r, args=%r, env=%r',
+                self.cmd, self.args, env)
         try:
             pid, self.master_fd = pty.fork()
         except OSError, err:
+            # too many open files, out of memory, no such file/directory
             logger.error('OSError in pty.fork(): %s', err)
             return
 
-        # subprocess
+        # child process
         if pid == pty.CHILD:
             sys.stdout.flush()
-            env = {'LANG': self.env_lang,
-                   'TERM': self.env_term,
-                   'PATH': self.env_path,
-                   'HOME': self.env_home,
-                   'LINES': '%s' % (term.height,),
-                   'COLUMNS': '%s' % (term.width,),
-                   }
+            # send initial screen size
+            fcntl.ioctl(sys.stdout.fileno(), termios.TIOCSWINSZ,
+                        struct.pack('HHHH', term.height, term.width, 0, 0))
+            # we cannot log an exception, only print to stderr and have
+            # it captured by the parent process; this is because our 'logger'
+            # instance is dangerously forked, and any attempt to communicate
+            # with multiprocessing pipes, loggers, etc. will cause the value
+            # and state of many various file descriptors to become corrupted
             try:
                 os.execvpe(self.cmd, self.args, env)
-            except OSError, err:
-                logger.error('OSError, %s: %s', err, self.args,)
-                sys.exit(1)
+            except Exception as err:
+                sys.stderr.write('%s\n' % (err,))
+            os._exit(1)
 
+        # parent process
+        #
         # execute self._loop() and catch all i/o and o/s errors
         #
         # typically, return values from 'input' events are translated keycodes,
@@ -92,14 +337,6 @@ class Door(object):
         # disable this by setting session.enable_keycodes = False
         swp = session.enable_keycodes
         session.enable_keycodes = False
-        # input must be flushed of keycodes!
-        readahead = u''.join([inp
-                              for inp in session.flush_event('input')
-                              if type(inp) is not int])
-        if 0 != len(readahead):
-            # place non-keycodes back in buffer %-&
-            logger.debug('readahead, %r', readahead)
-            session.buffer_event('input', readahead)
         try:
             logger.info('exec/%s: %s', pid, ' '.join(self.args))
             self._loop()
@@ -131,7 +368,7 @@ class Door(object):
             returns True if bytes waiting on master fd, meaning
             this utf8 byte must really be the last for a while.
             """
-            return (self.master_fd in
+            return self.master_fd != -1 and (self.master_fd in
                     select.select([self.master_fd, ], (), (), 0)[0])
         import codecs
         from x84.bbs import getsession, getterminal, echo
@@ -141,15 +378,18 @@ class Door(object):
         logger = logging.getLogger()
         while True:
             # block up to self.time_opoll for screen output
+            if self.master_fd == -1:
+                # pty file descriptor closed by child, early termination!
+                break
             rlist = (self.master_fd,)
             ret_tuple = select.select(rlist, (), (), self.time_opoll)
             if self.master_fd in ret_tuple[0]:
                 data = os.read(self.master_fd, self.blocksize)
                 if 0 == len(data):
                     break
-                # output to terminal as utf8, unless we specify decode_cp437
+                # output to terminal as utf8, unless we specify ``cp437``
                 # for special dos-emulated doors such as lord.
-                if self.decode_cp437:
+                if self.cp437:
                     echo(u''.join(
                         (CP437[ord(ch)] for ch in data)))
                 else:
@@ -166,7 +406,7 @@ class Door(object):
             event, data = session.read_events(
                 ('refresh', 'input',), self.time_ipoll)
 
-            if event == 'refresh' and data[0] == 'refresh':
+            if event == 'refresh' and data[0] == 'resize':
                 logger.debug('send TIOCSWINSZ: %dx%d',
                              term.width, term.height)
                 fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ,
