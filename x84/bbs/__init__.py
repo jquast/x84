@@ -14,7 +14,7 @@ from x84.bbs.lightbar import Lightbar
 from x84.bbs.cp437 import from_cp437
 from x84.bbs.dbproxy import DBProxy
 from x84.bbs.pager import Pager
-from x84.bbs.door import Door
+from x84.bbs.door import Door, Dropfile
 
 
 def goto(*args):
