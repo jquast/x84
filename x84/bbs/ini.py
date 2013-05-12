@@ -29,11 +29,11 @@ def init(lookup_bbs, lookup_log):
         """
         Write Config to filepath.
         """
-        if not os.path.exists(os.path.dirname(filepath)):
-            print('Creating folder %s\n' % (os.path.dirname(filepath),))
-            os.mkdir(os.path.dirname(filepath))
+        if not os.path.exists(os.path.dirname(os.path.expanduser(filepath))):
+            print('Creating folder %s\n' % (os.path.dirname(os.path.expanduser(filepath)),))
+            os.mkdir(os.path.dirname(os.path.expanduser(filepath)))
         print('Saving %s\n' % (filepath,))
-        cfg.write(open(filepath, 'wb'))
+        cfg.write(open(os.path.expanduser(filepath), 'wb'))
 
     # exploit last argument, presumed to be within a folder
     # writable by our process, and where the ini is wanted
@@ -41,6 +41,7 @@ def init(lookup_bbs, lookup_log):
     loaded = False
     cfg_logfile = lookup_log[-1]
     for cfg_logfile in lookup_log:
+        cfg_logfile = os.path.expanduser(cfg_logfile)
         # load-only defaults,
         if os.path.exists(cfg_logfile):
             print ('loading %s' % (cfg_logfile,))
@@ -59,12 +60,14 @@ def init(lookup_bbs, lookup_log):
             root.info('Saved %s' % (cfg_logfile,))
         except IOError as err:
             root.error('%s', err)
+        print(cfg_logfile)
         logging.config.fileConfig(cfg_logfile)
 
     loaded = False
     cfg_bbs = ConfigParser.SafeConfigParser()
     cfg_bbsfile = lookup_bbs[-1]
     for cfg_bbsfile in lookup_bbs:
+        cfg_bbsfile = os.path.expanduser(cfg_bbsfile)
         # load defaults,
         if os.path.exists(cfg_bbsfile):
             cfg_bbs.read(cfg_bbsfile)
