@@ -4,6 +4,7 @@ Session engine for x/84, http://github.com/jquast/x84/
 """
 import traceback
 import logging
+import inspect
 import struct
 import math
 import time
@@ -13,7 +14,6 @@ import os
 import io
 
 SESSION = None
-
 
 def getsession():
     """
@@ -28,24 +28,29 @@ def getterminal():
     """
     return getsession().terminal
 
+def getnode():
+    """
+    Returns unique session identifier for this session as integer.
+    """
+    return getsession().node
 
 class Session(object):
     """
-    A BBS Session engine, started by .run().
+    A BBS Session engine. Workflow begins in the ``run()`` method.
     """
     # pylint: disable=R0902,R0904,R0913
     #        Too many instance attributes
     #        Too many public methods
     #        Too many arguments
-    TRIM_CP437 = bytes(chr(14) + chr(15))
+    TRIM_CP437 = bytes(chr(14) + chr(15)) # HACK
     _encoding = None
     _decoder = None
 
     def __init__(self, terminal, inp_queue, out_queue,
                  sid, env, lock, encoding='utf8'):
         """
-        Instantiate a Session instanance, only one session may be instantiated
-        per process. Arguments:
+        Instantiate a Session instanance, only one session
+        may be instantiated per process. Arguments:
             terminal: blessings.Terminal,
             inp_queue: multiprocessing.Queue Parent writes, Child reads
             out_queue: multiprocessing.Queue Parent reads, Child writes
@@ -77,6 +82,7 @@ class Session(object):
         self._script_module = None
         self._fp_ttyrec = None
         self._ttyrec_fname = None
+        self._node = None
         self._connect_time = time.time()
         self._last_input_time = time.time()
         self._enable_keycodes = True
@@ -119,8 +125,9 @@ class Session(object):
     @property
     def activity(self):
         """
-        Current activity (arbitrarily set). This also updates xterm titles, and
-        is globally broadcasted as a "current activity" in the Who's online script.
+        Current activity (arbitrarily set). This also updates xterm titles,
+        and is globally broadcasted as a "current activity" in the Who's
+        online script.
         """
         return self._activity
 
@@ -208,6 +215,21 @@ class Session(object):
         # pylint: disable=R0201
         #        Method could be a function
         return os.getpid()
+
+    @property
+    def node(self):
+        """
+        Returns numeric constant for session, often required by 'doors'
+        """
+        if self._node is None:
+            for node in range(1, 64):
+                event = 'lock-%s/%d' % ('node', node)
+                self.send_event(event, ('acquire', None))
+                data = self.read_event(event)
+                if data is True:
+                    self._node = node
+                    break
+        return self._node
 
     def __error_recovery(self):
         """
@@ -356,6 +378,7 @@ class Session(object):
             ('idle', self.idle),
             ('activity', self.activity),
             ('encoding', self.encoding),
+            ('node', self._node),
         ))
 
     def buffer_event(self, event, data=None):
@@ -425,7 +448,8 @@ class Session(object):
 
     def buffer_input(self, data):
         """
-        Update idle time, buffering raw bytes received from telnet client via event queue
+        Update idle time, buffering raw bytes received from telnet client
+        via event queue
         """
         self._last_input_time = time.time()
         ctrl_l = self.terminal.KEY_REFRESH
@@ -501,12 +525,13 @@ class Session(object):
             if self.iqueue.poll(poll):
                 event, data = self.iqueue.recv()
                 retval = self.buffer_event(event, data)
-                if event != 'input' and self._tap_events:
-                    logger.debug('event %s %s.', event,
+                if (self._tap_events and logger.isEnabledFor(logging.DEBUG)):
+                    caller = inspect.stack()[2][3]
+                    logger.debug('event %s %s on behalf of %s.', event,
                                  'caught' if event in events else
                                  'handled' if retval is not None else
-                                 'buffered',)
-                if event in events and event:
+                                 'buffered', caller,)
+                if event in events:
                     return (event, self._event_pop(event))
             elif timeout == -1:
                 return (None, None)
@@ -567,6 +592,10 @@ class Session(object):
         """
         if self.is_recording:
             self.stop_recording()
+        if self._node is not None:
+            self.send_event(
+                    event='lock-node/%d' % (self._node),
+                    data=('release', None))
 
     @property
     def is_recording(self):
