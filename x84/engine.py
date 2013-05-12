@@ -234,20 +234,37 @@ def _loop(telnetd):
         """
         method, stale = data
         if method == 'acquire':
+            if event in locks:
+                held=False
+                for _sid, tty in terminals():
+                    if _sid == locks[event][0]:
+                        logger.debug('[%s] %r not acquired, held by %s.',
+                                tty.sid, (event, data), _sid)
+                        held=_sid
+                        break
+                if held is not False:
+                    logger.debug('[%s] %r discovered stale lock, previously '
+                            'held by %s.', tty.sid, (event, data), held)
+                    del locks[event]
             if not event in locks:
-                locks[event] = time.time()
+                locks[event] = (time.time(), tty.sid)
                 tty.iqueue.send((event, True,))
                 logger.debug('[%s] %r granted.',
                              tty.sid, (event, data))
-            elif (stale is not None
-                    and time.time() - locks[event] > stale):
-                tty.iqueue.send((event, True,))
-                logger.warn('[%s] %r stale %fs.',
-                            tty.sid, (event, data),
-                            time.time() - locks[event])
             else:
-                tty.iqueue.send((event, False,))
-                logger.debug('[%s] %r not acquired.',
+                # caller signals this kind of thread is short-lived, and any
+                # existing lock older than 'stale' should be released.
+                if (stale is not None
+                        and time.time() - locks[event][0] > stale):
+                    tty.iqueue.send((event, True,))
+                    locks[event] = (time.time(), tty.sid)
+                    logger.warn('[%s] %r stale %fs.',
+                                tty.sid, (event, data),
+                                time.time() - locks[event][0])
+                # signal busy with matching event, data=False
+                else:
+                    tty.iqueue.send((event, False,))
+                    logger.debug('[%s] %r not acquired.',
                             tty.sid, (event, data))
         elif method == 'release':
             if not event in locks:
