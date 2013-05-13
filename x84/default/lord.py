@@ -59,9 +59,4 @@ def main():
 
     Dropfile(getattr(Dropfile, lord_dropfile)).save(lord_path)
     door = DOSDoor(dosemu_bin, args=shlex.split(lord_args), env_home=dosemu_home)
-    cwd = os.path.realpath(os.curdir)
-    os.chdir(dosemu_home)
-    try:
-        door.run()
-    finally:
-        os.chdir(cwd)
+    door.run()
