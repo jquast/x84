@@ -184,8 +184,16 @@ def init_bbs_ini():
     # as each get_msg() is a lookup, thread-related sorting could
     # become too expensive.
     cfg_bbs.set('msg', 'max_depth', '8')
-    return cfg_bbs
 
+    cfg_bbs.add_section('dosemu')
+    cfg_bbs.set('dosemu', 'enabled', 'no')
+    cfg_bbs.set('dosemu', 'bin', '/usr/bin/dosemu')
+    cfg_bbs.set('dosemu', 'home', '/DOS')
+    cfg_bbs.set('dosemu', 'lord_path', '/DOS/X/lord')
+    cfg_bbs.set('dosemu', 'lord_dropfile', 'DORINFO')
+    cfg_bbs.set('dosemu', 'lord_args',
+            '-quiet -I \'$_com1 = "virtual"\' \'X:\\LORD\\START.BAT %%#\'')
+    return cfg_bbs
 
 def init_log_ini():
     """
