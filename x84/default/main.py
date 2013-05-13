@@ -96,9 +96,8 @@ def main():
             gosub('weather')
         elif inp == u'e':
             gosub('profile')
-        # temporarily disabled upstream until working
-        #elif inp == u'#':
-        #    gosub('lord')
+        elif inp == u'#' and u'#' in [char for char, blurb in entries]:
+            gosub('lord')
         elif inp == u't':
             gosub('tetris')
         elif inp == u'c':
