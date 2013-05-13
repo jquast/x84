@@ -375,6 +375,7 @@ class Door(object):
     def input_filter(self, data):
         """ When keyboard input is detected, this method may filter such input.
         """
+        return data
 
     def output_filter(self, data):
         """ Given door output in bytes, if 'cp437' is specified in class
