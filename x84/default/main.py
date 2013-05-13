@@ -96,7 +96,7 @@ def main():
             gosub('weather')
         elif inp == u'e':
             gosub('profile')
-        elif inp == u'#' and u'#' in [char for char, blurb in entries]:
+        elif inp == u'#':
             gosub('lord')
         elif inp == u't':
             gosub('tetris')
