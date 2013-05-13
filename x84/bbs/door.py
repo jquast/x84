@@ -25,7 +25,7 @@ class Dropfile(object):
     def save(self, folder):
         """ Save dropfile to folder """
         fp = open(os.path.join(folder, self.filename), 'w')
-        fp.write(self.__str__().decode('ascii', 'replace')
+        fp.write(self.__str__().decode('ascii', 'replace'))
         fp.close()
 
     @property
