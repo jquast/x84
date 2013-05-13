@@ -34,7 +34,7 @@ def main():
     from x84.bbs import DOSDoor, Dropfile
 
     assert ini.CFG.getboolean('dosemu', 'enabled'), (
-        'lord.py called but dosemu not enabled in ini.CFG')
+        'lord.py called but dosemu not enabled in configuration')
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
 
