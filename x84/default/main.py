@@ -7,7 +7,7 @@ def refresh():
     """ Refresh main menu. """
     # pylint: disable=R0914
     #         Too many local variables
-    from x84.bbs import getsession, getterminal, echo, Ansi, showcp437
+    from x84.bbs import getsession, getterminal, echo, Ansi, showcp437, ini
     import os
     session, term = getsession(), getterminal()
     session.activity = u'Main menu'
@@ -21,7 +21,7 @@ def refresh():
     for line in showcp437(artfile):
         echo(line)
     echo(u'\r\n\r\n')
-    entries = (
+    entries = [
         ('b', 'bS NEXUS'),
         ('l', 'ASt CAllS'),
         ('o', 'NE liNERS'),
@@ -29,14 +29,19 @@ def refresh():
         ('n', 'EWS'),
         ('c', 'hAt'),
         ('!', 'ENCOdiNG'),
-        ('#', 'PlAY lORd'), 
         ('t', 'EtRiS'),
         ('s', 'YS. iNfO'),
         ('f', 'ORECASt'),
         ('e', 'dit PROfilE'),
         ('p', 'OSt A MSG'),
         ('r', 'EAd All MSGS'),
-        ('g', 'OOdbYE /lOGOff'),)
+        ('g', 'OOdbYE /lOGOff'),]
+
+    # add LORD to menu only if enabled,
+    if ini.CFG.getboolean('dosemu', 'enabled') and (
+            ini.CFG.get('dosemu', 'lord_path') != 'no'):
+        entries.insert(0, ('#', 'PlAY lORd!'))
+
     if 'sysop' in session.user.groups:
         entries += (('v', 'idEO CASSEttE'),)
     buf_str = u''
