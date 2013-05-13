@@ -526,11 +526,12 @@ class Session(object):
                 event, data = self.iqueue.recv()
                 retval = self.buffer_event(event, data)
                 if (self._tap_events and logger.isEnabledFor(logging.DEBUG)):
-                    caller = inspect.stack()[2][3]
-                    logger.debug('event %s %s on behalf of %s.', event,
+                    stack = inspect.stack()
+                    caller_mod, caller_func = stack[2][1], stack[2][3]
+                    logger.debug('event %s %s by %s in %s.', event,
                                  'caught' if event in events else
                                  'handled' if retval is not None else
-                                 'buffered', caller,)
+                                 'buffered', caller_func, caller_mod,)
                 if event in events:
                     return (event, self._event_pop(event))
             elif timeout == -1:
