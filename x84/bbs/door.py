@@ -5,6 +5,7 @@ import resource
 import termios
 import logging
 import select
+import codecs
 import struct
 import time
 import fcntl
@@ -277,7 +278,12 @@ class Door(object):
         # pylint: disable=R0913
         #        Too many arguments (7/5)
         self.cmd = cmd
-        self.args = (self.cmd,) + args
+        if type(args) is tuple:
+            self.args = (self.cmd,) + args
+        elif type(args) is list:
+            self.args = [self.cmd,] + args
+        else:
+            raise ValueError, 'args must be tuple or list'
         self.env_lang = env_lang
         if env_term is None:
             self.env_term = getsession().env.get('TERM')
@@ -293,6 +299,7 @@ class Door(object):
             self.env_home = env_home
         self.env = None # add additional env variables ...
         self.cp437 = cp437
+        self._utf8_decoder = codecs.getincrementaldecoder('utf8')()
 
     def run(self):
         """
@@ -365,24 +372,43 @@ class Door(object):
         os.close(self.master_fd)
         return res
 
+    def input_filter(self, data):
+        """ When keyboard input is detected, this method may filter such input.
+        """
+
+    def output_filter(self, data):
+        """ Given door output in bytes, if 'cp437' is specified in class
+        constructor, convert to utf8 glyphs using cp437 encoding; otherwise
+        decode output as utf8. """
+        if self.cp437:
+            return u''.join((CP437[ord(ch)] for ch in data))
+
+        decoded = list()
+        for num, byte in enumerate(data):
+            final = ((num + 1) == len(data)
+                     and not self._masterfd_isready())
+            ucs = self._utf8_decoder.decode(byte, final)
+            if ucs is not None:
+                decoded.append(ucs)
+        return u''.join(decoded)
+
+    def _masterfd_isready(self):
+        """
+        returns True if bytes waiting on master fd, meaning
+        this utf8 byte must really be the last for a while.
+        """
+        return self.master_fd != -1 and (self.master_fd in
+                select.select([self.master_fd, ], (), (), 0)[0])
+
     def _loop(self):
         # pylint: disable=R0914
         #         Too many local variables (21/15)
         """
         Poll input and outpout of ptys,
         """
-        def masterfd_isready():
-            """
-            returns True if bytes waiting on master fd, meaning
-            this utf8 byte must really be the last for a while.
-            """
-            return self.master_fd != -1 and (self.master_fd in
-                    select.select([self.master_fd, ], (), (), 0)[0])
-        import codecs
         from x84.bbs import getsession, getterminal, echo
         from x84.bbs.cp437 import CP437
         session, term = getsession(), getterminal()
-        utf8_decoder = codecs.getincrementaldecoder('utf8')()
         logger = logging.getLogger()
         while True:
             # block up to self.time_opoll for screen output
@@ -395,20 +421,7 @@ class Door(object):
                 data = os.read(self.master_fd, self.blocksize)
                 if 0 == len(data):
                     break
-                # output to terminal as utf8, unless we specify ``cp437``
-                # for special dos-emulated doors such as lord.
-                if self.cp437:
-                    echo(u''.join(
-                        (CP437[ord(ch)] for ch in data)))
-                else:
-                    decoded = list()
-                    for num, byte in enumerate(data):
-                        final = ((num + 1) == len(data)
-                                 and not masterfd_isready())
-                        ucs = utf8_decoder.decode(byte, final)
-                        if ucs is not None:
-                            decoded.append(ucs)
-                    echo(u''.join(decoded))
+                echo(self.output_filter(data))
 
             # block up to self.time_ipoll for keyboard input
             event, data = session.read_events(
@@ -420,13 +433,34 @@ class Door(object):
                 fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ,
                             struct.pack('HHHH', term.height, term.width, 0, 0))
             elif event == 'input':
-                # hmm.. what to send, depending on TERM? interesting ..
-                n_written = os.write(self.master_fd, data)
-                if n_written == 0:
-                    logger.warn('fight 0-byte write; exit, right?')
-                if n_written != len(data):
-                    # we wrote none or some of our keyboard input, but not all.
-                    # re-buffer remaining bytes back into session for next poll
-                    session.buffer_input(data[n_written:])
-                    # haven't seen this yet, prove to me it works ..
-                    logger.warn('buffer_input(%r)', data[n_written:])
+                data = self.input_filter(data)
+                if 0 != len(data):
+                    n_written = os.write(self.master_fd, data)
+                    if n_written == 0:
+                        logger.warn('fight 0-byte write; exit, right?')
+                    if n_written != len(data):
+                        # we wrote none or some of our keyboard input, but not all.
+                        # re-buffer remaining bytes back into session for next poll
+                        session.buffer_input(data[n_written:])
+                        # haven't seen this yet, prove to me it works ..
+                        logger.warn('buffer_input(%r)', data[n_written:])
+
+class DOSDoor(Door):
+    """ This Door-derived class removes the "report cursor position" query
+    sequence, which is sent by DOSEMU on startup. It would appear that any early
+    input prior to DOOR execution in DOSEMU causes all input to be bitshifted
+    and invalid, this class should resolve such issues by ovveriding output_filter
+    to remove such sequence, and input_filter which only allows input after a few
+    seconds have passed.
+    """
+    def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
+                 env_term=None, env_path=None, env_home=None, cp437=False):
+        Door.__init__(self, cmd, args,
+                env_lang, env_term, env_path, env_home, cp437)
+        self.stime = time.time()
+    def output_filter(self, data):
+        return Door.output_filter(self, data).replace(u'\x1b[6n', u'')
+    def input_filter(self, data):
+        if time.time() - self.stime > 3:
+            return data
+        return ''
