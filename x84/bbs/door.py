@@ -171,7 +171,7 @@ class Dropfile(object):
             raise ValueError('filetype is unknown')
 
     def get_doorsys():
-        return ('%s:\r\n%d\r\n'  # comport, comspeed
+        return (u'%s:\r\n%d\r\n'  # comport, comspeed
                 '%d\r\n%d\r\n'  # parity, node
                 '%d\r\nY\r\n'  # comspeed, screen?
                 'Y\r\nY\r\nY\r\n'  # printer? pager alarm? caller alarm?
@@ -206,7 +206,7 @@ class Dropfile(object):
                     self.lastcall_time))
 
     def get_door32():
-        return ('%d\r\n%d\r\n%d\r\n'  # comm type, handle, speed
+        return (u'%d\r\n%d\r\n%d\r\n'  # comm type, handle, speed
                 '%s\r\n%d\r\n%s\r\n'  # system name, user num, real name
                 '%s\r\n%d\r\n%d\r\n'  # alias, security level, mins remain,
                 '1\r\n%d\n'  # emulation ('ansi'), current node num,
@@ -216,7 +216,7 @@ class Dropfile(object):
                     self.alias, self.securitylevel, self.remaining_mins,
                     self.node))
     def get_callinfo():
-        return ('%s\r\n%d\r\n%s\r\n'  # user name, comspeed, location
+        return (u'%s\r\n%d\r\n%s\r\n'  # user name, comspeed, location
                 '%d\r\n%d\r\nCOLOR\r\n' # security level, mins remain, ansi?
                 '%s\r\n%d\r\n%d\r\n'  # password, usernum, time_used,
                 '01:23\r\n01:23 01/02/90\r\n'
@@ -239,7 +239,7 @@ class Dropfile(object):
                     self.numcalls, self.pageheight, self.comspeed, ))
 
     def get_dorinfo(self):
-        return ('%s\r\n%s\r\n%s\r\n' # software, sysop fname, sysop lname,
+        return (u'%s\r\n%s\r\n%s\r\n' # software, sysop fname, sysop lname,
                 '%s\r\n%d\r\n0\r\n'  # com port, bps, "networked"?
                 '%s\r\n%s\r\n%s\r\n' # user fname, user lname, user location
                 '1\r\n%d\r\n%d\r\n' # term (ansi), security level, mins remain
