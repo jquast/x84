@@ -480,4 +480,21 @@ class DOSDoor(Door):
                 'Terminal height must be greater than '
                 '25 rows (IBM-PC dimensions). '
                 'Please resize your window.')
+    def run(self):
+        """
+        Begin door execution. pty.fork() is called, child process
+        calls execvpe() while the parent process pipes telnet session
+        IPC data to and from the slave pty until child process exits.
 
+        On exit, DOSDoor flushes any keyboard input; DOSEMU appears to
+        send various terminal reset sequences that may cause a reply to
+        be received on input, and later as an invalid menu command.
+        """
+        Door.run(self)
+
+        from x84.bbs import getsession, getterminal
+        session, terminal = getsession(), getterminal()
+        # flush any previously decoded but unreceived keystrokes,
+        # and any unprocessed input from telnet session not yet processed.
+        term.kbflush()
+        session.flush_event('input')
