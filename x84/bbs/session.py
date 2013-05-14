@@ -85,7 +85,6 @@ class Session(object):
         self._node = None
         self._connect_time = time.time()
         self._last_input_time = time.time()
-        self._enable_keycodes = True
         self._activity = u'<uninitialized>'
         # event buffer
         self._buffer = dict()
@@ -190,22 +189,6 @@ class Session(object):
             assert value in ('utf8', 'cp437')
             self._encoding = value
             self._decoder = codecs.getincrementaldecoder(value)()
-
-    @property
-    def enable_keycodes(self):
-        """
-        Translate multibyte sequences to single keycodes for input events.
-
-        It may be desirable to temporarily disable this when doing
-        pass-through, to another curses application such as a door.
-        """
-        return self._enable_keycodes
-
-    @enable_keycodes.setter
-    def enable_keycodes(self, value):
-        # pylint: disable=C0111
-        #         Missing docstring
-        self._enable_keycodes = value
 
     @property
     def pid(self):
