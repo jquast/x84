@@ -12,6 +12,7 @@ import fcntl
 import pty
 import sys
 import os
+import re
 
 class Dropfile(object):
     (DOORSYS, DOOR32, CALLINFOBBS, DORINFO) = range(4)
@@ -440,34 +441,46 @@ class Door(object):
                     if n_written == 0:
                         logger.warn('fight 0-byte write; exit, right?')
                     if n_written != len(data):
-                        # we wrote none or some of our keyboard input, but not all.
-                        # re-buffer remaining bytes back into session for next poll
+                        # we wrote none or some of our keyboard input, but
+                        # not all. re-buffer remaining bytes back into
+                        # session for next poll
                         session.buffer_input(data[n_written:])
-                        # haven't seen this yet, prove to me it works ..
-                        logger.warn('buffer_input(%r)', data[n_written:])
+                        # XXX I've never actually seen this, though. It might
+                        # require writing a sub-program that artificially
+                        # hangs, such as time.sleep(99999) to assert correct
+                        # behavior. Please report, should be ok ..
+                        logger.warn('buffer_input(%r)!', data[n_written:])
 
 class DOSDoor(Door):
     """ This Door-derived class removes the "report cursor position" query
-    sequence, which is sent by DOSEMU on startup. It would appear that any early
-    input prior to DOOR execution in DOSEMU causes all input to be bitshifted
-    and invalid, this class should resolve such issues by ovveriding output_filter
-    to remove such sequence, and input_filter which only allows input after a few
-    seconds have passed.
+    sequence, which is sent by DOSEMU on startup. It also removes the "switch
+    to alternate screen mode" set and reset (blessings terminals provide this
+    with the context manager, ala "with term.fullscreen():".
+
+    It would appear that any early keyboard input received (esp. in response
+    to "report cursor position") prior to DOOR execution in DOSEMU causes all
+    input to be bitshifted and invalid and/or broken.
+
+    This class should resolve such issues by ovveriding output_filter to
+    remove such sequence, and input_filter which only allows input after a
+    few seconds have passed.
     """
+    RE_TRIMOUT = r'\033[(6n|[?1049[lh])'
+    START_BLOCK_INP = 2.0
+
     def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
                  env_term=None, env_path=None, env_home=None, cp437=False):
         self.check_winsize()
         Door.__init__(self, cmd, args,
                 env_lang, env_term, env_path, env_home, cp437)
         self.stime = time.time()
+        self._re_trimout = re.compile(self.RE_TRIMOUT)
 
     def output_filter(self, data):
-        return Door.output_filter(self, data).replace(u'\x1b[6n', u'')
+        return re.sub(self._re_trimout, repl=u'', data)
 
     def input_filter(self, data):
-        if time.time() - self.stime > 3:
-            return data
-        return ''
+        return data if time.time() - self.stime > self.START_BLOCK_INP else ''
 
     def check_winsize(self):
         from x84.bbs import getterminal
@@ -480,6 +493,7 @@ class DOSDoor(Door):
                 'Terminal height must be greater than '
                 '25 rows (IBM-PC dimensions). '
                 'Please resize your window.')
+
     def run(self):
         """
         Begin door execution. pty.fork() is called, child process
