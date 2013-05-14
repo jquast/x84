@@ -468,9 +468,12 @@ class DOSDoor(Door):
         self.check_winsize()
         self._stime = time.time()
         self._re_trimout = re.compile(self.RE_TRIMOUT)
+        self._replace_with = ''.join((
+                self._term.move(self._term.height, 0),
+                '\r\n' * self._term.height, ))
 
     def output_filter(self, data):
-        return re.sub(pattern=self._re_trimout, repl=('\r\n' * self._term.height),
+        return re.sub(pattern=self._re_trimout, repl=(self._replace_with),
                 string=Door.output_filter(self, data))
 
     def input_filter(self, data):
