@@ -458,7 +458,9 @@ class DOSDoor(Door):
     remove such sequence, and input_filter which only allows input after a
     few seconds have passed.
     """
-    RE_TRIMOUT = r'\033\[(6n|\?1049[lh]|1;80H\033\[1K |\d+;\d+r)'
+    RE_REPWITH_CLEAR = r'\033\[1;80H\033\[1K'
+    RE_REPWITH_NONE = r'\033\[(6n|\?1049[lh]|\d+;\d+r)'
+    #RE_TRIMOUT = r'\033\[(6n|\?1049[lh]|1;80H\033\[1K |\d+;\d+r)'
     START_BLOCK_INP = 2.0
 
     def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
@@ -467,14 +469,16 @@ class DOSDoor(Door):
                 env_lang, env_term, env_path, env_home, cp437)
         self.check_winsize()
         self._stime = time.time()
-        self._re_trimout = re.compile(self.RE_TRIMOUT)
-        self._replace_with = ''.join((
+        self._re_trim_clear = re.compile(self.RE_TRIMWITH_CLEAR)
+        self._re_trim_none = re.compile(self.RE_TRIMWITH_NONE)
+        self._replace_clear = ''.join((
                 self._term.move(self._term.height-1, 1),
                 '\r\n' * (self._term.height-1), ))
 
     def output_filter(self, data):
-        return re.sub(pattern=self._re_trimout, repl=(self._replace_with),
-                string=Door.output_filter(self, data))
+        return re.sub(pattern=self._re_trim_none, repl=u'',
+                string=re.sub(pattern=self._re_trim_clear, repl=(self._replace_clear),
+                    string=Door.output_filter(self, data)))
 
     def input_filter(self, data):
         return data if time.time() - self._stime > self.START_BLOCK_INP else ''
