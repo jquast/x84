@@ -401,7 +401,7 @@ class Door(object):
         """
         Poll input and outpout of ptys,
         """
-        from x84.bbs echo
+        from x84.bbs import echo
         from x84.bbs.cp437 import CP437
         logger = logging.getLogger()
         while True:
