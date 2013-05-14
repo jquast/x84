@@ -469,8 +469,8 @@ class DOSDoor(Door):
         self._stime = time.time()
         self._re_trimout = re.compile(self.RE_TRIMOUT)
         self._replace_with = ''.join((
-                self._term.move(self._term.height, 0),
-                '\r\n' * self._term.height, ))
+                self._term.move(self._term.height-1, 1),
+                '\r\n' * (self._term.height-1), ))
 
     def output_filter(self, data):
         return re.sub(pattern=self._re_trimout, repl=(self._replace_with),
