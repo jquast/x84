@@ -66,10 +66,6 @@ def main(host, port=None, encoding='cp437'):
         getch()
         return
 
-    swp = session.enable_keycodes
-    # disable keyboard translation .. so special accomidations are
-    # made with carriage_return to handle \r\n to just \r, for one.
-    session.enable_keycodes = False
     echo(u'\r\n... ')
     inp = session.read_event('input', timeout=0)
     echo(u'\r\nConnected to %s.' % (host,))
@@ -101,5 +97,4 @@ def main(host, port=None, encoding='cp437'):
     echo(u''.join(('\r\n\r\n', term.clear_el, term.normal, 'press any key')))
     session.flush_event('input')
     getch()
-    session.enable_keycodes = swp
     return

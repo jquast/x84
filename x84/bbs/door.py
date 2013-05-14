@@ -275,7 +275,8 @@ class Door(object):
         When env_path is None, the .ini 'env_path' value of section [door] is
         used.  When env_home is None, $HOME of the main process is used.
         """
-        from x84.bbs import getsession, ini
+        from x84.bbs import getsession, getterminal, ini
+        self._session, self._term = getsession(), getterminal()
         # pylint: disable=R0913
         #        Too many arguments (7/5)
         self.cmd = cmd
@@ -287,7 +288,7 @@ class Door(object):
             raise ValueError, 'args must be tuple or list'
         self.env_lang = env_lang
         if env_term is None:
-            self.env_term = getsession().env.get('TERM')
+            self.env_term = self._session.env.get('TERM')
         else:
             self.env_term = env_term
         if env_path is None:
@@ -308,16 +309,14 @@ class Door(object):
         calls execvpe() while the parent process pipes telnet session
         IPC data to and from the slave pty until child process exits.
         """
-        from x84.bbs import getsession, getterminal
-        session, term = getsession(), getterminal()
         logger = logging.getLogger()
         env = dict() if self.env is None else self.env
         env.update({'LANG': self.env_lang,
                'TERM': self.env_term,
                'PATH': self.env_path,
                'HOME': self.env_home,
-               'LINES': '%s' % (term.height,),
-               'COLUMNS': '%s' % (term.width,)})
+               'LINES': '%s' % (self._term.height,),
+               'COLUMNS': '%s' % (self._term.width,)})
         logger.debug('os.execvpe(cmd=%r, args=%r, env=%r',
                 self.cmd, self.args, env)
         try:
@@ -332,7 +331,8 @@ class Door(object):
             sys.stdout.flush()
             # send initial screen size
             fcntl.ioctl(sys.stdout.fileno(), termios.TIOCSWINSZ,
-                        struct.pack('HHHH', term.height, term.width, 0, 0))
+                        struct.pack('HHHH',
+                            self._term.height, self._term.width, 0, 0))
             # we cannot log an exception, only print to stderr and have
             # it captured by the parent process; this is because our 'logger'
             # instance is dangerously forked, and any attempt to communicate
@@ -347,12 +347,6 @@ class Door(object):
         # parent process
         #
         # execute self._loop() and catch all i/o and o/s errors
-        #
-        # typically, return values from 'input' events are translated keycodes,
-        # such as terminal.KEY_ENTER. However, when executing a sub-door, we
-        # disable this by setting session.enable_keycodes = False
-        swp = session.enable_keycodes
-        session.enable_keycodes = False
         try:
             logger.info('exec/%s: %s', pid, ' '.join(self.args))
             self._loop()
@@ -363,7 +357,6 @@ class Door(object):
             if 'Errno 5' not in str(err):
                 # otherwise log as an error,
                 logger.error('OSError: %s', err)
-        session.enable_keycodes = swp
         (pid, status) = os.waitpid(pid, 0)
         res = status >> 8
         if res != 0:
@@ -408,9 +401,8 @@ class Door(object):
         """
         Poll input and outpout of ptys,
         """
-        from x84.bbs import getsession, getterminal, echo
+        from x84.bbs echo
         from x84.bbs.cp437 import CP437
-        session, term = getsession(), getterminal()
         logger = logging.getLogger()
         while True:
             # block up to self.time_opoll for screen output
@@ -426,14 +418,15 @@ class Door(object):
                 echo(self.output_filter(data))
 
             # block up to self.time_ipoll for keyboard input
-            event, data = session.read_events(
+            event, data = self._session.read_events(
                 ('refresh', 'input',), self.time_ipoll)
 
             if event == 'refresh' and data[0] == 'resize':
                 logger.debug('send TIOCSWINSZ: %dx%d',
-                             term.width, term.height)
+                             self._term.width, self._term.height)
                 fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ,
-                            struct.pack('HHHH', term.height, term.width, 0, 0))
+                            struct.pack('HHHH',
+                                self._term.height, self._term.width, 0, 0))
             elif event == 'input':
                 data = self.input_filter(data)
                 if 0 != len(data):
@@ -444,7 +437,7 @@ class Door(object):
                         # we wrote none or some of our keyboard input, but
                         # not all. re-buffer remaining bytes back into
                         # session for next poll
-                        session.buffer_input(data[n_written:])
+                        self._session.buffer_input(data[n_written:])
                         # XXX I've never actually seen this, though. It might
                         # require writing a sub-program that artificially
                         # hangs, such as time.sleep(99999) to assert correct
@@ -475,22 +468,22 @@ class DOSDoor(Door):
                 env_lang, env_term, env_path, env_home, cp437)
         self.stime = time.time()
         self._re_trimout = re.compile(self.RE_TRIMOUT)
+        from x84.bbs import getterminal
+        self._term = getterminal()
 
     def output_filter(self, data):
-        return re.sub(pattern=self._re_trimout, repl=u'',
+        return re.sub(pattern=self._re_trimout, repl=self._term.clear,
                 string=Door.output_filter(self, data))
 
     def input_filter(self, data):
         return data if time.time() - self.stime > self.START_BLOCK_INP else ''
 
     def check_winsize(self):
-        from x84.bbs import getterminal
-        term = getterminal()
-        assert term.width >= 80, (
+        assert self._term.width >= 80, (
                 'Terminal width must be greater than '
                 '80 columns (IBM-PC dimensions). '
                 'Please resize your window.')
-        assert term.height >= 25, (
+        assert self._term.height >= 25, (
                 'Terminal height must be greater than '
                 '25 rows (IBM-PC dimensions). '
                 'Please resize your window.')
@@ -507,9 +500,7 @@ class DOSDoor(Door):
         """
         Door.run(self)
 
-        from x84.bbs import getsession, getterminal
-        session, term = getsession(), getterminal()
         # flush any previously decoded but unreceived keystrokes,
         # and any unprocessed input from telnet session not yet processed.
-        term.kbflush()
-        session.flush_event('input')
+        self._term.kbflush()
+        self._session.flush_event('input')
