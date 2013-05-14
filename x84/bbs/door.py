@@ -463,10 +463,10 @@ class DOSDoor(Door):
 
     def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
                  env_term=None, env_path=None, env_home=None, cp437=False):
-        self.check_winsize()
         Door.__init__(self, cmd, args,
                 env_lang, env_term, env_path, env_home, cp437)
-        self.stime = time.time()
+        self.check_winsize()
+        self._stime = time.time()
         self._re_trimout = re.compile(self.RE_TRIMOUT)
         from x84.bbs import getterminal
         self._term = getterminal()
@@ -476,7 +476,7 @@ class DOSDoor(Door):
                 string=Door.output_filter(self, data))
 
     def input_filter(self, data):
-        return data if time.time() - self.stime > self.START_BLOCK_INP else ''
+        return data if time.time() - self._stime > self.START_BLOCK_INP else ''
 
     def check_winsize(self):
         assert self._term.width >= 80, (
