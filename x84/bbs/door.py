@@ -493,7 +493,7 @@ class DOSDoor(Door):
         Door.run(self)
 
         from x84.bbs import getsession, getterminal
-        session, terminal = getsession(), getterminal()
+        session, term = getsession(), getterminal()
         # flush any previously decoded but unreceived keystrokes,
         # and any unprocessed input from telnet session not yet processed.
         term.kbflush()
