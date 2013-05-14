@@ -456,12 +456,28 @@ class DOSDoor(Door):
     """
     def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
                  env_term=None, env_path=None, env_home=None, cp437=False):
+        self.check_winsize()
         Door.__init__(self, cmd, args,
                 env_lang, env_term, env_path, env_home, cp437)
         self.stime = time.time()
+
     def output_filter(self, data):
         return Door.output_filter(self, data).replace(u'\x1b[6n', u'')
+
     def input_filter(self, data):
         if time.time() - self.stime > 3:
             return data
         return ''
+
+    def check_winsize(self):
+        from x84.bbs import getterminal
+        term = getterminal()
+        assert term.width >= 80, (
+                'Terminal width must be greater than '
+                '80 columns (IBM-PC dimensions). '
+                'Please resize your window.')
+        assert term.height >= 25, (
+                'Terminal height must be greater than '
+                '25 rows (IBM-PC dimensions). '
+                'Please resize your window.')
+
