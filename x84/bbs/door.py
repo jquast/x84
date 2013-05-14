@@ -459,7 +459,7 @@ class DOSDoor(Door):
     few seconds have passed.
     """
     RE_REPWITH_CLEAR = r'\033\[(1;80H.*\033\[1;1H|H\033\[2J)' # dos CLS? or lord?
-    RE_REPWITH_NONE = r'(\033\[(6n|\?1049[lh]|\d+;\d+r)|dosemu\.org\033\[1;1H)'
+    RE_REPWITH_NONE = r'(\033\[(6n|\?1049[lh]|\d+;\d+r)|dosemu\.org\.\033\[1;1H)'
     #RE_TRIMOUT = r'\033\[(6n|\?1049[lh]|1;80H\033\[1K |\d+;\d+r)'
     START_BLOCK_INP = 2.0
 
