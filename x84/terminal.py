@@ -323,8 +323,6 @@ class ConnectTelnet (threading.Thread):
             self.client.socket_send()  # push
             time.sleep(self.TIME_POLL)
         mrk_bytes = self.client.bytes_received
-        if not self.client.active:
-            return
         self._try_ttype()
         #if ((0 == self.client.bytes_received
         #          or mrk_bytes == self.client.bytes_received)
@@ -342,21 +340,15 @@ class ConnectTelnet (threading.Thread):
         # First, telnet TTYPE is explicitly requested. If no
         # reply is found, then a dec terminal attributes
         # request is made, and a vt* terminal type is set.
-        if not self.client.active:
-            return
 
         # If this fails, or response is amiguous ('vt100'), try for
         # extended dec types. If not, just get them anyway.
         self._try_device_attributes()
-        if not self.client.active:
-            return
 
         # explicitly request naws. This will set TERM to vt100
         # or sun if the terminal is --still-- undetected.
         # Otherwise sets LINES and COLUMNS env variables to response.
         self._try_naws()
-        if not self.client.active:
-            return
 
         # this is totally useless, but informitive debugging information for
         # unknown unix clients ..
@@ -401,6 +393,8 @@ class ConnectTelnet (threading.Thread):
         """
         Try to snarf out some environment variables from unix machines.
         """
+        if not self.client.active:
+            return
         logger = logging.getLogger()
         from x84.telnet import NEW_ENVIRON, UNKNOWN
         # hard to tell if we already sent this once .. we mimmijammed
@@ -426,6 +420,8 @@ class ConnectTelnet (threading.Thread):
         """
         Negotiate about window size (NAWS) telnet option (on).
         """
+        if not self.client.active:
+            return
         logger = logging.getLogger()
         if (self.client.env.get('LINES', None) is not None
                 and self.client.env.get('COLUMNS', None) is not None):
@@ -569,6 +565,8 @@ class ConnectTelnet (threading.Thread):
         """
         Negotiate terminal type (TTYPE) telnet option (on).
         """
+        if not self.client.active:
+            return
         logger = logging.getLogger()
         detected = lambda: self.client.env['TERM'] != 'unknown'
         if detected():
@@ -596,6 +594,8 @@ class ConnectTelnet (threading.Thread):
         Try to identify the type of DEC terminal. reports.c of vttest
         includes all the valid responses!
         """
+        if not self.client.active:
+            return
         logger = logging.getLogger()
         logger.debug('request-device-attributes')
         query_seq = bytes('\x1b[0c')
