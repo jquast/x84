@@ -468,11 +468,9 @@ class DOSDoor(Door):
         self.check_winsize()
         self._stime = time.time()
         self._re_trimout = re.compile(self.RE_TRIMOUT)
-        from x84.bbs import getterminal
-        self._term = getterminal()
 
     def output_filter(self, data):
-        return re.sub(pattern=self._re_trimout, repl=self._term.clear,
+        return re.sub(pattern=self._re_trimout, repl=('\r\n' * self._term.height)
                 string=Door.output_filter(self, data))
 
     def input_filter(self, data):
