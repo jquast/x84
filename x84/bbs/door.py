@@ -465,7 +465,7 @@ class DOSDoor(Door):
     remove such sequence, and input_filter which only allows input after a
     few seconds have passed.
     """
-    RE_TRIMOUT = r'\033[(6n|[?1049[lh])'
+    RE_TRIMOUT = r'\033\[(6n|?1049[lh])'
     START_BLOCK_INP = 2.0
 
     def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
