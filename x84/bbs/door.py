@@ -458,8 +458,8 @@ class DOSDoor(Door):
     remove such sequence, and input_filter which only allows input after a
     few seconds have passed.
     """
-    RE_REPWITH_CLEAR = r'\033\[1;80H.*\033\[1;1H' # dos CLS? or lord? regardless sucks,
-    RE_REPWITH_NONE = r'\033\[(6n|\?1049[lh]|\d+;\d+r)'
+    RE_REPWITH_CLEAR = r'\033\[(25;2H.*\033\[1;1H|H\033\[2J)' # dos CLS? or lord?
+    RE_REPWITH_NONE = r'\033\[(6n|\?1049[lh]|\d+;\d+r|)'
     #RE_TRIMOUT = r'\033\[(6n|\?1049[lh]|1;80H\033\[1K |\d+;\d+r)'
     START_BLOCK_INP = 2.0
 
@@ -472,8 +472,8 @@ class DOSDoor(Door):
         self._re_trim_clear = re.compile(self.RE_REPWITH_CLEAR, flags=re.DOTALL)
         self._re_trim_none = re.compile(self.RE_REPWITH_NONE, flags=re.DOTALL)
         self._replace_clear = ''.join((
-                self._term.move(self._term.height-1, 1),
-                '\r\n' * (self._term.height-1), ))
+                self._term.move(self._term.height, 0),
+                '\r\n' * self._term.height, ))
 
     def output_filter(self, data):
         return re.sub(pattern=self._re_trim_none, repl=u'',
