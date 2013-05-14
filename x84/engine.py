@@ -239,12 +239,12 @@ def _loop(telnetd):
                 # acquire a lock from a now-deceased session.
                 held=False
                 for _sid, tty in terminals():
-                    if _sid == locks[event][1]:
+                    if _sid == locks[event][1] and _sid != tty.sid:
                         logger.debug('[%s] %r not acquired, held by %s.',
                                 tty.sid, (event, data), _sid)
                         held=_sid
                         break
-                if held is False:
+                if held is not False:
                     logger.debug('[%s] %r discovered stale lock, previously '
                             'held by %s.', tty.sid, (event, data), held)
                     del locks[event]
