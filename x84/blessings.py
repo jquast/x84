@@ -418,6 +418,13 @@ class Terminal(object):
         """ Read a single byte from input stream. """
         return os.read(self.i_stream.fileno(), 1)
 
+    def kbflush(self):
+        """ Flush buffered keystrokes, returns number of keystrokes removed """
+        n_removed = 0
+        for n_removed in range(len(self.i_buf)):
+            self.i_buf.pop()
+        return n_removed
+
     def inkey(self, timeout=None, esc_delay=0.35):
         """ Read a single keystroke from input up to timeout in seconds,
         translating special application keys, such as KEY_LEFT.
