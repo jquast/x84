@@ -237,7 +237,7 @@ def _loop(telnetd):
             if event in locks:
                 held=False
                 for _sid, tty in terminals():
-                    if _sid == locks[event][0]:
+                    if _sid == locks[event][1]:
                         logger.debug('[%s] %r not acquired, held by %s.',
                                 tty.sid, (event, data), _sid)
                         held=_sid
