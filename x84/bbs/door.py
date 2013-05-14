@@ -469,14 +469,14 @@ class DOSDoor(Door):
                 env_lang, env_term, env_path, env_home, cp437)
         self.check_winsize()
         self._stime = time.time()
-        self._re_trim_clear = re.compile(self.RE_REPWITH_CLEAR)
-        self._re_trim_none = re.compile(self.RE_REPWITH_NONE)
+        self._re_trim_clear = re.compile(self.RE_REPWITH_CLEAR, flags=re.DOTALL)
+        self._re_trim_none = re.compile(self.RE_REPWITH_NONE, flags=re.DOTALL)
         self._replace_clear = ''.join((
                 self._term.move(self._term.height-1, 1),
                 '\r\n' * (self._term.height-1), ))
 
     def output_filter(self, data):
-        return re.sub(pattern=self._re_trim_none, repl=u'', flags=re.DOTALL,
+        return re.sub(pattern=self._re_trim_none, repl=u'',
                 string=re.sub(pattern=self._re_trim_clear, repl=(self._replace_clear),
                     string=Door.output_filter(self, data)))
 
