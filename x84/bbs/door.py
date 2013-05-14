@@ -471,9 +471,10 @@ class DOSDoor(Door):
         self._stime = time.time()
         self._re_trim_clear = re.compile(self.RE_REPWITH_CLEAR, flags=re.DOTALL)
         self._re_trim_none = re.compile(self.RE_REPWITH_NONE, flags=re.DOTALL)
-        self._replace_clear = ''.join((
-                self._term.move(self._term.height, 0),
-                '\r\n' * self._term.height, ))
+        self._replace_clear = u'\r\n'
+        #''.join((
+                #self._term.move(self._term.height, 0),
+                #'\r\n' * self._term.height, ))
 
     def output_filter(self, data):
         return re.sub(pattern=self._re_trim_none, repl=u'',
