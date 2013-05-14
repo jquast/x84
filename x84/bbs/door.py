@@ -477,7 +477,7 @@ class DOSDoor(Door):
         self._re_trimout = re.compile(self.RE_TRIMOUT)
 
     def output_filter(self, data):
-        return re.sub(self._re_trimout, repl=u'', data)
+        return re.sub(pattern=self._re_trimout, repl=u'', string=data)
 
     def input_filter(self, data):
         return data if time.time() - self.stime > self.START_BLOCK_INP else ''
