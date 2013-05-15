@@ -459,8 +459,8 @@ class DOSDoor(Door):
     few seconds have passed.
     """
     RE_REPWITH_CLEAR = r'\033\[(1;80H.*\033\[1;1H|H\033\[2J)' # dos CLS? or lord?
-    RE_REPWITH_NONE = r'\033\[(6n|\?1049[lh]|\d+;\d+r|1;1H|1;1H\033\[5M\033\[25;1H)'
-    START_BLOCK_INP = 2.0
+    RE_REPWITH_NONE = r'\033\[(6n|\?1049[lh]|\d+;\d+r|1;1H)'
+    START_BLOCK = 2.0
 
     def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
                  env_term=None, env_path=None, env_home=None, cp437=False):
@@ -471,13 +471,13 @@ class DOSDoor(Door):
         self._re_trim_clear = re.compile(self.RE_REPWITH_CLEAR, flags=re.DOTALL)
         self._re_trim_none = re.compile(self.RE_REPWITH_NONE, flags=re.DOTALL)
         self._replace_clear = ''.join((
-                ('\r\n' + ' ' * self._term.width) * self._term.height,
-                self._term.normal))
+            self._term.normal,
+            ('\r\n' + ' ' * 80) * 25,))
 
     def output_filter(self, data):
         data = Door.output_filter(self, data)
         if self._stime is not None and (
-                time.time() - self._stime < self.START_BLOCK_INP):
+                time.time() - self._stime < self.START_BLOCK):
             data = re.sub(pattern=self._re_trim_clear,
                     repl=(self._replace_clear), string=data)
             data = re.sub(pattern=self._re_trim_none,
@@ -485,7 +485,7 @@ class DOSDoor(Door):
         return data
 
     def input_filter(self, data):
-        return data if time.time() - self._stime > self.START_BLOCK_INP else ''
+        return data if time.time() - self._stime > self.START_BLOCK else ''
 
     def check_winsize(self):
         assert self._term.width >= 80, (
