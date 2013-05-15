@@ -485,7 +485,10 @@ class DOSDoor(Door):
         self._stime = time.time()
         self._re_trim_clear = re.compile(self.RE_REPWITH_CLEAR, flags=re.DOTALL)
         self._re_trim_none = re.compile(self.RE_REPWITH_NONE, flags=re.DOTALL)
-        self._replace_clear = (u'\r\n')
+        self._replace_clear = (
+                self._term.move(25, 0)
+                + (u'\r\n' * 25)
+                + self._term.home)
 
     def output_filter(self, data):
         data = Door.output_filter(self, data)
@@ -493,8 +496,6 @@ class DOSDoor(Door):
                 time.time() - self._stime < self.START_BLOCK):
             logger = logging.getLogger()
             logger.debug('+++ %r' % (data,))
-            while u'\r\n\r\n' in data:
-                data = data.replace(u'\r\n\r\n', '\r\n')
             data = re.sub(pattern=self._re_trim_clear,
                     repl=(self._replace_clear), string=data)
             data = re.sub(pattern=self._re_trim_none,
