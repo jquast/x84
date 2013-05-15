@@ -61,7 +61,7 @@ def main():
                     'and at least 25 rows, or press return.\r\n')
             echo(term.bold_blue(u'|' + (u'=' * 78) + u'|\r\n'))
             disp = 0
-        ret = term.inkey(0.25)
+        ret = term.inkey(1)
         if ret in (term.KEY_ENTER, u'\r', u'\n'):
             break
 
