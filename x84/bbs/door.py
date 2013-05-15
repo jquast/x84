@@ -493,6 +493,8 @@ class DOSDoor(Door):
                 time.time() - self._stime < self.START_BLOCK):
             logger = logging.getLogger()
             logger.debug('+++ %r' % (data,))
+            while u'\r\n\r\n' in data:
+                data = data.replace(u'\r\n\r\n', '\r\n')
             data = re.sub(pattern=self._re_trim_clear,
                     repl=(self._replace_clear), string=data)
             data = re.sub(pattern=self._re_trim_none,
