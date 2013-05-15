@@ -538,4 +538,4 @@ class DOSDoor(Door):
         self._session.flush_event('input')
 
         # perform losless "cls" after dosemu exit; display is garbage
-        echo(term.normal + u'\r\n' * term.height)
+        echo(self._term.normal + u'\r\n' * self._term.height)
