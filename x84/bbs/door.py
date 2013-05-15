@@ -459,7 +459,7 @@ class DOSDoor(Door):
     few seconds have passed.
     """
     RE_REPWITH_CLEAR = r'\033\[(1;80H.*\033\[1;1H|H\033\[2J)' # dos CLS? or lord?
-    RE_REPWITH_NONE = r'\033\[(6n|\?1049[lh]|\d+;\d+r|1;1H\033\[5M\033\[25;1H)'
+    RE_REPWITH_NONE = r'\033\[(6n|\?1049[lh]|\d+;\d+r|1;1H|1;1H\033\[5M\033\[25;1H)'
     START_BLOCK_INP = 2.0
 
     def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
@@ -481,7 +481,7 @@ class DOSDoor(Door):
             data = re.sub(pattern=self._re_trim_clear,
                     repl=(self._replace_clear), string=data)
             data = re.sub(pattern=self._re_trim_none,
-                    repl=u'', string=data)
+                    repl=u'\r\n', string=data)
         return data
 
     def input_filter(self, data):
