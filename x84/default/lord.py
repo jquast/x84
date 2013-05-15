@@ -11,7 +11,7 @@ import os
 #  $_layout = "us"
 #  $_rawkeyboard = (0)
 
-# example <dosemu_home>/.dosemu/drive_c/autoexec.bat
+# example <home>/.dosemu/drive_c/autoexec.bat
 #  @echo off
 #  path d:\bin;d:\gnu;d:\dosemu
 #  set TEMP=c:\tmp
@@ -34,28 +34,41 @@ def main():
         'lord.py called but dosemu not enabled in configuration')
     session, term = getsession(), getterminal()
 
-    # dosemu is a bear; as the BBS typically runs as user 'nobody', the $HOME
-    # path is often unset or '/', by exporting an ENV variable 'HOME' to
-    # '/DOS', we can manipulate the bbs door dosemu environment with the
-    # auto-created /DOS/.dosemu folder.
-    dosemu_bin = ini.CFG.get('dosemu', 'bin')
-    dosemu_home = ini.CFG.get('dosemu', 'home')
+    # dosemu is a bear; as the BBS typically runs as user 'nobody',
+    # the $HOME path is often unset or '/'; by exporting an ENV
+    # variable 'HOME' to '/DOS', we can manipulate the bbs door
+    # dosemu environment with the /DOS/.dosemu folder, and test with
+    # 'sudo su - nobody', then launching 'dosemu'
+    bin = ini.CFG.get('dosemu', 'bin')
+    home = ini.CFG.get('dosemu', 'home')
     lord_path = ini.CFG.get('dosemu', 'lord_path')
     lord_dropfile = ini.CFG.get('dosemu', 'lord_dropfile').upper()
     lord_args = ini.CFG.get('dosemu', 'lord_args')
 
-    assert lord_path != 'no'
-    assert os.path.exists(lord_path)
-    assert os.path.exists(dosemu_bin)
-    assert os.path.exists(dosemu_home)
+    #assert lord_path != 'no'
+    #assert os.path.exists(lord_path)
+    #assert os.path.exists(bin)
+    #assert os.path.exists(home)
 
+    store_width, store_height = term.width, term.height
     want_width, want_height = 80, 40
     if want_width != term.width or want_height != term.height:
-        store_width, store_height = term.width, term.height
-        echo('\r\nResizing terminal to %dx%d\r\n' % (
-            want_width, want_height,))
-        echo('\x1b[4;%d;%dt' % (want_height, want_width,))
+        echo(u'\x1b[8;%d;%dt' % (want_height, want_width,))
+    disp = 1
+    while not (term.width == want_width and term.height >= 25):
+        if disp:
+            echo(u'\r\nPlease resize your window to 80 columns'
+                    'and at least 25 rows, or press return.\r\n')
+            echo(term.bold_blue(u'|' + (u'=' * 78) + u'|\r\n'))
+            disp = 0
+        if term.inkey(0.25) in (term.KEY_ENTER, u'\r'):
+            break
+    if term.width != want_width or term.height < 25:
+        # hand-hack, its ok ... really
+        term.width, term.height = want_width, 25
+
     lord_args = lord_args.replace('%#', str(session.node))
     Dropfile(getattr(Dropfile, lord_dropfile)).save(lord_path)
-    door = DOSDoor(dosemu_bin, args=shlex.split(lord_args), env_home=dosemu_home)
+    door = DOSDoor(bin, args=shlex.split(lord_args),
+            env_home=home)
     door.run()
