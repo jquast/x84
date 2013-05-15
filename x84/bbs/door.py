@@ -475,11 +475,7 @@ class DOSDoor(Door):
         self._stime = time.time()
         self._re_trim_clear = re.compile(self.RE_REPWITH_CLEAR, flags=re.DOTALL)
         self._re_trim_none = re.compile(self.RE_REPWITH_NONE, flags=re.DOTALL)
-        self._replace_clear =  ''.join((
-            self._term.normal,
-            self._term.move(0, 24),
-            '\r\n' * 25, # form feed
-            self._term.home))
+        self._replace_clear = u'\r\n' * 25
 
     def output_filter(self, data):
         data = Door.output_filter(self, data)
@@ -517,6 +513,8 @@ class DOSDoor(Door):
         send various terminal reset sequences that may cause a reply to
         be received on input, and later as an invalid menu command.
         """
+        from x84.bbs import echo
+        echo('\r\n' * self._term.height)
         Door.run(self)
 
         # flush any previously decoded but unreceived keystrokes,
