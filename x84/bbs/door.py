@@ -473,7 +473,7 @@ class DOSDoor(Door):
         self._replace_clear =  ''.join((
             self._term.normal,
             self._term.move(0, 24),
-            unichr(12) * 25, # form feed
+            '\r\n' * 25, # form feed
             self._term.home))
 
     def output_filter(self, data):
