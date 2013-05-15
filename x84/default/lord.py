@@ -57,11 +57,12 @@ def main():
     disp = 1
     while not (term.width == want_width and term.height >= 25):
         if disp:
-            echo(u'\r\nPlease resize your window to 80 columns'
+            echo(u'\r\nPlease resize your window to 80 columns '
                     'and at least 25 rows, or press return.\r\n')
             echo(term.bold_blue(u'|' + (u'=' * 78) + u'|\r\n'))
             disp = 0
-        if term.inkey(0.25) in (term.KEY_ENTER, u'\r'):
+        ret = term.inkey(0.25)
+        if ret in (term.KEY_ENTER, u'\r', u'\n'):
             break
     if term.width != want_width or term.height < 25:
         # hand-hack, its ok ... really
