@@ -488,7 +488,7 @@ class DOSDoor(Door):
         if rowhack is not None:
             data = u''.join((
                     data[:rowhack.start()],
-                    self._replace_clear,
+                    '\r\n' * self._term.height,
                     self._term.move(0, int(rowhack.group(1)) - 1),
                     data[rowhack.end():]))
         return data
