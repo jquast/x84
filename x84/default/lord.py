@@ -45,10 +45,10 @@ def main():
     lord_dropfile = ini.CFG.get('dosemu', 'lord_dropfile').upper()
     lord_args = ini.CFG.get('dosemu', 'lord_args')
 
-    #assert lord_path != 'no'
-    #assert os.path.exists(lord_path)
-    #assert os.path.exists(bin)
-    #assert os.path.exists(home)
+    assert lord_path != 'no'
+    assert os.path.exists(lord_path)
+    assert os.path.exists(bin)
+    assert os.path.exists(home)
 
     store_width, store_height = None, None
     want_width, want_height = 80, 40
