@@ -75,6 +75,5 @@ def main():
     door = DOSDoor(bin, args=shlex.split(lord_args),
             env_home=home)
     door.run()
-
     if store_width is not None and store_height is not None:
         term._width, term._height = store_width, store_height
