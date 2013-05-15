@@ -50,7 +50,7 @@ def main():
     #assert os.path.exists(bin)
     #assert os.path.exists(home)
 
-    store_width, store_height = term.width, term.height
+    store_width, store_height = None, None
     want_width, want_height = 80, 40
     if want_width != term.width or want_height != term.height:
         echo(u'\x1b[8;%d;%dt' % (want_height, want_width,))
@@ -64,12 +64,17 @@ def main():
         ret = term.inkey(0.25)
         if ret in (term.KEY_ENTER, u'\r', u'\n'):
             break
+
     if term.width != want_width or term.height < 25:
         # hand-hack, its ok ... really
-        term.width, term.height = want_width, 25
+        store_width, store_height = term._width, term._height
+        term._width, term._height = want_width, 25
 
     lord_args = lord_args.replace('%#', str(session.node))
     Dropfile(getattr(Dropfile, lord_dropfile)).save(lord_path)
     door = DOSDoor(bin, args=shlex.split(lord_args),
             env_home=home)
     door.run()
+
+    if store_width is not None and store_height is not None:
+        term._width, term._height = store_width, store_height
