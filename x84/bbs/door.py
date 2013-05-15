@@ -536,3 +536,6 @@ class DOSDoor(Door):
         # and any unprocessed input from telnet session not yet processed.
         self._term.kbflush()
         self._session.flush_event('input')
+
+        # perform losless "cls" after dosemu exit; display is garbage
+        echo(term.normal + u'\r\n' * term.height)
