@@ -481,6 +481,8 @@ class DOSDoor(Door):
         data = Door.output_filter(self, data)
         if self._stime is not None and (
                 time.time() - self._stime < self.START_BLOCK):
+            logger = logging.getLogger()
+            logger.debug('+++ %r' % (data,))
             data = re.sub(pattern=self._re_trim_clear,
                     repl=(self._replace_clear), string=data)
             data = re.sub(pattern=self._re_trim_none,
