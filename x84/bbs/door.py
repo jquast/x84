@@ -459,7 +459,7 @@ class DOSDoor(Door):
     few seconds have passed.
     """
     RE_REPWITH_CLEAR = r'\033\[(1;80H.*\033\[1;1H|H\033\[2J)' # dos CLS? or lord?
-    RE_REPWITH_NONE = r'\033\[(6n|\?1049[lh]|\d+;\d+r|1;1H)'
+    RE_REPWITH_NONE = r'\033\[(6n|\?1049[lh]|\d+;\d+r)'
     START_BLOCK = 2.0
 
     def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
