@@ -468,8 +468,13 @@ class DOSDoor(Door):
                 r'1;80H.*\033\[1;1H'
                 r'|H\033\[2J'
                 r'|\d+;1H.*\033\[1;1H'
-                r'|1;1H\033\[\dM)')
-    RE_REPWITH_NONE = (r'\033\[(6n|\?1049[lh]|\d+;\d+r)')
+                r')')
+    RE_REPWITH_NONE = (
+            r'\033\[('
+            r'6n'
+            r'|\?1049[lh]'
+            r'|\d+;\d+r'
+            r'|1;1H\033\[\dM)')
     START_BLOCK = 2.0
 
     def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
