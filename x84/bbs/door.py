@@ -395,6 +395,14 @@ class Door(object):
         return self.master_fd != -1 and (self.master_fd in
                 select.select([self.master_fd, ], (), (), 0)[0])
 
+    def resize(self):
+        logger = logging.getLogger()
+        logger.debug('send TIOCSWINSZ: %dx%d',
+                     self._term.width, self._term.height)
+        fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ,
+                    struct.pack('HHHH',
+                        self._term.height, self._term.width, 0, 0))
+
     def _loop(self):
         # pylint: disable=R0914
         #         Too many local variables (21/15)
@@ -422,11 +430,8 @@ class Door(object):
                 ('refresh', 'input',), self.time_ipoll)
 
             if event == 'refresh' and data[0] == 'resize':
-                logger.debug('send TIOCSWINSZ: %dx%d',
-                             self._term.width, self._term.height)
-                fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ,
-                            struct.pack('HHHH',
-                                self._term.height, self._term.width, 0, 0))
+                self.resize()
+
             elif event == 'input':
                 data = self.input_filter(data)
                 if 0 != len(data):
@@ -498,6 +503,9 @@ class DOSDoor(Door):
                 'Terminal height must be greater than '
                 '25 rows (IBM-PC dimensions). '
                 'Please resize your window.')
+
+    def resize(self):
+        pass
 
     def run(self):
         """
