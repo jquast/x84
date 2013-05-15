@@ -458,7 +458,7 @@ class DOSDoor(Door):
     remove such sequence, and input_filter which only allows input after a
     few seconds have passed.
     """
-    RE_REPWITH_CLEAR = r'\033\[(1;80H.*\033\[1;1H|H\033\[2J)' # dos CLS? or lord?
+    RE_REPWITH_CLEAR = r'\033\[(1;80H.*\033\[1;1H|H\033\[2J|1;1H)'
     RE_REPWITH_NONE = r'\033\[(6n|\?1049[lh]|\d+;\d+r)'
     START_BLOCK = 2.0
 
@@ -473,7 +473,7 @@ class DOSDoor(Door):
         self._replace_clear = ''.join((
             self._term.normal,
             self._term.move(0, 24),
-            ('\r\n' + ' ' * 80) * 25,
+            ('\r\n' + self._term.clear_eol) * 25,
             self._term.home))
 
     def output_filter(self, data):
