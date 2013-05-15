@@ -473,9 +473,11 @@ class DOSDoor(Door):
         self._re_trim_clear = re.compile(self.RE_REPWITH_CLEAR, flags=re.DOTALL)
 #        self._re_rowone_fix = re.compile(self.RE_ROWONE_FIX)
         self._re_trim_none = re.compile(self.RE_REPWITH_NONE, flags=re.DOTALL)
-        self._replace_clear = ''.join((
-                '\r\n' * self._term.height,
-                self._term.normal))
+        self._replace_clear = '\r\n'
+#                '\r\n' * self._term.height,
+#        self._replace_clear = ''.join((
+#                '\r\n' * self._term.height,
+#                self._term.normal))
 
     def output_filter(self, data):
         data = Door.output_filter(self, data)
