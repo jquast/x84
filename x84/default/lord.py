@@ -1,8 +1,5 @@
-import tempfile
 import logging
-import shutil
 import shlex
-import time
 import os
 
 # example dosemu.conf
@@ -35,7 +32,6 @@ def main():
 
     assert ini.CFG.getboolean('dosemu', 'enabled'), (
         'lord.py called but dosemu not enabled in configuration')
-    logger = logging.getLogger()
     session, term = getsession(), getterminal()
 
     # dosemu is a bear; as the BBS typically runs as user 'nobody', the $HOME
@@ -46,17 +42,20 @@ def main():
     dosemu_home = ini.CFG.get('dosemu', 'home')
     lord_path = ini.CFG.get('dosemu', 'lord_path')
     lord_dropfile = ini.CFG.get('dosemu', 'lord_dropfile').upper()
-
-    # "lord_args" is the dosemu arguments to execute the lord game. The special
-    # sequence '%#' is replaced with the Node Number (ala synchronet).
-    lord_args = ini.CFG.get('dosemu', 'lord_args').replace('%#', str(session.node))
-
+    lord_args = ini.CFG.get('dosemu', 'lord_args')
 
     assert lord_path != 'no'
     assert os.path.exists(lord_path)
     assert os.path.exists(dosemu_bin)
     assert os.path.exists(dosemu_home)
 
+    want_width, want_height = 80, 40
+    if want_width != term.width or want_height != term.height:
+        store_width, store_height = term.width, term.height
+        echo('\r\nResizing terminal to %dx%d\r\n' % (
+            want_width, want_height,))
+        echo('\x1b[4;%d;%dt' % (want_height, want_width,))
+    lord_args = lord_args.replace('%#', str(session.node))
     Dropfile(getattr(Dropfile, lord_dropfile)).save(lord_path)
     door = DOSDoor(dosemu_bin, args=shlex.split(lord_args), env_home=dosemu_home)
     door.run()
