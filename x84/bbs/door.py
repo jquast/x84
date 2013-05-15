@@ -467,7 +467,7 @@ class DOSDoor(Door):
             r'1;80H.*\033\[1;1H'
             r'|H\033\[2J'
             r'|\d+;1H.*\033\[1;1H'
-            r'|1;1H\033\[\dM)'
+            r'|1;1H\033\[\dM)')
     RE_REPWITH_NONE = (r'\033\[(6n|\?1049[lh]|\d+;\d+r)')
     START_BLOCK = 2.0
 
