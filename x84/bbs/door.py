@@ -470,12 +470,12 @@ class DOSDoor(Door):
         self._stime = time.time()
         self._re_trim_clear = re.compile(self.RE_REPWITH_CLEAR, flags=re.DOTALL)
         self._re_trim_none = re.compile(self.RE_REPWITH_NONE, flags=re.DOTALL)
-        self._replace_clear = unichr(12) # form feed
-        #''.join((
-        #    self._term.normal,
-        #    self._term.move(0, 24),
-        #    ('\r\n' + self._term.clear_eol) * 25,
-        #    self._term.home))
+        self._replace_clear =  # form feed
+        ''.join((
+            self._term.normal,
+            self._term.move(0, 24),
+            unichr(12) * 25,
+            self._term.home))
 
     def output_filter(self, data):
         data = Door.output_filter(self, data)
