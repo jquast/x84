@@ -460,8 +460,7 @@ class DOSDoor(Door):
     """
     RE_REPWITH_CLEAR = r'\033\[(1;80H.*\033\[1;1H|H\033\[2J)' # dos CLS? or lord?
     RE_REPWITH_NONE = r'(\033\[(6n|\?1049[lh]|\d+;\d+r)|dosemu\.org\.\033\[1;1H)'
-    RE_ROWONE_FIX = (r'\033\[1;(\d+)H')
-    #RE_TRIMOUT = r'\033\[(6n|\?1049[lh]|1;80H\033\[1K |\d+;\d+r)'
+#    RE_ROWONE_FIX = (r'\033\[1;(\d+)H')
     START_BLOCK_INP = 2.0
 
     def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
@@ -471,7 +470,7 @@ class DOSDoor(Door):
         self.check_winsize()
         self._stime = time.time()
         self._re_trim_clear = re.compile(self.RE_REPWITH_CLEAR, flags=re.DOTALL)
-        self._re_rowone_fix = re.compile(self.RE_ROWONE_FIX)
+#        self._re_rowone_fix = re.compile(self.RE_ROWONE_FIX)
         self._re_trim_none = re.compile(self.RE_REPWITH_NONE, flags=re.DOTALL)
         self._replace_clear = ''.join((
                 self._term.move(self._term.height, 0),
@@ -484,13 +483,13 @@ class DOSDoor(Door):
                 string=data)
         data = re.sub(pattern=self._re_trim_none, repl=u'',
                 string=data)
-        rowhack = self._re_rowone_fix.search(data)
-        if rowhack is not None:
-            data = u''.join((
-                    data[:rowhack.start()],
-                    '\r\n' * self._term.height,
-                    self._term.move(0, int(rowhack.group(1)) - 1),
-                    data[rowhack.end():]))
+#        rowhack = self._re_rowone_fix.search(data)
+#        if rowhack is not None:
+#            data = u''.join((
+#                    data[:rowhack.start()],
+#                    '\r\n' * self._term.height,
+#                    self._term.move(0, int(rowhack.group(1)) - 1),
+#                    data[rowhack.end():]))
         return data
 
     def input_filter(self, data):
