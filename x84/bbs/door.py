@@ -470,10 +470,9 @@ class DOSDoor(Door):
         self._stime = time.time()
         self._re_trim_clear = re.compile(self.RE_REPWITH_CLEAR, flags=re.DOTALL)
         self._re_trim_none = re.compile(self.RE_REPWITH_NONE, flags=re.DOTALL)
-        self._replace_clear = u''
-#        self._replace_clear = ''.join((
-#                '\r\n' * self._term.height,
-#                self._term.normal))
+        self._replace_clear = ''.join((
+                '\r\n' * self._term.height,
+                self._term.normal))
 
     def output_filter(self, data):
         data = Door.output_filter(self, data)
