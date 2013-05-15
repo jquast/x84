@@ -463,8 +463,8 @@ class DOSDoor(Door):
     remove such sequence, and input_filter which only allows input after a
     few seconds have passed.
     """
-    RE_REPWITH_CLEAR = r'\033\[(1;80H.*\033\[1;1H|H\033\[2J|1;1H)'
-    RE_REPWITH_NONE = r'\033\[(6n|\?1049[lh]|\d+;\d+r|\d+;\d+H\033\[K)'
+    RE_REPWITH_CLEAR = r'\033\[(1;80H.*\033\[1;1H|H\033\[2J)'
+    RE_REPWITH_NONE = r'\033\[(6n|\?1049[lh]|\d+;\d+r)'
     START_BLOCK = 2.0
 
     def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
