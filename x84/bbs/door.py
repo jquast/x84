@@ -458,8 +458,8 @@ class DOSDoor(Door):
     remove such sequence, and input_filter which only allows input after a
     few seconds have passed.
     """
-    RE_REPWITH_CLEAR = r'\033\[(1;80H.*\033\[1;1H|H\033\[2J|1;1H)' # dos CLS? or lord?
-    RE_REPWITH_NONE = r'(\033\[(6n|\?1049[lh]|\d+;\d+r|25;1H))'
+    RE_REPWITH_CLEAR = r'\033\[(1;80H.*\033\[1;1H|H\033\[2J)' # dos CLS? or lord?
+    RE_REPWITH_NONE = r'(\033\[(6n|\?1049[lh]|\d+;\d+r))'
 
 #    RE_ROWONE_FIX = (r'\033\[1;(\d+)H')
     START_BLOCK_INP = 2.0
