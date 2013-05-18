@@ -260,6 +260,7 @@ def main(autoscan_tags=None):
     from x84.bbs import getsession, getterminal, echo, getch
     from x84.bbs import list_msgs
     session, term = getsession(), getterminal()
+    session.activity = 'autoscan msgs'
     echo(banner())
     global ALREADY_READ, SEARCH_TAGS, DELETED
     if autoscan_tags is not None:
@@ -345,6 +346,7 @@ def read_messages(msgs, new):
     import x84.default.writemsg
     session, term = getsession(), getterminal()
 
+    session.activity = 'reading msgs'
     # build header
     len_idx = max([len('%d' % (_idx,)) for _idx in msgs])
     len_author = ini.CFG.getint('nua', 'max_user')

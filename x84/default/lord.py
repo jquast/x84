@@ -1,4 +1,3 @@
-import logging
 import shlex
 import os
 
@@ -70,6 +69,7 @@ def main():
         store_width, store_height = term._width, term._height
         term._width, term._height = want_width, 25
 
+    session.activity = 'Playing LORD'
     lord_args = lord_args.replace('%#', str(session.node))
     Dropfile(getattr(Dropfile, lord_dropfile)).save(lord_path)
     door = DOSDoor(bin, args=shlex.split(lord_args),
