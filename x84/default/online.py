@@ -1,10 +1,10 @@
 """ Who's online script for X/84, https://github.com/jquast/x84 """
 import time
 SELF_ID = -1
-POLL_KEY = 0.05  # blocking ;; how often to poll keyboard
+POLL_KEY = 0.25  # blocking ;; how often to poll keyboard
 POLL_INF = 2.00  # seconds elapsed until re-ask clients for more details
 POLL_AYT = 4.00  # seconds elapsed until global 'are you there?' is checked,
-POLL_OUT = 0.30  # seconds elapsed before screen updates
+POLL_OUT = 0.50  # seconds elapsed before screen updates
 
 
 def request_info(sid):
@@ -201,7 +201,7 @@ def disconnect(sessions):
     session = getsession()
     (node, tgt_session) = get_node(sessions)
     if node is not None:
-        tgt_session.send_event('remote-disconnect', session['sid'])
+        session.send_event('remote-disconnect', tgt_session['sid'])
         return True
 
 
