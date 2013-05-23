@@ -169,7 +169,7 @@ def chat(sessions):
                   if not 'sysop' in session.user.groups else -1)
         session.send_event('route', (
             tgt_session['sid'], 'page', channel, sender))
-        gosub('chat', tgt_session['sid'])
+        gosub('chat', channel)
         return True
 
 
