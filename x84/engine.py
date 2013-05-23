@@ -331,9 +331,9 @@ def _loop(telnetd):
                 # 'route': message passing directly from one session to another
                 elif event == 'route':
                     logger.debug('route %r', (event, data))
-                    send_event, send_val = data[1], data[2:]
+                    tgt_sid, send_event, send_val = data[0], data[1], data[2:]
                     for _sid, _tty in terminals():
-                        if data[0] == _sid:
+                        if tgt_sid == _sid:
                             _tty.iqueue.send((send_event, send_val))
                             break
                 # 'global': message broadcasting to all sessions
