@@ -27,7 +27,8 @@ def main():
               ('hysteriabbs.com', 'Hysteria', 'Netsurge',),
               ('pharcyde.ath.cx', 'Pharcyde BBS', 'Access Denied',),
               ('bloodisland.ph4.se', 'Blood Island', 'xzip',),
-              ('ssl.archaicbinary.net', 'Archaic Binary', 'Wayne Smith',),)
+              ('ssl.archaicbinary.net', 'Archaic Binary', 'Wayne Smith',)
+              ('bbs.godta.com', 'godta', 'sk-5',) ,)
     board_fmt = u'%25s %-30s %-15s\r\n'
     goodbye_msg = u''.join((
         term.move(term.height, 0),
