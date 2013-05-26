@@ -1,37 +1,10 @@
 """ ttyplay door for x/84, https://github.com/jquast/x84 """
+import os
 
-
-def main(ttyfile=u'', peek=False):
-    """ Main procedure. """
-    # pylint: disable=R0914,R0915
-    #         Too many local variables
-    #         Too many statements
-    from x84.bbs import getsession, getterminal, echo, getch
-    from x84.bbs import Door, ini, Lightbar
-    import os
+def playfile(ttyplay_exe, ttyfile, peek=False):
+    from x84.bbs import getsession, getterminal, echo, getch, Door
     import re
-    ttyplay_exe = ini.CFG.get('ttyplay', 'exe')
-    if not os.path.exists(ttyplay_exe):
-        echo(u'\r\n%s NOt iNStAllEd.\r\n' % (ttyplay_exe,))
-        getch()
-        return
-
     session, term = getsession(), getterminal()
-    if 'sysop' in session.user.groups and ttyfile == u'':
-        # pylint: disable=W0212
-        #         Access to a protected member _ttyrec_folder of a client class
-        folder = os.path.dirname(ttyfile) or session._ttyrec_folder
-        files = sorted([fn for fn in os.listdir(session._ttyrec_folder)
-                        if fn.endswith('.ttyrec')])
-        echo(u'\r\n' * term.height)
-        sel = Lightbar(term.height - 1, term.width - 1, 0, 0)
-        sel.colors['border'] = term.bold_green
-        echo(sel.border() + sel.title('-  SElECt A RECORdiNG  -'))
-        sel.update([(fname, fname) for fname in files])
-        x_ttyfile = sel.read()
-        if x_ttyfile is None or sel.quit:
-            return
-        ttyfile = os.path.join(folder, x_ttyfile)
 
     if not (os.path.exists(ttyfile) and os.path.isfile(ttyfile)):
         echo(term.bold_red('\r\n\r\nPAth NOt fOUNd: %s\r\n' % (ttyfile,)))
@@ -64,10 +37,10 @@ def main(ttyfile=u'', peek=False):
         session._record_tty = False
     # press any key prompt, instructions for quitting (^c) ..
     echo(u'\r\n\r\n lOAd CASSEttE ANd PRESS %s. PRESS %s tO %s.\r\n' % (
-        term.green_reverse(u'PlAY'),
-        term.green_underline('bREAk'),
-        term.red_reverse(u'StOP'),))
-    getch()
+        term.green(u'PlAY'),
+        term.red_reverse('^c'),
+        term.red_underline(u'StOP'),))
+    getch(2)
     with term.fullscreen():
         door.run()
         echo(u'\r\n\r\n')
@@ -79,3 +52,37 @@ def main(ttyfile=u'', peek=False):
         session.start_recording()
     echo(term.move(term.height, 0))
     echo(u'\r\n')
+
+def main(ttyfile=u'', peek=False):
+    """ Main procedure. """
+    from x84.bbs import Lightbar, getch, getsession, getterminal, ini, echo
+    # pylint: disable=R0914,R0915
+    #         Too many local variables
+    #         Too many statements
+    ttyplay_exe = ini.CFG.get('ttyplay', 'exe')
+    if not os.path.exists(ttyplay_exe):
+        echo(u'\r\n%s NOt iNStAllEd.\r\n' % (ttyplay_exe,))
+        getch()
+        return
+    session, term = getsession(), getterminal()
+
+    if 'sysop' in session.user.groups and ttyfile == u'':
+        # pylint: disable=W0212
+        #         Access to a protected member _ttyrec_folder of a client class
+        folder = os.path.dirname(ttyfile) or session._ttyrec_folder
+        while True:
+            files = sorted([fn for fn in os.listdir(session._ttyrec_folder)
+                            if fn.endswith('.ttyrec')])
+            echo(u'\r\n' * term.height)
+            sel = Lightbar(term.height - 1, term.width - 1, 0, 0)
+            sel.colors['border'] = term.bold_green
+            echo(sel.border() + sel.title('-  SElECt A RECORdiNG  -'))
+            sel.update([(fname, fname) for fname in files])
+
+            x_ttyfile = sel.read()
+            if x_ttyfile is None or sel.quit:
+                return
+            ttyfile = os.path.join(folder, x_ttyfile)
+            playfile(ttyplay_exe, ttyfile, peek)
+    else:
+        ttyfile(ttyplay_exe, ttyfile, peek)
