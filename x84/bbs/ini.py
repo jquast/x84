@@ -195,8 +195,8 @@ def init_bbs_ini():
     cfg_bbs.set('dosemu', 'lord_args',
             '-quiet -I \'$_com1 = "virtual"\' \'X:\\LORD\\START.BAT %%#\'')
 
-    cfg_log.add_section('ttyplay')
-    cfg_log.set('ttyplay', 'exe', '/usr/bin/ttyplay')
+    cfg_bbs.add_section('ttyplay')
+    cfg_bbs.set('ttyplay', 'exe', '/usr/bin/ttyplay')
     return cfg_bbs
 
 def init_log_ini():
