@@ -436,7 +436,7 @@ class User(object):
             if not chk_grp in gdb:
                 gdb[chk_grp] = Group(chk_grp, set([self.handle]))
                 logger.info("created group '%s' for user '%s'.",
-                        chk_group, self.handle)
+                        chk_grp, self.handle)
             # ensure membership in existing groups
             group = gdb[chk_grp]
             if not self.handle in group.members:
