@@ -475,7 +475,7 @@ class DOSDoor(Door):
             r'|\?1049[lh]'
             r'|\d+;\d+r'
             r'|1;1H\033\[\dM)')
-    START_BLOCK = 2.0
+    START_BLOCK = 4.0
 
     def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
                  env_term=None, env_path=None, env_home=None, cp437=False):
