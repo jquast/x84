@@ -238,7 +238,7 @@ def _loop(telnetd):
                 # lock already held; check for and display owner, or
                 # acquire a lock from a now-deceased session.
                 held=False
-                for _sid, tty in terminals():
+                for _sid, _tty in terminals():
                     if _sid == locks[event][1] and _sid != tty.sid:
                         logger.debug('[%s] %r not acquired, held by %s.',
                                 tty.sid, (event, data), _sid)
