@@ -70,6 +70,7 @@ def main(ttyfile=u'', peek=False):
         # pylint: disable=W0212
         #         Access to a protected member _ttyrec_folder of a client class
         folder = os.path.dirname(ttyfile) or session._ttyrec_folder
+        pos = None
         while True:
             files = sorted([fn for fn in os.listdir(session._ttyrec_folder)
                             if fn.endswith('.ttyrec')])
@@ -78,10 +79,13 @@ def main(ttyfile=u'', peek=False):
             sel.colors['border'] = term.bold_green
             echo(sel.border() + sel.title('-  SElECt A RECORdiNG  -'))
             sel.update([(fname, fname) for fname in files])
+            if pos is not None:
+                sel.position = pos
 
             x_ttyfile = sel.read()
             if x_ttyfile is None or sel.quit:
                 return
+            pos = sel.position
             ttyfile = os.path.join(folder, x_ttyfile)
             playfile(ttyplay_exe, ttyfile, peek)
     else:
