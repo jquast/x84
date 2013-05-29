@@ -50,8 +50,6 @@ def playfile(ttyplay_exe, ttyfile, peek=False):
     if not session.is_recording and resume_rec:
         session._record_tty = True
         session.start_recording()
-    echo(term.move(term.height, 0))
-    echo(u'\r\n')
 
 def main(ttyfile=u'', peek=False):
     """ Main procedure. """
@@ -84,9 +82,12 @@ def main(ttyfile=u'', peek=False):
 
             x_ttyfile = sel.read()
             if x_ttyfile is None or sel.quit:
-                return
+                break
             pos = sel.position
             ttyfile = os.path.join(folder, x_ttyfile)
             playfile(ttyplay_exe, ttyfile, peek)
     else:
         ttyfile(ttyplay_exe, ttyfile, peek)
+    echo(term.move(term.height, 0))
+    echo(u'\r\n')
+
