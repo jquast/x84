@@ -470,7 +470,7 @@ def read_messages(msgs, new):
                 (u'SUbj: %s' % (msg.subject,)).ljust(reader.visible_width)
             )),
             u'', (msg.body),))
-        return Ansi(ucs).wrap(min(80, term.width - 1))
+        return ucs
 
     def get_selector_title(mbox, new):
         """
