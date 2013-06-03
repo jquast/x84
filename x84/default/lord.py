@@ -50,24 +50,30 @@ def main():
     assert os.path.exists(home)
 
     store_width, store_height = None, None
-    want_width, want_height = 80, 40
+    want_width, want_height = 80, 25
     if want_width != term.width or want_height != term.height:
         echo(u'\x1b[8;%d;%dt' % (want_height, want_width,))
     disp = 1
-    while not (term.width == want_width and term.height >= 25):
+    while not (term.width == want_width
+            and term.height == want_width):
         if disp:
-            echo(u'\r\nPlease resize your window to 80 columns '
-                    'and at least 25 rows, or press return.\r\n')
+            echo('^\r\n')
+            echo(term.bold_blue('\r\n'.join([u'|'] * (want_height - 3))))
             echo(term.bold_blue(u'|' + (u'=' * 78) + u'|\r\n'))
+            echo(u'\r\nfor best "screen draw" emulating, please '
+                'resize your window to %s x %s, (or press return).\r\n' % (
+                    want_width, want_height,))
             disp = 0
-        ret = term.inkey(1)
+        ret = term.inkey(2)
         if ret in (term.KEY_ENTER, u'\r', u'\n'):
             break
 
-    if term.width != want_width or term.height < 25:
+    if term.width != want_width or term.height != want_height :
+        echo('Your dimensions: %s by %s; emulating %s by %s' % (
+            term._width, term._height, want_width, want_height,))
         # hand-hack, its ok ... really
         store_width, store_height = term._width, term._height
-        term._width, term._height = want_width, 25
+        term._width, term._height = want_width, want_height
 
     session.activity = 'Playing LORD'
     lord_args = lord_args.replace('%#', str(session.node))
