@@ -49,32 +49,33 @@ def main():
     assert os.path.exists(bin)
     assert os.path.exists(home)
 
-    store_width, store_height = None, None
-    want_width, want_height = 80, 25
-    if want_width != term.width or want_height != term.height:
-        echo(u'\x1b[8;%d;%dt' % (want_height, want_width,))
+    store_cols, store_rows = None, None
+    want_cols, want_rows = 80, 25
+    if want_cols != term.width or want_rows != term.height:
+        echo(u'\x1b[8;%d;%dt' % (want_rows, want_cols,))
     disp = 1
-    while not (term.width == want_width
-            and term.height == want_width):
+    while not (term.width == want_cols
+            and term.height == want_cols):
         if disp:
             echo(term.bold_blue('\r\n^\r\n'))
-            echo(term.bold_blue('\r\n'.join([u'|'] * (want_height - 3))))
+            echo(term.bold_blue('\r\n'.join([u'|'] * (want_rows - 3))))
             echo('\r\n')
             echo(term.bold_blue(u'|' + (u'=' * 78) + u'|\r\n'))
             echo(u'\r\nfor best "screen draw" emulating, please '
                 'resize your window to %s x %s, (or press return).\r\n' % (
-                    want_width, want_height,))
+                    want_cols, want_rows,))
             disp = 0
         ret = term.inkey(2)
         if ret in (term.KEY_ENTER, u'\r', u'\n'):
             break
 
-    if term.width != want_width or term.height != want_height :
-        echo('Your dimensions: %s by %s; emulating %s by %s' % (
-            term._width, term._height, want_width, want_height,))
+    if term.width != want_cols or term.height != want_rows:
+        echo('Your dimensions: %s by %s; emulating %s by %s !' % (
+            term.width, term.height, want_cols, want_rows,))
         # hand-hack, its ok ... really
-        store_width, store_height = term._width, term._height
-        term._width, term._height = want_width, want_height
+        store_cols, store_rows = term.width, term.height
+        term.columns, term.rows= want_cols, want_rows
+        term.inkey(1)
 
     session.activity = 'Playing LORD'
     lord_args = lord_args.replace('%#', str(session.node))
@@ -82,5 +83,6 @@ def main():
     door = DOSDoor(bin, args=shlex.split(lord_args),
             env_home=home)
     door.run()
-    if store_width is not None and store_height is not None:
-        term._width, term._height = store_width, store_height
+    if not (store_cols is None and store_rows is None):
+        echo('Restoring dimensions to %s by %s !' % (store_cols, store_rows))
+        term.rows, term.columns = store_rows, store_cols
