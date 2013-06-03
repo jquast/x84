@@ -57,8 +57,9 @@ def main():
     while not (term.width == want_width
             and term.height == want_width):
         if disp:
-            echo('^\r\n')
+            echo(term.bold_blue('\r\n^\r\n'))
             echo(term.bold_blue('\r\n'.join([u'|'] * (want_height - 3))))
+            echo('\r\n')
             echo(term.bold_blue(u'|' + (u'=' * 78) + u'|\r\n'))
             echo(u'\r\nfor best "screen draw" emulating, please '
                 'resize your window to %s x %s, (or press return).\r\n' % (
