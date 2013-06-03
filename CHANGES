@@ -1,0 +1,10 @@
+
+1.0.5
+  - please add/merge in new 'default.ini' and 'logging.ini' values.
+    You can move away your old files, start x84, then compare. There are
+    new sections such as [lord], [dosemu], and [door].
+  - otherwise, this new release includes general display and bug fixes and
+    door support for LORD/dosemu, bbs/door.py and default/lord.py.
+
+KNOWN ISSUES
+the multibyte decoder doesn't work with tintin++, which seems to send '\x1b' in a seperate tcp sock as the remaining '[A'. We should handle this, we have in the past, but we've re-wired 'keyboard input' for the 'blessings' module, which may accept our multibyte decoder upstream. This is still incomplete, as any fixes I would make would be upstream if possible, and not in our local bastardized ver ..
