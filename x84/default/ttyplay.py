@@ -87,7 +87,7 @@ def main(ttyfile=u'', peek=False):
             ttyfile = os.path.join(folder, x_ttyfile)
             playfile(ttyplay_exe, ttyfile, peek)
     else:
-        ttyfile(ttyplay_exe, ttyfile, peek)
+        playfile(ttyplay_exe, ttyfile, peek)
     echo(term.move(term.height, 0))
     echo(u'\r\n')
 
