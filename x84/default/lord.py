@@ -61,8 +61,8 @@ def main():
             echo(term.bold_blue('\r\n'.join([u'|'] * (want_rows - 3))))
             echo('\r\n')
             echo(term.bold_blue(u'|' + (u'=' * 78) + u'|\r\n'))
-            echo(u'\r\nfor best "screen draw" emulating, please '
-                'resize your window to %s x %s, (or press return).\r\n' % (
+            echo(u'for best "screen output", please '
+                'resize window to %s x %s (or press return).' % (
                     want_cols, want_rows,))
             disp = 0
         ret = term.inkey(2)
