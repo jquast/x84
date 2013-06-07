@@ -71,28 +71,29 @@ def main(host, port=None, encoding='cp437'):
     echo(u'\r\nConnected to %s.' % (host,))
     session.activity = 'connected to %s' % (host,)
     carriage_returned = False
-    while True:
-        if encoding == 'cp437':
-            unistring = from_cp437(
-                    telnet_client.read_very_eager().decode('iso8859-1'))
-        else:
-            unistring = telnet_client.read_very_eager().decode('utf8')
-        if 0 != len(unistring):
-            echo(unistring)
-        if inp is not None:
-            if inp == bytes([30]):  # ctrl-^
-                telnet_client.close()
-                echo(u'\r\n' + term.clear_el + term.normal)
-                break
-            elif not carriage_returned and inp in (b'\x0d', b'\x0a'):
-                telnet_client.write(b'\x0d')
-                carriage_returned = True
-            elif carriage_returned and inp in (b'\x0a', b'\x00'):
-                carriage_returned = False
-            elif inp is not None:
-                telnet_client.write(inp)
-                carriage_returned = False
-        inp = session.read_event('input', timeout=KEY_POLL)
+    with term.fullscreen():
+        while True:
+            if encoding == 'cp437':
+                unistring = from_cp437(
+                        telnet_client.read_very_eager().decode('iso8859-1'))
+            else:
+                unistring = telnet_client.read_very_eager().decode('utf8')
+            if 0 != len(unistring):
+                echo(unistring)
+            if inp is not None:
+                if inp == bytes([30]):  # ctrl-^
+                    telnet_client.close()
+                    echo(u'\r\n' + term.clear_el + term.normal)
+                    break
+                elif not carriage_returned and inp in (b'\x0d', b'\x0a'):
+                    telnet_client.write(b'\x0d')
+                    carriage_returned = True
+                elif carriage_returned and inp in (b'\x0a', b'\x00'):
+                    carriage_returned = False
+                elif inp is not None:
+                    telnet_client.write(inp)
+                    carriage_returned = False
+            inp = session.read_event('input', timeout=KEY_POLL)
     echo(u'\r\nConnection closed.\r\n')
     echo(u''.join(('\r\n\r\n', term.clear_el, term.normal, 'press any key')))
     session.flush_event('input')
