@@ -84,7 +84,7 @@ def main(host, port=None, encoding='cp437'):
             if 0 != len(unistring):
                 echo(unistring)
             if inp is not None:
-                if inp == bytes([30]):  # ctrl-^
+                if inp == chr(30):  # ctrl-^
                     telnet_client.close()
                     echo(u'\r\n' + term.clear_el + term.normal)
                     break
