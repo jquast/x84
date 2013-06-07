@@ -3,6 +3,9 @@
   - please add/merge in new 'default.ini' and 'logging.ini' values.
     You can move away your old files, start x84, then compare. There are
     new sections such as [lord], [dosemu], and [door].
+  - last callers database must be rebuilt for migrations, this is the default
+    "debug" door for sysops, press ctrl + _ from the main menu to rebuild.
+    otherwise only new callers will appear.
   - otherwise, this new release includes general display and bug fixes and
     door support for LORD/dosemu, bbs/door.py and default/lord.py.
 
