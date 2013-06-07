@@ -212,8 +212,9 @@ class ConnectTelnet (threading.Thread):
     """
     Accept new Telnet Connection and negotiate options.
     """
-    TIME_NEGOTIATE = 1.25
-    TIME_WAIT_SILENT = 0.60  # wait 600ms after silence
+    # this all gets much better using "telnetlib3" tulip/Futures
+    TIME_NEGOTIATE = 3.00
+    TIME_WAIT_SILENT = 1.60  # wait 1600ms after silence
     TIME_WAIT_STAGE = 1.90  # wait 190ms foreach negotiation
     TIME_POLL = 0.15
     TTYPE_UNDETECTED = 'unknown'
