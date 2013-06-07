@@ -324,7 +324,7 @@ class User(object):
         assert len(self._handle) > 0, ('handle must be non-zero length')
         assert (None, None) != self._password, ('password must be set')
         assert self._handle != u'anonymous', (
-            'anonymous user my not be saved.')
+            'anonymous user may not be saved.')
         udb = DBProxy(USERDB)
         udb.acquire()
         if 0 == len(udb) and self.is_sysop is False:
