@@ -16,13 +16,19 @@ from x84.bbs.dbproxy import DBProxy
 from x84.bbs.pager import Pager
 from x84.bbs.door import Door, DOSDoor, Dropfile
 
+__all__ = ['list_users', 'get_user', 'find_user', 'User', 'Group',
+    'list_msgs', 'get_msg', 'list_tags', 'Msg',
+    'LineEditor', 'ScrollingEditor', 'echo', 'timeago', 'Ansi',
+    'ansiwrap', 'AnsiWindow', 'Selector', 'Lightbar', 'from_cp437',
+    'DBProxy', 'Pager', 'Door', 'DOSDoor', 'goto', 'disconnect',
+    'getsession', 'getterminal', 'getch', 'gosub', 'ropen',
+    'showcp437', 'Dropfile',]
 
 def goto(*args):
     """
     Change bbs script. Does not return.
     """
-    import x84.bbs.exception
-    raise x84.bbs.exception.Goto(args)
+    raise Goto(args)
 
 
 def disconnect(reason=u''):
@@ -115,10 +121,3 @@ def showcp437(filepattern):
             return
         yield line + u'\r\n'
 
-
-__all__ = ['list_users', 'get_user', 'find_user', 'User', 'Group',
-    'list_msgs', 'get_msg', 'list_tags', 'Msg', 'Disconnected', 'Goto',
-    'LineEditor', 'ScrollingEditor', 'echo', 'timeago', 'Ansi',
-    'ansiwrap', 'AnsiWindow', 'Selector', 'Lightbar', 'from_cp437',
-    'DBProxy', 'Pager', 'Door', 'goto', 'disconnect', 'getsession',
-    'getterminal', 'getch', 'gosub', 'ropen', 'showcp437',]
