@@ -74,7 +74,7 @@ def main(handle=None):
     #         Too many branches
     #         Too many statements
     from x84.bbs import getsession, getterminal, echo, getch
-    from x84.bbs import goto, gosub, User, get_user
+    from x84.bbs import goto, gosub, User, get_user, DBProxy
     import logging
     import time
     session, term = getsession(), getterminal()
@@ -102,6 +102,12 @@ def main(handle=None):
     session.user.lastcall = time.time()
     if session.user.handle != 'anonymous':
         session.user.save()
+
+    # record into " last caller " record
+    key = (session.user.handle)
+    lcall = (session.user.lastcall, session.user.calls, session.user.location)
+    db = DBProxy('lastcalls')
+    db[key] = lcall
 
     # 3. if no preferred charset run charset.py selector
     if (session.user.get('charset', None) is None

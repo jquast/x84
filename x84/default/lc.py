@@ -178,18 +178,23 @@ def lc_retrieve():
     """
     # pylint: disable=R0914
     #         Too many local variables
-    from x84.bbs import list_users, get_user, ini, timeago, getterminal
+    from x84.bbs import get_user, ini, timeago, getterminal
+    from x84.bbs import DBProxy
     import time
     term = getterminal()
-    udb = dict()
-    for handle in list_users():
-        user = get_user(handle)
-        udb[(user.lastcall, handle)] = (user.calls, user.location)
+    udb = DBProxy('lastcalls')
+    # re-order by time called; unfortunate ..
+    sortdb = {}
+    for ((handle), (tm_lc, _nc, origin)) in (udb.items()):
+        while tm_lc in sortdb:
+            tm_lc += 0.1
+        sortdb[tm_lc] = [handle, _nc, origin]
+
     padd_handle = (ini.CFG.getint('nua', 'max_user') + 2)
     padd_origin = (ini.CFG.getint('nua', 'max_location') + 2)
     rstr = u''
     nicks = []
-    for ((tm_lc, handle), (_nc, origin)) in (reversed(sorted(udb.items()))):
+    for tm_lc, (handle, _nc, origin) in (reversed(sorted(sortdb.items()))):
         is_sysop = 'sysop' in get_user(handle).groups
         rstr += (term.bold_red(u'@') if is_sysop else u''
                  ) + (handle.ljust(padd_handle - (2 if is_sysop else 1)))

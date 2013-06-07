@@ -7,7 +7,8 @@ def main():
     from x84.bbs import getsession
     assert 'sysop' in getsession().user.groups
 
-    return nothing()
+    return migrate_105lc()
+    #return nothing()
 
     # but this is a great way to make data manipulations,
     # exampled here is importing of a .csv import of
@@ -15,6 +16,17 @@ def main():
     #return merge_mystic()
 
     #return tygerofdantye_fix()
+
+
+def migrate_105lc():
+    from x84.bbs import echo, DBProxy, list_users, get_user
+    # migrating lastcallers database for 1.0.5 upgrade
+    lc = DBProxy('lastcalls')
+    for handle in list_users():
+        user = get_user(handle)
+        lc[(handle)] = (user.lastcall, user.calls, user.location)
+        echo('\r\n' + user.handle + '.')
+    echo ('\r\n\r\nlast callers db rebuilt!')
 
 
 def nothing():
