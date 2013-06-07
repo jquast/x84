@@ -131,7 +131,7 @@ def get_oltxt():
     from x84.bbs import getterminal, DBProxy, timeago, Ansi
     term = getterminal()
     colors = (term.bold_white, term.bold_green, term.bold_blue)
-    hist = [(int(k), v) for (k, v) in DBProxy('oneliner').iteritems()]
+    hist = [(int(k), v) for (k, v) in DBProxy('oneliner').items()]
     hist.sort()
     output = list()
     for idx, onel in hist[BUF_HISTORY * -1:]:
