@@ -15,9 +15,9 @@ def playfile(ttyplay_exe, ttyfile, peek=False):
     # .. esp. at EOF, about session.user.handle & connect_time & etc.
     data = open(ttyfile, 'rb').read(64)
     size_pattern = re.compile(r'\[8;(\d+);(\d+)t')
-    match = size_pattern.match(data)
+    match = size_pattern.findall(data)
     if match:
-        echo(u'\r\n\r\nheight, width: %s, %s' % match.groups())
+        echo(u'\r\n\r\nheight, width: %s, %s' % match[0].groups())
     args = tuple()
     if peek:
         args += ('-p',)
@@ -29,12 +29,6 @@ def playfile(ttyplay_exe, ttyfile, peek=False):
     args += (ttyfile,)
     door = Door(ttyplay_exe, args=args)
     session.activity = u'playing tty recording'
-    # pylint: disable=W0212
-    #         Access to a protected member _record_tty of a client class
-    resume_rec = session._record_tty and session.is_recording
-    if resume_rec:
-        session.stop_recording()
-        session._record_tty = False
     # press any key prompt, instructions for quitting (^c) ..
     echo(u'\r\n\r\n lOAd CASSEttE ANd PRESS %s. PRESS %s tO %s.\r\n' % (
         term.green(u'PlAY'),
@@ -43,13 +37,10 @@ def playfile(ttyplay_exe, ttyfile, peek=False):
     getch(2)
     with term.fullscreen():
         door.run()
-        echo(u'\r\n\r\n')
+        echo(u'\r\n' * term.height)
         echo(u'PRESS ' + term.green_underline('q') + u'.')
         while not getch() in (u'q', u'Q'):
             pass
-    if not session.is_recording and resume_rec:
-        session._record_tty = True
-        session.start_recording()
 
 def main(ttyfile=u'', peek=False):
     """ Main procedure. """
@@ -63,6 +54,12 @@ def main(ttyfile=u'', peek=False):
         getch()
         return
     session, term = getsession(), getterminal()
+    # pylint: disable=W0212
+    #         Access to a protected member _record_tty of a client class
+    resume_rec = session._record_tty and session.is_recording
+    if resume_rec:
+        session.stop_recording()
+        session._record_tty = False
 
     if 'sysop' in session.user.groups and ttyfile == u'':
         # pylint: disable=W0212
@@ -88,6 +85,11 @@ def main(ttyfile=u'', peek=False):
             playfile(ttyplay_exe, ttyfile, peek)
     else:
         playfile(ttyplay_exe, ttyfile, peek)
+
+    if not session.is_recording and resume_rec:
+        session._record_tty = True
+        session.start_recording()
+
     echo(term.move(term.height, 0))
     echo(u'\r\n')
 
