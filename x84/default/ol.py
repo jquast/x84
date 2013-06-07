@@ -197,22 +197,24 @@ def banner():
 
 def redraw(pager, selector):
     """ Redraw pager and selector """
-    from x84.bbs import getsession, getterminal
+    from x84.bbs import getsession, getterminal, echo
     session, term = getsession(), getterminal()
     session.flush_event('oneliner_update')
-    pager.update(u'\n'.join(get_oltxt()))
-    pager.move_end()
     pager.colors['border'] = term.white
     pager.glyphs['left-vert'] = u' '
     pager.glyphs['right-vert'] = u' '
     prompt_ole = u'SAY somethiNG ?!'
-    return u''.join((
+    pager.update(u'\n\n\nFetching ...')
+    echo(u''.join((
         pager.refresh(),
         pager.border(),
         term.move(selector.yloc - 2, selector.xloc),
         term.bold_green(prompt_ole.center(selector.width).rstrip()),
         term.clear_eol,
-        selector.refresh(),))
+        selector.refresh(),)))
+    pager.update(u'\n'.join(get_oltxt()))
+    pager.move_end()
+    echo(pager.refresh())
 
 
 def dummy_pager():
@@ -387,7 +389,7 @@ def main():
                       and not session.user.get('expert', False)
                       and term.width >= 78 and term.height >= 20):
             # smart terminal
-            echo(redraw(pager, selector))
+            redraw(pager, selector)
             dirty = False
         elif dirty:
             # dumb terminal
