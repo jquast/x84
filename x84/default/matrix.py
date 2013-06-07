@@ -42,7 +42,6 @@ def get_username(handle=u''):
     #         (but some types could not be inferred)
     newcmds = ini.CFG.get('matrix', 'newcmds').split()
     byecmds = ini.CFG.get('matrix', 'byecmds').split()
-    topscript = ini.CFG.get('matrix', 'topscript')
     denied_msg = u'\r\n\r\nfiRSt, YOU MUSt AbANdON YOUR libERtIES.'
     badanon_msg = u"\r\n  " + term.bright_red + u"'%s' login denied."
     max_user = ini.CFG.getint('nua', 'max_user')
@@ -101,18 +100,17 @@ def try_reset(user):
 
 def try_pass(user):
     """
-    Prompt for password and authenticate, if succesfull, goto topscript.
+    Prompt for password and authenticate, returns True if succesfull.
     """
     # pylint: disable=R0914
     #         Too many local variables
-    from x84.bbs import getsession, getterminal, ini, LineEditor, echo, goto
+    from x84.bbs import getsession, getterminal, ini, LineEditor, echo
     session, term = getsession(), getterminal()
     prompt_pass = u'\r\n\r\n  pass: '
     status_auth = u'\r\n\r\n  ' + term.yellow_reverse(u"Encrypting ..")
-    topscript = ini.CFG.get('matrix', 'topscript', 'top')
     badpass_msg = (u'\r\n\r\n' + term.red_reverse +
                    u"'%s' login failed." + term.normal)
-    max_pass = int(ini.CFG.get('nua', 'max_pass', '32'))
+    max_pass = int(ini.CFG.get('nua', 'max_pass'))
     # prompt for password, disable input tap during, mask input with 'x',
     # and authenticate against user record, performing a script change to
     # topscript if sucessful.
@@ -128,9 +126,9 @@ def try_pass(user):
     if password is not None and 0 != len(password):
         echo(status_auth)
         if user.auth(password):
-            goto(topscript, user.handle)
+            return True
     denied(badpass_msg % (user.handle,))
-    return
+    return False
 
 
 def uname():
@@ -150,6 +148,7 @@ def main():
     #         Too many local variables
     import logging
     from x84.bbs import getsession, getterminal, ini, echo, get_user, goto
+    from x84.bbs import find_user
     from x84.engine import __url__ as url
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
@@ -168,6 +167,7 @@ def main():
     enable_pwreset = ini.CFG.getboolean('matrix', 'enable_pwreset')
     bbsname = ini.CFG.get('system', 'bbsname')
     artfile = os.path.join(os.path.dirname(__file__), 'art', '1984.asc')
+    topscript = ini.CFG.get('matrix', 'topscript')
     max_tries = 10
     session.flush_event('refresh')
     #uname()
@@ -194,9 +194,18 @@ def main():
     # http://www.termsys.demon.co.uk/vtansi.htm
     # disable line-wrapping
     echo(unichr(27) + u'[7l')
+
     # http://www.xfree86.org/4.5.0/ctlseqs.html
     # Save xterm icon and window title on stack.
     echo(unichr(27) + u'[22;0t')
+
+    if handle:
+        echo('\r\nHello, %s!' % (handle,))
+        match = find_user(handle)
+        if match is not None:
+            handle = match
+        else:
+            handle = ''
 
     # prompt for username & password
     for _num in range(0, max_tries):
@@ -204,7 +213,8 @@ def main():
         if handle != u'':
             session.activity = u'Logging in'
             user = get_user(handle)
-            try_pass(user)
+            if try_pass(user):
+                goto(topscript, user.handle)
             echo(u'\r\n\r\n')
             if enable_pwreset:
                 try_reset(user)
