@@ -23,7 +23,7 @@ If you receive this error::
 
   warn    engine.py:95  - Python not built with wide unicode support!
 
-And you are concerned with very large unicode points, such as used in Thai or emoticons like hamsterface, 🐹, you will need to upgrade or rebuild your python interpreter so that it is build with *UCS4* support.  Otherwise it may only be displayed, but input characters will often be decoded as '??'.
+And you are concerned with very large unicode points, such as used in Thai or emoticons like hamsterface, chr(128057), you will need to upgrade or rebuild your python interpreter so that it is build with *UCS4* support.  Otherwise it may only be displayed, but input characters will often be decoded as '??'.
 
 
 Installing
