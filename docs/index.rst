@@ -6,6 +6,8 @@
 Welcome to x/84's documentation!
 ================================
 
+Read the pdf_ version
+
 Contents:
 
 .. toctree::
@@ -31,3 +33,5 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+.. _pdf: https://media.readthedocs.org/pdf/x84/latest/x84.pdf
