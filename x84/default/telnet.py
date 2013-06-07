@@ -74,8 +74,11 @@ def main(host, port=None, encoding='cp437'):
     with term.fullscreen():
         while True:
             if encoding == 'cp437':
-                unistring = from_cp437(
-                        telnet_client.read_very_eager().decode('iso8859-1'))
+                try:
+                    unistring = from_cp437(
+                            telnet_client.read_very_eager().decode('iso8859-1'))
+                except EOFError:
+                    break
             else:
                 unistring = telnet_client.read_very_eager().decode('utf8')
             if 0 != len(unistring):
