@@ -1,3 +1,16 @@
+|12Fri Jun  7 14:37:07 EDT 2013
+|08============================
+
+Release 1.0.5 is now on pypi. This release includes "dropfile" and concise dosemu support. An example lord.py door is used and hosted on 1984.ws.
+
+I'd also like to tell you about a new python 3.3 telnet API:
+
+  |11https://github.com/jquast/telnetlib3
+
+This may find its way back into x/84 in some coming years, after Guido's "tulip" module is released as a part of python 3.4.
+
+It features lightning-fast connect-time negotiation through the use of "futures", and all three line input modes: local line editing (half-duplex), remote line editing, and "kludge" mode, which is used here on x/84 and other bbs systems. It supports the telnet CHARSET option and on-the-fly changes of any encoding and binary mode bi-directionally (utf-8 input, cp437 output, for example). This is also complaint with *all* telnet clients, including MUD clients, and provides lightning-faster-than-ssh remote line editing for most unix telnet clients.
+
 |12Mon Apr 15 12:37:08 EDT 2013
 |08============================
 
