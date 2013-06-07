@@ -86,7 +86,8 @@ Lightbar
 Doors
 `````
 
-.. autoclass:: x84.bbs.Door
+.. automodule:: x84.bbs.door
+   :members:
 
 CP437 and ANSI
 ``````````````

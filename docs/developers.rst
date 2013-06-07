@@ -58,6 +58,11 @@ telnet.py
 .. automodule:: x84.telnet
    :members:
 
+blessings.py
+------------
+.. automodule:: x84.blessings
+   :members:
+
 db.py
 -----
 
@@ -70,10 +75,10 @@ Userland
 
 Procedures not necessarily exposed that are internal to the child process executed by terminal.py_ on connect. Though most of this is accessible by the child process for scripting, their use or documentation isn't considered very useful to a general audience.
 
-wcswidth.py
+wcwidth.py
 -----------
 
-.. automodule:: x84.bbs.wcswidth
+.. automodule:: x84.bbs.wcwidth
   :members:
 
 log.py
