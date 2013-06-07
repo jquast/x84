@@ -183,12 +183,14 @@ def lc_retrieve():
     import time
     term = getterminal()
     udb = DBProxy('lastcalls')
-    # re-order by time called; unfortunate ..
+    # re-order by time called; unfortunate ..; note that sqlite
+    # encodes unicode as utf-8; but doesn't decode it on retrieval,
+    # of dict keys; possible upstream patching opportunity here,
     sortdb = {}
     for ((handle), (tm_lc, _nc, origin)) in (udb.items()):
         while tm_lc in sortdb:
             tm_lc += 0.1
-        sortdb[tm_lc] = [handle, _nc, origin]
+        sortdb[tm_lc] = [handle.decode('utf-8'), _nc, origin]
 
     padd_handle = (ini.CFG.getint('nua', 'max_user') + 2)
     padd_origin = (ini.CFG.getint('nua', 'max_location') + 2)
