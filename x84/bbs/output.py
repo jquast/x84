@@ -7,7 +7,7 @@ import warnings
 import textwrap
 
 from x84.bbs.session import getterminal, getsession
-from x84.bbs.wcswidth import wcswidth
+from x84.bbs.wcwidth import wcswidth
 
 ANSI_PIPE = re.compile(r'\|(\d{2,3})')
 ANSI_COLOR = re.compile(r'\033\[(\d{2,3})m')
