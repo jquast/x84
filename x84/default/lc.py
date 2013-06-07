@@ -197,7 +197,8 @@ def lc_retrieve():
     for tm_lc, (handle, _nc, origin) in (reversed(sorted(sortdb.items()))):
         is_sysop = 'sysop' in get_user(handle).groups
         rstr += (term.bold_red(u'@') if is_sysop else u''
-                 ) + (handle.ljust(padd_handle - (2 if is_sysop else 1)))
+                 ) + (term.ljust(handle,
+                     (padd_handle - (2 if is_sysop else 1))))
         rstr += term.red(origin.ljust(padd_origin))
         rstr += timeago(time.time() - tm_lc)
         rstr += u'\n'
