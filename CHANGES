@@ -1,4 +1,10 @@
-
+1.0.6
+  - various issues with SyncTerm client resolved in bbs/editor.py and
+    default/editor.py, notably: don't draw on bottom line (causes scroll),
+    and use 'term.normal' before 'term.red_reverse' or other 'highlight'
+    colors, which were otherwise rendered invisible by SyncTerm.
+  - some timing negotiations lengthened for very-high latency links, and
+    dec vt query removed, it was found useless, increasing connect-time.
 1.0.5
   - please add/merge in new 'default.ini' and 'logging.ini' values.
     You can move away your old files, start x84, then compare. There are
