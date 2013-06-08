@@ -447,13 +447,11 @@ class ScrollingEditor(AnsiWindow):
                     self.content[self._horiz_shift:],))
         else:
             prnt = self.content
-        erase_len = self.visible_width - (len(prnt))
         return u''.join((
             self.pos(self.ypadding, self.xpadding),
             term.normal,
             self.colors.get('highlight', u''),
-            prnt,
-            self.glyphs.get('erase', u' ') * erase_len,
+            self.align(prnt),
             self.fixate(),))
 
     def backword(self):
@@ -490,7 +488,7 @@ class ScrollingEditor(AnsiWindow):
                 u'\b' * len_toss,
                 u' ' * len_move,
                 u'\b' * len_move,))
-        self._horiz_pos -= 1
+            self._horiz_pos -= 1
         return rstr
 
     def update(self, ucs=u''):
@@ -501,7 +499,7 @@ class ScrollingEditor(AnsiWindow):
         self._horiz_pos = 0
         self.content = ucs
         assert unichr(27) not in ucs, ('Editor is not ESC sequence-safe')
-        # TODO: assert binary, also ..
+        # TODO: assert binary, also .. hex editor? :-)
 
     def add(self, u_chr):
         """
