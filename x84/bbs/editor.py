@@ -105,7 +105,9 @@ class LineEditor(object):
         No movement or positional sequences are returned.
         """
         from x84.bbs.session import getterminal
+        term = getterminal()
         lightbar = u''.join((
+            term.normal,
             self.colors.get('highlight', u''),
             ' ' * self.width,
             '\b' * self.width))
@@ -114,7 +116,7 @@ class LineEditor(object):
         return u''.join((
             lightbar,
             content,
-            getterminal().cursor_visible))
+            term.cursor_visible))
 
     def process_keystroke(self, keystroke):
         """
@@ -426,6 +428,8 @@ class ScrollingEditor(AnsiWindow):
         infinate scrolling
         """
         # reset position and detect new position
+        from x84.bbs import getterminal
+        term = getterminal()
         self._horiz_lastshift = self._horiz_shift
         self._horiz_shift = 0
         self._horiz_pos = 0
@@ -438,12 +442,15 @@ class ScrollingEditor(AnsiWindow):
             self._horiz_pos += 1
         if self._horiz_shift > 0:
             self._horiz_shift += len(self.glyphs['strip'])
-            prnt = self.glyphs['strip'] + self.content[self._horiz_shift:]
+            prnt = u''.join((
+                    self.glyphs['strip'],
+                    self.content[self._horiz_shift:],))
         else:
             prnt = self.content
         erase_len = self.visible_width - (len(prnt))
         return u''.join((
             self.pos(self.ypadding, self.xpadding),
+            term.normal,
             self.colors.get('highlight', u''),
             prnt,
             self.glyphs.get('erase', u' ') * erase_len,
