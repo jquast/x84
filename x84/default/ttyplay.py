@@ -16,8 +16,9 @@ def playfile(ttyplay_exe, ttyfile, peek=False):
     data = open(ttyfile, 'rb').read(64)
     size_pattern = re.compile(r'\[8;(\d+);(\d+)t')
     match = size_pattern.findall(data)
-    if match:
-        echo(u'\r\n\r\nheight, width: %s, %s' % match[0].groups())
+    for height, width in match:
+        echo(u'\r\n\r\nheight, width: %s, %s' % (height, width,))
+        break
     args = tuple()
     if peek:
         args += ('-p',)
