@@ -216,6 +216,8 @@ def prompt_tags(tags):
         echo(lne.refresh())
         while not lne.carriage_returned:
             inp = getch()
+            if inp in (unichr(27), term.KEY_EXIT):
+                return None
             if inp in (unichr(24),): # ^A:all
                 return set()
             if inp in (unichr(1),): # ^X:autoscan
@@ -275,9 +277,12 @@ def main(autoscan_tags=None):
             term.bold_black(' ]'), u'\r\n')))
     else:
         SEARCH_TAGS = set(['public'])
-        # also throw in user groups
+        # also throw in user groups, maybe the top 3 .. ?
         SEARCH_TAGS.update(session.user.groups)
         SEARCH_TAGS = prompt_tags(SEARCH_TAGS)
+        # user escape
+        if SEARCH_TAGS is None:
+            return
 
     echo(u'\r\n\r\n%s%s ' % (
         term.bold_yellow('SCANNiNG'),
