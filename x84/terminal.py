@@ -53,14 +53,14 @@ def init_term(out_queue, lock, env):
         # translate 'ansi' -> 'ansi-bbs'
         # http://wiki.synchro.net/install:nix?s[]=termcap#terminal_capabilities
         env['TERM'] = ini.CFG.get('system', 'termcap-ansi')
-        log.debug('TERM %s transliterated to %' % ( ttype, env['TERM'],))
+        log.debug('TERM %s transliterated to %s' % ( ttype, env['TERM'],))
     elif (ttype == 'unknown'
             and ini.CFG.get('system', 'termcap-unknown') != 'no'):
         # instead of using 'unknown' as a termcap definition, try to use
         # the most broadly capable termcap possible, 'vt100', configurable with
         # default.ini
         env['TERM'] = ini.CFG.get('system', 'termcap-unknown')
-        log.debug('TERM %s transliterated to %' % ( ttype, env['TERM'],))
+        log.debug('TERM %s transliterated to %s' % ( ttype, env['TERM'],))
     else:
         log.debug('TERM is %s' % (ttype,))
     stream = IPCStream(out_queue, lock)
