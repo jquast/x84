@@ -172,8 +172,8 @@ def main(handle=None):
     gosub('lc')
     session.activity = 'top'
 
-    # 6. check for new msgs,
-    gosub('readmsgs', session.user.get('autoscan', None))
+    # 6. check for new public/private msgs,
+    gosub('readmsgs', set())
     session.activity = 'top'
 
     # 7. news

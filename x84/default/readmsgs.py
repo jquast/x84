@@ -203,9 +203,10 @@ def prompt_tags(tags):
         echo(u"\r\n\r\nENtER SEARCh %s, COMMA-dEliMitEd. " % (
             term.red('TAG(s)'),))
         echo(u"OR '/list', %s%s\r\n : " % (
-            (term.yellow_underline('^a') + u':utoscan '
-                ) if session.user.get('autoscan', False) else u'',
-            term.yellow_underline('Escape') + u':quit',))
+            (term.yellow_underline('^x') + u':autoscan '
+                if session.user.get('autoscan', False) else u''),
+            term.yellow_underline('^a') + u':ll msgs ' +
+            term.yellow_underline('Esc') + u':quit',))
         width = term.width - 6
         sel_tags = u', '.join(tags)
         while len(Ansi(sel_tags)) >= (width - 8):
@@ -215,15 +216,17 @@ def prompt_tags(tags):
         echo(lne.refresh())
         while not lne.carriage_returned:
             inp = getch()
-            if inp in (unichr(1),): # ^A:
-                inp_tags = session.user.get('autoscan', set())
-                break
+            if inp in (unichr(24),): # ^A:all
+                return set()
+            if inp in (unichr(1),): # ^X:autoscan
+                return session.user.get('autoscan', set())
             else:
                 echo(lne.process_keystroke(inp))
-        inp_tags = lne.content
+        if lne.carriage_returned:
+            inp_tags = lne.content
         if (inp_tags is None or 0 == len(inp_tags)
                 or inp_tags.strip().lower() == '/quit'):
-            return None
+            return set()
         elif inp_tags.strip().lower() == '/list':
             # list all available tags, and number of messages
             echo(u'\r\n\r\nTags: \r\n')
@@ -275,8 +278,6 @@ def main(autoscan_tags=None):
         # also throw in user groups
         SEARCH_TAGS.update(session.user.groups)
         SEARCH_TAGS = prompt_tags(SEARCH_TAGS)
-        if SEARCH_TAGS is None:
-            SEARCH_TAGS = set()
 
     echo(u'\r\n\r\n%s%s ' % (
         term.bold_yellow('SCANNiNG'),
@@ -604,7 +605,7 @@ def read_messages(msgs, new):
                 dirty = 1
             mark_read(idx)  # also mark as read
 
-        # 't' uses writemsg.prompt_tags() routine
+        # 't' uses writemsg.prompt_tags() routine, how confusing ..
         elif inp in (u't',) and allow_tag(idx):
             echo(term.move(term.height, 0))
             msg = get_msg(idx)

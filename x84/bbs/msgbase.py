@@ -141,5 +141,5 @@ class Msg(object):
         logger.info(u"saved %s%s%s, addressed to '%s'.",
                     'new ' if new else u'',
                     'public ' if 'public' in self.tags else u'',
-                    'message ' if self.parent is None else u'reply ',
+                    'message' if self.parent is None else u'reply',
                     self.recipient,)
