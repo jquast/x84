@@ -46,6 +46,7 @@ def get_username(handle=u''):
     badanon_msg = u"\r\n  " + term.bright_red + u"'%s' login denied."
     max_user = ini.CFG.getint('nua', 'max_user')
     nuascript = ini.CFG.get('nua', 'script')
+    topscript = ini.CFG.get('matrix', 'topscript')
 
     echo(prompt_user)
     handle = LineEditor(max_user, handle).read()
