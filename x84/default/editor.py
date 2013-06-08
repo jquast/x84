@@ -173,7 +173,7 @@ def get_lightbar(ucs):
     term = getterminal()
     width = min(80, max(term.width, 40))
     yloc = 0
-    height = term.height - yloc
+    height = term.height - yloc - 1
     xloc = max(0, (term.width / 2) - (width / 2))
     lightbar = Lightbar(height, width, yloc, xloc)
     lightbar.glyphs['left-vert'] = lightbar.glyphs['right-vert'] = u''
