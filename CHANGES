@@ -1,4 +1,4 @@
-1.0.6
+1.0.6, 1.0.7
   - various issues with SyncTerm client resolved in bbs/editor.py and
     default/editor.py, notably: don't draw on bottom line (causes scroll),
     and use 'term.normal' before 'term.red_reverse' or other 'highlight'
