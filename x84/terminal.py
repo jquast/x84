@@ -45,18 +45,24 @@ def init_term(out_queue, lock, env):
     """
     from x84.bbs import ini
     from x84.bbs.ipc import IPCStream
-    if (env.get('TERM', 'unknown') == 'ansi'
-            and ini.CFG.get('system', 'termcap-ansi', u'no') != 'no'):
+    log = logging.getLogger()
+    ttype = env.get('TERM', 'unknown')
+    if (ttype == 'ansi'
+            and ini.CFG.get('system', 'termcap-ansi') != 'no'):
         # special workaround for systems with 'ansi-bbs' termcap,
         # translate 'ansi' -> 'ansi-bbs'
         # http://wiki.synchro.net/install:nix?s[]=termcap#terminal_capabilities
         env['TERM'] = ini.CFG.get('system', 'termcap-ansi')
-    if (env.get('TERM', 'unknown') == 'unknown'
-            and ini.CFG.get('system', 'termcap-unknown', u'no') != 'no'):
+        log.debug('TERM %s transliterated to %' % ( ttype, env['TERM'],))
+    elif (ttype == 'unknown'
+            and ini.CFG.get('system', 'termcap-unknown') != 'no'):
         # instead of using 'unknown' as a termcap definition, try to use
         # the most broadly capable termcap possible, 'vt100', configurable with
         # default.ini
         env['TERM'] = ini.CFG.get('system', 'termcap-unknown')
+        log.debug('TERM %s transliterated to %' % ( ttype, env['TERM'],))
+    else:
+        log.debug('TERM is %s' % (ttype,))
     stream = IPCStream(out_queue, lock)
     return Terminal(env.get('TERM', 'unknown'), stream,
             int(env.get('LINES', '24')),
@@ -212,10 +218,14 @@ class ConnectTelnet (threading.Thread):
     """
     Accept new Telnet Connection and negotiate options.
     """
-    # this all gets much better using "telnetlib3" tulip/Futures
-    TIME_NEGOTIATE = 3.00
-    TIME_WAIT_SILENT = 1.60  # wait 1600ms after silence
-    TIME_WAIT_STAGE = 1.90  # wait 190ms foreach negotiation
+    # this all gets much better using "telnetlib3" tulip/Futures, this is
+    # a pretty poor implementation, but necessary for correct "TERM" before
+    # going through the trouble of spawning a new process -- that process
+    # may only call curses.setupterm() once per process, so it is imperative
+    # to make a "good call"; which is a combination of many several factors
+    TIME_NEGOTIATE = 2.50  # wait 2500ms on-connect
+    TIME_WAIT_STAGE = 2.50  # wait 2500ms foreach negotiation
+    TIME_WAIT_SILENT = 2.50  # wait 2500ms after silence
     TIME_POLL = 0.15
     TTYPE_UNDETECTED = 'unknown'
     WINSIZE_TRICK = (
