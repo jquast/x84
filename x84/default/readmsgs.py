@@ -212,6 +212,7 @@ def prompt_tags(tags):
             tags = tags[:-1]
             sel_tags = u', '.join(tags)
         lne = LineEditor(width, sel_tags)
+        echo(lne.refresh())
         while not lne.carriage_returned:
             inp = getch()
             if inp in (unichr(1),): # ^A:
