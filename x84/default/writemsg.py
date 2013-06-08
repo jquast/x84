@@ -182,8 +182,9 @@ def prompt_public(msg):
 
     if msg.recipient is None and 'public' in msg.tags:
         # msg is addressed to None, and is tagged as 'public',
-        return True
-    elif msg.recipient is None:
+        return True # quit/escape
+
+    if msg.recipient is None:
         # msg is addressed to nobody, force tag as 'public' or cancel,
         blurb = u"POStS AddRESSEd tO 'None' MUSt bE PUbliC!"
         inp = Selector(yloc=term.height - 1,
@@ -197,26 +198,26 @@ def prompt_public(msg):
         if selection == u'Ok':
             msg.tags.add(u'public')
             return True
-        return False
-    else:
-        # not specified; you don't want this msg public? confirm,
-        inp = Selector(yloc=term.height - 1,
-                       xloc=term.width - 22,
-                       width=20,
-                       left=u'PUbliC', right=u'PRiVAtE')
-        blurb = u'PUbliC OR PRiVAtE POSt?'
-        echo(term.move(inp.yloc, inp.xloc - len(blurb)))
-        echo(term.bold_yellow(blurb))
-        selection = inp.read()
-        echo(term.move(inp.yloc, 0) + term.clear_eol)
-        if selection == u'PUbliC':
-            msg.tags.add(u'public')
-            return True
-        elif selection == u'PRiVAtE':
-            if u'public' in msg.tags:
-                msg.tags.remove(u'public')
-            return True
-        return False
+        return False # quit/escape
+
+    # not specified; you don't want this msg public? confirm,
+    inp = Selector(yloc=term.height - 1,
+                   xloc=term.width - 22,
+                   width=20,
+                   left=u'YES!iZ-SECRET', right=u'NO')
+    blurb = u'SENd PRiVAtE POSt?'
+    echo(term.move(inp.yloc, inp.xloc - len(blurb)))
+    echo(term.bold_yellow(blurb))
+    selection = inp.read()
+    echo(term.move(inp.yloc, 0) + term.clear_eol)
+    if selection == u'NO':
+        msg.tags.add(u'public')
+        return True
+    elif selection == u'YES!iZ-SECRET':
+        if u'public' in msg.tags:
+            msg.tags.remove(u'public')
+        return True
+    return False # quit/escape
 
 
 def prompt_body(msg):
