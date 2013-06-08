@@ -6,7 +6,7 @@ from distutils.core import setup
 import os
 
 setup(name='x84',
-      version='1.0.6',
+      version='1.0.7',
       description="Telnet server for UTF-8 and cp437 terminals.",
       long_description=open(os.path.join(os.path.dirname(__file__),
                                          'README.txt')).read(),
