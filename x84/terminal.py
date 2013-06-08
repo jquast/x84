@@ -224,7 +224,7 @@ class ConnectTelnet (threading.Thread):
     # may only call curses.setupterm() once per process, so it is imperative
     # to make a "good call"; which is a combination of many several factors
     TIME_NEGOTIATE = 2.50  # wait 2500ms on-connect
-    TIME_WAIT_STAGE = 2.50  # wait 2500ms foreach negotiation
+    TIME_WAIT_STAGE = 3.50  # wait upto 3500ms foreach stage of negotiation :(
     TIME_WAIT_SILENT = 2.50  # wait 2500ms after silence
     TIME_POLL = 0.15
     TTYPE_UNDETECTED = 'unknown'
