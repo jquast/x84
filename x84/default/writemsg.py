@@ -180,7 +180,7 @@ def prompt_public(msg):
     from x84.bbs import getterminal, echo, Selector
     term = getterminal()
 
-    if msg.recipient is None and 'public' in msg.tags:
+    if 'public' in msg.tags:
         # msg is addressed to None, and is tagged as 'public',
         return True # quit/escape
 
@@ -202,9 +202,9 @@ def prompt_public(msg):
 
     # not specified; you don't want this msg public? confirm,
     inp = Selector(yloc=term.height - 1,
-                   xloc=term.width - 22,
+                   xloc=term.width - 24,
                    width=20,
-                   left=u'YES!iZ-SECRET', right=u'NO')
+                   left=u'YES!', right=u'NO')
     blurb = u'SENd PRiVAtE POSt?'
     echo(term.move(inp.yloc, inp.xloc - len(blurb)))
     echo(term.bold_yellow(blurb))
@@ -213,7 +213,7 @@ def prompt_public(msg):
     if selection == u'NO':
         msg.tags.add(u'public')
         return True
-    elif selection == u'YES!iZ-SECRET':
+    elif selection == u'YES!':
         if u'public' in msg.tags:
             msg.tags.remove(u'public')
         return True
