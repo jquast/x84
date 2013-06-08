@@ -319,6 +319,10 @@ class ConnectTelnet (threading.Thread):
         self.client.request_do_binary()
         self.client.request_will_binary()
         self.client.request_do_ttype()
+        # and do naws, please.
+        self.client.request_do_naws()
+        self.client.socket_send()  # push
+
         if not self.client.active:
             return
         # wait at least 1.25s for the client to speak. If it doesn't,
@@ -352,14 +356,15 @@ class ConnectTelnet (threading.Thread):
         # reply is found, then a dec terminal attributes
         # request is made, and a vt* terminal type is set.
 
+        # XXX Disabled, was not found to be very useful.
         # If this fails, or response is amiguous ('vt100'), try for
         # extended dec types. If not, just get them anyway.
-        self._try_device_attributes()
+        #self._try_device_attributes()
 
-        # explicitly request naws. This will set TERM to vt100
+        # check for naws reply. This will set TERM to vt100
         # or sun if the terminal is --still-- undetected.
         # Otherwise sets LINES and COLUMNS env variables to response.
-        self._try_naws()
+        self._check_naws()
 
         # this is totally useless, but informitive debugging information for
         # unknown unix clients ..
@@ -427,7 +432,7 @@ class ConnectTelnet (threading.Thread):
         if self.client.check_remote_option(NEW_ENVIRON) is UNKNOWN:
             logger.debug('failed: NEW_ENVIRON')
 
-    def _try_naws(self):
+    def _check_naws(self):
         """
         Negotiate about window size (NAWS) telnet option (on).
         """
@@ -440,8 +445,6 @@ class ConnectTelnet (threading.Thread):
                          self.client.env.get('COLUMNS'),
                          self.client.env.get('LINES'),)
             return
-        self.client.request_do_naws()
-        self.client.socket_send()  # push
         st_time = time.time()
         while (self.client.env.get('LINES', None) is None
                 and self.client.env.get('COLUMNS', None) is None
