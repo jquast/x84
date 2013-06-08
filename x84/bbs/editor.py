@@ -438,7 +438,6 @@ class ScrollingEditor(AnsiWindow):
             self._horiz_pos += 1
         if self._horiz_shift > 0:
             self._horiz_shift += len(self.glyphs['strip'])
-            # self._horiz_shift += len(self.glyphs['strip'])
             prnt = self.glyphs['strip'] + self.content[self._horiz_shift:]
         else:
             prnt = self.content
@@ -446,7 +445,8 @@ class ScrollingEditor(AnsiWindow):
         return u''.join((
             self.pos(self.ypadding, self.xpadding),
             self.colors.get('highlight', u''),
-            prnt + self.glyphs.get('erase', u' ') * erase_len,
+            prnt,
+            self.glyphs.get('erase', u' ') * erase_len,
             self.fixate(),))
 
     def backword(self):
