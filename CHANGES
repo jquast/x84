@@ -1,3 +1,5 @@
+1.0.8
+  - fix for 'anonymous' user display in last callers.
 1.0.6, 1.0.7
   - various issues with SyncTerm client resolved in bbs/editor.py and
     default/editor.py, notably: don't draw on bottom line (causes scroll),
