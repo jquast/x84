@@ -17,7 +17,10 @@ def view_plan(handle):
     from x84.bbs import getterminal, echo, Ansi, get_user
     term = getterminal()
     echo(u'\r\n\r\n')
-    echo(Ansi(get_user(handle).get('.plan', u'No Plan.')).wrap(term.width))
+    try:
+        echo(Ansi(get_user(handle).get('.plan', u'No Plan.')).wrap(term.width))
+    except KeyError:
+        pass # anonymous/deleted accounts
     echo(u'\r\n')
     pak()
 
@@ -65,13 +68,16 @@ def dummy_pager(last_callers):
                     continue
                 handle = handle.strip()
                 if handle.lower() in [nick.lower() for nick in list_users()]:
-                    user = get_user((nick for nick in usrlist
-                                     if nick.lower() == handle.lower()).next())
-                    if 'sysop' in session.user.groups and (
-                            inp in (u'e', u'E')):
-                        gosub('profile', user.handle)
-                    else:
-                        view_plan(user.handle)
+                    try:
+                        user = get_user((nick for nick in usrlist
+                                         if nick.lower() == handle.lower()).next())
+                        if 'sysop' in session.user.groups and (
+                                inp in (u'e', u'E')):
+                            gosub('profile', user.handle)
+                        else:
+                            view_plan(user.handle)
+                    except KeyError:
+                        pass # anonymous / deleted accts,
                 else:
                     misses = [nick for nick in usrlist.keys()
                               if nick.lower().startswith(handle[:1].lower())]
@@ -197,7 +203,10 @@ def lc_retrieve():
     rstr = u''
     nicks = []
     for tm_lc, (handle, _nc, origin) in (reversed(sorted(sortdb.items()))):
-        is_sysop = 'sysop' in get_user(handle).groups
+        try:
+            is_sysop = 'sysop' in get_user(handle).groups
+        except KeyError:
+            pass # anonymous/deleted accts,
         rstr += (term.bold_red(u'@') if is_sysop else u''
                  ) + (term.ljust(handle,
                      (padd_handle - (2 if is_sysop else 1))))
