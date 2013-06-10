@@ -5,9 +5,9 @@ def playfile(ttyplay_exe, ttyfile, peek=False):
     from x84.bbs import getsession, getterminal, echo, getch, Door
     import re
     session, term = getsession(), getterminal()
-
+    echo(term.move(term.height, 0) + '\r\n' * term.height)
     if not (os.path.exists(ttyfile) and os.path.isfile(ttyfile)):
-        echo(term.bold_red('\r\n\r\nPAth NOt fOUNd: %s\r\n' % (ttyfile,)))
+        echo(term.bold_red('PAth NOt fOUNd: %s\r\n' % (ttyfile,)))
         getch()
         return
 
@@ -17,7 +17,7 @@ def playfile(ttyplay_exe, ttyfile, peek=False):
     size_pattern = re.compile(r'\[8;(\d+);(\d+)t')
     match = size_pattern.findall(data)
     for height, width in match:
-        echo(u'\r\n\r\nheight, width: %s, %s' % (height, width,))
+        echo(u'height, width: %s, %s' % (height, width,))
         break
     args = tuple()
     if peek:
