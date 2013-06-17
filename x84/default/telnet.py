@@ -99,6 +99,7 @@ def main(host, port=None, encoding='cp437'):
             inp = session.read_event('input', timeout=KEY_POLL)
     echo(u'\r\nConnection closed.\r\n')
     echo(u''.join(('\r\n\r\n', term.clear_el, term.normal, 'press any key')))
+    echo(u'\x1b[r') # unset 'set scrolling region', sometimes set by BBS's
     session.flush_event('input')
     getch()
     return
