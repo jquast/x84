@@ -535,5 +535,8 @@ class DOSDoor(Door):
         self._term.kbflush()
         self._session.flush_event('input')
 
-        # perform losless "cls" after dosemu exit; display is garbage
+        # perform lossless "cls" after dosemu exit; display is garbage
         echo(self._term.normal + u'\r\n' * self._term.height)
+        # also, fight against 'set scrolling region' by resetting, LORD
+        # contains, for example: \x1b[3;22r after 'E'nter the realm :-(
+        echo(u"\x1b[r")
