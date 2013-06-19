@@ -83,6 +83,9 @@ def main():
     door = DOSDoor(bin, args=shlex.split(lord_args),
             env_home=home)
     door.run()
+    echo(term.clear)
     if not (store_cols is None and store_rows is None):
         echo('Restoring dimensions to %s by %s !' % (store_cols, store_rows))
         term.rows, term.columns = store_rows, store_cols
+    echo ('\r\n')
+    term.inkey(0.5)
