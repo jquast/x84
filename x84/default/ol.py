@@ -53,8 +53,8 @@ class FetchUpdates(threading.Thread):
         # we're breaking the shit out of encoding here, but most other bbs's
         # are US-ASCII (cp437)-only, and bbs-api doesn't care
         buf = ''.join((byte for byte in req.content
-                       if ord(byte) >= 0x20
-                       or ord(byte) in (0x09, 0x0a, 0x0d, 0x7f)
+                       (if ord(byte) >= 0x20
+                        or ord(byte) in (0x09, 0x0a, 0x0d, 0x7f))
                        and ord(byte) not in (0x9f,)))
         xml_nodes = xml.etree.ElementTree.XML(buf).findall('node')
         for node in xml_nodes:
