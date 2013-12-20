@@ -46,10 +46,13 @@ class FetchUpdates(threading.Thread):
                         req.status_code, time.time() - stime)
 
         # can throw exceptions when xml is invalid, as a thread, nobody needs
-        # to catch it. theres some things that should be CDATA wrapped ..
+        # to catch it. theres some things that should be CDATA wrapped .. these
+        # break even viewing it in firefox, but upstream doesn't seem to
+        # notice, probably upstream does print('<xml_node>' + var +
+        # '</xml_node>'), i've found more than a few nasty escape flaws
         buf = ''.join((byte for byte in req.content
                        if ord(byte) >= 0x20
-                       or ord(byte) in (0x09, 0x0a, 0x0d, 0x7f)))
+                       or ord(byte) in (0x09, 0x0a, 0x0d, 0x7f, 0x9f)))
         xml_nodes = xml.etree.ElementTree.XML(buf).findall('node')
         for node in xml_nodes:
             self.content.append(
