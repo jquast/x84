@@ -49,10 +49,13 @@ class FetchUpdates(threading.Thread):
         # to catch it. theres some things that should be CDATA wrapped .. these
         # break even viewing it in firefox, but upstream doesn't seem to
         # notice, probably upstream does print('<xml_node>' + var +
-        # '</xml_node>'), i've found more than a few nasty escape flaws
+        # '</xml_node>'), i've found more than a few nasty escape flaws,
+        # we're breaking the shit out of encoding here, but most other bbs's
+        # are US-ASCII (cp437)-only, and bbs-api doesn't care
         buf = ''.join((byte for byte in req.content
                        if ord(byte) >= 0x20
-                       or ord(byte) in (0x09, 0x0a, 0x0d, 0x7f, 0x9f)))
+                       or ord(byte) in (0x09, 0x0a, 0x0d, 0x7f)
+                       and ord(byte) not in (0x9f,)))
         xml_nodes = xml.etree.ElementTree.XML(buf).findall('node')
         for node in xml_nodes:
             self.content.append(
