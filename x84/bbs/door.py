@@ -527,7 +527,7 @@ class DOSDoor(Door):
         be received on input, and later as an invalid menu command.
         """
         from x84.bbs import echo
-        echo('\r\n' * self._term.height)
+        echo(u'\r\n' * self._term.height)
         Door.run(self)
 
         # flush any previously decoded but unreceived keystrokes,
