@@ -184,6 +184,10 @@ def init_bbs_ini():
     # as each get_msg() is a lookup, thread-related sorting could
     # become too expensive.
     cfg_bbs.set('msg', 'max_depth', '8')
+    # by default, anybody can make up a new tag. otherwise, only
+    # those of groups specified may.
+    cfg_bbs.set('msg', 'moderated_tags', 'no')
+    cfg_bbs.set('msg', 'tag_moderators', 'sysop moderator')
 
     cfg_bbs.add_section('dosemu')
     cfg_bbs.set('dosemu', 'enabled', 'no')

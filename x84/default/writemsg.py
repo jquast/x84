@@ -13,7 +13,7 @@ def banner():
 
 
 def display_msg(msg):
-    """ Refresh screen, level indicates up to which step """
+    """ Display full message """
     from x84.bbs import getterminal, getsession, echo, Ansi
     session, term = getsession(), getterminal()
     body = msg.body.splitlines()
@@ -118,16 +118,26 @@ def prompt_tags(msg):
     #         Too many local variables
     #         Using the global statement
     from x84.bbs import DBProxy, echo, getterminal, getsession
-    from x84.bbs import Ansi, LineEditor
+    from x84.bbs import Ansi, LineEditor, ini
     session, term = getsession(), getterminal()
     tagdb = DBProxy('tags')
-    msg_onlymods = (u"\r\nONlY MEMbERS Of thE '%s' OR '%s' "
-                    "GROUP MAY CREAtE NEW tAGS." % (
-                        term.bold_yellow('sysop'),
-                        term.bold_blue('moderator'),))
+    # version 1.0.9 introduced new ini option; set defaults for
+    # those missing it from 1.0.8 upgrades.
+    import ConfigParser
+    try:
+        moderated_tags = ini.CFG.getboolean('msg', 'moderated_tags')
+    except ConfigParser.NoOptionError:
+        moderated_tags = False
+    try:
+        moderated_groups = set(ini.CFG.get('msg', 'tag_moderator_groups'
+                                           ).split())
+    except ConfigParser.NoOptionError:
+        moderated_groups = ('sysop', 'moderator',)
+    msg_onlymods = (u"\r\nONlY MEMbERS Of GROUPS %s MAY CREAtE NEW tAGS." % (
+        ", ".join(["'%s'".format(term.bold_yellow(grp)
+                                 for grp in moderated_groups)])))
     msg_invalidtag = u"\r\n'%s' is not a valid tag."
-    prompt_tags1 = u"ENtER %s, COMMA-dEliMitEd. " % (
-        term.bold_red('TAG(s)'),)
+    prompt_tags1 = u"ENtER %s, COMMA-dEliMitEd. " % (term.bold_red('TAG(s)'),)
     prompt_tags2 = u"OR '/list', %s:quit\r\n : " % (
         term.bold_yellow_underline('Escape'),)
     while True:
@@ -159,17 +169,21 @@ def prompt_tags(msg):
 
         # search input as valid tag(s)
         tags = set([inp.strip().lower() for inp in inp_tags.split(',')])
-        err = False
-        for tag in tags.copy():
-            if not tag in tagdb and not (
-                    'sysop' in session.user.groups or
-                    'moderator' in session.user.groups):
-                tags.remove(tag)
-                echo(msg_invalidtag % (term.bold_red(tag),))
-                err = True
-        if err:
-            echo(msg_onlymods)
-            continue
+
+        # if the tag is new, and the user's group is not in
+        # tag_moderator_groups, then dissallow such tag if
+        # 'moderated_tags = yes' in ini cfg
+        if moderated_tags:
+            err = False
+            for tag in tags.copy():
+                if not tag in tagdb and not (
+                        session.users.groups & moderated_groups):
+                    tags.remove(tag)
+                    echo(msg_invalidtag % (term.bold_red(tag),))
+                    err = True
+            if err:
+                echo(msg_onlymods)
+                continue
         msg.tags = tags
         return True
 
