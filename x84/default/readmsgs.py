@@ -231,6 +231,7 @@ def prompt_tags(tags):
             return set()
         elif inp_tags.strip().lower() == '/list':
             # list all available tags, and number of messages
+            echo(term.normal)
             echo(u'\r\n\r\nTags: \r\n')
             all_tags = sorted(tagdb.items())
             if 0 == len(all_tags):
