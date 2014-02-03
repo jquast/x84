@@ -449,7 +449,7 @@ def display_weather(todays, weather, centigrade):
     from x84.bbs import getterminal, echo, from_cp437
     term = getterminal()
 
-    echo(term.height * '\r\n')
+    echo(term.height * u'\r\n')
     echo(term.move(1, 1))
     at = term.yellow_bold('At')
     city = term.bold(todays.get('City', u''))
