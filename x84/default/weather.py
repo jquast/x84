@@ -5,10 +5,12 @@ from xml.etree import cElementTree as ET
 import itertools
 import textwrap
 import requests
+import warnings
 import time
 import os
 
-weather_icons = os.path.join(os.path.dirname(__file__), 'art', 'weather')
+weather_icons = os.path.join(os.path.abspath(
+    os.path.dirname(__file__)), 'art', 'weather')
 panel_width = 16
 panel_height = 8
 top_margin = 3
@@ -391,6 +393,7 @@ def get_icon(weather):
     icon = int(weather['WeatherIcon'])
     artfile = os.path.join(weather_icons, '{}.ans'.format(icon))
     if not os.path.exists(artfile):
+        warnings.warn('{} not found'.format(artfile))
         art = u'[ .{:>2}. ]'.format(icon)
     else:
         art = [from_cp437(line.rstrip())
