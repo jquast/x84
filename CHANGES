@@ -1,3 +1,9 @@
+1.0.9
+  - tagging no longer requires 'moderator' or 'sysop' group by default,
+    is now configurable with .ini options of section [msg]:
+    moderated_tags: yes/no, tag_moderators: list of groups
+  - yet even more fixes for bad xml bytes in bbs-scene.org's onelinerz api
+  - thanks to xzip, weather now looks like a television broadcast layout.
 1.0.8
   - UI/bugfixes for last callers (default/lc.py) and default/ttyplay.py
 1.0.6, 1.0.7

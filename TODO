@@ -37,7 +37,7 @@ TESTING
 must be compatible with the following clients,
 OSX: iTerm2, Terminal.app
 Windows: PuTTy, SyncTerm, mtel, telnet (-t vtnt?)
-BSD/Linux: uxterm, bsdtelnet, linux console
+BSD/Linux: uxterm, bsdtelnet, linux console, tintin++
 
 PARKING LOT, 2.0
 ================
