@@ -504,7 +504,6 @@ def display_weather(todays, weather, centigrade):
             echo(row_txt + u'\r\n')
         else:
             echo(u'\r\n')
-    echo(term.move(bottom + next_margin + row_num))
 
 
 def main():
@@ -536,7 +535,7 @@ def main():
             chk_centigrade()
         centigrade = session.user.get('centigrade', False)
         display_weather(todays, forecast, centigrade)
-        echo(u'\r\n\r\n')
+        echo(u'\r\n')
         echo(term.yellow_reverse('--ENd Of tRANSMiSSiON--'))
         getch()
         break
