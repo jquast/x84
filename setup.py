@@ -20,6 +20,7 @@ setup(name='x84',
           '': ['README.txt'],
           'x84.default': ['*.ans', '*.txt', ],
           'x84.default.art': ['*.asc', '*.ans', '*.txt'],
+          'x84.default.art.weather': ['*.ans'],
       },
       install_requires=[
           'requests >=1.1.0',
