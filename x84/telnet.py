@@ -780,6 +780,9 @@ class TelnetClient(object):
         if 1 == len(buf) and buf[0] == chr(0):
             logger.error('0nil SB')
             return
+        elif len(buf) < 2:
+            logger.error('SB too short')
+            return
         elif (TTYPE, IS) == (buf[0], buf[1]):
             self._sb_ttype(buf[2:].tostring())
         elif (XDISPLOC, IS) == (buf[0], buf[1]):
