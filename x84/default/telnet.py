@@ -18,6 +18,9 @@ def main(host, port=None, encoding='cp437'):
     import telnetlib
     import struct
     from x84.bbs import getsession, getterminal, echo, getch, from_cp437
+    import logging
+    log = logging.getLogger()
+
     assert encoding in ('utf8', 'cp437')
     session, term = getsession(), getterminal()
     session.activity = 'connecting to %s' % (host,)
@@ -90,11 +93,13 @@ def main(host, port=None, encoding='cp437'):
                     break
                 elif not carriage_returned and inp in (b'\x0d', b'\x0a'):
                     telnet_client.write(b'\x0d')
+                    log.debug('send {!r}'.format(b'\x0d'))
                     carriage_returned = True
                 elif carriage_returned and inp in (b'\x0a', b'\x00'):
                     carriage_returned = False
                 elif inp is not None:
                     telnet_client.write(inp)
+                    log.debug('send {!r}'.format(inp))
                     carriage_returned = False
             inp = session.read_event('input', timeout=KEY_POLL)
     echo(u'\r\nConnection closed.\r\n')
