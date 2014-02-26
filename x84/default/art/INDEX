@@ -1,6 +1,6 @@
 artfile            used by script    author
 -------            --------------    -----------
-1984.asc ......... matrix.py ....... spidy!food
+1984.asc .........            ...... spidy!food
 irc.asc .......... irc.py .......... spidy!food
 lc.asc ........... lc.py ........... spidy!food
 main.asc ......... main.py ......... spidy!food
@@ -15,3 +15,4 @@ sense.ans ........            ...... sense 25?
 test.ans .........            ...... ?!?
 ueditor.asc ...... ueditor.py ...... spidy!food
 bbslist.asc ...... bbslist.py ...... spidy!food
+xz-1984.ans....... matrix.py ....... xzip!impure

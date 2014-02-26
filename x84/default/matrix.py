@@ -167,7 +167,7 @@ def main():
     enable_anonymous = ini.CFG.getboolean('matrix', 'enable_anonymous')
     enable_pwreset = ini.CFG.getboolean('matrix', 'enable_pwreset')
     bbsname = ini.CFG.get('system', 'bbsname')
-    artfile = os.path.join(os.path.dirname(__file__), 'art', '1984.asc')
+    artfile = os.path.join(os.path.dirname(__file__), 'art', 'xz-1984.asc')
     topscript = ini.CFG.get('matrix', 'topscript')
     max_tries = 10
     session.flush_event('refresh')
