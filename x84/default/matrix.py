@@ -149,7 +149,7 @@ def main():
     #         Too many local variables
     import logging
     from x84.bbs import getsession, getterminal, ini, echo, get_user, goto
-    from x84.bbs import find_user
+    from x84.bbs import find_user, showcp437
     from x84.engine import __url__ as url
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
@@ -175,8 +175,9 @@ def main():
     # display banner
     echo(u''.join((
         term.normal, u'\r\n',
-        u'Connected to %s, see %s for source\r\n' % (bbsname, url),
-        u'\r\n'.join([line[:term.width].rstrip() for line in open(artfile)]),
+        u'Connected to %s, see %s for source\r\n' % (bbsname, url),)))
+    showcp437(artfile)
+    echo (u''.join((
         u'\r\n\r\n',
         term.bold(u'tERM'), u': ',
         term.cyan_underline(session.env['TERM']),
