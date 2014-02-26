@@ -178,6 +178,7 @@ def main():
         u'Connected to %s, see %s for source\r\n' % (bbsname, url),)))
     for line in showcp437(artfile):
         echo(line)
+    echo(term.normal)
     echo (u''.join((
         u'\r\n\r\n',
         term.bold(u'tERM'), u': ',
