@@ -19,6 +19,7 @@ import math
 import sys
 import re
 
+import logging
 import termios
 import select
 import fcntl
@@ -175,6 +176,8 @@ class Terminal(object):
         self.KEY_SUP = self.KEY_SR  # scroll reverse (shift+pgup)
         self.KEY_SDOWN = self.KEY_SF  # scroll forward (shift+pgdown)
         self.KEY_ESCAPE = self.KEY_EXIT
+
+        self.log = logging.getLogger(__name__)
 
     # Sugary names for commonly-used capabilities, intended to help avoid trips
     # to the terminfo man page and comments in your code:
@@ -720,7 +723,7 @@ class Terminal(object):
             return code.decode('utf-8')
         return u''
 
-    def _decode_istream(self, buf, end=True):
+    def _decode_istream(self, buf):
         """ T._decode_istream(buf, end=True)
 
         Incrementaly decode input byte buffer, ``buf``, using the encoding
@@ -730,10 +733,13 @@ class Terminal(object):
 
         decoded = []
         for num, byte in enumerate(buf):
-            is_final = end and num == (len(buf) - 1)
-            ucs = self._idecoder.decode(byte, final=is_final)
-            if ucs is not None:
-                decoded.append(ucs)
+            try:
+                ucs = self._idecoder.decode(byte, final=False)
+            except UnicodeDecodeError, err:
+                # an illegal utf8 sequence, good on you ..
+                self.log.warn('UnicodeDecodeError: {}'.format(err))
+                ucs = ''
+            decoded.append(ucs)
         return u''.join(decoded)
 
     def resolve_mbs(self, ucs):
