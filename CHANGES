@@ -5,6 +5,7 @@
   - yet even more fixes for bad xml bytes in bbs-scene.org's onelinerz api
   - thanks to xzip, weather now looks like a television broadcast layout.
   - a short/malicious sub-negotiation string will not cause engine crash.
+  - default board recieved some new ami/x-style art from xzip!impure
 1.0.8
   - UI/bugfixes for last callers (default/lc.py) and default/ttyplay.py
 1.0.6, 1.0.7
