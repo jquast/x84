@@ -24,7 +24,7 @@ def main():
     prompt_say = u''.join((term.bold_blue(handle),
                            term.blue(u' SAYS WhAt'), term.bold(': '),))
     boards = (('1984.ws', 'x/84 dEfAUlt bOARd', 'dingo',),
-              ('hysteriabbs.com', 'Hysteria', 'Netsurge',),
+              ('htc.zapto.org', 'Haunting the Chapel', 'Mercyful',),
               ('pharcyde.ath.cx', 'Pharcyde BBS', 'Access Denied',),
               ('bloodisland.ph4.se', 'Blood Island', 'xzip',),
               ('ssl.archaicbinary.net', 'Archaic Binary', 'Wayne Smith',),
