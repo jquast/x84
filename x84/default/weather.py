@@ -15,6 +15,8 @@ panel_width = 16
 panel_height = 8
 top_margin = 3
 next_margin = 3
+timeout_fch = 3  # timeout of fahrenheit vs. centigrade prompt
+cf_key = u'!'
 
 
 def temp_conv(val, centigrade):
@@ -106,7 +108,7 @@ def disp_search_help():
         int_city=int_city, keyhelp=keyhelp)).wrap(term.width))
 
 
-def do_fetch(postal):
+def fetch_weather(postal):
     """
     Given postal code, fetch and return xml root node of weather results.
     """
@@ -189,6 +191,9 @@ def parse_forecast(root):
 
 
 def get_centigrade():
+    """
+    Blocking prompt for setting C/F preference
+    """
     from x84.bbs import getterminal, getsession, echo, getch
     term = getterminal()
     session = getsession()
@@ -205,7 +210,6 @@ def get_centigrade():
     echo('? ')
     while True:
         inp = getch()
-        print(repr(inp))
         if inp in (u'c', u'C'):
             session.user['centigrade'] = True
             session.user.save()
@@ -219,9 +223,11 @@ def get_centigrade():
 
 
 def chk_centigrade():
+    """
+    Provide hint for setting C/F preference (! key)
+    """
     from x84.bbs import getterminal, getsession, echo, getch
-    term = getterminal()
-    session = getsession()
+    session, term = getsession(), getterminal()
     echo(u'\r\n\r\n')
     echo(u'USiNG ')
     if session.user.get('centigrade', None):
@@ -230,10 +236,40 @@ def chk_centigrade():
         echo(term.yellow(u'fAhRENhEit'))
     echo(term.bold_black('...'))
     echo(u' PRESS ')
-    echo(term.bold_yellow_reverse(u'!'))
+    echo(term.bold_yellow_reverse(cf_key))
     echo(u' tO ChANGE.')
-    if getch(timeout=1) == u'!':
+    if getch(timeout=timeout_fch) == cf_key:
         get_centigrade()
+
+
+def chk_save_location(location):
+    """
+    Prompt user to save location for quick re-use
+    """
+    from x84.bbs import getterminal, getsession, echo, getch
+    session, term = getsession(), getterminal()
+    stored_location = session.user.get('location', dict()).items()
+    if (sorted(location.items()) == sorted(stored_location)):
+        return
+
+    # prompt to store (unsaved/changed) location
+    echo(u'\r\n\r\n')
+    echo(term.yellow(u'SAVE lOCAtION'))
+    echo(term.bold_yellow(' ('))
+    echo(term.bold_black(u'PRiVAtE'))
+    echo(term.bold_yellow(') '))
+    echo(term.yellow('? '))
+    echo(term.bold_yellow(u'['))
+    echo(term.underline_yellow(u'yn'))
+    echo(term.bold_yellow(u']'))
+    echo(u': ')
+    while True:
+        inp = getch()
+        if inp is None or inp in (u'n', u'N', u'q', u'Q', term.KEY_EXIT):
+            break
+        if inp in (u'y', u'Y', u' ', term.KEY_ENTER):
+            session.user['location'] = location
+            break
 
 
 def get_zipsearch(zipcode=u''):
@@ -512,50 +548,39 @@ def main():
     session, term = getsession(), getterminal()
     session.activity = 'Weather'
 
-    echo(u'\r\n\r\n')
-    location = session.user.get('location', dict())
     while True:
+        echo(u'\r\n\r\n')
+        location = session.user.get('location', dict())
         search = location.get('postal', u'')
         disp_search_help()
         search = get_zipsearch(search)
         if search is None or 0 == len(search):
-            return  # exit
+            # exit (no selection)
+            return
         locations = do_search(search)
         if 0 != len(locations):
             location = (locations.pop() if 1 == len(locations)
                         else chose_location(locations) or dict())
-        root = do_fetch(location.get('postal'))
+        root = fetch_weather(location.get('postal'))
         if root is None:
+            # exit (weather not found)
             return
         todays = parse_todays_weather(root)
         forecast = parse_forecast(root)
         if session.user.get('centigrade', None) is None:
+            # request C/F preference,
             get_centigrade()
         else:
+            # offer C/F preference change
             chk_centigrade()
         centigrade = session.user.get('centigrade', False)
         display_weather(todays, forecast, centigrade)
         echo(u'\r\n')
-        echo(term.yellow_reverse('--ENd Of tRANSMiSSiON--'))
-        getch()
+        echo(term.yellow_reverse(u'--ENd Of tRANSMiSSiON--'))
+        if getch() == cf_key:
+            get_centigrade()
+            continue
         break
 
-    if (sorted(location.items())
-            != sorted(session.user.get('location', dict()).items())):
-        echo(u''.join((u'\r\n\r\n',
-                       term.yellow(u'SAVE lOCAtION'),
-                       term.bold_yellow(' ('),
-                       term.bold_black(u'PRiVAtE'),
-                       term.bold_yellow(') '),
-                       term.yellow('? '),
-                       term.bold_yellow(u'['),
-                       term.underline_yellow(u'yn'),
-                       term.bold_yellow(u']'),
-                       u': '),))
-        while True:
-            inp = getch()
-            if inp is None or inp in (u'n', u'N', 'q', 'Q', term.KEY_EXIT):
-                break
-            if inp in (u'y', u'Y', u' ', term.KEY_ENTER):
-                session.user['location'] = location
-                break
+    chk_save_location(location)
+

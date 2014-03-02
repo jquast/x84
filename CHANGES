@@ -6,6 +6,7 @@
   - thanks to xzip, weather now looks like a television broadcast layout.
   - a short/malicious sub-negotiation string will not cause engine crash.
   - default board recieved some new ami/x-style art from xzip!impure
+  - resolve issues with utf8 input on slow links
 1.0.8
   - UI/bugfixes for last callers (default/lc.py) and default/ttyplay.py
 1.0.6, 1.0.7
@@ -24,6 +25,3 @@
     otherwise only new callers will appear.
   - otherwise, this new release includes general display and bug fixes and
     door support for LORD/dosemu, bbs/door.py and default/lord.py.
-
-KNOWN ISSUES
-the multibyte decoder doesn't work with tintin++, which seems to send '\x1b' in a seperate tcp sock as the remaining '[A'. We should handle this, we have in the past, but we've re-wired 'keyboard input' for the 'blessings' module, which may accept our multibyte decoder upstream. This is still incomplete, as any fixes I would make would be upstream if possible, and not in our local bastardized ver ..
