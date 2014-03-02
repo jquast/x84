@@ -1,3 +1,10 @@
+|12Sun Mar  2 14:57:06 PST 2014
+|08============================
+
+Release 1.0.9 is now on pypi. New features include a revamped 'weather' program, and some new art from xzip!impure.  Otherwise, various bugs were resolved. Thanks to a few folk now running the bbs and providing feedback. Mercyful of |08htc.zapto.org|07 has also been using this bbs as a gatewaying host to test UTF8/CP437 translation -- what a strange thing! Regardless, |08htc.zapto.org|07 now supports UTF-8 encoding like this one, so give it a try!
+
+As for blessings, the upstream author has not been accepting patches, delayed over 1 year now. I will fork the project, tentatively named 'blessed'.
+
 |12Fri Jun  7 14:37:07 EDT 2013
 |08============================
 
