@@ -215,7 +215,9 @@ class TelnetClient(object):
         self.address_pair = address_pair
         self.on_naws = on_naws
         self.active = True
-        self.env = dict([('TERM', 'unknown')])
+        self.env = dict([('TERM', 'unknown'),
+                         ('LINES', 24),
+                         ('COLUMNS', 80)])
         self.send_buffer = array.array('c')
         self.recv_buffer = array.array('c')
         self.telnet_sb_buffer = array.array('c')
@@ -875,8 +877,15 @@ class TelnetClient(object):
                 and self.env.get('COLUMNS', None) == columns):
             logger.debug('%s: NAWS repeated', self.addrport())
         else:
-            self.env['LINES'] = str(rows)
-            self.env['COLUMNS'] = str(columns)
+
+            if rows <= 0:
+                logger.debug('LINES %s ignored', rows)
+            else:
+                self.env['LINES'] = str(rows)
+            if columns <= 0:
+                logger.debug('COLUMNS %s ignored', columns)
+            else:
+                self.env['COLUMNS'] = str(columns)
             logger.debug('%s: NAWS is %sx%s',
                          self.addrport(), columns, rows)
             if self.on_naws is not None:
