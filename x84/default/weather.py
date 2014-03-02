@@ -573,14 +573,16 @@ def main():
         else:
             # offer C/F preference change
             chk_centigrade()
-        centigrade = session.user.get('centigrade', False)
-        display_weather(todays, forecast, centigrade)
-        echo(u'\r\n')
-        echo(term.yellow_reverse(u'--ENd Of tRANSMiSSiON--'))
-        if getch() == cf_key:
-            get_centigrade()
-            continue
+        while True:
+            centigrade = session.user.get('centigrade', False)
+            display_weather(todays, forecast, centigrade)
+            echo(u'\r\n')
+            echo(term.yellow_reverse(u'--ENd Of tRANSMiSSiON--'))
+            # allow re-displaying weather between C/F, even at EOT prompt
+            if getch() == cf_key:
+                get_centigrade()
+                continue
+            break
         break
 
     chk_save_location(location)
-
