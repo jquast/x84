@@ -871,25 +871,25 @@ class TelnetClient(object):
                          self.addrport(), len(charbuf),)
             return
 
-        columns = str((256 * ord(charbuf[1])) + ord(charbuf[2]))
-        rows = str((256 * ord(charbuf[3])) + ord(charbuf[4]))
-        if (self.env.get('LINES', None) == rows
-                and self.env.get('COLUMNS', None) == columns):
+        columns = (256 * ord(charbuf[1])) + ord(charbuf[2])
+        rows = (256 * ord(charbuf[3])) + ord(charbuf[4])
+        old_rows = self.env.get('LINES', None)
+        old_columns = self.env.get('COLUMNS', None)
+        if (old_rows == str(rows) and old_columns == str(columns)):
             logger.debug('%s: NAWS repeated', self.addrport())
-        else:
-
-            if rows <= 0:
-                logger.debug('LINES %s ignored', rows)
-            else:
-                self.env['LINES'] = str(rows)
-            if columns <= 0:
-                logger.debug('COLUMNS %s ignored', columns)
-            else:
-                self.env['COLUMNS'] = str(columns)
-            logger.debug('%s: NAWS is %sx%s',
-                         self.addrport(), columns, rows)
-            if self.on_naws is not None:
-                self.on_naws(self)
+            return
+        if rows <= 0:
+            logger.debug('LINES %s ignored', rows)
+            rows = old_rows
+        if columns <= 0:
+            logger.debug('COLUMNS %s ignored', columns)
+            columns = old_columns
+        self.env['LINES'] = str(rows)
+        self.env['COLUMNS'] = str(columns)
+        logger.debug('%s: NAWS is %sx%s',
+                     self.addrport(), columns, rows)
+        if self.on_naws is not None:
+            self.on_naws(self)
 
     #---[ State Juggling for Telnet Options ]----------------------------------
     ## Sometimes verbiage is tricky.  I use 'note' rather than 'set' here
