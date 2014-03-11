@@ -171,7 +171,7 @@ class Dropfile(object):
         else:
             raise ValueError('filetype is unknown')
 
-    def get_doorsys():
+    def get_doorsys(self):
         return (u'%s:\r\n%d\r\n'  # comport, comspeed
                 '%d\r\n%d\r\n'  # parity, node
                 '%d\r\nY\r\n'  # comspeed, screen?
@@ -206,7 +206,7 @@ class Dropfile(object):
                     self.remaining_mins, self.lastcall_time,
                     self.lastcall_time))
 
-    def get_door32():
+    def get_door32(self):
         return (u'%d\r\n%d\r\n%d\r\n'  # comm type, handle, speed
                 '%s\r\n%d\r\n%s\r\n'  # system name, user num, real name
                 '%s\r\n%d\r\n%d\r\n'  # alias, security level, mins remain,
@@ -216,7 +216,7 @@ class Dropfile(object):
                     self.systemname, self.usernum, self.fullname,
                     self.alias, self.securitylevel, self.remaining_mins,
                     self.node))
-    def get_callinfo():
+    def get_callinfo(self):
         return (u'%s\r\n%d\r\n%s\r\n'  # user name, comspeed, location
                 '%d\r\n%d\r\nCOLOR\r\n' # security level, mins remain, ansi?
                 '%s\r\n%d\r\n%d\r\n'  # password, usernum, time_used,
