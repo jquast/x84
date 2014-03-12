@@ -179,11 +179,11 @@ class Dropfile(object):
                 '%s\r\n%s\r\n'  # fullname, location
                 '123-456-7890\r\n123-456-7890\r\n'  # phone numbers
                 '%s\r\n%d\r\n%d\r\n'  # password, security level, numcalls
-                '%d\r\n%d\r\n%d\r\n'  # lastcall, remaining (mins, secs)
+                '%d\r\n%d\r\n%d\r\n'  # lastcall, remaining (secs, mins)
                 'NG\r\n%d\r\nN\r\n'  # graphics mode, page length, expert mode
                 '1,2,3,4,5,6,7\r\n1\r\n'  # conferences, conf. sel, exp. date
                 '01/01/99\r\n'  # exp. date
-                '%s\r\n%s\r\n%s\r\n'  # user number, def. xfer protocol,
+                '%s\r\n%s\r\n'  # user number, def. xfer protocol,
                 '0\r\n0\r\n'  # total #u/l, total #d/l
                 '0\r\n9999999\r\n'  # daily d/l limit return val/write val
                 '01/01/2001\r\n'  # birthdate
