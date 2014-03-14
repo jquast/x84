@@ -171,7 +171,7 @@ class Dropfile(object):
         else:
             raise ValueError('filetype is unknown')
 
-    def get_doorsys():
+    def get_doorsys(self):
         return (u'%s:\r\n%d\r\n'  # comport, comspeed
                 '%d\r\n%d\r\n'  # parity, node
                 '%d\r\nY\r\n'  # comspeed, screen?
@@ -179,11 +179,11 @@ class Dropfile(object):
                 '%s\r\n%s\r\n'  # fullname, location
                 '123-456-7890\r\n123-456-7890\r\n'  # phone numbers
                 '%s\r\n%d\r\n%d\r\n'  # password, security level, numcalls
-                '%d\r\n%d\r\n%d\r\n'  # lastcall, remaining (mins, secs)
+                '%d\r\n%d\r\n%d\r\n'  # lastcall, remaining (secs, mins)
                 'NG\r\n%d\r\nN\r\n'  # graphics mode, page length, expert mode
                 '1,2,3,4,5,6,7\r\n1\r\n'  # conferences, conf. sel, exp. date
                 '01/01/99\r\n'  # exp. date
-                '%s\r\n%s\r\n%s\r\n'  # user number, def. xfer protocol,
+                '%s\r\n%s\r\n'  # user number, def. xfer protocol,
                 '0\r\n0\r\n'  # total #u/l, total #d/l
                 '0\r\n9999999\r\n'  # daily d/l limit return val/write val
                 '01/01/2001\r\n'  # birthdate
@@ -206,7 +206,7 @@ class Dropfile(object):
                     self.remaining_mins, self.lastcall_time,
                     self.lastcall_time))
 
-    def get_door32():
+    def get_door32(self):
         return (u'%d\r\n%d\r\n%d\r\n'  # comm type, handle, speed
                 '%s\r\n%d\r\n%s\r\n'  # system name, user num, real name
                 '%s\r\n%d\r\n%d\r\n'  # alias, security level, mins remain,
@@ -216,7 +216,7 @@ class Dropfile(object):
                     self.systemname, self.usernum, self.fullname,
                     self.alias, self.securitylevel, self.remaining_mins,
                     self.node))
-    def get_callinfo():
+    def get_callinfo(self):
         return (u'%s\r\n%d\r\n%s\r\n'  # user name, comspeed, location
                 '%d\r\n%d\r\nCOLOR\r\n' # security level, mins remain, ansi?
                 '%s\r\n%d\r\n%d\r\n'  # password, usernum, time_used,
@@ -375,6 +375,8 @@ class Door(object):
         """ Given door output in bytes, if 'cp437' is specified in class
         constructor, convert to utf8 glyphs using cp437 encoding; otherwise
         decode output as utf8. """
+        from x84.bbs.cp437 import CP437
+        
         if self.cp437:
             return u''.join((CP437[ord(ch)] for ch in data))
 
