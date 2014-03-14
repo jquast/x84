@@ -244,7 +244,7 @@ def _loop(telnetd):
                                 tty.sid, (event, data), _sid)
                         held=_sid
                         break
-                if held is not False:
+                if held is False:
                     logger.debug('[%s] %r discovered stale lock, previously '
                             'held by %s.', tty.sid, (event, data), held)
                     del locks[event]
