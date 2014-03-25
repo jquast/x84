@@ -237,7 +237,7 @@ class Dropfile(object):
                 % (self.alias, self.comspeed, self.location,
                     self.securitylevel, self.remaining_mins, self.password,
                     self.usernum, self.time_used, self.xferprotocol,
-                    self.numcalls, self.pageheight, self.comspeed, ))
+                    self.numcalls, self.pageheight, self.comport, self.comspeed, ))
 
     def get_dorinfo(self):
         return (u'%s\r\n%s\r\n%s\r\n' # software, sysop fname, sysop lname,
