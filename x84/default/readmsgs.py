@@ -360,8 +360,7 @@ def read_messages(msgs, new):
     len_author = ini.CFG.getint('nua', 'max_user')
     len_ago = 9
     len_subject = ini.CFG.getint('msg', 'max_subject')
-    len_preview = min(len_idx + len_author + len_ago + len_subject + 4,
-                      term.width - 2)
+    len_preview = min(len_idx + len_author + len_ago + len_subject + -1, term.width - 2)
     reply_depth = ini.CFG.getint('msg', 'max_depth')
     indent_start, indent, indent_end = u'\\', u'-', u'> '
 
@@ -559,8 +558,8 @@ def read_messages(msgs, new):
         return u''.join((term.move(0, 0), term.clear, u'\r\n',
                          u'// REAdiNG MSGS ..'.center(term.width).rstrip(),
                          selector.refresh(),
-                         reader.border(),
-                         selector.border(),
+                         selector.border() if READING else reader.border(),
+                         reader.border() if READING else selector.border(),
                          selector.title(
                              sel_padd_left + title + sel_padd_right),
                          selector.footer(get_selector_footer(idx)
