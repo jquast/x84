@@ -1,3 +1,10 @@
+1.1.0
+  - resolve issue #53: using upstream 'blessed' fork.
+  - fix issue #38: chat buffer lost on resize
+  - fix issue #43: bordering math issues in msgreader
+  - pull request #46, #47, #50, #54: misc. dropfile bugfixes (haliphax)
+  - pull request #45: resolves CP437 issue with output_filter (haliphax)
+
 1.0.9
   - tagging no longer requires 'moderator' or 'sysop' group by default,
     is now configurable with .ini options of section [msg]:
