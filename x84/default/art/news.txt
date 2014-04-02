@@ -1,3 +1,19 @@
+|12Tue Apr  1 20:05:28 PDT 2014
+|08============================
+
+Release 1.1.0 has been reached -- 10 iterations! Much more than I thought. Special thanks to |12haliphax|07 and |12hellbeard|07 of |12telnet://oddnetwork.org|07 and |12telnet://bloodisland.ph4.se|07 for playing with x/84 and making their own customizations and driving these various updates.
+
+We are looking to improve upon messaging and intra-bbs messaging in the next release, at least with other x/84 boards.
+
+As for the terminal support in x/84, this has now been published as an independent package, 'blessed' and re-used with x/84. It has gone through a great deal of improvement, you may notice more keys on my terminals and better input encoding support for SyncTerm. Anyway, you can build your own python apps upon it:
+
+  |11https://pypi.python.org/pypi/blessed/
+
+Expect to see some of the bbs applications in x/84 independently packaged and released to pypi as well -- others might make their way into the bbs -- for example, somebody recently created a 2048 clone with 'blessed':
+
+  |11https://pypi.python.org/pypi/macht/
+
+
 |12Sun Mar  2 14:57:06 PST 2014
 |08============================
 
