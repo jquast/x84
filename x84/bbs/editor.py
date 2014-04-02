@@ -51,6 +51,7 @@ class LineEditor(object):
         term = x84.bbs.session.getterminal()
         self.keyset['refresh'].append(term.KEY_REFRESH)
         self.keyset['backspace'].append(term.KEY_BACKSPACE)
+        self.keyset['backspace'].append(term.KEY_DELETE)
         self.keyset['enter'].append(term.KEY_ENTER)
         self.keyset['exit'].append(term.KEY_EXIT)
 
@@ -362,6 +363,7 @@ class ScrollingEditor(AnsiWindow):
         term = x84.bbs.session.getterminal()
         self.keyset['refresh'].append(term.KEY_REFRESH)
         self.keyset['backspace'].append(term.KEY_BACKSPACE)
+        self.keyset['backspace'].append(term.KEY_DELETE)
         self.keyset['enter'].append(term.KEY_ENTER)
         self.keyset['exit'].append(term.KEY_EXIT)
 

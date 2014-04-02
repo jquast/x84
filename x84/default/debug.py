@@ -7,8 +7,8 @@ def main():
     from x84.bbs import getsession
     assert 'sysop' in getsession().user.groups
 
-    return migrate_105lc()
-    #return nothing()
+    #return migrate_105lc()
+    return nothing()
 
     # but this is a great way to make data manipulations,
     # exampled here is importing of a .csv import of

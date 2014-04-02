@@ -4,7 +4,7 @@ Logging handler for x/84 BBS, http://github.com/jquast/x84
 import logging
 import copy
 import sys
-from x84.blessings import Terminal
+from blessed import Terminal
 
 
 class ColoredConsoleHandler(logging.StreamHandler):
