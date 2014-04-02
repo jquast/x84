@@ -57,7 +57,6 @@ x84/default/writemsg.py
 x84/default/art/1984.asc
 x84/default/art/__init__.py
 x84/default/art/bbslist.asc
-x84/default/art/cx2m-1337.ans
 x84/default/art/irc.asc
 x84/default/art/lc.asc
 x84/default/art/main.asc
@@ -68,7 +67,6 @@ x84/default/art/nua.asc
 x84/default/art/online.asc
 x84/default/art/plant-256.ans
 x84/default/art/plant.ans
-x84/default/art/po-help.ans
 x84/default/art/sense.ans
 x84/default/art/test.ans
 x84/default/art/top-IMP-8YL.ans
@@ -79,8 +77,6 @@ x84/default/art/top-h7-e1999.ans
 x84/default/art/top-mkk-ice.ans
 x84/default/art/ueditor.asc
 x84/default/art/xz-1984.ans
-x84/default/art/xz-cotm.ans
-x84/default/art/xz-news.ans
 x84/default/art/weather/1.ans
 x84/default/art/weather/11.ans
 x84/default/art/weather/12.ans
