@@ -4,6 +4,7 @@ Terminal handler for x/84 bbs.  http://github.com/jquast/x84
 import threading
 import logging
 import socket
+import codecs
 import time
 import re
 
@@ -19,8 +20,20 @@ class Terminal(BlessedTerminal):
         BlessedTerminal.__init__(self, kind, stream)
 
     def inkey(self, timeout=None, esc_delay=0.35):
-        val = BlessedTerminal.inkey(self, timeout=None, esc_delay=0.35)
-        return val
+        try:
+            return BlessedTerminal.inkey(self, timeout, esc_delay=0.35)
+        except UnicodeDecodeError, err:
+            log = logging.getLogger()
+            log.warn('UnicodeDecodeError: {}'.format(err))
+            return u'?'
+
+    def set_keyboard_decoder(self, encoding):
+        try:
+            self._keyboard_decoder = codecs.getincrementaldecoder(encoding)()
+            self._encoding = encoding
+        except Exception, err:
+            log = logging.getLogger()
+            log.exception(err)
 
     def kbhit(self, timeout=0):
         from x84.bbs import getsession
@@ -32,7 +45,8 @@ class Terminal(BlessedTerminal):
 
     def getch(self):
         from x84.bbs import getsession
-        return getsession().read_event('input')
+        val = getsession().read_event('input')
+        return self._keyboard_decoder.decode(val, final=False)
 
     def _height_and_width(self):
         from blessed.terminal import WINSZ
@@ -42,6 +56,7 @@ class Terminal(BlessedTerminal):
     @property
     def is_a_tty(self):
         return True
+
 
 def init_term(out_queue, lock, env):
     """

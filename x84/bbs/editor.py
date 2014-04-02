@@ -53,7 +53,7 @@ class LineEditor(object):
         self.keyset['backspace'].append(term.KEY_BACKSPACE)
         self.keyset['backspace'].append(term.KEY_DELETE)
         self.keyset['enter'].append(term.KEY_ENTER)
-        self.keyset['exit'].append(term.KEY_EXIT)
+        self.keyset['exit'].append(term.KEY_ESCAPE)
 
     @property
     def quit(self):
@@ -159,7 +159,7 @@ class LineEditor(object):
     def read(self):
         """
         Reads input until the ENTER or ESCAPE key is pressed (Blocking).
-        Allows backspacing. Returns unicode text, or None when cancelled.
+        Allows backspacing. Returns unicode text, or None when canceled.
         """
         from x84.bbs import getch
         from x84.bbs.output import echo
@@ -365,7 +365,7 @@ class ScrollingEditor(AnsiWindow):
         self.keyset['backspace'].append(term.KEY_BACKSPACE)
         self.keyset['backspace'].append(term.KEY_DELETE)
         self.keyset['enter'].append(term.KEY_ENTER)
-        self.keyset['exit'].append(term.KEY_EXIT)
+        self.keyset['exit'].append(term.KEY_ESCAPE)
 
     def process_keystroke(self, keystroke):
         """
@@ -394,7 +394,7 @@ class ScrollingEditor(AnsiWindow):
     def read(self):
         """
         Reads input until the ENTER or ESCAPE key is pressed (Blocking).
-        Allows backspacing. Returns unicode text, or None when cancelled.
+        Allows backspacing. Returns unicode text, or None when canceled.
         """
         from x84.bbs import getch
         from x84.bbs.output import echo

@@ -66,11 +66,12 @@ def getch(timeout=None):
     behavior unless upstream blessings accepts our impl. in some form ..
     """
     keystroke = getterminal().inkey(timeout)
-    if keystroke is None:
+    if keystroke == u'':
         return None
     if keystroke.is_sequence:
         return keystroke.code
     return keystroke
+
 
 def gosub(*arg):
     """

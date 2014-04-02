@@ -57,7 +57,8 @@ class IPCStream(object):
         """
         Sends unicode text to Pipe. Default encoding is 'ascii',
         which is unset only when used with blessings, which rarely
-        writes directly to the stream.
+        writes directly to the stream (context managers, such as
+        "with term.location(0, 0):" have such side effects).
         """
         self.lock.acquire()
         self.oqueue.send(('output', (ucs, encoding)))

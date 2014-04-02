@@ -59,7 +59,7 @@ class Selector(AnsiWindow):
         self.keyset['left'].append(term.KEY_LEFT)
         self.keyset['right'].append(term.KEY_RIGHT)
         self.keyset['enter'].append(term.KEY_ENTER)
-        self.keyset['exit'].append(term.KEY_EXIT)
+        self.keyset['exit'].append(term.KEY_ESCAPE)
 
     def process_keystroke(self, keystroke):
         """

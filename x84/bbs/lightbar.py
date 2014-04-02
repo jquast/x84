@@ -161,12 +161,12 @@ class Lightbar (AnsiWindow):
         self.keyset = NETHACK_KEYSET
         self.keyset['home'].append(term.KEY_HOME)
         self.keyset['end'].append(term.KEY_END)
-        self.keyset['pgup'].append(term.KEY_PPAGE)
-        self.keyset['pgdown'].append(term.KEY_NPAGE)
+        self.keyset['pgup'].append(term.KEY_PGUP)
+        self.keyset['pgdown'].append(term.KEY_PGDOWN)
         self.keyset['up'].append(term.KEY_UP)
         self.keyset['down'].append(term.KEY_DOWN)
         self.keyset['enter'].append(term.KEY_ENTER)
-        self.keyset['exit'].append(term.KEY_EXIT)
+        self.keyset['exit'].append(term.KEY_ESCAPE)
 
     def process_keystroke(self, key):
         """
@@ -198,7 +198,7 @@ class Lightbar (AnsiWindow):
     def read(self):
         """
         Reads input until the ENTER or ESCAPE key is pressed (Blocking).
-        Allows backspacing. Returns unicode text, or None when cancelled.
+        Allows backspacing. Returns unicode text, or None when canceled.
         """
         from x84.bbs import getch
         from x84.bbs.output import echo

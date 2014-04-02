@@ -103,12 +103,12 @@ class Pager(AnsiWindow):
         term = x84.bbs.session.getterminal()
         self.keyset['home'].append(term.KEY_HOME)
         self.keyset['end'].append(term.KEY_END)
-        self.keyset['pgup'].append(term.KEY_PPAGE)
-        self.keyset['pgdown'].append(term.KEY_NPAGE)
+        self.keyset['pgup'].append(term.KEY_PGUP)
+        self.keyset['pgdown'].append(term.KEY_PGDOWN)
         self.keyset['up'].append(term.KEY_UP)
         self.keyset['down'].append(term.KEY_DOWN)
         self.keyset['down'].append(term.KEY_ENTER)
-        self.keyset['exit'].append(term.KEY_EXIT)
+        self.keyset['exit'].append(term.KEY_ESCAPE)
 
     def process_keystroke(self, keystroke):
         """

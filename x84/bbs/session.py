@@ -182,13 +182,12 @@ class Session(object):
     def encoding(self, value):
         # pylint: disable=C0111
         #         Missing docstring
-        import codecs
         if value != self._encoding:
             logger = logging.getLogger()
             logger.info('encoding is %s.', value)
             assert value in ('utf8', 'cp437')
             self._encoding = value
-            self._decoder = codecs.getincrementaldecoder(value)()
+            getterminal().set_keyboard_decoder(self._encoding)
 
     @property
     def pid(self):
@@ -435,7 +434,6 @@ class Session(object):
         via event queue
         """
         self._last_input_time = time.time()
-        ctrl_l = self.terminal.KEY_REFRESH
 
         logger = logging.getLogger()
         if self._tap_input and logger.isEnabledFor(logging.DEBUG):
