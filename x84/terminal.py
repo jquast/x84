@@ -7,15 +7,20 @@ import socket
 import time
 import re
 
-from x84.blessings import Terminal as BlessingsTerminal
+from blessed import Terminal as BlessedTerminal
 
 TERMINALS = dict()
 
-class Terminal(BlessingsTerminal):
+
+class Terminal(BlessedTerminal):
     def __init__(self, kind, stream, rows, columns):
         self.rows = rows
         self.columns = columns
-        BlessingsTerminal.__init__(self, kind, stream)
+        BlessedTerminal.__init__(self, kind, stream)
+
+    def inkey(self, timeout=None, esc_delay=0.35):
+        val = BlessedTerminal.inkey(self, timeout=None, esc_delay=0.35)
+        return val
 
     def kbhit(self, timeout=0):
         from x84.bbs import getsession
@@ -30,7 +35,9 @@ class Terminal(BlessingsTerminal):
         return getsession().read_event('input')
 
     def _height_and_width(self):
-        return (self.rows, self.columns)
+        from blessed.terminal import WINSZ
+        return WINSZ(ws_row=self.rows, ws_col=self.columns,
+                     ws_xpixel=None, ws_ypixel=None)
 
     @property
     def is_a_tty(self):

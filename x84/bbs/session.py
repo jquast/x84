@@ -137,9 +137,9 @@ class Session(object):
         if self._activity != value:
             logger = logging.getLogger()
             logger.debug('activity=%s', value)
-            term = self.env.get('TERM', 'unknown')
+            kind = self.env.get('TERM', 'unknown')
             set_title = self.user.get('set-title', (
-                'xterm' in term or 'rxvt' in term
+                'xterm' in kind or 'rxvt' in kind
                 or '_xtitle' in self.env))
             self._activity = value
             if set_title:
