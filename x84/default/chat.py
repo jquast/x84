@@ -177,7 +177,7 @@ def get_pager(pager=None):
     width = int(term.width * .9)
     yloc = term.height - height - 1
     xloc = int(term.width / 2) - (width / 2)
-    pager = Pager(height, width, yloc, xloc)
+    new_pager = Pager(height, width, yloc, xloc)
     if pager is not None:
         content = pager.content
         # little hack to keep empty lines from re-importing
@@ -188,13 +188,13 @@ def get_pager(pager=None):
             if ucs.endswith(u'\x1b[m'):
                 ucs = ucs[len(u'\x1b[m'):]
             content[row] = ucs
-        pager.update('\r\n'.join(content))
-    pager.enable_scrolling = True
-    pager.colors['border'] = term.cyan
-    pager.glyphs['right-vert'] = u'|'
-    pager.glyphs['left-vert'] = u'|'
-    pager.glyphs['bot-horiz'] = u''
-    return pager
+        new_pager.update('\r\n'.join(content))
+    new_pager.enable_scrolling = True
+    new_pager.colors['border'] = term.cyan
+    new_pager.glyphs['right-vert'] = u'|'
+    new_pager.glyphs['left-vert'] = u'|'
+    new_pager.glyphs['bot-horiz'] = u''
+    return new_pager
 
 
 def main(channel=None, caller=None):
