@@ -31,6 +31,7 @@ def refresh():
         ('!', 'ENCOdiNG'),
         ('t', 'EtRiS'),
         ('s', 'YS. iNfO'),
+        ('u', 'SER LiST'),
         ('f', 'ORECASt'),
         ('e', 'dit PROfilE'),
         ('p', 'OSt A MSG'),
@@ -88,6 +89,8 @@ def main():
             gosub('ol')
         elif inp == u's':
             gosub('si')
+        elif inp == u'u':
+            gosub('userlist')
         elif inp == u'w':
             gosub('online')
         elif inp == u'n':

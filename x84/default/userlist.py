@@ -1,4 +1,4 @@
-# Userlister v1.0 by Hellbeard for x84
+""" Userlister v1.0 by Hellbeard for x84 """
 
 from x84.bbs import getsession, getterminal, echo, getch
 from x84.bbs import list_users, get_user, timeago
@@ -23,7 +23,7 @@ def waitprompt():
         numberofrows = 0
         term = getterminal()
 
-        echo ('\r\n'+term.magenta+'('+term.green+'..'+term.white+' press any key to continue '+term.green+'..'+term.magenta+')')
+        echo ('\n\r'+term.magenta+'('+term.green+'..'+term.white+' press any key to continue '+term.green+'..'+term.magenta+')')
         getch()
         echo(term.normal_cursor)
         return
@@ -32,6 +32,7 @@ def waitprompt():
 
 def main():
    session, term = getsession(), getterminal()
+   session.activity = 'userlist'
    echo(term.clear)
    showansi('userlist.ans')
    echo('\r\n')

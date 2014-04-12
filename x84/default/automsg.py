@@ -16,7 +16,7 @@ def banner():
   echo (banner)
 
   msg = ''
-  fo = open(os.path.dirname(__file__)+ '/../data/automsg.txt', 'r')
+  fo = open(os.path.dirname(__file__)+ '/art/automsg.txt', 'r')
 
   echo(term.move(9,30)+term.blue_on_green+str(fo.readline())+term.normal)
 
