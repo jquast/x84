@@ -35,7 +35,9 @@ class Terminal(BlessedTerminal):
             log = logging.getLogger()
             log.exception(err)
 
-    def kbhit(self, timeout=0):
+    def kbhit(self, timeout=0, _intr_continue=True):
+        # _intr_continue has no meaning here, sigwinch or events do not
+        # interrupt the event IPC.
         from x84.bbs import getsession
         val = getsession().read_event('input', timeout)
         if val is not None:
