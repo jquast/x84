@@ -38,9 +38,10 @@ def main():
         user = get_user(handle)
         origin = user.location
         ago = timeago(time.time() - user.lastcall)
-        echo(term.move_x(4) + term.white(handle))
-        echo(term.move_x(32) + term.green(origin))
-        echo(term.move_x(59) + term.bright_white(ago))
+        echo(u' '*4)
+        echo(term.ljust(term.white(handle), 28))
+        echo(term.lust(term.green(origin), 18))
+        echo(term.bright_white(ago))
         if (firstpage and counter % (term.height - 12) == 0 or
                 counter % (term.height - 2) == 0):
             firstpage = False
