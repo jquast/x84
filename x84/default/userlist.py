@@ -1,58 +1,50 @@
-""" Userlister v1.0 by Hellbeard for x84 """
+""" Userlister for x/84 bbs, https://github.com/jquast/x84 """
+__version__ = 1.0
+__author__ = 'Hellbeard'
 
-from x84.bbs import getsession, getterminal, echo, getch
-from x84.bbs import list_users, get_user, timeago
-from x84.bbs import userbase
+from x84.bbs import getsession, getterminal, echo
+from x84.bbs import list_users, get_user, timeago, showcp437
 import time
+import os
 
-# ------------------------------------------------------------------
 
-def showansi(fname):
-    """ Return banner """
-    from x84.bbs import getterminal, Ansi, from_cp437, showcp437
-    import os
+def banner():
+    """ Display banner """
     term = getterminal()
-    for line in showcp437(os.path.dirname(__file__)+ '/art/'+fname):
+    echo(term.clear)
+    artfile = os.path.join(os.path.dirname(__file__), 'art', 'userlist.ans')
+    for line in showcp437(artfile):
         echo(line)
+    echo(u'\r\n')
 
-# ------------------------------------------------------------------
 
 def waitprompt():
-        ansiprompt = {}
-        numberofprompts = 0
-        numberofrows = 0
-        term = getterminal()
-
-        echo ('\n\r'+term.magenta+'('+term.green+'..'+term.white+' press any key to continue '+term.green+'..'+term.magenta+')')
-        getch()
-        echo(term.normal_cursor)
-        return
-
-# ------------------------------------------------------------------
+    term = getterminal()
+    echo(u'\n\r')
+    echo(term.magenta(u'(') + term.green(u'..'))
+    echo(term.white(u' press any key to continue ') + term.green(u'..'))
+    echo(term.magenta(u')'))
+    term.inkey()
+    echo(term.normal_cursor)
+    return
 
 def main():
-   session, term = getsession(), getterminal()
-   session.activity = 'userlist'
-   echo(term.clear)
-   showansi('userlist.ans')
-   echo('\r\n')
+    session, term = getsession(), getterminal()
+    session.activity = 'userlist'
+    banner()
+    firstpage = True
+    handles = sorted(list_users(), key=lambda s: s.lower())
+    for counter, handle in enumerate(handles):
+        user = get_user(handle)
+        origin, ago = user.location
+        ago = timeago(time.time() - user.lastcall)
+        echo(term.move_x(4) + term.white(handle))
+        echo(term.move_x(32) + term.green(origin))
+        echo(term.move_x(59) + term.bright_white(ago))
+        if (firstpage and counter % (term.height - 12) == 0 or
+                counter % (term.height - 2) == 0):
+            firstpage = False
+            waitprompt()
+            echo(term.move_x(0) + term.clear_eol + term.move_up)
 
-   counter = 0
-   sortera = []
-   user_handles = list_users()
-
-   for handle in user_handles:
-      user_record = get_user(handle)
-      sortera.append(str(user_record.handle))
-   sortera = sorted(sortera, key=lambda s: s.lower())
-
-   for i in range (0,len(sortera)):
-      user_record = get_user(sortera[i])
-      echo(term.white+term.move_x(4)+user_record.handle+term.move_x(32)+term.green(user_record.location)+term.move_x(59)+term.bright_white+timeago(time.time() - user_record.lastcall)+'\r\n')
-      counter = counter + 1
-      if counter > term.height - 12:
-          counter = 0
-          waitprompt()
-          echo (term.move_x(0)+term.clear_eol+term.move_up)
-
-   waitprompt()
+    waitprompt()
