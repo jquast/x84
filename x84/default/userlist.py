@@ -7,7 +7,9 @@ from x84.bbs import list_users, get_user, timeago, showcp437
 import time
 import os
 
-BANNER_HEIGHT = 8
+# actually ansi height + prompt length
+BANNER_HEIGHT = 12
+
 
 def banner():
     """ Display banner """
