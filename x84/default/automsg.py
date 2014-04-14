@@ -13,6 +13,7 @@ def get_datafile_path():
 
 
 def ask(msg):
+    term = getterminal()
     echo(term.move(18, 0))
     echo(term.magenta(msg))
     echo(term.green(u'(') + term.cyan(u'yes/no') + term.green(u')'))
