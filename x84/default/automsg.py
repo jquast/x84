@@ -4,7 +4,6 @@ import os
 import codecs
 
 # -----------------------------------------------------------------------------
-
 def banner():
   term = getterminal()
   session = getsession()
@@ -35,6 +34,12 @@ def main():
   session.activity = 'automsg'
   banner()
 
+  folder = os.path.join(os.path.dirname(__file__), os.path.pardir, 'data')
+  if not os.path.exists(folder):
+    os.makedirs(folder)
+  automsg_txt = os.path.join(folder, 'automsg.txt')
+
+
   keypressed = ''
   while 1:
     keypressed = getch()
@@ -60,8 +65,8 @@ def main():
         if keypressed == 'n' or keypressed == 'N':
           return
         if keypressed == 'y' or keypressed == 'Y':
-          echo(term.move(18,0)+term.clear_eol) 
-          fo = codecs.open(os.path.dirname(__file__)+ '/../data/automsg.txt', 'w', 'utf-8')
+          echo(term.move(18,0)+term.clear_eol)
+          fo = codecs.open(automsg_txt, 'w', 'utf-8')
           fo.write(session.user.handle+'\n')
           for i in range (1,4):
             fo.write(msg[i]+'\n')
