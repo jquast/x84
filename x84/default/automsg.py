@@ -46,15 +46,16 @@ def banner():
 def main():
     term = getterminal()
     session = getsession()
-    session.activity = 'automsg'
     banner()
 
     while True:
+        session.activity = 'Viewing automsg'
         inp = term.inkey()
         if inp.lower() in (u'n', 'q') or inp.code == term.KEY_ENTER:
             return
 
         if inp.lower() == u'y':
+            session.activity = 'Writing automsg'
             echo(term.move(9, 30))
             echo(term.blue_on_green(session.user.handle))
             echo((u' ' * 7))

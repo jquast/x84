@@ -26,12 +26,11 @@ def waitprompt():
     echo(term.white(u' press any key to continue ') + term.green(u'..'))
     echo(term.magenta(u')'))
     term.inkey()
-    echo(term.normal_cursor)
-    return
+    echo('\r\n')
 
 def main():
     session, term = getsession(), getterminal()
-    session.activity = 'userlist'
+    session.activity = 'Viewing Userlist'
     banner()
     firstpage = True
     handles = sorted(list_users(), key=lambda s: s.lower())
@@ -45,8 +44,8 @@ def main():
         echo(term.bright_white(ago))
         echo('\r\n')
         # first page only, prompt stops at height - BANNER_HEIGHT
-        if ((firstpage and 0 == (term.height - 1 - BANNER_HEIGHT)
-             % (counter + BANNER_HEIGHT)) or counter % (term.height - 1) == 0):
+        if (firstpage and counter == term.height - BANNER_HEIGHT or
+                counter % (term.height - 1) == 0):
             waitprompt()
             echo(term.move_x(0) + term.clear_eol + term.move_up)
             firstpage = False
