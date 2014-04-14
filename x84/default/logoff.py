@@ -28,7 +28,8 @@ def main():
               ('pharcyde.ath.cx', 'Pharcyde BBS', 'Access Denied',),
               ('bloodisland.ph4.se', 'Blood Island', 'xzip',),
               ('ssl.archaicbinary.net', 'Archaic Binary', 'Wayne Smith',),
-              ('bbs.godta.com', 'godta', 'sk-5',)
+              ('bbs.godta.com', 'godta', 'sk-5',),
+              ('oddnetwork.org', '79 columns', 'haliphax')
               ,)
     board_fmt = u'%25s %-30s %-15s\r\n'
     goodbye_msg = u''.join((

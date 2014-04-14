@@ -187,5 +187,9 @@ def main(handle=None):
     # 9. weather
     if session.user.get('location', None):
         gosub('weather')
+    session.activity = 'top'
 
+    # 10. automsg
+    gosub('automsg')
+    
     goto('main')
