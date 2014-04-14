@@ -41,7 +41,7 @@ def main():
         ago = timeago(time.time() - user.lastcall)
         echo(u' '*4)
         echo(term.ljust(term.white(handle), 28))
-        echo(term.lust(term.green(origin), 18))
+        echo(term.ljust(term.green(origin), 18))
         echo(term.bright_white(ago))
         if ((firstpage and 0 == counter % (term.height - BANNER_HEIGHT))
                 or counter % (term.height - 1) == 0):
