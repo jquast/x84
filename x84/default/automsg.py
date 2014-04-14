@@ -6,7 +6,7 @@ import codecs
 
 def get_datafile():
     from x84.bbs import ini
-    folder = os.path.join(ini.CFG.get('datapath'), os.path.pardir, 'data')
+    folder = os.path.join(ini.CFG.get('system', 'datapath'), os.path.pardir, 'data')
     return os.path.join(folder, 'automsg.txt')
 
 
