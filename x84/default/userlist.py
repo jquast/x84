@@ -35,7 +35,7 @@ def main():
     banner()
     firstpage = True
     handles = sorted(list_users(), key=lambda s: s.lower())
-    for counter, handle in enumerate(handles):
+    for counter, handle in enumerate(handles, 1):
         user = get_user(handle)
         origin = user.location
         ago = timeago(time.time() - user.lastcall)
@@ -44,8 +44,9 @@ def main():
         echo(term.ljust(term.green(origin), 18))
         echo(term.bright_white(ago))
         echo('\r\n')
-        if ((firstpage and 0 == (term.height - BANNER_HEIGHT) % counter)
-                or (term.height - 1) % counter == 0):
+        # first page only, prompt stops at height - BANNER_HEIGHT
+        if ((firstpage and 0 == (term.height - 1 - BANNER_HEIGHT)
+             % (counter + BANNER_HEIGHT)) or counter % (term.height - 1) == 0):
             waitprompt()
             echo(term.move_x(0) + term.clear_eol + term.move_up)
             firstpage = False
