@@ -43,8 +43,9 @@ def main():
         echo(term.ljust(term.white(handle), 28))
         echo(term.ljust(term.green(origin), 18))
         echo(term.bright_white(ago))
-        if ((firstpage and 0 == counter % (term.height - BANNER_HEIGHT))
-                or counter % (term.height - 1) == 0):
+        echo('\r\n')
+        if ((firstpage and 0 == (term.height - BANNER_HEIGHT) % counter)
+                or (term.height - 1) % counter == 0):
             waitprompt()
             echo(term.move_x(0) + term.clear_eol + term.move_up)
             firstpage = False
