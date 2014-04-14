@@ -36,7 +36,7 @@ def main():
     handles = sorted(list_users(), key=lambda s: s.lower())
     for counter, handle in enumerate(handles):
         user = get_user(handle)
-        origin, ago = user.location
+        origin = user.location
         ago = timeago(time.time() - user.lastcall)
         echo(term.move_x(4) + term.white(handle))
         echo(term.move_x(32) + term.green(origin))
