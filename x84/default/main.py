@@ -36,6 +36,7 @@ def refresh():
         ('e', 'dit PROfilE'),
         ('p', 'OSt A MSG'),
         ('r', 'EAd All MSGS'),
+        ('x', '84 bulletins'),
         ('g', 'OOdbYE /lOGOff'),]
 
     # add LORD to menu only if enabled,
@@ -91,6 +92,8 @@ def main():
             gosub('si')
         elif inp == u'u':
             gosub('userlist')
+        elif inp == u'x':
+            gosub('bulletins')
         elif inp == u'w':
             gosub('online')
         elif inp == u'n':
