@@ -288,14 +288,12 @@ def get_swinfo(entry, pager):
             "Author: Mercyful Fate\n"
             "IRC: #enthral on irc.bbs-scene.org\r\n")
         output += pager.title(u'- about ' + term.blue('Enthral') + u' -')
-
     elif entry and entry.strip().lower() == 'daydream':
         output += pager.update(
             "Daydream is a powerful, fast, configurable, and stable "
             "Ami/x style bbs software for Linux and Amiga systems."
             "  " + term.bold_blue('http://www.daydreambbs.com\r\n'))
         output += pager.title(u'- about ' + term.blue('Daydream') + u' -')
-
     elif entry and entry.strip().lower() == 'citadel':
         output += pager.update(
             "Ancient history.\r\n\r\n")
