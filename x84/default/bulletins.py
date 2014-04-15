@@ -113,6 +113,7 @@ def getfilelist(katalog):
 
 def main():
     """ Main procedure. """
+    session.activity = u'Bulletins'
     term = getterminal()
     echo(term.clear+banner()+footer())
 
