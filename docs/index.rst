@@ -25,7 +25,7 @@ Contents:
 Support
 =======
 
-An irc channel, *#prsv* on efnet, is available for development discussion.
+An irc channel, *#1984* on efnet, is available for development discussion.
    
 Indices and tables
 ==================
