@@ -64,6 +64,21 @@ def ansiwrap(ucs, width=70, **kwargs):
     """
     return AnsiWrapper(width=width, **kwargs).wrap(ucs)
 
+def syncterm_setfont(fontname):
+    fontname = fontname.lower()
+    if fontname == 'topaz':
+        ansicode = '\x1b[0;40 D'
+    if fontname == 'microknight':
+        ansicode = '\x1b[0;39 D'
+    if fontname == 'potnoodle':
+        ansicode = '\x1b[0;37 D'
+    if fontname == 'mosoul':
+        ansicode = '\x1b[0;38 D'
+    if fontname == 'cp437thin':
+        ansicode = '\x1b[0;26 D'
+    if fontname == 'cp437':
+        ansicode = '\x1b[0;0 D'
+    return ansicode
 
 def echo(ucs):
     """
