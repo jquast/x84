@@ -406,7 +406,7 @@ def read_messages(msgs, new):
                 attr(u'ago'),
                 term.bold_black(':'),)
             msg_list.append((head(msg), idx, row_txt, subj))
-        msg_list.sort()
+        msg_list.sort(reverse=True)
         return [(idx, row_txt + thread_indent(depth) + subj)
                 for (_threadid, depth), idx, row_txt, subj in msg_list]
 
