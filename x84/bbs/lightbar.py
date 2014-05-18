@@ -62,28 +62,29 @@ class Lightbar (AnsiWindow):
         will be trimmed using glyphs['strip'] if their displayed width is
         wider than window.
         """
-        import x84.bbs.session
-        from x84.bbs.output import Ansi
+        from x84.bbs.session import getterminal
+        from x84.bbs.output import decode_pipe
+        term = getterminal()
+
         pos = self.pos(self.ypadding + row, self.xpadding)
         entry = self.vitem_shift + row
         if entry >= len(self.content):
             # out-of-bounds;
-            return u''.join((pos,
-                self.glyphs.get('erase', u' ') * self.visible_width,))
+            disp_erase = self.glyphs.get('erase', u' ') * self.visible_width
+            return u''.join((pos, disp_erase,))
 
         def fit_row(ucs):
             """ Strip a unicode row to fit window boundry, if necessary """
             column = self.visible_width + 1
-            wrapped = Ansi(ucs).wrap(column).splitlines()
+            wrapped = term.wrap(ucs, column)
             if len(wrapped) > 1:
                 marker = self.glyphs.get('strip', u' $')
                 marker_column = self.visible_width - len(marker)
-                wrapped = Ansi(ucs).wrap(marker_column).splitlines()
-                ucs = Ansi(wrapped[0].rstrip()).ljust(marker_column) + marker
+                wrapped = term.wrap(ucs, marker_column)
+                ucs = term.ljust(wrapped[0].rstrip(), marker_column) + marker
                 return ucs
-            return (Ansi(ucs).ljust(column))
+            return term.ljust(ucs, column)
 
-        term = x84.bbs.session.getterminal()
         # allow ucs data with '\r\n', to accomidate soft and hardbreaks; just
         # don't display them, really wrecks up cusor positioning.
         ucs = self.content[entry][1].strip(u'\r\n')
@@ -91,17 +92,18 @@ class Lightbar (AnsiWindow):
         # highlighted entry; strip of ansi sequences, use color 'highlight'
         # trim and append '$ ' if it cannot fit,
         if entry == self.index:
-            ucs = Ansi(ucs).seqfill()
-            if len(Ansi(ucs)) > self.visible_width:
+            ucs = term.strip_seqs(ucs)
+            if term.length(ucs) > self.visible_width:
                 ucs = fit_row(ucs)
             return u''.join((pos,
+                             term.normal,
                              self.colors.get('highlight', u''),
                              self.align(ucs),
                              term.normal,))
         # unselected entry; retain ansi sequences, decode any pipe characters,
         # trim and append '$ ' if it cannot fit
-        ucs = Ansi(ucs).decode_pipe()
-        if len(Ansi(ucs)) > self.visible_width:
+        ucs = decode_pipe(ucs)
+        if term.length(ucs) > self.visible_width:
             ucs = fit_row(ucs)
         return u''.join((pos,
                          self.colors.get('lowlight', u''),
@@ -110,8 +112,7 @@ class Lightbar (AnsiWindow):
 
     def fixate(self):
         """
-        Reterm unicode terminal sequence for moving cursor to current
-        selection.
+        Return terminal sequence for moving cursor to current selection.
         """
         return self.pos(self.ypadding + self.vitem_idx,
                         self.xpadding + self.visible_width)

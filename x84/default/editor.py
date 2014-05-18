@@ -361,7 +361,7 @@ def main(save_key=u'draft'):
     dirty = True
     edit = False
     digbuf, num_repeat = u'', -1
-    count_repeat = lambda: range(num_repeat if num_repeat != -1 else 1)
+    count_repeat = lambda: range(max(num_repeat, 1))
     while True:
         # poll for refresh
         if session.poll_event('refresh'):
@@ -417,18 +417,18 @@ def main(save_key=u'draft'):
         elif not edit and inp in keyset['kill']:
             # when 'killing' a line, make accomidations to clear
             # bottom-most row, otherwise a ghosting effect occurs
-            for _count in count_repeat():
+            for _ in count_repeat():
                 del lightbar.content[lightbar.index]
                 set_lbcontent(lightbar, get_lbcontent(lightbar))
-                if lightbar.visible_bottom > len(lightbar.content):
-                    echo(lightbar.refresh_row(lightbar.visible_bottom + 1))
-                else:
-                    dirty = True
+            if lightbar.visible_bottom > len(lightbar.content):
+                echo(lightbar.refresh_row(lightbar.visible_bottom + 1))
+            else:
+                dirty = True
             save_draft(save_key, get_lbcontent(lightbar))
 
         # command mode, insert line
         elif not edit and inp in keyset['insert']:
-            for _count in count_repeat():
+            for _ in count_repeat():
                 lightbar.content.insert(lightbar.index,
                                        (lightbar.index, HARDWRAP,))
                 set_lbcontent(lightbar, get_lbcontent(lightbar))
@@ -470,7 +470,7 @@ def main(save_key=u'draft'):
 
         # command mode, undo
         elif not edit and inp in keyset['undo']:
-            for _count in count_repeat():
+            for _ in count_repeat():
                 if len(UNDO):
                     set_lbcontent(lightbar, UNDO.pop())
                     dirty = True
@@ -480,7 +480,7 @@ def main(save_key=u'draft'):
 
         # command mode, join line
         elif not edit and inp in keyset['join']:
-            for _count in count_repeat():
+            for _ in count_repeat():
                 if lightbar.index + 1 < len(lightbar.content):
                     idx = lightbar.index
                     lightbar.content[idx] = (idx,
@@ -530,7 +530,7 @@ def main(save_key=u'draft'):
                 dirty = True
             else:
                 moved = False
-                for _count in count_repeat():
+                for _ in count_repeat():
                     echo(lightbar.process_keystroke(inp))
                     moved = lightbar.moved or moved
                 if moved:

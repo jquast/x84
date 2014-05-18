@@ -55,6 +55,10 @@ class Terminal(BlessedTerminal):
         return WINSZ(ws_row=self.rows, ws_col=self.columns,
                      ws_xpixel=None, ws_ypixel=None)
 
+    def padd(self, text):
+        from blessed.sequences import Sequence
+        return Sequence(text, self).padd()
+
     @property
     def is_a_tty(self):
         return True

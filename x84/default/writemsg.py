@@ -2,6 +2,16 @@
 Write public or private posts for x/84, https://github.com/jquast/x84/
 """
 
+def getstyle():
+    """ Returns a dictionary providing various terminal styles """
+    from x84.bbs import getterminal
+    term = getterminal()
+    return {
+        'highlight': term.bold_yellow,
+        'lowlight': term.yellow,
+        'underline': term.yellow_underline,
+    }
+
 
 def banner():
     """ Display banner/art ... nothing for now """
@@ -17,17 +27,20 @@ def display_msg(msg):
     from x84.bbs import getterminal, getsession, echo, Ansi
     session, term = getsession(), getterminal()
     body = msg.body.splitlines()
-    echo(u'    AUthOR: ' + term.bold_yellow(msg.author) + u'\r\n\r\n')
+    style = getstyle()
+
+    receipt = (msg.recipient if msg.recipient is not None
+               else u'<(None)=All users>')
+
+    echo(u'    AUthOR: ' + style['highlight'](msg.author) + u'\r\n\r\n')
     echo(u'   RECiPiENt: ')
-    echo(term.yellow(msg.recipient
-                     if msg.recipient is not None
-                     else u'<(None)=All users>'))
+    echo(style['lowlight'](receipt))
     echo(u'\r\n\r\n')
     echo(u'     SUBjECt: ')
-    echo(term.yellow(msg.subject))
+    echo(style['lowlight'](msg.subject))
     echo(u'\r\n\r\n')
     echo(u'        tAGS: ')
-    echo(term.yellow(u', '.join(msg.tags)))
+    echo(style['lowlight'](u', '.join(msg.tags)))
     echo(u'\r\n\r\n')
     echo(term.underline(u'        bOdY: '.ljust(term.width - 1)) + u'\r\n')
     echo(Ansi(u'\r\n'.join(body)).decode_pipe() + term.normal)
@@ -46,10 +59,11 @@ def prompt_recipient(msg):
     from x84.bbs import Selector
     import difflib
     term = getterminal()
+    style = getstyle()
     echo(u"ENtER %s, OR '%s' tO AddRESS All. %s to exit" % (
-        term.bold_yellow(u'hANdlE'),
-        term.bold_yellow(u'None'),
-        term.bold_yellow_underline('Escape'),))
+        style['highlight'](u'hANdlE'),
+        style['highlight'](u'None'),
+        style['underline']('Escape'),))
     echo(u'\r\n\r\n')
     max_user = ini.CFG.getint('nua', 'max_user')
     lne = LineEditor(max_user, msg.recipient or u'None')
@@ -72,7 +86,7 @@ def prompt_recipient(msg):
                 u'\r\n',
                 term.move(inp.yloc, inp.xloc - len(blurb)),
                 term.clear_eol,
-                term.bold_yellow(blurb))))
+                style['highlight'](blurb))))
             selection = inp.read()
             echo(term.move(inp.yloc, 0) + term.clear_eol)
             if selection == u'YES':
@@ -81,20 +95,12 @@ def prompt_recipient(msg):
             if selection is None or inp.quit:
                 return False
     else:
-        blurb = u' NO RECiPiENT; POSt tO PUbliC? '
-        inp = Selector(yloc=term.height - 1,
-                       xloc=term.width - 22,
-                       width=20, left=u'YES', right=u'NO')
-        echo(u''.join((
-            u'\r\n',
-            term.move(inp.yloc, inp.xloc - len(blurb)),
-            term.clear_eol,
-            term.bold_yellow(blurb))))
-        selection = inp.read()
-        echo(term.move(inp.yloc, 0) + term.clear_eol)
-        if selection == u'YES':
-            msg.recipient = None
-            return True
+        blurb = u' NO RECiPiENT; POSting tO PUbliC, PRESS ESC tO CANCEl'
+        echo(u''.join((u'\r\n\r\n',
+                       term.clear_eol,
+                       style['highlight'](blurb))))
+        term.inkey(0.2)
+        return True
 
 
 def prompt_subject(msg):
@@ -243,15 +249,10 @@ def prompt_body(msg):
                    xloc=term.width - 22,
                    width=20,
                    left=u'CONtiNUE', right=u'CANCEl')
-    blurb = u'CONtiNUE tO Edit MESSAGE bOdY'
-    echo(u'\r\n\r\n')
-    echo(term.move(inp.yloc, inp.xloc - len(blurb)))
-    echo(term.bold_yellow(blurb))
-    selection = inp.read()
-    echo(term.move(inp.yloc, 0) + term.clear_eol)
-    if selection != u'CONtiNUE':
-        return False
+
+    # check for previously existing draft
     if 0 != len(session.user.get('draft', u'')):
+        # XXX display age of message
         inp = Selector(yloc=term.height - 1,
                        xloc=term.width - 22,
                        width=20,
@@ -264,6 +265,7 @@ def prompt_body(msg):
         echo(term.move(inp.yloc, 0) + term.clear_eol)
         if selection == u'REStORE':
             msg.body = session.user['draft']
+
     echo(u'\r\n\r\n')
     session.user['draft'] = msg.body
     if gosub('editor', 'draft'):
@@ -326,11 +328,12 @@ def main(msg=None):
             break
         if not prompt_subject(msg):
             break
-        if not prompt_tags(msg):
-            break
         if not prompt_public(msg):
             break
         if not prompt_body(msg):
+            break
+        # XXX
+        if not prompt_tags(msg):
             break
         display_msg(msg)
         if not prompt_send():

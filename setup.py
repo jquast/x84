@@ -6,7 +6,7 @@ from distutils.core import setup
 import os
 
 setup(name='x84',
-      version='1.1.2',
+      version='1.2.0',
       description="Telnet server for UTF-8 and cp437 terminals.",
       long_description=open(os.path.join(os.path.dirname(__file__),
                                          'README.txt')).read(),
@@ -25,7 +25,9 @@ setup(name='x84',
           'requests >=1.1.0',
           'sauce >=0.1.1',
           'sqlitedict >=1.0.8',
-          'blessed >=1.8.4'],
+          'blessed >=1.8.8',
+          'wcwidth >=0.1.0',
+      ],
       scripts=['bin/x84'],
       classifiers=[
           'Environment :: Console',

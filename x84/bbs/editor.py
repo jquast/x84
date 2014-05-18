@@ -39,16 +39,16 @@ class LineEditor(object):
         """
         Initialize colors['highlight'].
         """
-        import x84.bbs.session
-        term = x84.bbs.session.getterminal()
+        from x84.bbs.session import getterminal
+        term = getterminal()
         self.colors['highlight'] = term.reverse
 
     def init_keystrokes(self):
         """
         This initializer sets keyboard keys for backspace/exit.
         """
-        import x84.bbs.session
-        term = x84.bbs.session.getterminal()
+        from x84.bbs.session import getterminal
+        term = getterminal()
         self.keyset['refresh'].append(term.KEY_REFRESH)
         self.keyset['backspace'].append(term.KEY_BACKSPACE)
         self.keyset['backspace'].append(term.KEY_DELETE)
@@ -102,33 +102,34 @@ class LineEditor(object):
 
     def refresh(self):
         """
-        Returns unicode byts suitable for drawing line.
+        Returns unicode suitable for drawing edit line.
+
         No movement or positional sequences are returned.
         """
         from x84.bbs.session import getterminal
         term = getterminal()
-        lightbar = u''.join((
+        disp_lightbar = u''.join((
             term.normal,
             self.colors.get('highlight', u''),
             ' ' * self.width,
             '\b' * self.width))
-        content = (self.hidden * len(Ansi(self.content))
-                   if self.hidden else self.content)
-        return u''.join((
-            lightbar,
-            content,
-            term.cursor_visible))
+        content = self.content
+        if self.hidden:
+            content = self.hidden * term.length(self.content)
+        return u''.join((disp_lightbar, content, term.cursor_visible))
 
     def process_keystroke(self, keystroke):
         """
         Process the keystroke received by read method and take action.
         """
+        from x84.bbs.session import getterminal
+        term = getterminal()
         self._quit = False
         if keystroke in self.keyset['refresh']:
-            return u'\b' * len(Ansi(self.content)) + self.refresh()
+            return u'\b' * term.length(self.content) + self.refresh()
         elif keystroke in self.keyset['backspace']:
             if len(self.content) != 0:
-                len_toss = len(Ansi(self.content[-1]))
+                len_toss = term.length(self.content[-1])
                 self.content = self.content[:-1]
                 return u''.join((
                     u'\b' * len_toss,
@@ -137,7 +138,7 @@ class LineEditor(object):
         elif keystroke in self.keyset['backword']:
             if len(self.content) != 0:
                 ridx = self.content.rstrip().rfind(' ') + 1
-                toss = len(Ansi(self.content[ridx:]))
+                toss = term.length(self.content[ridx:])
                 move = len(self.content[ridx:])
                 self.content = self.content[:ridx]
                 return u''.join((
@@ -151,7 +152,7 @@ class LineEditor(object):
         elif type(keystroke) is int:
             return u''
         elif (ord(keystroke) >= ord(' ') and
-                (len(Ansi(self.content)) < self.width or self.width == 0)):
+                (term.length(self.content) < self.width or self.width == 0)):
             self.content += keystroke
             return keystroke if not self.hidden else self.hidden
         return u''
@@ -224,7 +225,9 @@ class ScrollingEditor(AnsiWindow):
         """
         Return True when no more input can be accepted (end of line).
         """
-        return len(Ansi(self.content)) >= self.max_length
+        from x84.bbs.session import getterminal
+        term = getterminal()
+        return term.length(self.content) >= self.max_length
 
     @property
     def bell(self):
@@ -347,8 +350,8 @@ class ScrollingEditor(AnsiWindow):
         """
         Initialize colors['highlight'] as REVERSE and glyphs['strip'] as '$ '.
         """
-        import x84.bbs.session
-        term = x84.bbs.session.getterminal()
+        from x84.bbs.session import getterminal
+        term = getterminal()
         AnsiWindow.init_theme(self)
         self.colors['highlight'] = term.yellow_reverse
         self.glyphs['strip'] = '$ '
@@ -359,8 +362,8 @@ class ScrollingEditor(AnsiWindow):
         override or inherit this method to create a common color and graphic
         set.
         """
-        import x84.bbs.session
-        term = x84.bbs.session.getterminal()
+        from x84.bbs.session import getterminal
+        term = getterminal()
         self.keyset['refresh'].append(term.KEY_REFRESH)
         self.keyset['backspace'].append(term.KEY_BACKSPACE)
         self.keyset['backspace'].append(term.KEY_DELETE)
@@ -415,8 +418,9 @@ class ScrollingEditor(AnsiWindow):
         the last character, or 0 for 'after' (default).
         """
         from x84.bbs.session import getterminal
+        term = getterminal()
         xpos = self._xpadding + self._horiz_pos + x_adjust
-        return self.pos(1, xpos) + getterminal().cursor_visible
+        return self.pos(1, xpos) + term.cursor_visible
 
     def refresh(self):
         """
@@ -435,7 +439,7 @@ class ScrollingEditor(AnsiWindow):
         self._horiz_lastshift = self._horiz_shift
         self._horiz_shift = 0
         self._horiz_pos = 0
-        for _count in range(len(Ansi(self.content))):
+        for _count in range(term.length(self.content)):
             if (self._horiz_pos >
                     (self.visible_width - self.scroll_amt)):
                 self._horiz_shift += self.scroll_amt
@@ -474,9 +478,12 @@ class ScrollingEditor(AnsiWindow):
         """
         if 0 == len(self.content):
             return u''
+        from x84.bbs.session import getterminal
+        term = getterminal()
+
         rstr = u''
         # measured backspace erases over double-wide
-        len_toss = len(Ansi(self.content[-1]))
+        len_toss = term.length(self.content[-1])
         len_move = len(self.content[-1])
         self.content = self.content[:-1]
         if (self.is_scrolled and (self._horiz_pos < self.scroll_amt)):

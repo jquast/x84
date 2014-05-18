@@ -2,7 +2,6 @@
 Pager class for x/84, http://github.com/jquast/x84/
 """
 from x84.bbs.ansiwin import AnsiWindow
-from x84.bbs.output import Ansi
 import logging
 
 VI_KEYSET = {
@@ -116,7 +115,8 @@ class Pager(AnsiWindow):
         sequence suitable for refreshing when that keystroke modifies the
         window.
         """
-        import x84.bbs.session
+        from x84.bbs.session import getterminal
+        term = getterminal()
         self.moved = False
         rstr = u''
         if keystroke in self.keyset['refresh']:
@@ -137,9 +137,7 @@ class Pager(AnsiWindow):
             self._quit = True
         else:
             logger = logging.getLogger()
-            logger.debug(
-                'unhandled, %r', keystroke if type(keystroke) is not int
-                else x84.bbs.session.getterminal().keyname(keystroke))
+            logger.debug('unhandled, %r', keystroke)
         return rstr
 
     def read(self):
@@ -147,9 +145,7 @@ class Pager(AnsiWindow):
         Reads input until ESCAPE key is pressed (Blocking).  Returns None.
         """
         from x84.bbs import getch
-        from x84.bbs.session import getsession
         from x84.bbs.output import echo
-        session = getsession()
         self._quit = False
         echo(self.refresh())
         while not self.quit:
@@ -210,16 +206,16 @@ class Pager(AnsiWindow):
         Return unicode string suitable for refreshing pager window at
         visible row.
         """
-        import x84.bbs.session
-        term = x84.bbs.session.getterminal()
-        ucs = (Ansi(self.visible_content[row])
-               if row < len(self.visible_content)
-               else u'')
-        return u''.join((
-            term.normal,
-            self.pos(row + self.ypadding, self.xpadding),
-            self.align(ucs),
-            term.normal))
+        from x84.bbs.session import getterminal
+        term = getterminal()
+        ucs = u''
+        if row < len(self.visible_content):
+            ucs = self.visible_content[row]
+        disp_position = self.pos(row + self.ypadding, self.xpadding)
+        return u''.join((term.normal,
+                         disp_position,
+                         self.align(ucs),
+                         term.normal))
 
     def refresh(self, start_row=0):
         """
@@ -231,28 +227,37 @@ class Pager(AnsiWindow):
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
         return u''.join(
-            [term.normal] + [self.refresh_row(row)
-                for row in range(start_row, len(self.visible_content))]
-            + [term.normal])
+            [term.normal] + [
+                self.refresh_row(row)
+                for row in range(start_row, len(self.visible_content))
+            ] + [term.normal])
+
+    def content_wrap(self, ucs):
+        """
+        Return word-wrapped text ``ucs`` that contains newlines.
+        """
+        from x84.bbs.session import getterminal
+        term = getterminal()
+        lines = []
+        for line in ucs.splitlines():
+            if line.strip():
+                lines.extend(term.wrap(line, self.visible_width - 1))
+            else:
+                lines.append(u'')
+        return lines
 
     def update(self, ucs):
         """
-        Update content buffer with '\n'-delimited lines of Ansi.
+        Update content buffer with newline-delimited text.
         """
-        try:
-            self.content = Ansi(Ansi(ucs).decode_pipe()).wrap(
-                self.visible_width).splitlines()
-        except AssertionError, err:
-            # indeterminate length
-            logger = logging.getLogger()
-            logger.warn('%s in [%r]', err, ucs)
-            self.content = ucs.split('\r\n')
+        from x84.bbs.output import decode_pipe
+        self.content = self.content_wrap(decode_pipe(ucs))
         return self.refresh()
 
     def append(self, ucs):
         """
-        Update content buffer with additional lines of ansi unicodes.
+        Update content buffer with additional line(s) of text.
         """
-        self.content.extend(Ansi(Ansi(ucs).decode_pipe())
-                            .wrap(self.visible_width - 1).splitlines())
+        from x84.bbs.output import decode_pipe
+        self.content.extend(self.content_wrap(decode_pipe(ucs)))
         return self.move_end() or self.refresh(self.bottom)

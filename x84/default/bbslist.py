@@ -170,7 +170,7 @@ def get_bbslist(max_len=23):
         return key
     output = list()
     for _grp, _value in sorted(get_bysoftware()):
-        output.append((None, term.blue(_grp.rjust(max_len))))
+        output.append((None, term.blue(strip_name(_grp).rjust(max_len))))
         for key, bbs in sorted(_value):
             output.append((key, strip_name(bbs['bbsname'])))
     return output
@@ -272,13 +272,10 @@ def get_swinfo(entry, pager):
     fetch a description paragraph for use in pager
     """
     from x84.bbs import getterminal
-    from x84.bbs.output import Ansi
     term = getterminal()
-    output = pager.clear()
-    if entry:
-        entry = Ansi(entry).seqfill().strip()
-    if entry and entry.strip().lower() == 'enthral':
-        output += pager.update(
+    style = term.blue_underline
+    if entry.startswith('enthral'):
+        output = pager.update(
             "Enthral is a fresh look at the old school art of bbsing. "
             "It's a fresh face to an old favorite. Although Enthral is "
             "still in it's alpha stages, the system is quite stable and "
@@ -287,13 +284,13 @@ def get_swinfo(entry, pager):
             "   " + term.bold_blue('http://enthralbbs.com/') + "\r\n\r\n"
             "Author: Mercyful Fate\n"
             "IRC: #enthral on irc.bbs-scene.org\r\n")
-        output += pager.title(u'- about ' + term.blue('Enthral') + u' -')
-    elif entry and entry.strip().lower() == 'citadel':
-        output += pager.update(
+        output += pager.title(u'- about ' + style('Enthral') + u' -')
+    elif entry.startswith('citadel'):
+        output = pager.update(
             "Ancient history.\r\n\r\n")
-        output += pager.title(u'- about ' + term.blue('Citadel') + u' -')
-    elif entry and entry.strip().lower() == 'mystic':
-        output += pager.update(
+        output += pager.title(u'- about ' + style('Citadel') + u' -')
+    elif entry.startswith('mystic'):
+        output = pager.update(
             "Mystic BBS is a bulletin board system (BBS) software in "
             "the vein of other \"forum hack\" style software such as "
             "Renegade, Oblivion/2, and Iniquity. Like many of its "
@@ -305,9 +302,18 @@ def get_swinfo(entry, pager):
             "  " + term.bold_blue('http://mysticbbs.com/') + "\r\n\r\n"
             "Author: g00r00\r\n"
             "IRC: #MysticBBS on irc.efnet.org\r\n")
-        output += pager.title(u'- about ' + term.blue('Mystic') + u' -')
-    elif entry and entry.strip().lower() == 'synchronet':
-        output += pager.update(
+        output += pager.title(u'- about ' + style('Mystic') + u' -')
+    elif entry.startswith('daydream'):
+        output = pager.update(
+            "DayDream was initially created as a dialup BBS for the Amiga "
+            "computer and operating system. Later it was ported to linux. "
+            "Recently, it was ported also to *bsd and should be compatible "
+            "with most *nix flavors.\r\n\r\n"
+            "  " + term.bold_blue('http://daydreambbs.com/\r\n') + "\r\n\r\n"
+            "Author: Ryan Fantus\r\n")
+        output += pager.title(u'- about ' + style('daydream') + u' -')
+    elif entry.startswith('synchronet'):
+        output = pager.update(
             "Synchronet Bulletin Board System Software is a free "
             "software package that can turn your personal computer "
             "into your own custom online service supporting multiple "
@@ -321,30 +327,29 @@ def get_swinfo(entry, pager):
             "  " + term.bold_blue('http://www.synchro.net/\r\n') + "\r\n\r\n"
             "Author: Deuce\r\n"
             "IRC: #synchronet on irc.bbs-scene.org")
-        output += pager.title(u'- about ' + term.blue('Synchronet') + u' -')
-    elif entry and entry.strip().lower() == 'progressive':
-        output += pager.update(
+        output += pager.title(u'- about ' + style('Synchronet') + u' -')
+    elif entry.startswith('progressive'):
+        output = pager.update(
             "This bbs features threading, intra-process communication, "
             "and easy scripting in python. X/84 is a continuation of "
             "this codebase.\r\n\r\n"
             + "Author: jojo\r\n"
             "IRC: #prsv on irc.efnet.org")
-        output += pager.title(u'- about ' + term.blue('The Progressive -'))
-    elif entry and entry.strip().lower() == 'x/84':
-        output += pager.update(
+        output += pager.title(u'- about ' + style('The Progressive -'))
+    elif entry.startswith('x/84'):
+        output = pager.update(
             "X/84 is an open source python utf8 bsd-licensed telnet "
-            "server specificly designed for BBS's, MUD's, and high "
+            "server specifically designed for BBS's, MUD's, and high "
             "scriptability. It is a Continuation of 'The Progressive' "
             "and is the only BBS software to support both CP437 and "
             "UTF8 encoding.\r\n\r\n"
             "  " + term.bold_blue('https://github.com/jquast/x84/\r\n')
             + "\r\n\r\nAuthor: dingo, jojo\r\n"
             "IRC: #prsv on irc.efnet.org")
-        output += pager.title(u'- about ' + term.blue('X/84') + u' -')
+        output += pager.title(u'- about ' + style('X/84') + u' -')
     else:
-        output += pager.update(u' no information about %s.'
-                               % (entry or u'').title(),)
-        output += pager.title(u'- about ' + term.blue(entry or u'') + u' -')
+        output = pager.update(u' no information about ' + entry + ' !\r\n')
+        output += pager.title(u'- about ' + style(entry.title() or u'') + u' -')
     return output
 
 
@@ -402,9 +407,9 @@ def redraw_pager(pager, selection, active=True):
     pager.move_home()
     key, entry = selection
     if key is None:
-        output += get_swinfo((entry or u'?').strip(), pager)
-        output += pager.footer(u'-'
-                               + fancy_green('a', 'dd') + u' -')
+        # describe bbs software
+        output += get_swinfo((term.strip(entry).lower() or u'?'), pager)
+        output += pager.footer(fancy_green('a', 'dd'))
     else:
         # describe bbs in pager
         bbsname = DBProxy('bbslist')[key]['bbsname']
@@ -413,13 +418,12 @@ def redraw_pager(pager, selection, active=True):
             term.bold_blue(bbsname) if active else term.blue(bbsname)))
         output += pager.update(get_bbsinfo(key, active))
         ans = u''
-        if ansiurl != 'NONE' and 0 != len(ansiurl):
+        if ansiurl != 'NONE' and 0 != len(ansiurl) and term.width >= 79:
             ans = u'.' + fancy_green('v', 'ansi')
-        output += pager.footer(u'- '
-                               + fancy_green('a', 'dd') + u'.'
+        output += pager.footer(fancy_green('a', 'dd') + u'.'
                                + fancy_green('t', 'ElNEt') + u'.'
                                + fancy_green('c', 'OMNt') + u'.'
-                               + fancy_green('r', 'AtE') + ans + u' -')
+                               + fancy_green('r', 'AtE') + ans)
         output += pager.pos(pager.height - 2, pager.width - 4)
     # pager scroll indicator ..
     output += pager.pos(pager.height - 2, pager.width - 4)

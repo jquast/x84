@@ -131,7 +131,7 @@ def get_lightbar(lcallers, lcalls):
     yloc = term.height - height
     pager = Lightbar(height, width, yloc, xloc)
     pager.glyphs['left-vert'] = pager.glyphs['right-vert'] = u''
-    pager.colors['highlight'] = term.red_reverse
+    pager.colors['highlight'] = term.bold_red_reverse
     pager.colors['border'] = term.yellow
     pager.xpadding, pager.ypadding = 2, 1
     pager.alignment = 'center'

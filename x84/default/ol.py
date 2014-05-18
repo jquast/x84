@@ -185,17 +185,22 @@ def banner():
     import os
     term = getterminal()
     output = u''
-    output += u'\r\n\r\n'
+    output += u'\r\n\r\n' + term.normal
     if term.width >= 78:
         output += term.home + term.normal + term.clear
         # xzip's ansi is line-clean, center-align with terminal width,
         artfile = os.path.join(os.path.dirname(__file__), 'ol.ans')
-        art = open(artfile).readlines()
-        max_ans = max([len(Ansi(from_cp437(line.rstrip()))) for line in art])
+        art = [line.rstrip()
+               for line in from_cp437(open(artfile).read()).splitlines()]
+        max_ans = max([term.length(line) for line in art])
         for line in art:
-            padded = Ansi(from_cp437(line.rstrip())).center(max_ans)
-            output += term.normal + term.blue  # minor fix for this art ;/
-            output += Ansi(padded).center(term.width).rstrip() + '\r\n'
+#            output += line.rstrip() + '\r\n'
+            #output += term.normal + term.blue  # minor fix for this art ;/
+            output += term.center(term.ljust(line.rstrip(), max_ans)).rstrip() + '\r\n'
+            #+ str(term.length(line)) + '|\r\n'
+#            #Ansi(from_cp437(line.rstrip())).center(max_ans)
+#            output += term.normal + term.blue
+#            output += Ansi(padded).center(term.width).rstrip() + '\r\n'
     return output + term.normal
 
 

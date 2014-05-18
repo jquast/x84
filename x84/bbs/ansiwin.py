@@ -117,15 +117,16 @@ class AnsiWindow(object):
 
     def align(self, text, width=None):
         """
-        justify Ansi text alignment property and width. When None (default),
-        the visible width after padding is used.
+        Return ``text`` alignmnd to ``width`` using self.alignment.
+
+        When None (default), the visible width of this window is used.
         """
-        return (Ansi(text).rjust
-                if self.alignment == 'right'
-                else Ansi(text).ljust
-                if self.alignment == 'left'
-                else Ansi(text).center
-                )(width if width is not None else self.visible_width)
+        term = getterminal()
+        width = width if width is not None else (self.visible_width)
+        return (term.rjust(text, width) if self.alignment == 'right' else
+                term.ljust(text, width) if self.alignment == 'left' else
+                term.center(text, width)
+                )
 
     @property
     def visible_height(self):
@@ -195,7 +196,8 @@ class AnsiWindow(object):
         Returns sequence that positions and displays unicode sequence
         'ansi_text' at the title location of the window.
         """
-        xloc = self.width / 2 - min(len(Ansi(ansi_text)) / 2, self.width / 2)
+        term = getterminal()
+        xloc = self.width / 2 - min(term.length(ansi_text) / 2, self.width / 2)
         return self.pos(0, max(0, xloc)) + ansi_text
 
     def footer(self, ansi_text):
@@ -203,7 +205,8 @@ class AnsiWindow(object):
         Returns sequence that positions and displays unicode sequence
         'ansi_text' at the bottom edge of the window.
         """
-        xloc = self.width / 2 - min(len(Ansi(ansi_text)) / 2, self.width / 2)
+        term = getterminal()
+        xloc = self.width / 2 - min(term.length(ansi_text) / 2, self.width / 2)
         return self.pos(max(0, self.height - 1), max(0, xloc)) + ansi_text
 
     def border(self):
