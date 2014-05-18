@@ -69,7 +69,7 @@ def disp_notfound():
     bad_req = term.bold(u'bAd REQUESt')
     decorator = term.bold_red(u'-/-')
     not_found = term.bold('NOt fOUNd.')
-    echo('\r\n\r\n{bad_req} {decorator} {not_found}'.format(
+    echo(u'\r\n\r\n{bad_req} {decorator} {not_found}'.format(
         bad_req=bad_req, decorator=decorator, not_found=not_found))
     if not getsession().user.get('expert', False):
         getch(1.7)
