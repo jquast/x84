@@ -547,12 +547,22 @@ class Session(object):
             if self._script_module is None:
                 # load default/__init__.py as 'default',
                 base_script = os.path.basename(self._script_path)
+                # ensure _script_path exists
+                assert os.path.exists(self._script_path), (
+                    '[system] section value "scriptpath", %r, does not exist!'
+                    .format(self._script_path))
+                # and put it in sys.path for relative imports
+                if not self._script_path in sys.path:
+                    sys.path.insert(0, self._script_path)
+                    logger.debug("Added to sys.path: %s", self._script_path)
+                # finally, import the script
                 lookup = imp.find_module(script_name, [self._script_path])
                 # pylint: disable=W0142
                 #        Used * or ** magic
                 self._script_module = imp.load_module(base_script, *lookup)
                 self._script_module.__path__ = self._script_path
             return self._script_module
+
         # pylint: disable=W0142
         #        Used * or ** magic
         script_module = _load_script_module()
