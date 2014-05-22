@@ -401,6 +401,35 @@ def _loop(servers):
     tap_events = CFG.getboolean('session', 'tap_events')
     locks = dict()
 
+    def msgpoll():
+        import socket
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        tc = TelnetClient(s, ('msgpoll', 0))
+        tc.env['TERM'] = 'xterm-256color'
+        c = ConnectTelnet(tc)
+        c._set_socket_opts()
+        c._spawn_session()
+
+    poll_interval = None
+    last_poll = None
+
+    if CFG.has_option('msg', 'poll_interval'):
+        poll_interval = int(CFG.get('msg', 'poll_interval'))
+        last_poll = int(time.time()) - poll_interval
+
+    if CFG.has_section('msgserver'):
+        from x84.msgserve import MessageNetworkServer, MessageNetworkServerHandler
+        import SocketServer
+        import threading
+
+        addr = CFG.get('msgserver', 'addr')
+        port = int(CFG.get('msgserver', 'port'))
+        msgserver = MessageNetworkServer((addr, port), MessageNetworkServerHandler)
+        server_thread = threading.Thread(target=msgserver.serve_forever)
+        server_thread.daemon = True
+        server_thread.start()
+        log.info(u'[x84net server] Listening on %s:%d' % (addr, port))
+
     while True:
         # shutdown, close & delete inactive clients,
         for server in servers:
@@ -428,6 +457,14 @@ def _loop(servers):
 
         # receive new data from tcp clients.
         client_recv(servers, log)
+
+        # fire up message polling process if enabled
+        if poll_interval is not None:
+            now = int(time.time())
+
+            if now - last_poll >= poll_interval:
+                msgpoll()
+                last_poll = now
 
         terms = get_terminals()
 

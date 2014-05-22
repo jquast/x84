@@ -12,6 +12,7 @@ def quote_body(msg, width=79, quote_txt=u'> ', hardwrap=u'\r\n'):
     Given a message, return new string suitable for quoting it.
     """
     from x84.bbs import getterminal
+    import dateutil.tz
     term = getterminal()
     ucs = u''
     for line in msg.body.splitlines():
@@ -21,8 +22,8 @@ def quote_body(msg, width=79, quote_txt=u'> ', hardwrap=u'\r\n'):
             hardwrap,))
     return u''.join((
         'On ',
-        msg.stime.strftime(TIME_FMT), u' ',
-        msg.author, ' wrote:',
+        msg.stime.replace(tzinfo=dateutil.tz.tzlocal()).astimezone(dateutil.tz.tzutc()).strftime(TIME_FMT), u' UTC ',
+        msg.author, u' wrote:',
         hardwrap, ucs, hardwrap))
 
 
