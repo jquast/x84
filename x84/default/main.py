@@ -54,13 +54,13 @@ def refresh():
             term.bold_blue(name.split()[0]),
             u' ', u' '.join(name.split()[1:]),
             u'  '))
-        ansilen = len(Ansi(buf_str + out_str))
+        ansilen = term.length(buf_str + out_str)
         if ansilen >= (term.width * .8):
-            echo(Ansi(buf_str).center(term.width) + u'\r\n\r\n')
+            echo(term.center(buf_str, term.width) + u'\r\n\r\n')
             buf_str = out_str
         else:
             buf_str += out_str
-    echo(Ansi(buf_str).center(term.width) + u'\r\n\r\n')
+    echo(term.center(buf_str, term.width) + u'\r\n\r\n')
     echo(u' [%s]:' % (
         term.blue_underline(''.join([key for key, name in entries]))))
 
