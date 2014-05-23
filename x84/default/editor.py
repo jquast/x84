@@ -80,7 +80,7 @@ def get_lbcontent(lightbar):
     """
     Returns ucs string for content of Lightbar instance, ``lightbar``.
     """
-    from x84.bbs import Ansi
+    from x84.bbs import encode_pipe
     # a custom 'soft newline' versus 'hard newline' is implemented,
     # '\n' == 'soft', '\r\n' == 'hard'
     lines = list()
@@ -97,7 +97,8 @@ def get_lbcontent(lightbar):
             # SOFTWRAP, strip that softwrap and re-assign value to a
             # whitespace-joined value by current line value.
             lines[-1] = WHITESPACE.join((lines[-1].rstrip(), ucs.lstrip(),))
-    retval = Ansi(u''.join(lines)).encode_pipe()
+#    retval = Ansi(u''.join(lines)).encode_pipe()
+    retval = encode_pipe(u''.join(lines))
     return retval
 
 
