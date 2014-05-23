@@ -7,6 +7,14 @@ x84net message network client/server
 import SocketServer
 import multiprocessing
 
+""" dummy server for programmatic connections """
+class BlackHoleServer(SocketServer.ThreadingTCPServer):
+    pass
+
+class BlackHoleHandler(SocketServer.StreamRequestHandler):
+    def handle(self):
+        self.rfile.readline()
+
 """ server and its queues """
 class MessageNetworkServer(SocketServer.TCPServer):
     INQUEUE = multiprocessing.Queue()
@@ -22,10 +30,9 @@ class MessageNetworkServerHandler(SocketServer.StreamRequestHandler):
         import json
 
         queue = MessageNetworkServer.INQUEUE
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.settimeout(5)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
-        tc = TelnetClient(s, ('msgserve', 0))
+        pitcher = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        pitcher.connect(('localhost', 31339))
+        tc = TelnetClient(pitcher, ('msgserve', 0))
         tc.env['TERM'] = 'xterm-256color'
         c = ConnectTelnet(tc)
         c._set_socket_opts()
@@ -34,7 +41,6 @@ class MessageNetworkServerHandler(SocketServer.StreamRequestHandler):
         queue = MessageNetworkServer.OUTQUEUE
         self.wfile.write(json.dumps(queue.get()) + u'\n')
         self.wfile.flush()
-        s.close()
 
 """ functions for processing the request within x84 """
 
@@ -47,13 +53,14 @@ def server_error(logger, queue, logtext, message=None):
 
 """ server request handling process """
 def main():
-    from x84.bbs import ini, msgbase, DBProxy, getsession
+    from x84.bbs import ini, msgbase, DBProxy, getsession, echo
     from x84.bbs.aes import encryptData, decryptData
     from x84.bbs.msgbase import to_utctime, to_localtime, Msg
     from base64 import standard_b64encode, standard_b64decode
     import hashlib
     import time
     import logging
+    import json
 
     queue = MessageNetworkServer.INQUEUE
     session = getsession()

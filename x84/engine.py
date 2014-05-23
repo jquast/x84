@@ -20,7 +20,6 @@ __credits__ = [
 ]
 __license__ = 'ISC'
 
-
 def main():
     """
     x84 main entry point. The system begins and ends here.
@@ -386,9 +385,9 @@ def _loop(servers):
     # pylint: disable=R0912,R0914,R0915
     #         Too many local variables (24/15)
     import logging
+    import os
     import select
     import socket
-
     from x84.terminal import get_terminals, kill_session
     from x84.bbs.ini import CFG
 
@@ -400,11 +399,290 @@ def _loop(servers):
     timeout_ipc = CFG.getint('system', 'timeout_ipc')
     tap_events = CFG.getboolean('session', 'tap_events')
     locks = dict()
+    blackhole_socket = None
 
-    def msgpoll():
+    def lookup(client):
+        """
+        Given a telnet client, return a matching session
+        of tuple (client, inp_queue, out_queue, lock).
+        If no session matches a telnet client,
+            (None, None, None, None) is returned.
+        """
+        for _sid, tty in terminals():
+            if client == tty.client:
+                return tty
+        return None
+
+    def telnet_recv(fds):
+        """
+        test all telnet clients with file descriptors in list fds for
+        recv(). If any are disconnected, signal exit to subprocess,
+        unregister the session (if any).
+        """
+        # read in any telnet input
+        for client in (clt for (fno, clt) in telnetd.clients.iteritems()
+                       if fno in fds):
+            try:
+                client.socket_recv()
+            except Disconnected as err:
+                log.info('%s Connection Closed: %s.',
+                            client.addrport(), err)
+                tty = lookup(client)
+                if tty is None:
+                    # no session found, just de-activate this client
+                    client.deactivate()
+                else:
+                    # signal exit to sub-process and shutdown
+                    send_event, send_data = 'exception', Disconnected(err)
+                    tty.iqueue.send((send_event, send_data))
+                    unregister(tty)
+
+    def telnet_send(recv_list):
+        """
+        test all telnet clients for send(). If any are disconnected,
+        signal exit to subprocess, unregister the session, and return
+        recv_list pruned of their file descriptors.
+        """
+        for sid, tty in terminals():
+            if tty.client.send_ready():
+                try:
+                    tty.client.socket_send()
+                except Disconnected as err:
+                    log.debug('%s Disconnected: %s.', sid, err)
+                    # client.sock.fileno() can raised 'bad file descriptor',
+                    # so, to remove it from the recv_list, reverse match by
+                    # instance saved with its FD as a key for telnetd.clients!
+                    for _fd, _client in telnetd.clients.items():
+                        if tty.client == _client:
+                            if _fd in recv_list:
+                                recv_list.remove(_fd)
+                            break
+                    send_event, send_data = 'exception', Disconnected(err)
+                    tty.iqueue.send((send_event, send_data,))
+                    unregister(tty)
+        return recv_list
+
+    def accept():
+        """
+        accept new connection from telnetd.server_socket, and
+        instantiate a new TelnetClient, registering it with
+        dictionary telnetd.clients, and spawning an unmanaged
+        thread for negotiating TERM.
+        """
+        try:
+            sock, address_pair = telnetd.server_socket.accept()
+            # busy signal
+            if telnetd.client_count() > telnetd.MAX_CONNECTIONS:
+                try:
+                    sock.shutdown(socket.SHUT_RDWR)
+                except socket.error:
+                    pass
+                sock.close()
+                log.error('refused new connect; maximum reached.')
+                return
+            client = TelnetClient(sock, address_pair, telnetd.on_naws)
+            telnetd.clients[client.sock.fileno()] = client
+            # spawn negotiation and process registration thread
+            ConnectTelnet(client).start()
+            log.info('%s Connected.', client.addrport())
+        except socket.error as err:
+            log.error('accept error %d:%s', err[0], err[1],)
+
+    @timeout_alarm(timeout_ipc, False)   # REMOVEME
+    def f_send_event(iqueue, event, data):
+        """
+        Send event to subprocess, signaling an alarm timeout if blocked.
+        """
+        iqueue.send((event, data))
+        return True
+
+    def send_input(client, iqueue):
+        """
+        Send tcp input to subprocess as 'input' event,
+        signaling an alarm timeout and re-buffering input if blocked.
+
+        The reasons for the input buffer to block are vaugue
+        """
+        inp = client.get_input()
+        retval = f_send_event(iqueue, 'input', inp)
+        # if timeout occured, re-buffer input
+        if not retval:
+            client.recv_buffer.fromstring(inp)
+        return retval
+
+    def session_send():
+        """
+        Test all sessions for idle timeout, and signal exit to subprocess,
+        unregister the session.  Also test for data received by telnet
+        client, and send to subprocess as 'input' event.
+        """
+        # accept session event i/o, such as output
+        for sid, tty in terminals():
+            # poll about and kick off idle users
+            if tty.timeout and tty.client.idle() > tty.timeout:
+                send_event = 'exception'
+                send_data = Disconnected('timeout: %ds' % (tty.client.idle()))
+                tty.iqueue.send((send_event, send_data))
+                continue
+            elif tty.client.input_ready():
+                # input buffered on tcp socket, attempt to send to client
+                # with a signal alarm timeout; raising a warning if exceeded.
+                if not send_input(tty.client, tty.iqueue):
+                    log.warn('%s input buffer exceeded', sid)
+                    tty.client.deactivate()
+
+    def handle_lock(tty, event, data):
+        """
+        handle locking event of (lock-key, (method, stale))
+        """
+        method, stale = data
+        if method == 'acquire':
+            if event in locks:
+                # lock already held; check for and display owner, or
+                # acquire a lock from a now-deceased session.
+                held=False
+                for _sid, _tty in terminals():
+                    if _sid == locks[event][1] and _sid != tty.sid:
+                        log.debug('[%s] %r not acquired, held by %s.',
+                                tty.sid, (event, data), _sid)
+                        held=_sid
+                        break
+                if held is not False:
+                    log.debug('[%s] %r discovered stale lock, previously '
+                            'held by %s.', tty.sid, (event, data), held)
+                    del locks[event]
+            if not event in locks:
+                locks[event] = (time.time(), tty.sid)
+                tty.iqueue.send((event, True,))
+                log.debug('[%s] %r granted.',
+                             tty.sid, (event, data))
+            else:
+                # caller signals this kind of thread is short-lived, and any
+                # existing lock older than 'stale' should be released.
+                if (stale is not None
+                        and time.time() - locks[event][0] > stale):
+                    tty.iqueue.send((event, True,))
+                    locks[event] = (time.time(), tty.sid)
+                    log.warn('[%s] %r stale %fs.',
+                                tty.sid, (event, data),
+                                time.time() - locks[event][0])
+                # signal busy with matching event, data=False
+                else:
+                    tty.iqueue.send((event, False,))
+                    log.debug('[%s] %r not acquired.',
+                            tty.sid, (event, data))
+        elif method == 'release':
+            if not event in locks:
+                log.error('[%s] %r failed: no match',
+                             tty.sid, (event, data))
+            else:
+                del locks[event]
+                log.debug('[%s] %r removed.',
+                             tty.sid, (event, data))
+
+    def session_recv(fds):
+        """
+        receive data waiting for session; all data received from
+        subprocess is in form (event, data), and is handled by ipc_recv.
+
+        if stale is not None, elapsed time lock was held to consider stale
+        and acquire anyway. no actual locks are held or released, just a
+        simple dictionary state/time tracking system.
+        """
+
+        disp_handle = lambda handle: ((handle + u' ')
+                                      if handle is not None
+                                      and 0 != len(handle) else u'')
+        disp_origin = lambda client: client.addrport().split(':', 1)[0]
+
+        for sid, tty in terminals():
+            while tty.oqueue.fileno() in fds and tty.oqueue.poll():
+                # receive data from pipe, unregister if any error,
+                try:
+                    event, data = tty.oqueue.recv()
+                except (EOFError, IOError) as err:
+                    # sub-process unexpectedly closed
+                    log.exception(err)
+                    unregister(tty)
+                    return
+                # 'exit' event, unregisters client
+                if event == 'exit':
+                    unregister(tty)
+                    return
+                # 'logger' event, propogated upward
+                elif event == 'logger':
+                    # prefix message with 'ip:port/nick '
+                    data.msg = '%s[%s] %s' % (
+                        disp_handle(data.handle),
+                        disp_origin(tty.client),
+                        data.msg)
+                    log.handle(data)
+                # 'output' event, buffer for tcp socket
+                elif event == 'output':
+                    tty.client.send_unicode(ucs=data[0], encoding=data[1])
+                # 'remote-disconnect' event, hunt and destroy
+                elif event == 'remote-disconnect':
+                    send_to = data[0]
+                    for _sid, _tty in terminals():
+                        if send_to == _sid:
+                            send_event = 'exception'
+                            send_val = Disconnected(
+                                'remote-disconnect by %s' % (sid,))
+                            tty.iqueue.send((send_event, send_val))
+                            unregister(tty)
+                            break
+                # 'route': message passing directly from one session to another
+                elif event == 'route':
+                    log.debug('route %r', (event, data))
+                    tgt_sid, send_event, send_val = data[0], data[1], data[2:]
+                    for _sid, _tty in terminals():
+                        if tgt_sid == _sid:
+                            _tty.iqueue.send((send_event, send_val))
+                            break
+                # 'global': message broadcasting to all sessions
+                elif event == 'global':
+                    log.debug('broadcast %r', (event, data))
+                    for _sid, _tty in terminals():
+                        if sid != _sid:
+                            _tty.iqueue.send((event, data,))
+                # 'set-timeout': set user-preferred timeout
+                elif event == 'set-timeout':
+                    log.debug('set-timeout %d', data)
+                    tty.timeout = data
+                # 'db*': access DBProxy API for shared sqlitedict
+                elif event.startswith('db'):
+                    thread = DBHandler(tty.iqueue, event, data)
+                    thread.start()
+                # 'lock': access fine-grained bbs-global locking
+                elif event.startswith('lock'):
+                    handle_lock(tty, event, data)
+                else:
+                    assert False, 'unhandled %r' % ((event, data),)
+
+    # black hole socket server for dummy connections (bots)
+    blackhole_configured = CFG.has_option('session', 'blackhole_port')
+
+    if blackhole_configured:
+        from x84.msgserve import BlackHoleServer, BlackHoleHandler
+        from threading import Thread
+        addr = 'localhost'
+        port = CFG.getint('session', 'blackhole_port')
+        blackhole_socket = (addr, port)
+        blackholeserver = BlackHoleServer((addr, port), BlackHoleHandler)
+        bh = Thread(target=blackholeserver.serve_forever)
+        bh.daemon = True
+        bh.start()
+        log.info(u'Black hole listening on %s:%d' % (addr, port))
+
+    # message polling routine; connects to black hole socket
+    def msgpoll(blackhole_socket):
+        from x84.telnet import TelnetClient
+        from x84.terminal import ConnectTelnet
         import socket
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        tc = TelnetClient(s, ('msgpoll', 0))
+
+        pitcher = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        pitcher.connect(blackhole_socket)
+        tc = TelnetClient(pitcher, ('msgpoll', 0))
         tc.env['TERM'] = 'xterm-256color'
         c = ConnectTelnet(tc)
         c._set_socket_opts()
@@ -414,21 +692,27 @@ def _loop(servers):
     last_poll = None
 
     if CFG.has_option('msg', 'poll_interval'):
-        poll_interval = int(CFG.get('msg', 'poll_interval'))
-        last_poll = int(time.time()) - poll_interval
+        if not blackhole_configured:
+            log.error(u"[x84net poll] Black hole not configured; can't poll for messages")
+        else:
+            poll_interval = int(CFG.get('msg', 'poll_interval'))
+            last_poll = int(time.time()) - poll_interval
 
+    # x84net message server; uses black hole socket
     if CFG.has_section('msgserver'):
         from x84.msgserve import MessageNetworkServer, MessageNetworkServerHandler
-        import SocketServer
-        import threading
+        from threading import Thread
 
-        addr = CFG.get('msgserver', 'addr')
-        port = int(CFG.get('msgserver', 'port'))
-        msgserver = MessageNetworkServer((addr, port), MessageNetworkServerHandler)
-        server_thread = threading.Thread(target=msgserver.serve_forever)
-        server_thread.daemon = True
-        server_thread.start()
-        log.info(u'[x84net server] Listening on %s:%d' % (addr, port))
+        if not blackhole_configured:
+            log.error(u"[x84net server] Black hole not configured; can't run a message server")
+        else:
+            addr = CFG.get('msgserver', 'addr')
+            port = int(CFG.get('msgserver', 'port'))
+            msgserver = MessageNetworkServer((addr, port), MessageNetworkServerHandler)
+            t = Thread(target=msgserver.serve_forever)
+            t.daemon = True
+            t.start()
+            log.info(u'[x84net server] Listening on %s:%d' % (addr, port))
 
     while True:
         # shutdown, close & delete inactive clients,
@@ -463,7 +747,7 @@ def _loop(servers):
             now = int(time.time())
 
             if now - last_poll >= poll_interval:
-                msgpoll()
+                msgpoll(blackhole_socket)
                 last_poll = now
 
         terms = get_terminals()

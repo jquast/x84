@@ -93,6 +93,20 @@ class Session(object):
         self._ttyrec_usec = -1
         self._ttyrec_len_text = 0
 
+        # detect if this is a "robot" user and handle it accordingly
+        addr, port = sid.split(':', 1)
+
+        if int(port) == 0:
+            robots = [robot.strip() for robot in ini.CFG.get('bots', 'names').split(',')]
+
+            if addr in robots:
+                self._script_stack.pop()
+
+                if ini.CFG.has_option('bots', addr):
+                    self._script_stack.append((ini.CFG.get('bots', addr),))
+                else:
+                    self._script_stack.append(('bots',))
+
     def to_dict(self):
         """
         Returns a dictionary containing information about this session object.

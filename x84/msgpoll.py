@@ -12,6 +12,8 @@ def get_token(network):
 
 """ turn a Msg object into a dict for transfer """
 def prepare_message(msg, network):
+    from x84.bbs.msgbase import format_origin_line, to_utctime
+
     return {
         'author': msg.author
         , 'subject': msg.subject
@@ -267,17 +269,7 @@ def main():
             logger.error(u'[%s] Retrieval error' % net['name'])
             continue
 
-        if len(msgs) == 0:
-            continue
-
-        transdb = None
-
-        try:
-            transdb = DBProxy(net['trans_db_name'])
-        except:
-            logger.error(u'[%s] Could not create translation DB' % net['name'])
-            continue
-
+        transdb = DBProxy(net['trans_db_name'])
         transkeys = transdb.keys()
         msgs = sorted(msgs, cmp=lambda x, y: cmp(int(x['id']), int(y['id'])))
 
@@ -321,13 +313,7 @@ def main():
         """ push messages """
 
         queuedb = None
-
-        try:
-            queuedb = DBProxy(net['queue_db_name'])
-        except:
-            logger.error(u'[%s] Could not create queue DB' % net['name'])
-            continue
-
+        queuedb = DBProxy(net['queue_db_name'])
         logger.info(u'[%s] Begin publishing' % net['name'])
         msgdb = DBProxy(msgbase.MSGDB)
         msgs = msgdb.keys()

@@ -153,24 +153,6 @@ def main():
     from x84.engine import __url__ as url
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
-    whoami, port = session.sid.split(':')
-
-    if int(port) == 0:
-            from x84.bbs.userbase import User
-
-            if whoami == 'msgserve':
-                from x84 import msgserve
-                session.user = User(u'x84net server')
-                session.activity = u'Processing request'
-                msgserve.main()
-                return
-            elif whoami == 'msgpoll':
-                from x84 import msgpoll
-                session.user = User(u'x84net client')
-                session.activity = u'Polling for messages'
-                msgpoll.main()
-                return
-
     session.activity = u'Logging in'
     handle = (session.env.get('USER', '').decode('iso8859-1', 'replace'))
     anon_allowed_msg = u"'%s' login enabled.\r\n" % (
