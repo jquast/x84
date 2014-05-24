@@ -27,20 +27,11 @@ def banner():
 def waitprompt():
     """ Display "press enter" prompt and returns key input """
     term = getterminal()
-    echo(u''.join((u'\r\n',
-                   term.magenta(u'('),
-                   term.green(u'..'),
-                   term.white(u' press any key to continue '),
-                   term.green(u'..'),
-                   term.magenta(u')'))))
-    keypressed = getch()
-    echo(u''.join((term.move_x(0),
-                   term.clear_eol,
-                   term.move_up,
-                   term.green(u'-' * (term.width - 1)),
-                  u'\r\n')))
-    return keypressed
-
+    echo(u'\n\r')
+    echo(term.magenta(u'(') + term.green(u'..'))
+    echo(term.white(u' press any key to continue ') + term.green(u'..'))
+    echo(term.magenta(u')'))
+    term.inkey()
 
 def main():
     session, term = getsession(), getterminal()
