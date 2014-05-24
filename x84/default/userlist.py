@@ -26,7 +26,7 @@ def waitprompt():
     term = getterminal()
     echo(u'\n\r')
     echo(term.magenta(u'(') + term.green(u'..'))
-    echo(term.white(u'press any key to continue ') + term.green(u'..'))
+    echo(term.white(u' press any key to continue ') + term.green(u'..'))
  
     echo(term.magenta(u')'))
     keypressed = getch()
