@@ -24,7 +24,7 @@ def banner():
 
 def display_msg(msg):
     """ Display full message """
-    from x84.bbs import getterminal, getsession, echo, Ansi
+    from x84.bbs import getterminal, getsession, echo, decode_pipe
     session, term = getsession(), getterminal()
     body = msg.body.splitlines()
     style = getstyle()
@@ -43,7 +43,7 @@ def display_msg(msg):
     echo(style['lowlight'](u', '.join(msg.tags)))
     echo(u'\r\n\r\n')
     echo(term.underline(u'        bOdY: '.ljust(term.width - 1)) + u'\r\n')
-    echo(Ansi(u'\r\n'.join(body)).decode_pipe() + term.normal)
+    echo(decode_pipe(u'\r\n'.join(body)) + term.normal)
     echo(u'\r\n' + term.underline(u''.ljust(term.width - 1)))
     echo(u'\r\n\r\n')
     session.activity = 'Constructing a %s message' % (
@@ -124,7 +124,7 @@ def prompt_tags(msg):
     #         Too many local variables
     #         Using the global statement
     from x84.bbs import DBProxy, echo, getterminal, getsession
-    from x84.bbs import Ansi, LineEditor, ini
+    from x84.bbs import LineEditor, ini
     session, term = getsession(), getterminal()
     tagdb = DBProxy('tags')
     # version 1.0.9 introduced new ini option; set defaults for
@@ -167,9 +167,9 @@ def prompt_tags(msg):
             if 0 == len(all_tags):
                 echo(u'None !'.center(term.width / 2))
             else:
-                echo(Ansi(u', '.join(([u'%s(%d)' % (_key, len(_value),)
+                echo(u', '.join((term.wrap([u'%s(%d)' % (_key, len(_value),)
                                        for (_key, _value) in all_tags]))
-                          ).wrap(term.width - 2))
+                          ), term.width - 2)
             continue
         echo(u'\r\n')
 
