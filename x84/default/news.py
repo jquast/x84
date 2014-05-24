@@ -51,18 +51,23 @@ def get_pager(news_txt, position=None):
 
 def redraw(pager):
     """ Returns string suitable for refreshing screen. """
-    from x84.bbs import getsession, getterminal
+    from x84.bbs import getsession, getterminal, from_cp437
     import os
     # pylint: disable=W0603
     #         Using the global statement
     global NEWS_ART  # in-memory cache
     session, term = getsession(), getterminal()
-    artfile = os.path.join(os.path.dirname(__file__), 'art', 'news.asc')
-    if NEWS_ART is None:
-        NEWS_ART = [line for line in open(artfile)]
-    # left-align, center, strip, and trim each line of ascii art
-    ladjust = lambda line: (
-        line.rstrip().center(term.width)[:term.width].rstrip())
+
+    output = ''
+    output += term.home + term.normal + term.clear
+    artfile = os.path.join(os.path.dirname(__file__), 'art', 'news.ans')
+    art = [line.rstrip()
+        for line in from_cp437(open(artfile).read()).splitlines()]
+    max_ans = max([term.length(line) for line in art])
+    for line in art:
+        output += term.center(term.ljust(line.rstrip(), max_ans)).rstrip() + '\r\n'
+
+
     title = u''.join((u']- ', term.bold_blue('PARtY NEWS'), ' [-',))
     footer = u''.join((u'-[ ',
                        term.blue_underline(u'Escape'), '/',
@@ -72,15 +77,15 @@ def redraw(pager):
                                'sysop' in session.user.groups) else u''),
                            u']-',
     ))
-    return u''.join((u'\r\n\r\n',
-                     '\r\n'.join(
-                         (ladjust(line) for line in NEWS_ART)), u'\r\n',
+
+    return u''.join((u'',
+                         (output), u'',
                      u''.join((
-                              u'\r\n' * pager.height,
+                              u'' * pager.height,
                               pager.refresh(),
                               pager.border(),
                               pager.title(title),
-                              pager.footer(footer),)
+                              pager.footer(footer))
                               ) if pager is not None else u'',))
 
 
