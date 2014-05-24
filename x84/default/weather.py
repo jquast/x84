@@ -79,17 +79,17 @@ def disp_found(num):
     """ Display 'N locations discovered' in yellow/white. """
     from x84.bbs import getterminal, echo
     term = getterminal()
-    disp_n = term.bold_white('{}'.format(num))
+    disp_n = term.bold_white(u'{}'.format(num))
     locations = term.yellow(u'lOCAtiON{s} diSCOVEREd'.format(
         s=u's' if num > 1 else u'',))
     dotdot = term.bold_black(u'...')
-    echo('\r{disp_n} {locations} {dotdot}'.format(
+    echo(u'\r{disp_n} {locations} {dotdot}'.format(
         disp_n=disp_n, locations=locations, dotdot=dotdot))
 
 
 def disp_search_help():
     """ Display searchbar usage. """
-    from x84.bbs import getterminal, echo, Ansi
+    from x84.bbs import getterminal, echo
     term = getterminal()
 
     enter = term.yellow(u'ENtER US')
@@ -103,9 +103,9 @@ def disp_search_help():
                u'{t.bold_yellow}){t.normal}'.format(t=term))
 
     echo(u'\r\n\r\n' + term.normal)
-    echo(Ansi(u'{enter} {postal}{or_nearest} {int_city} {keyhelp}'.format(
+    echo(u''.join((term.wrap(u'{enter} {postal}{or_nearest} {int_city} {keyhelp}'.format(
         enter=enter, postal=postal, or_nearest=or_nearest,
-        int_city=int_city, keyhelp=keyhelp)).wrap(term.width))
+        int_city=int_city, keyhelp=keyhelp), term.width))))
 
 
 def fetch_weather(postal):

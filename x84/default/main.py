@@ -40,7 +40,7 @@ def refresh():
 
     # add LORD to menu only if enabled,
     if ini.CFG.getboolean('dosemu', 'enabled') and (
-            ini.CFG.get('dosemu', 'lord_path') != 'no'):
+        ini.CFG.get('dosemu', 'lord_path') != 'no'):
         entries.insert(0, ('#', 'PlAY lORd!'))
 
     if 'sysop' in session.user.groups:
