@@ -14,16 +14,13 @@ def pak():
 
 def view_plan(handle):
     """ Display .plan file for handle. """
-    from x84.bbs import getterminal, echo, get_user, find_user, Ansi
+    from x84.bbs import getterminal, echo, get_user, find_user
     term = getterminal()
     echo(u'\r\n\r\n')
     if not find_user(handle):
         echo(term(u'No Plan.'))
     else:
-        echo(Ansi(get_user(handle).get('.plan', u'No Plan.')).wrap(term.width))
-        # TODO make this work, is there a bug in term.wrap (in blessed terminal.py)?
-        # or am trying to do it all Wrong?
-        #echo(term.wrap(get_user(handle).get('.plan', u'No Plan.')))
+        echo(u'\r\n'.join(term.wrap(get_user(handle).get('.plan', u'No Plan.'))))
     echo(u'\r\n')
     pak()
 

@@ -7,7 +7,7 @@ def main():
     #         Too many local variables
     #         Too many branches
     from x84.bbs import DBProxy, getsession, getterminal, echo
-    from x84.bbs import ini, LineEditor, timeago, Ansi, showcp437
+    from x84.bbs import ini, LineEditor, timeago, showcp437
     from x84.bbs import disconnect, getch
     import time
     import os
