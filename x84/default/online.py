@@ -23,7 +23,8 @@ def banner():
         term.green_underline('.'),
         term.green_bold_underline('.'),
         term.underline('.'),
-        term.bold_green(" whO'S ONliNE"),))
+        term.bold_green(" whO'S ONliNE"),
+        u'\r\n'))
 
 
 def describe(sessions):
