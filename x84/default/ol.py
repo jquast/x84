@@ -132,7 +132,7 @@ def add_oneline(msg):
 def get_oltxt():
     """ Return unicode terminal string of oneliners. """
     import time
-    from x84.bbs import getterminal, DBProxy, timeago, Ansi
+    from x84.bbs import getterminal, DBProxy, timeago, decode_pipe
     term = getterminal()
     colors = (term.bold_white, term.bold_green, term.bold_blue)
     hist = [(int(k), v) for (k, v) in DBProxy('oneliner').items()]
@@ -149,7 +149,7 @@ def get_oltxt():
             color(onel['alias']),
             term.bold_black(u'/'), onel['bbsname'],
             term.bold_white(u')'), color(u': '),
-            Ansi(onel['oneliner']).decode_pipe(),
+            decode_pipe(onel['oneliner']),
         )))
     return output[(BUF_HISTORY * -1):]
 
@@ -181,7 +181,7 @@ def get_pager():
 
 def banner():
     """ Return banner """
-    from x84.bbs import getterminal, Ansi, from_cp437
+    from x84.bbs import getterminal, from_cp437
     import os
     term = getterminal()
     output = u''
@@ -194,13 +194,7 @@ def banner():
                for line in from_cp437(open(artfile).read()).splitlines()]
         max_ans = max([term.length(line) for line in art])
         for line in art:
-#            output += line.rstrip() + '\r\n'
-            #output += term.normal + term.blue  # minor fix for this art ;/
             output += term.center(term.ljust(line.rstrip(), max_ans)).rstrip() + '\r\n'
-            #+ str(term.length(line)) + '|\r\n'
-#            #Ansi(from_cp437(line.rstrip())).center(max_ans)
-#            output += term.normal + term.blue
-#            output += Ansi(padded).center(term.width).rstrip() + '\r\n'
     return output + term.normal
 
 
@@ -228,14 +222,14 @@ def redraw(pager, selector):
 
 def dummy_pager():
     """ Display oneliners for dummy terminals and prompt to saysomething """
-    from x84.bbs import getterminal, Ansi, echo, getch
+    from x84.bbs import getterminal, echo, getch
     term = getterminal()
     tail = term.height - 4
     indent = 3
     prompt_ole = u'\r\n\r\nSAY somethiNG ?! [yn]'
     buf = list()
     for record in get_oltxt():
-        buf.extend(Ansi(record.rstrip()).wrap(
+        buf.extend(term.rstrip(record).term.wrap(
             term.width - indent).split('\r\n'))
     echo((u'\r\n' + term.normal).join(buf[tail * -1:]))
     echo(prompt_ole)

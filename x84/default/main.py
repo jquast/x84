@@ -7,7 +7,7 @@ def refresh():
     """ Refresh main menu. """
     # pylint: disable=R0914
     #         Too many local variables
-    from x84.bbs import getsession, getterminal, echo, Ansi, showcp437, ini
+    from x84.bbs import getsession, getterminal, echo, showcp437, ini
     import os
     session, term = getsession(), getterminal()
     session.activity = u'Main menu'
@@ -54,13 +54,13 @@ def refresh():
             term.bold_blue(name.split()[0]),
             u' ', u' '.join(name.split()[1:]),
             u'  '))
-        ansilen = len(Ansi(buf_str + out_str))
+        ansilen = term.length(buf_str + out_str)
         if ansilen >= (term.width * .8):
-            echo(Ansi(buf_str).center(term.width) + u'\r\n\r\n')
+            echo(term.center(buf_str) + u'\r\n\r\n')
             buf_str = out_str
         else:
             buf_str += out_str
-    echo(Ansi(buf_str).center(term.width) + u'\r\n\r\n')
+    echo(term.center(buf_str) + u'\r\n\r\n')
     echo(u' [%s]:' % (
         term.blue_underline(''.join([key for key, name in entries]))))
 

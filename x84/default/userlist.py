@@ -46,7 +46,7 @@ def main():
         echo(term.ljust(term.white(handle), 28))
         echo(term.ljust(term.green(origin), 27))
         echo(term.bright_white(ago))
-        echo('\r\n')
+        echo(u'\r\n')
         # first page only, prompt stops at height - BANNER_HEIGHT
         if (firstpage and counter == term.height - BANNER_HEIGHT or
                 counter % (term.height - 1) == 0):

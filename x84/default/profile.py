@@ -28,7 +28,7 @@ def process_keystroke(inp, user):
     # ^ lol, this is one of those things that should be
     #   refactored into smaller subroutines =)
     from x84.bbs import getsession, getterminal, echo, getch, gosub
-    from x84.bbs import LineEditor, Ansi
+    from x84.bbs import LineEditor
     from x84.default.nua import set_email, set_location
     from x84.bbs.ini import CFG
     def_timeout = CFG.getint('system', 'timeout')
@@ -135,8 +135,7 @@ def process_keystroke(inp, user):
     elif inp in (u'.',):
         echo(term.move(0, 0) + term.normal + term.clear)
         echo(term.move(int(term.height * .8), 0))
-        for line in Ansi(ABOUT_DOT_PLAN).wrap(
-                term.width / 3).splitlines():
+        for line in term.wrap(ABOUT_DOT_PLAN, term.width / 3):
             echo(line.center(term.width).rstrip() + u'\r\n')
         echo(u'\r\n\r\nPRESS ANY kEY ...')
         getch()
@@ -231,7 +230,7 @@ def process_keystroke(inp, user):
 
 def dummy_pager(user):
     """ A dummy selector for profile attributes """
-    from x84.bbs import getsession, getterminal, echo, Ansi, getch
+    from x84.bbs import getsession, getterminal, echo, getch
     session, term = getsession(), getterminal()
     plan = user.get('.plan', False)
     from x84.bbs.ini import CFG
@@ -269,7 +268,7 @@ def dummy_pager(user):
                                          else 'diSAblEd')),
             '(q)Uit', ]
     echo(term.normal + u'\r\n\r\n')
-    lines = Ansi('\n'.join(menu)).wrap(term.width).splitlines()
+    lines = u'\r\n'.join(menu).splitlines()
     xpos = max(1, int(term.width / 2) - (40 / 2))
     for row, line in enumerate(lines):
         if row and (0 == row % (term.height - 2)):

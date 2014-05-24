@@ -129,7 +129,7 @@ def ansiwrap(ucs, width=70, **kwargs):
     """Wrap a single paragraph of Unicode Ansi sequences,
     returning a list of wrapped lines.
     """
-    warnings.warn('ansiwrap() depricated, getterminal() now'
+    warnings.warn('ansiwrap() deprecated, getterminal() now'
                   'supplies an equivalent .wrap() API')
     return getterminal().wrap(text=ucs, width=width, **kwargs)
 

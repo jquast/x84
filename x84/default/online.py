@@ -23,7 +23,8 @@ def banner():
         term.green_underline('.'),
         term.green_bold_underline('.'),
         term.underline('.'),
-        term.bold_green(" whO'S ONliNE"),))
+        term.bold_green(" whO'S ONliNE"),
+        u'\r\n'))
 
 
 def describe(sessions):
@@ -64,8 +65,8 @@ def heading(sessions):
     term = getterminal()
     max_user = ini.CFG.getint('nua', 'max_user')
     return u'\r\n'.join((
-        u'\r\n'.join([pline.center(term.width)
-                      for pline in prompt().splitlines()]),
+        u'\r\n'.join([term.center(pline, (term.width))
+                      for pline in prompt()]),
         u'\r\n',
         term.green_underline(u''.join((
             'node'.rjust(4 + slen(sessions)),
@@ -78,13 +79,13 @@ def prompt():
     """
     Return string suitable for displaying prompt and available commands.
     """
-    from x84.bbs import getsession, getterminal, Ansi
+    from x84.bbs import getsession, getterminal
     session, term = getsession(), getterminal()
     decorate = lambda key, desc: u''.join((
         u'(', term.green_underline(key,),
         u')', term.reverse_green(desc.split()[0]), u' ',
         u' '.join(desc.split()[1:]), u' ',))
-    return Ansi(u''.join((
+    return term.wrap(u''.join((
         u' ' * 2,
         term.green_reverse(':keys'), u' ',
         decorate('c', 'hAt USR'),
@@ -98,7 +99,7 @@ def prompt():
         u' ',)) if 'sysop' in session.user.groups else u''),
         decorate('Escape/q', 'Uit'),
         decorate('Spacebar', 'REfRESh'),
-    ))).wrap(int(term.width * .7), indent=u' ' * 8)
+    )), int(term.width * .8), subsequent_indent=u' ' * 8)
 
 
 def get_node(sessions):

@@ -68,7 +68,7 @@ def disp_notfound():
     term = getterminal()
     bad_req = term.bold(u'bAd REQUESt')
     decorator = term.bold_red(u'-/-')
-    not_found = term.bold('NOt fOUNd.')
+    not_found = term.bold(u'NOt fOUNd.')
     echo(u'\r\n\r\n{bad_req} {decorator} {not_found}'.format(
         bad_req=bad_req, decorator=decorator, not_found=not_found))
     if not getsession().user.get('expert', False):
@@ -79,17 +79,17 @@ def disp_found(num):
     """ Display 'N locations discovered' in yellow/white. """
     from x84.bbs import getterminal, echo
     term = getterminal()
-    disp_n = term.bold_white('{}'.format(num))
+    disp_n = term.bold_white(u'{}'.format(num))
     locations = term.yellow(u'lOCAtiON{s} diSCOVEREd'.format(
         s=u's' if num > 1 else u'',))
     dotdot = term.bold_black(u'...')
-    echo('\r{disp_n} {locations} {dotdot}'.format(
+    echo(u'\r{disp_n} {locations} {dotdot}'.format(
         disp_n=disp_n, locations=locations, dotdot=dotdot))
 
 
 def disp_search_help():
     """ Display searchbar usage. """
-    from x84.bbs import getterminal, echo, Ansi
+    from x84.bbs import getterminal, echo
     term = getterminal()
 
     enter = term.yellow(u'ENtER US')
@@ -103,9 +103,9 @@ def disp_search_help():
                u'{t.bold_yellow}){t.normal}'.format(t=term))
 
     echo(u'\r\n\r\n' + term.normal)
-    echo(Ansi(u'{enter} {postal}{or_nearest} {int_city} {keyhelp}'.format(
+    echo(u''.join((term.wrap(u'{enter} {postal}{or_nearest} {int_city} {keyhelp}'.format(
         enter=enter, postal=postal, or_nearest=or_nearest,
-        int_city=int_city, keyhelp=keyhelp)).wrap(term.width))
+        int_city=int_city, keyhelp=keyhelp), term.width))))
 
 
 def fetch_weather(postal):
@@ -113,7 +113,7 @@ def fetch_weather(postal):
     Given postal code, fetch and return xml root node of weather results.
     """
     import StringIO
-    disp_msg('fEtChiNG')
+    disp_msg(u'fEtChiNG')
     resp = requests.get(u'http://apple.accuweather.com'
                         + u'/adcbin/apple/Apple_Weather_Data.asp',
                         params=(('zipcode', postal),))
@@ -134,7 +134,7 @@ def do_search(search):
     """
     import StringIO
     from x84.bbs import echo, getch
-    disp_msg('SEARChiNG')
+    disp_msg(u'SEARChiNG')
     resp = requests.get(u'http://apple.accuweather.com'
                         + u'/adcbin/apple/Apple_find_city.asp',
                         params=(('location', search),))
@@ -255,10 +255,10 @@ def chk_save_location(location):
     # prompt to store (unsaved/changed) location
     echo(u'\r\n\r\n')
     echo(term.yellow(u'SAVE lOCAtION'))
-    echo(term.bold_yellow(' ('))
+    echo(term.bold_yellow(u' ('))
     echo(term.bold_black(u'PRiVAtE'))
-    echo(term.bold_yellow(') '))
-    echo(term.yellow('? '))
+    echo(term.bold_yellow(u') '))
+    echo(term.yellow(u'? '))
     echo(term.bold_yellow(u'['))
     echo(term.underline_yellow(u'yn'))
     echo(term.bold_yellow(u']'))

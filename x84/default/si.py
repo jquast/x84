@@ -7,7 +7,7 @@ def main():
     #         Too many local variables
     #         Used builtin function 'map'
     #         Too many branches
-    from x84.bbs import getsession, getterminal, Ansi, echo, getch, from_cp437
+    from x84.bbs import getsession, getterminal, echo, getch, from_cp437
     from x84.engine import __url__ as url
     import platform
     import random

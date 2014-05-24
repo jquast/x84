@@ -24,7 +24,7 @@ def getsession():
 
 def getterminal():
     """
-    Return blessings terminal instance of this session.
+    Return blessed terminal instance of this session.
     """
     return getsession().terminal
 
@@ -51,7 +51,7 @@ class Session(object):
         """
         Instantiate a Session instanance, only one session
         may be instantiated per process. Arguments:
-            terminal: blessings.Terminal,
+            terminal: blessed.Terminal,
             inp_queue: multiprocessing.Queue Parent writes, Child reads
             out_queue: multiprocessing.Queue Parent reads, Child writes
             sid: session id by engine: origin of telnet connection (ip:port),

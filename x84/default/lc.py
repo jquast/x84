@@ -14,13 +14,13 @@ def pak():
 
 def view_plan(handle):
     """ Display .plan file for handle. """
-    from x84.bbs import getterminal, echo, Ansi, get_user, find_user
+    from x84.bbs import getterminal, echo, get_user, find_user
     term = getterminal()
     echo(u'\r\n\r\n')
     if not find_user(handle):
-        echo(Ansi(u'No Plan.'))
+        echo(u'No Plan.')
     else:
-        echo(Ansi(get_user(handle).get('.plan', u'No Plan.')).wrap(term.width))
+        echo(u'\r\n'.join(term.wrap(get_user(handle).get('.plan', u'No Plan.'))))
     echo(u'\r\n')
     pak()
 
@@ -30,7 +30,7 @@ def dummy_pager(last_callers):
     # pylint: disable=R0914
     #         Too many local variables
     from x84.bbs import getterminal, getsession, echo, getch, ini, find_user
-    from x84.bbs import LineEditor, Ansi, list_users, get_user, gosub
+    from x84.bbs import LineEditor, list_users, get_user, gosub
     session, term = getsession(), getterminal()
     msg_prompt = (
         u'\r\n%sONtiNUE, %stOP, %sON-StOP %siEW .PlAN%s ?\b\b' % (
@@ -48,7 +48,7 @@ def dummy_pager(last_callers):
     nonstop = False
     row = 10  # after-art,
     for txt in last_callers:
-        echo(Ansi(txt).ljust(term.width / 2).center(term.width))
+        echo(term.center(term.ljust(txt, (term.width / 2)), term.width))
         echo(u'\r\n')
         row += 1
         if ((not nonstop and row > 0 and 0 == (row % (term.height - 3)))
@@ -82,7 +82,7 @@ def dummy_pager(last_callers):
                               if nick.lower().startswith(handle[:1].lower())]
                     if len(misses) > 0:
                         echo(u'%s:\r\n\r\n%s\r\n' % (msg_partial,
-                            Ansi(', '.join(misses)).wrap(term.width)))
+                            u'\r\n'.join(term.wrap(', '.join(misses)))))
                     continue
             if inp in ('n', u'N'):
                 nonstop = True
@@ -92,7 +92,7 @@ def dummy_pager(last_callers):
 
 def refresh_opts(pager, handle):
     """ Refresh pager border with command keys available. """
-    from x84.bbs import getsession, getterminal, get_user, find_user, Ansi
+    from x84.bbs import getsession, getterminal, get_user, find_user
     session, term = getsession(), getterminal()
     if not handle or not find_user(handle):
         has_plan = 0
@@ -111,7 +111,7 @@ def refresh_opts(pager, handle):
         decorate(u'e', 'dit USR') if 'sysop' in session.user.groups else u'',
         term.bold_yellow(u'-'),
     ))
-    if len(Ansi(statusline)) < (pager.visible_width - 4):
+    if term.length(statusline) < (pager.visible_width - 4):
         return pager.border() + pager.footer(statusline)
     else:
         return pager.border() + pager.footer(term.bold_red('q') + u':uit')
@@ -177,7 +177,7 @@ def redraw(pager=None):
 
 def lc_retrieve():
     """
-    Returns tuple of ([nicknames,] u'text'), where 'text' describes in Ansi
+    Returns tuple of ([nicknames,] u'text'), where 'text' describes in ANSI
     color the last callers to the system, and 'nicknames' is simply a list
     of last callers (for lightbar selection key).
     """
