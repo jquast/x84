@@ -28,8 +28,7 @@ def waitprompt():
     echo(term.white(u' press any key to continue ') + term.green(u'..'))
     echo(term.magenta(u')'))
     term.inkey()
-    echo('\r\n')
-
+	
 def main():
     session, term = getsession(), getterminal()
     session.activity = 'Viewing Userlist'
@@ -41,8 +40,8 @@ def main():
         origin = user.location
         ago = timeago(time.time() - user.lastcall)
         echo(u' '*4)
-        echo(term.ljust(term.white(handle), 12))
-        echo(term.ljust(term.green(origin), 28))
+        echo(term.ljust(term.white(handle), 28))
+        echo(term.ljust(term.green(origin), 27))
         echo(term.bright_white(ago))
         echo('\r\n')
         # first page only, prompt stops at height - BANNER_HEIGHT
