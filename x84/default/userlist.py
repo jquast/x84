@@ -2,7 +2,7 @@
 __version__ = 1.0
 __author__ = 'Hellbeard'
 
-from x84.bbs import getsession, getterminal, echo
+from x84.bbs import getsession, getterminal, echo, getch
 from x84.bbs import list_users, get_user, timeago, showcp437
 import time
 import os
@@ -22,12 +22,15 @@ def banner():
 
 
 def waitprompt():
+    """ Display "press enter" prompt and returns key input """
     term = getterminal()
     echo(u'\n\r')
     echo(term.magenta(u'(') + term.green(u'..'))
-    echo(term.white(u' press any key to continue ') + term.green(u'..'))
+    echo(term.white(u'press any key to continue ') + term.green(u'..'))
+ 
     echo(term.magenta(u')'))
-    term.inkey()
+    keypressed = getch()
+    return keypressed
 	
 def main():
     session, term = getsession(), getterminal()
@@ -47,8 +50,10 @@ def main():
         # first page only, prompt stops at height - BANNER_HEIGHT
         if (firstpage and counter == term.height - BANNER_HEIGHT or
                 counter % (term.height - 1) == 0):
-            waitprompt()
-            echo(term.move_x(0) + term.clear_eol + term.move_up)
-            firstpage = False
+            if waitprompt() == term.KEY_ESCAPE:
+                return
+            else:
+                echo(term.move_x(0) + term.clear_eol + term.move_up)
+                firstpage = False
 
     waitprompt()
