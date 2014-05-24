@@ -7,7 +7,7 @@ def refresh():
     """ Refresh main menu. """
     # pylint: disable=R0914
     #         Too many local variables
-    from x84.bbs import getsession, getterminal, echo, Ansi, showcp437, ini
+    from x84.bbs import getsession, getterminal, echo, showcp437, ini
     import os
     session, term = getsession(), getterminal()
     session.activity = u'Main menu'

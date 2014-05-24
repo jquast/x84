@@ -75,18 +75,15 @@ def main():
             idx = 0
         tm_ago, handle, msg = automsgs[idx]
         asc_ago = u'%s ago' % (timeago(time.time() - tm_ago))
-        disp = (u''.join(('\r\n\r\n',
+        disp = u''.join(('\r\n\r\n',
                           term.bold(handle.rjust(max_user)),
                           term.bold_blue(u'/'),
                           term.blue(u'%*d' % (len('%d' % (dblen,)), idx,)),
                           term.bold_blue(u':'),
                           term.blue_reverse(msg.ljust(automsg_len)),
                           term.bold(u'\\'),
-                          term.blue(asc_ago),)))
-        echo(u''.join((
-            u'\r\n\r\n',
-            Ansi(disp).wrap(term.width),
-        )))
+                          term.blue(asc_ago),))
+        echo(u'\r\n'.join(term.wrap(disp)))
         return idx
 
     def refresh_all(idx=None):
