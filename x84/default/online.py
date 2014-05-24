@@ -99,7 +99,7 @@ def prompt():
         u' ',)) if 'sysop' in session.user.groups else u''),
         decorate('Escape/q', 'Uit'),
         decorate('Spacebar', 'REfRESh'),
-    )), int(term.width * .8))
+    )), int(term.width * .8), subsequent_indent=u' ' * 8)
 
 
 def get_node(sessions):

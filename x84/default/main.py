@@ -40,7 +40,7 @@ def refresh():
 
     # add LORD to menu only if enabled,
     if ini.CFG.getboolean('dosemu', 'enabled') and (
-        ini.CFG.get('dosemu', 'lord_path') != 'no'):
+            ini.CFG.get('dosemu', 'lord_path') != 'no'):
         entries.insert(0, ('#', 'PlAY lORd!'))
 
     if 'sysop' in session.user.groups:
@@ -56,11 +56,11 @@ def refresh():
             u'  '))
         ansilen = term.length(buf_str + out_str)
         if ansilen >= (term.width * .8):
-            echo(term.center(buf_str, term.width) + u'\r\n\r\n')
+            echo(term.center(buf_str) + u'\r\n\r\n')
             buf_str = out_str
         else:
             buf_str += out_str
-    echo(term.center(buf_str, term.width) + u'\r\n\r\n')
+    echo(term.center(buf_str) + u'\r\n\r\n')
     echo(u' [%s]:' % (
         term.blue_underline(''.join([key for key, name in entries]))))
 

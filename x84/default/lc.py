@@ -18,7 +18,7 @@ def view_plan(handle):
     term = getterminal()
     echo(u'\r\n\r\n')
     if not find_user(handle):
-        echo(term(u'No Plan.'))
+        echo(u'No Plan.')
     else:
         echo(u'\r\n'.join(term.wrap(get_user(handle).get('.plan', u'No Plan.'))))
     echo(u'\r\n')
@@ -82,7 +82,7 @@ def dummy_pager(last_callers):
                               if nick.lower().startswith(handle[:1].lower())]
                     if len(misses) > 0:
                         echo(u'%s:\r\n\r\n%s\r\n' % (msg_partial,
-                            term.wrap(', '.join(misses))))
+                            u'\r\n'.join(term.wrap(', '.join(misses)))))
                     continue
             if inp in ('n', u'N'):
                 nonstop = True

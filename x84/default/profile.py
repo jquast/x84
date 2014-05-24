@@ -268,7 +268,7 @@ def dummy_pager(user):
                                          else 'diSAblEd')),
             '(q)Uit', ]
     echo(term.normal + u'\r\n\r\n')
-    lines = u'\n'.join(menu).splitlines()
+    lines = u'\r\n'.join(menu).splitlines()
     xpos = max(1, int(term.width / 2) - (40 / 2))
     for row, line in enumerate(lines):
         if row and (0 == row % (term.height - 2)):

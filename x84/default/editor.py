@@ -97,7 +97,6 @@ def get_lbcontent(lightbar):
             # SOFTWRAP, strip that softwrap and re-assign value to a
             # whitespace-joined value by current line value.
             lines[-1] = WHITESPACE.join((lines[-1].rstrip(), ucs.lstrip(),))
-#    retval = Ansi(u''.join(lines)).encode_pipe()
     retval = encode_pipe(u''.join(lines))
     return retval
 
