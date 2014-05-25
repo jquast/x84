@@ -60,7 +60,7 @@ def redraw(pager):
 
     output = ''
     output += term.home + term.normal + term.clear
-    artfile = os.path.join(os.path.dirname(__file__), 'art', 'news.asc')
+    artfile = os.path.join(os.path.dirname(__file__), 'art', 'news.ans')
     art = [line.rstrip()
         for line in from_cp437(open(artfile).read()).splitlines()]
     max_ans = max([term.length(line) for line in art])
