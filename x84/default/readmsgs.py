@@ -11,12 +11,13 @@ def quote_body(msg, width=79, quote_txt=u'> ', hardwrap=u'\r\n'):
     """
     Given a message, return new string suitable for quoting it.
     """
-    from x84.bbs import Ansi
+    from x84.bbs import getterminal
+    term = getterminal()
     ucs = u''
     for line in msg.body.splitlines():
         ucs += u''.join((
             quote_txt,
-            Ansi(line).wrap(width - len(quote_txt), indent=quote_txt),
+            u''.join(term.wrap(line, width - len(quote_txt), subsequent_indent=quote_txt)),
             hardwrap,))
     return u''.join((
         'On ',
@@ -172,8 +173,8 @@ def msg_filter(msgs):
             txt_out.append('%s new' % (
                 term.bold_yellow(str(len(new),)),))
         if 0 != len(txt_out):
-            echo(u'\r\n\r\n' + Ansi(
-                u', '.join(txt_out) + u'.').wrap(term.width - 2))
+            echo(u'\r\n\r\n' + u''.join(term.wrap(
+                u', '.join(txt_out) + u'.', (term.width - 2))))
     return msgs, new
 
 
@@ -209,7 +210,7 @@ def prompt_tags(tags):
             term.yellow_underline('Esc') + u':quit',))
         width = term.width - 6
         sel_tags = u', '.join(tags)
-        while len(Ansi(sel_tags)) >= (width - 8):
+        while len(sel_tags) >= (width - 8):
             tags = tags[:-1]
             sel_tags = u', '.join(tags)
         lne = LineEditor(width, sel_tags)
@@ -550,7 +551,7 @@ def read_messages(msgs, new):
         sel_padd_right = padd_attr(
             u'-'
             + selector.glyphs['bot-horiz'] * (
-            selector.visible_width - len(Ansi(title)) - 7)
+            selector.visible_width - len(title) - 7)
             + u'-\u25a0-' if READING else u'- -')
         sel_padd_left = padd_attr(
             selector.glyphs['bot-horiz'] * 3)
