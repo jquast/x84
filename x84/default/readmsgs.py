@@ -210,7 +210,7 @@ def prompt_tags(tags):
             term.yellow_underline('Esc') + u':quit',))
         width = term.width - 6
         sel_tags = u', '.join(tags)
-        while len(sel_tags) >= (width - 8):
+        while term.length(sel_tags) >= (width - 8):
             tags = tags[:-1]
             sel_tags = u', '.join(tags)
         lne = LineEditor(width, sel_tags)
