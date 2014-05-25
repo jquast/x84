@@ -11,12 +11,13 @@ def quote_body(msg, width=79, quote_txt=u'> ', hardwrap=u'\r\n'):
     """
     Given a message, return new string suitable for quoting it.
     """
-    from x84.bbs import Ansi
+    from x84.bbs import getterminal
+    term = getterminal()
     ucs = u''
     for line in msg.body.splitlines():
         ucs += u''.join((
             quote_txt,
-            Ansi(line).wrap(width - len(quote_txt), indent=quote_txt),
+            u'\r\n'.join(term.wrap(line, width - len(quote_txt), subsequent_indent=quote_txt)),
             hardwrap,))
     return u''.join((
         'On ',
@@ -103,7 +104,7 @@ def msg_filter(msgs):
     #         Too many local variables
     #         Too many branches
     #         Too many statements
-    from x84.bbs import list_msgs, echo, getsession, getterminal, get_msg, Ansi
+    from x84.bbs import list_msgs, echo, getsession, getterminal, get_msg
     session, term = getsession(), getterminal()
     public_msgs = list_msgs(('public',))
     addressed_to = 0
@@ -172,8 +173,8 @@ def msg_filter(msgs):
             txt_out.append('%s new' % (
                 term.bold_yellow(str(len(new),)),))
         if 0 != len(txt_out):
-            echo(u'\r\n\r\n' + Ansi(
-                u', '.join(txt_out) + u'.').wrap(term.width - 2))
+            echo(u'\r\n\r\n' + u'\r\n'.join(term.wrap(
+                u', '.join(txt_out) + u'.', (term.width - 2))))
     return msgs, new
 
 
@@ -193,7 +194,7 @@ def prompt_tags(tags):
     #         Too many local variables
     #         Using the global statement
     from x84.bbs import DBProxy, echo, getterminal, getsession
-    from x84.bbs import Ansi, LineEditor, getch
+    from x84.bbs import LineEditor, getch
     session, term = getsession(), getterminal()
     tagdb = DBProxy('tags')
     global FILTER_PRIVATE
@@ -209,7 +210,7 @@ def prompt_tags(tags):
             term.yellow_underline('Esc') + u':quit',))
         width = term.width - 6
         sel_tags = u', '.join(tags)
-        while len(Ansi(sel_tags)) >= (width - 8):
+        while term.length(sel_tags) >= (width - 8):
             tags = tags[:-1]
             sel_tags = u', '.join(tags)
         lne = LineEditor(width, sel_tags)
@@ -237,10 +238,10 @@ def prompt_tags(tags):
             if 0 == len(all_tags):
                 echo(u'None !'.center(term.width / 2))
             else:
-                echo(Ansi(u', '.join(([u'%s(%s)' % (
+                echo(u'\r\n'.join((term.wrap(u', '.join(([u'%s(%s)' % (
                     term.red(tag),
                     term.yellow(str(len(msgs))),)
-                        for (tag, msgs) in all_tags]))).wrap(term.width - 2))
+                        for (tag, msgs) in all_tags])), (term.width - 2)))))
             continue
         elif (inp_tags.strip().lower() == '/nofilter'
                 and 'sysop' in session.user.groups):
@@ -350,7 +351,7 @@ def read_messages(msgs, new):
     #         Too many branches
     #         Too many statements
     from x84.bbs import timeago, get_msg, getterminal, echo, gosub
-    from x84.bbs import ini, Pager, getsession, getch, Ansi, Msg
+    from x84.bbs import ini, Pager, getsession, getch, Msg
     import x84.default.writemsg
     session, term = getsession(), getterminal()
 
@@ -464,15 +465,15 @@ def read_messages(msgs, new):
                 term.yellow('tO: '),
                 to_attr((u'%s' % to_attr(msg.recipient,)).rjust(len_author)
                         if msg.recipient is not None else u'All'),)),
-            (Ansi(
+            (u'\r\n'.join((term.wrap(
                 term.yellow('tAGS: ')
                 + (u'%s ' % (term.bold(','),)).join((
                     [term.bold_red(_tag)
                         if _tag in SEARCH_TAGS
                         else term.yellow(_tag)
-                        for _tag in msg.tags]))).wrap(
+                        for _tag in msg.tags])),
                             reader.visible_width,
-                            indent=u'      ')),
+                            subsequent_indent=u' ' * 6)))),
             (term.yellow_underline(
                 (u'SUbj: %s' % (msg.subject,)).ljust(reader.visible_width)
             )),
@@ -550,7 +551,7 @@ def read_messages(msgs, new):
         sel_padd_right = padd_attr(
             u'-'
             + selector.glyphs['bot-horiz'] * (
-            selector.visible_width - len(Ansi(title)) - 7)
+            selector.visible_width - term.length(title) - 7)
             + u'-\u25a0-' if READING else u'- -')
         sel_padd_left = padd_attr(
             selector.glyphs['bot-horiz'] * 3)

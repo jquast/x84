@@ -53,7 +53,7 @@ def main():
         while num > len(otxt):
             otxt += [u'', ]
         otxt[num] = otxt[num][:int(term.width / 2.5)] + u' ' + line
-    width = max([len(Ansi(line)) for line in otxt])
+    width = max([term.length(line) for line in otxt])
     height = len(otxt)
     num_stars = int((term.width * term.height) * .002)
     stars = dict([(n, (random.choice('\\|/-'),
