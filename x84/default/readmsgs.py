@@ -551,7 +551,7 @@ def read_messages(msgs, new):
         sel_padd_right = padd_attr(
             u'-'
             + selector.glyphs['bot-horiz'] * (
-            selector.visible_width - len(title) - 7)
+            selector.visible_width - term.length(title) - 7)
             + u'-\u25a0-' if READING else u'- -')
         sel_padd_left = padd_attr(
             selector.glyphs['bot-horiz'] * 3)
