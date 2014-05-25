@@ -17,7 +17,7 @@ def quote_body(msg, width=79, quote_txt=u'> ', hardwrap=u'\r\n'):
     for line in msg.body.splitlines():
         ucs += u''.join((
             quote_txt,
-            u''.join(term.wrap(line, width - len(quote_txt), subsequent_indent=quote_txt)),
+            u'\r\n'.join(term.wrap(line, width - len(quote_txt), subsequent_indent=quote_txt)),
             hardwrap,))
     return u''.join((
         'On ',
@@ -173,7 +173,7 @@ def msg_filter(msgs):
             txt_out.append('%s new' % (
                 term.bold_yellow(str(len(new),)),))
         if 0 != len(txt_out):
-            echo(u'\r\n\r\n' + u''.join(term.wrap(
+            echo(u'\r\n\r\n' + u'\r\n'.join(term.wrap(
                 u', '.join(txt_out) + u'.', (term.width - 2))))
     return msgs, new
 
@@ -238,7 +238,7 @@ def prompt_tags(tags):
             if 0 == len(all_tags):
                 echo(u'None !'.center(term.width / 2))
             else:
-                echo(u''.join((term.wrap(u', '.join(([u'%s(%s)' % (
+                echo(u'\r\n'.join((term.wrap(u', '.join(([u'%s(%s)' % (
                     term.red(tag),
                     term.yellow(str(len(msgs))),)
                         for (tag, msgs) in all_tags])), (term.width - 2)))))
@@ -465,7 +465,7 @@ def read_messages(msgs, new):
                 term.yellow('tO: '),
                 to_attr((u'%s' % to_attr(msg.recipient,)).rjust(len_author)
                         if msg.recipient is not None else u'All'),)),
-            (u''.join((term.wrap(
+            (u'\r\n'.join((term.wrap(
                 term.yellow('tAGS: ')
                 + (u'%s ' % (term.bold(','),)).join((
                     [term.bold_red(_tag)
@@ -473,7 +473,7 @@ def read_messages(msgs, new):
                         else term.yellow(_tag)
                         for _tag in msg.tags])),
                             reader.visible_width,
-                            subsequent_indent=u'      ')))),
+                            subsequent_indent=u' ' * 6)))),
             (term.yellow_underline(
                 (u'SUbj: %s' % (msg.subject,)).ljust(reader.visible_width)
             )),
