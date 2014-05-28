@@ -20,6 +20,17 @@ __credits__ = [
 ]
 __license__ = 'ISC'
 
+import SocketServer
+import socket
+
+# black hole socket server for dummy connections (bots)
+class BlackHoleServer(SocketServer.TCPServer):
+    allow_reuse_address = True
+
+class BlackHoleHandler(SocketServer.StreamRequestHandler):
+    def handle(self):
+        pass
+
 def main():
     """
     x84 main entry point. The system begins and ends here.
@@ -399,7 +410,6 @@ def _loop(servers):
     timeout_ipc = CFG.getint('system', 'timeout_ipc')
     tap_events = CFG.getboolean('session', 'tap_events')
     locks = dict()
-    blackhole_socket = None
 
     def lookup(client):
         """
@@ -659,35 +669,41 @@ def _loop(servers):
                 else:
                     assert False, 'unhandled %r' % ((event, data),)
 
-    # black hole socket server for dummy connections (bots)
+    # instantiate black hole socket server?
     blackhole_configured = CFG.has_option('session', 'blackhole_port')
 
     if blackhole_configured:
-        from x84.msgserve import BlackHoleServer, BlackHoleHandler
         from threading import Thread
         addr = 'localhost'
         port = CFG.getint('session', 'blackhole_port')
-        blackhole_socket = (addr, port)
         blackholeserver = BlackHoleServer((addr, port), BlackHoleHandler)
         bh = Thread(target=blackholeserver.serve_forever)
         bh.daemon = True
         bh.start()
-        log.info(u'Black hole listening on %s:%d' % (addr, port))
+        log.info(u'black hole listening %d/tcp' % port)
 
-    # message polling routine; connects to black hole socket
-    def msgpoll(blackhole_socket):
-        from x84.telnet import TelnetClient
-        from x84.terminal import ConnectTelnet
-        import socket
+    web_modules = set()
 
-        pitcher = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        pitcher.connect(blackhole_socket)
-        tc = TelnetClient(pitcher, ('msgpoll', 0))
-        tc.env['TERM'] = 'xterm-256color'
-        c = ConnectTelnet(tc)
-        c._set_socket_opts()
-        c._spawn_session()
+    # web server
+    if CFG.has_section('web'):
+        try:
+            import web, OpenSSL
+            from x84 import msgserve
+            from x84.msgserve import MessageNetworkServer
+            from threading import Thread, Lock
+            from multiprocessing import Queue
 
+            MessageNetworkServer.iqueue = Queue()
+            MessageNetworkServer.oqueue = Queue()
+            MessageNetworkServer.lock = Lock()
+            t = Thread(target=msgserve.start)
+            t.daemon = True
+            t.start()
+            web_modules = set([key.strip() for key in CFG.get('web', 'modules').split(',')])
+        except Exception, e:
+            log.error('%s' % str(e))
+
+    # setup message polling mechanism; uses black hole socket
     poll_interval = None
     last_poll = None
 
@@ -699,20 +715,17 @@ def _loop(servers):
             last_poll = int(time.time()) - poll_interval
 
     # x84net message server; uses black hole socket
-    if CFG.has_section('msgserver'):
-        from x84.msgserve import MessageNetworkServer, MessageNetworkServerHandler
-        from threading import Thread
-
+    if 'msgserve' in web_modules:
         if not blackhole_configured:
             log.error(u"[x84net server] Black hole not configured; can't run a message server")
         else:
-            addr = CFG.get('msgserver', 'addr')
-            port = int(CFG.get('msgserver', 'port'))
-            msgserver = MessageNetworkServer((addr, port), MessageNetworkServerHandler)
-            t = Thread(target=msgserver.serve_forever)
-            t.daemon = True
-            t.start()
-            log.info(u'[x84net server] Listening on %s:%d' % (addr, port))
+            pitcher = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            pitcher.connect(('localhost', CFG.getint('session', 'blackhole_port')))
+            tc = TelnetClient(pitcher, ('msgserve', 0))
+            tc.env['TERM'] = 'xterm-256color'
+            c = ConnectTelnet(tc)
+            c._set_socket_opts()
+            c._spawn_session()
 
     while True:
         # shutdown, close & delete inactive clients,
@@ -747,7 +760,8 @@ def _loop(servers):
             now = int(time.time())
 
             if now - last_poll >= poll_interval:
-                msgpoll(blackhole_socket)
+                from x84.msgpoll import do_poll
+                do_poll()
                 last_poll = now
 
         terms = get_terminals()

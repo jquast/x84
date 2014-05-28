@@ -50,6 +50,7 @@ def pull_tcp(network, last):
         sfile.flush()
         result = sfile.readline().strip()
         result = json.loads(result)
+        s.shutdown(socket.SHUT_RDWR)
         s.close()
 
         if result['response'] == True:
@@ -100,6 +101,8 @@ def push_tcp(network, msg, parent, origin_line):
         sfile.write(json.dumps(data) + u'\n')
         sfile.flush()
         result = json.loads(sfile.readline().strip())
+        s.shutdown(socket.SHUT_RDWR)
+        s.close()
 
         if result[u'response'] == True:
             return result[u'id']
@@ -114,17 +117,17 @@ def push_tcp(network, msg, parent, origin_line):
 REST network client methods
 """
 
-def pull_rest(network, last):
+def pull_rest(network, last, ca_path=True):
     import requests
     import json
     import logging
 
     logger = logging.getLogger()
-    url = '%smessage/%s' % (network['url_base'], last)
+    url = '%smessages/%s' % (network['url_base'], last)
     r = None
 
     try:
-        r = requests.get(url, headers={'Auth-X84net': get_token(network)})
+        r = requests.get(url, headers={'Auth-X84net': get_token(network)}, verify=ca_path)
     except Exception, err:
         logger.exception(u'[%s] Request error: %s' % (network['name'], str(err)))
         return False
@@ -136,24 +139,24 @@ def pull_rest(network, last):
 
     try:
         response = json.loads(r.text)
-        return response['response']
+        return response['messages']
     except Exception, err:
         logger.exception(u'[%s] JSON error: %s' % (network['name'], str(err)))
         return False
 
-def push_rest(network, msg, parent, origin_line):
+def push_rest(network, msg, parent, origin_line, ca_path=True):
     import requests
     import json
     import logging
 
     msg_data = prepare_message(msg, network)
     logger = logging.getLogger()
-    url = '%smessage' % network['url_base']
+    url = '%smessages/' % network['url_base']
     data = {'message': json.dumps(msg_data)}
     r = None
 
     try:
-        r = requests.post(url, headers={'Auth-X84net': get_token(network)}, data=data)
+        r = requests.put(url, headers={'Auth-X84net': get_token(network)}, data=data, verify=ca_path)
     except Exception, err:
         logger.exception(u'[%s] Request error: %s' % (network['name'], str(err)))
         return False
@@ -165,7 +168,7 @@ def push_rest(network, msg, parent, origin_line):
 
     try:
         response = json.loads(r.text)
-        return response['response']
+        return response['id']
     except Exception, err:
         logger.exception(u'[%s] JSON error: %s' % (network['name'], str(err)))
         return False
@@ -178,11 +181,12 @@ def main():
     from x84.bbs.msgbase import format_origin_line, to_localtime, to_utctime
     import os
     import time
+    import ssl
 
     # load config
     cfg_bbs = x84.bbs.ini.CFG
     logger = logging.getLogger()
-    logger.info(u'Beginning poll/publish process')
+    logger.debug(u'Beginning poll/publish process')
     # origin line
     origin_line = format_origin_line()
     # pull list of network-associated tags
@@ -228,6 +232,12 @@ def main():
     if cfg_bbs.has_option('msgserver', 'server_tags'):
         server_tags = [tag.strip() for tag in cfg_bbs.get('msgserver', 'server_tags').split(',')]
 
+    # can manually specify path to ca-certs bundle if necessary
+    ca_path = True
+
+    if cfg_bbs.has_option('system', 'ca_path'):
+        ca_path = os.path.expanduser(cfg_bbs.get('system', 'ca_path'))
+
     # handle supported networks
     for i in [net for net in networks if net['type'] in ['rest', 'tcp']]:
         # don't poll tcp-based networks we host ourselves
@@ -255,10 +265,10 @@ def main():
                 logger.error(u'[%s] Could not create last_file; skipping network' % net['name'])
                 continue
 
-        logger.info(u'[%s] Begin polling' % net['name'])
+        logger.debug(u'[%s] Begin polling' % net['name'])
 
         if net['type'] == 'rest':
-            msgs = pull_rest(net, last)
+            msgs = pull_rest(net, last, ca_path)
         elif net['type'] == 'tcp':
             msgs = pull_tcp(net, last)
         # <-- redis, etc. would go here
@@ -314,7 +324,7 @@ def main():
 
         queuedb = None
         queuedb = DBProxy(net['queue_db_name'])
-        logger.info(u'[%s] Begin publishing' % net['name'])
+        logger.debug(u'[%s] Begin publishing' % net['name'])
         msgdb = DBProxy(msgbase.MSGDB)
         msgs = msgdb.keys()
 
@@ -339,7 +349,7 @@ def main():
             transid = None
 
             if net['type'] == 'rest':
-                transid = push_rest(net, msg, trans_parent, origin_line)
+                transid = push_rest(net, msg, trans_parent, origin_line, ca_path)
             elif net['type'] == 'tcp':
                 transid = push_tcp(net, msg, trans_parent, origin_line)
 
@@ -366,4 +376,21 @@ def main():
             queuedb.release()
             logger.info(u'[%s] Published message (msgid %s) => %s' % (net['name'], m, transid))
 
-    logger.info(u'Message poll/publish complete')
+    logger.debug(u'Message poll/publish complete')
+
+"""
+fire up a thread to poll for messages
+"""
+def do_poll():
+    from x84.telnet import TelnetClient
+    from x84.terminal import ConnectTelnet
+    from x84.bbs.ini import CFG
+    import socket
+    pitcher = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    pitcher.settimeout(10)
+    pitcher.connect(('localhost', CFG.getint('session', 'blackhole_port')))
+    tc = TelnetClient(pitcher, ('msgpoll', 0))
+    tc.env['TERM'] = 'xterm-256color'
+    c = ConnectTelnet(tc)
+    c._set_socket_opts()
+    c._spawn_session()

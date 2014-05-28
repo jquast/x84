@@ -196,8 +196,8 @@ class Msg(object):
             if len(networks) == 0:
                 break
             server_tags = []
-            if ini.CFG.has_option('msgserver', 'server_tags'):
-                servers_ini = ini.CFG.get('msgserver', 'server_tags')
+            if ini.CFG.has_option('msg', 'server_tags'):
+                servers_ini = ini.CFG.get('msg', 'server_tags')
                 server_tags = [key.strip() for key in servers_ini.split(',')]
             origin_line = format_origin_line()
             for t in self.tags:

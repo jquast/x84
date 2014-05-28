@@ -2,45 +2,85 @@
 x84net message network client/server
 """
 
-""" TCP server for x84net """
+import web
 
-import SocketServer
-import multiprocessing
+""" server queues and locking mechanism """
+class MessageNetworkServer():
+    iqueue = None
+    oqueue = None
+    lock = None
 
-""" dummy server for programmatic connections """
-class BlackHoleServer(SocketServer.ThreadingTCPServer):
-    pass
-
-class BlackHoleHandler(SocketServer.StreamRequestHandler):
-    def handle(self):
-        self.rfile.readline()
-
-""" server and its queues """
-class MessageNetworkServer(SocketServer.TCPServer):
-    INQUEUE = multiprocessing.Queue()
-    OUTQUEUE = multiprocessing.Queue()
-    allow_reuse_address = True
-
-""" method for handling individual requests """
-class MessageNetworkServerHandler(SocketServer.StreamRequestHandler):
-    def handle(self):
-        import socket
-        from x84.telnet import TelnetClient
-        from x84.terminal import ConnectTelnet
+""" api endpoint """
+class messages():
+    def GET(self, network, last):
         import json
 
-        queue = MessageNetworkServer.INQUEUE
-        pitcher = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        pitcher.connect(('localhost', 31339))
-        tc = TelnetClient(pitcher, ('msgserve', 0))
-        tc.env['TERM'] = 'xterm-256color'
-        c = ConnectTelnet(tc)
-        c._set_socket_opts()
-        c._spawn_session()
-        queue.put(json.loads(self.rfile.readline().strip()))
-        queue = MessageNetworkServer.OUTQUEUE
-        self.wfile.write(json.dumps(queue.get()) + u'\n')
-        self.wfile.flush()
+        if len(last) <= 0:
+            last = 0
+        else:
+            last = int(last)
+
+        if not 'HTTP_AUTH_X84NET' in web.ctx.env.keys():
+            raise web.HTTPError('401 Unauthorized', {}, 'Unauthorized')
+
+        data = {
+            'auth': web.ctx.env['HTTP_AUTH_X84NET']
+            , 'network': network
+            , 'action': 'pull'
+            , 'last': last
+        }
+
+        MessageNetworkServer.lock.acquire()
+        MessageNetworkServer.iqueue.put(data)
+        response = MessageNetworkServer.oqueue.get()
+        MessageNetworkServer.lock.release()
+
+        try:
+            return json.dumps(response)
+        except:
+            return response
+
+    def PUT(self, network, null):
+        import json
+
+        if not 'HTTP_AUTH_X84NET' in web.ctx.env.keys():
+            raise web.HTTPError('401 Unauthorized', {}, 'Unauthorized')
+
+        webdata = web.input()
+
+        data = {
+            'auth': web.ctx.env['HTTP_AUTH_X84NET']
+            , 'network': network
+            , 'action': 'push'
+            , 'message': json.loads(webdata.message)
+        }
+
+        MessageNetworkServer.lock.acquire()
+        MessageNetworkServer.iqueue.put(data)
+        response = MessageNetworkServer.oqueue.get()
+        MessageNetworkServer.lock.release()
+
+        try:
+            return json.dumps(response)
+        except:
+            return response
+
+""" fire up the server """
+def start():
+    from x84.bbs import ini
+    from web.wsgiserver import CherryPyWSGIServer
+    from threading import Lock
+    from multiprocessing import Queue
+
+    CherryPyWSGIServer.ssl_certificate = ini.CFG.get('web', 'cert')
+    CherryPyWSGIServer.ssl_private_key = ini.CFG.get('web', 'key')
+
+    urls = (
+        '/(.*)/messages/(.*)', 'messages'
+        )
+
+    app = web.application(urls, globals())
+    web.httpserver.runsimple(app.wsgifunc(), (ini.CFG.get('web', 'addr'), ini.CFG.getint('web', 'port')))
 
 """ functions for processing the request within x84 """
 
@@ -54,154 +94,153 @@ def server_error(logger, queue, logtext, message=None):
 """ server request handling process """
 def main():
     from x84.bbs import ini, msgbase, DBProxy, getsession, echo
-    from x84.bbs.aes import encryptData, decryptData
     from x84.bbs.msgbase import to_utctime, to_localtime, Msg
-    from base64 import standard_b64encode, standard_b64decode
     import hashlib
     import time
     import logging
     import json
 
-    queue = MessageNetworkServer.INQUEUE
     session = getsession()
     logger = logging.getLogger()
-    data = queue.get(True, 5)
-    queue = MessageNetworkServer.OUTQUEUE
 
-    if not data:
-        return server_error(logger, queue, u'No data')
+    while True:
+        data = MessageNetworkServer.iqueue.get()
+        queue = MessageNetworkServer.oqueue
 
-    if 'network' not in data.keys():
-        return server_error(logger, queue, u'Network not specified')
+        if 'network' not in data.keys():
+            server_error(logger, queue, u'Network not specified')
+            continue
 
-    if 'action' not in data.keys():
-        return server_error(logger, queue, u'Action not specified')
+        if 'action' not in data.keys():
+            server_error(logger, queue, u'Action not specified')
+            continue
 
-    if 'auth' not in data.keys():
-        return server_error(logger, queue, u'Auth token missing')
+        if 'auth' not in data.keys():
+            server_error(logger, queue, u'Auth token missing')
+            continue
 
-    auth = data['auth'].split('|')
+        auth = data['auth'].split('|')
 
-    if len(auth) != 3:
-        return server_error(logger, queue, u'Improper token')
+        if len(auth) != 3:
+            server_error(logger, queue, u'Improper token')
+            continue
 
-    board_id = int(auth[0])
-    token = auth[1]
-    when = int(auth[2])
-    now = int(time.time())
-    netcfg = 'msgnet_%s' % data['network']
-    logger.info(u"client %d connecting for '%s' %s" % (board_id, data['network'], data['action']))
+        board_id = int(auth[0])
+        token = auth[1]
+        when = int(auth[2])
+        now = int(time.time())
+        netcfg = 'msgnet_%s' % data['network']
+        logger.info(u"client %d connecting for '%s' %s" % (board_id, data['network'], data['action']))
 
-    if not ini.CFG.has_option(netcfg, 'keys_db_name'):
-        return server_error(logger, queue, u'No keys database config for this network', u'Server error')
+        if not ini.CFG.has_option(netcfg, 'keys_db_name'):
+            server_error(logger, queue, u'No keys database config for this network', u'Server error')
+            continue
 
-    keysdb = DBProxy(ini.CFG.get(netcfg, 'keys_db_name'))
+        keysdb = DBProxy(ini.CFG.get(netcfg, 'keys_db_name'))
 
-    if str(board_id) not in keysdb.keys():
-        return server_error(logger, queue, u'No such key for this network')
+        if str(board_id) not in keysdb.keys():
+            server_error(logger, queue, u'No such key for this network')
+            continue
 
-    board_key = keysdb[str(board_id)]
+        board_key = keysdb[str(board_id)]
 
-    if when > now or now - when > 15:
-        return server_error(logger, queue, u'Expired token')
+        if when > now or now - when > 15:
+            server_error(logger, queue, u'Expired token')
+            continue
 
-    if token != hashlib.sha256('%s%d' % (board_key, when)).hexdigest():
-        return server_error(logger, queue, u'Invalid token')
+        if token != hashlib.sha256('%s%d' % (board_key, when)).hexdigest():
+            server_error(logger, queue, u'Invalid token')
+            continue
 
-    if not ini.CFG.has_option(netcfg, 'source_db_name'):
-        return server_error(logger, queue, u'Source DB not configured', u'Server error')
+        if not ini.CFG.has_option(netcfg, 'source_db_name'):
+            server_error(logger, queue, u'Source DB not configured', u'Server error')
+            continue
 
-    if not ini.CFG.has_option(netcfg, 'trans_db_name'):
-        return server_error(logger, queue, u'Translation DB not configured', u'Server error')
+        if not ini.CFG.has_option(netcfg, 'trans_db_name'):
+            server_error(logger, queue, u'Translation DB not configured', u'Server error')
+            continue
 
-    tagdb = DBProxy(msgbase.TAGDB)
-    msgdb = DBProxy(msgbase.MSGDB)
-    sourcedb = DBProxy(ini.CFG.get(netcfg, 'source_db_name'))
-    transdb = DBProxy(ini.CFG.get(netcfg, 'trans_db_name'))
+        tagdb = DBProxy(msgbase.TAGDB)
+        msgdb = DBProxy(msgbase.MSGDB)
+        sourcedb = DBProxy(ini.CFG.get(netcfg, 'source_db_name'))
+        transdb = DBProxy(ini.CFG.get(netcfg, 'trans_db_name'))
 
-    if data['action'] == 'pull':
+        if data['action'] == 'pull':
 
-        """ client is requesting to pull messages """
+            """ client is requesting to pull messages """
 
-        if data['network'] not in tagdb.keys():
-            queue.put({u'response': True, u'messages': []})
-            return
-
-        msgs = list()
-        last = None
-
-        if 'last' in data.keys():
-            last = int(data['last'])
-
-        count = 0
-
-        for m in tagdb[data['network']]:
-            if count == 20:
-                break
-
-            if last != None and int(m) <= last:
+            if data['network'] not in tagdb.keys():
+                queue.put({u'response': True, u'messages': []})
                 continue
 
-            count += 1
-            msg = msgdb[m]
+            msgs = list()
+            last = None
 
-            # don't pull messages that the client posted
-            if sourcedb.has_key(msg.idx) and sourcedb[msg.idx] == int(board_id):
+            if 'last' in data.keys():
+                last = int(data['last'])
+
+            count = 0
+
+            for m in tagdb[data['network']]:
+                if count == 20:
+                    break
+
+                if last != None and int(m) <= last:
+                    continue
+
+                count += 1
+                msg = msgdb[m]
+
+                # don't pull messages that the client posted
+                if sourcedb.has_key(msg.idx) and sourcedb[msg.idx] == int(board_id):
+                    continue
+
+                pushmsg = {
+                    u'id': msg.idx
+                    , u'author': msg.author
+                    , u'recipient': msg.recipient
+                    , u'parent': msg.parent
+                    , u'subject': msg.subject
+                    , u'tags': [tag for tag in msg.tags if tag != data['network']]
+                    , u'ctime': to_utctime(msg.ctime)
+                    , u'body': msg.body
+                }
+                msgs.append(pushmsg)
+
+            queue.put({u'response': True, u'messages': msgs})
+        elif data['action'] == 'push':
+
+            """ client is requesting to push messages """
+
+            if 'message' not in data.keys():
+                server_error(logger, queue, u'No message')
                 continue
 
-            pushmsg = {
-                u'id': msg.idx
-                , u'author': msg.author
-                , u'recipient': msg.recipient
-                , u'parent': msg.parent
-                , u'subject': msg.subject
-                , u'tags': [tag for tag in msg.tags if tag != data['network']]
-                , u'ctime': to_utctime(msg.ctime)
-                , u'body': msg.body
-            }
-            msgs.append(pushmsg)
+            pullmsg = data['message']
 
-        try:
-            response = {u'response': True, u'messages': None}
-            response[u'messages'] = standard_b64encode(encryptData(board_key.decode('hex'), json.dumps(msgs)))
-            queue.put(response)
-        except Exception, e:
-            return server_error(logger, queue, u'Encryption error: %s' % str(e), u'Server error')
-    elif data['action'] == 'push':
+            for k in [u'author', u'recipient', u'subject', u'parent', u'tags', u'ctime', u'body']:
+                if k not in pullmsg.keys():
+                    server_error(logger, queue, u'Missing %s' % k)
+                    continue
 
-        """ client is requesting to push messages """
+            msg = Msg()
+            msg.author = pullmsg['author']
+            msg.recipient = pullmsg['recipient']
+            msg.subject = pullmsg['subject']
+            msg.parent = pullmsg['parent']
+            msg.tags = set(pullmsg['tags'] + [data['network']])
+            msg.body = pullmsg['body']
 
-        if 'message' not in data.keys():
-            return server_error(logger, queue, u'No message')
+            try:
+                msg.save(noqueue=True, ctime=to_localtime(pullmsg['ctime'].partition('.')[0]))
+            except Exception, e:
+                server_error('Error saving message: %s' % str(e))
+                continue
 
-        pullmsg = data['message']
-
-        try:
-            pullmsg = json.loads(decryptData(board_key.decode('hex'), standard_b64decode(pullmsg)))
-        except Exception, e:
-            return server_error(logger, queue, u'Decryption exception: %s' % str(e))
-
-        for k in [u'author', u'recipient', u'subject', u'parent', u'tags', u'ctime', u'body']:
-            if k not in pullmsg.keys():
-                return server_error(logger, queue, u'Missing %s' % k)
-
-        msg = Msg()
-        msg.author = pullmsg['author']
-        msg.recipient = pullmsg['recipient']
-        msg.subject = pullmsg['subject']
-        msg.parent = pullmsg['parent']
-        msg.tags = set(pullmsg['tags'] + [data['network']])
-        msg.body = pullmsg['body']
-
-        try:
-            msg.save(noqueue=True, ctime=to_localtime(pullmsg['ctime'].partition('.')[0]))
-        except Exception, e:
-            return server_error('Error saving message: %s' % str(e))
-
-        sourcedb.acquire()
-        transdb.acquire()
-        sourcedb[msg.idx] = board_id
-        transdb[msg.idx] = msg.idx
-        sourcedb.release()
-        transdb.release()
-        queue.put({u'response': True, u'id': msg.idx})
+            sourcedb.acquire()
+            transdb.acquire()
+            sourcedb[msg.idx] = board_id
+            transdb[msg.idx] = msg.idx
+            sourcedb.release()
+            transdb.release()
+            queue.put({u'response': True, u'id': msg.idx})
