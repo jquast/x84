@@ -721,6 +721,8 @@ def _loop(servers):
         else:
             pitcher = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             pitcher.connect(('localhost', CFG.getint('session', 'blackhole_port')))
+            pitcher.settimeout(0)
+            pitcher.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
             tc = TelnetClient(pitcher, ('msgserve', 0))
             tc.env['TERM'] = 'xterm-256color'
             c = ConnectTelnet(tc)

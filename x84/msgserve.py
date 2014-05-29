@@ -14,6 +14,7 @@ class MessageNetworkServer():
 class messages():
     def GET(self, network, last):
         import json
+        import Queue
 
         if len(last) <= 0:
             last = 0
@@ -32,7 +33,12 @@ class messages():
 
         MessageNetworkServer.lock.acquire()
         MessageNetworkServer.iqueue.put(data)
-        response = MessageNetworkServer.oqueue.get()
+
+        try:
+            response = MessageNetworkServer.oqueue.get(True, 60)
+        except Queue.Empty:
+            response = {u'response': False, u'message': u'No response'}
+
         MessageNetworkServer.lock.release()
 
         try:
@@ -42,6 +48,7 @@ class messages():
 
     def PUT(self, network, null):
         import json
+        import Queue
 
         if not 'HTTP_AUTH_X84NET' in web.ctx.env.keys():
             raise web.HTTPError('401 Unauthorized', {}, 'Unauthorized')
@@ -57,7 +64,12 @@ class messages():
 
         MessageNetworkServer.lock.acquire()
         MessageNetworkServer.iqueue.put(data)
-        response = MessageNetworkServer.oqueue.get()
+
+        try:
+            response = MessageNetworkServer.oqueue.get(True, 60)
+        except Queue.Empty:
+            response = {u'response': False, u'message': u'No response'}
+
         MessageNetworkServer.lock.release()
 
         try:
@@ -76,7 +88,7 @@ def start():
     CherryPyWSGIServer.ssl_private_key = ini.CFG.get('web', 'key')
 
     urls = (
-        '/(.*)/messages/(.*)', 'messages'
+        '/messages/([^/]+)/([^/]+)/?', 'messages'
         )
 
     app = web.application(urls, globals())
@@ -93,18 +105,24 @@ def server_error(logger, queue, logtext, message=None):
 
 """ server request handling process """
 def main():
-    from x84.bbs import ini, msgbase, DBProxy, getsession, echo
+    from x84.bbs import ini, msgbase, DBProxy, getsession, echo, getterminal
     from x84.bbs.msgbase import to_utctime, to_localtime, Msg
     import hashlib
     import time
     import logging
     import json
+    import Queue
 
     session = getsession()
     logger = logging.getLogger()
+    term = getterminal()
 
     while True:
-        data = MessageNetworkServer.iqueue.get()
+        try:
+            data = MessageNetworkServer.iqueue.get(True, 10)
+        except Queue.Empty:
+            continue
+
         queue = MessageNetworkServer.oqueue
 
         if 'network' not in data.keys():

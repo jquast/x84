@@ -123,7 +123,7 @@ def pull_rest(network, last, ca_path=True):
     import logging
 
     logger = logging.getLogger()
-    url = '%smessages/%s' % (network['url_base'], last)
+    url = '%smessages/%s/%s' % (network['url_base'], network['name'], last)
     r = None
 
     try:
@@ -141,6 +141,7 @@ def pull_rest(network, last, ca_path=True):
         response = json.loads(r.text)
         return response['messages']
     except Exception, err:
+        print r.text
         logger.exception(u'[%s] JSON error: %s' % (network['name'], str(err)))
         return False
 
@@ -151,7 +152,7 @@ def push_rest(network, msg, parent, origin_line, ca_path=True):
 
     msg_data = prepare_message(msg, network)
     logger = logging.getLogger()
-    url = '%smessages/' % network['url_base']
+    url = '%smessages/%s' % (network['url_base'], network['name'])
     data = {'message': json.dumps(msg_data)}
     r = None
 
