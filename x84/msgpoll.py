@@ -236,8 +236,8 @@ def main():
     # can manually specify path to ca-certs bundle if necessary
     ca_path = True
 
-    if cfg_bbs.has_option('system', 'ca_path'):
-        ca_path = os.path.expanduser(cfg_bbs.get('system', 'ca_path'))
+    if cfg_bbs.has_option(netcfg, 'ca_path'):
+        ca_path = os.path.expanduser(cfg_bbs.get(netcfg, 'ca_path'))
 
     # handle supported networks
     for i in [net for net in networks if net['type'] in ['rest', 'tcp']]:
