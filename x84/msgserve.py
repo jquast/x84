@@ -87,8 +87,11 @@ def start():
     CherryPyWSGIServer.ssl_certificate = ini.CFG.get('web', 'cert')
     CherryPyWSGIServer.ssl_private_key = ini.CFG.get('web', 'key')
 
+    if ini.CFG.has_option('web', 'chain'):
+        CherryPyWSGIServer.ssl_certificate_chain = ini.CFG.get('web', 'chain')
+
     urls = (
-        '/messages/([^/]+)/([^/]+)/?', 'messages'
+        '/messages/([^/]+)/([^/]*)/?', 'messages'
         )
 
     app = web.application(urls, globals())
