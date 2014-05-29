@@ -16,15 +16,18 @@ def main():
         from x84 import msgserve
         from x84.msgserve import MessageNetworkServer
         session.user = User(u'x84net server')
+        session.send_event('set-timeout', 0)
         session.activity = u'Serving messages'
         while True:
             try:
                 msgserve.main()
             except KeyboardInterrupt:
-                MessageNetworkServer.oqueue.put('Error')
+                print 'KeyboardInterrupt'
+                MessageNetworkServer.oqueue.put({u'response': False, u'message': u'Error'})
                 break
-            except Exception:
-                MessageNetworkServer.oqueue.put('Error')
+            except Exception, e:
+                logger.exception(u'%r' % e)
+                MessageNetworkServer.oqueue.put({u'response': False, u'message': u'Error'})
     elif whoami == 'msgpoll':
         from x84 import msgpoll
         session.user = User(u'x84net client')
