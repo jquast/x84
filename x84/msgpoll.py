@@ -152,7 +152,7 @@ def push_rest(network, msg, parent, origin_line, ca_path=True):
 
     msg_data = prepare_message(msg, network)
     logger = logging.getLogger()
-    url = '%smessages/%s' % (network['url_base'], network['name'])
+    url = '%smessages/%s/' % (network['url_base'], network['name'])
     data = {'message': json.dumps(msg_data)}
     r = None
 
