@@ -11,14 +11,14 @@ def get_token(network):
     return '%s|%s|%s' % (network['board_id'], hashlib.sha256('%s%s' % (network['token'], t)).hexdigest(), t)
 
 """ turn a Msg object into a dict for transfer """
-def prepare_message(msg, network):
+def prepare_message(msg, network, parent):
     from x84.bbs.msgbase import format_origin_line, to_utctime
 
     return {
         'author': msg.author
         , 'subject': msg.subject
         , 'recipient': msg.recipient
-        , 'parent': msg.parent
+        , 'parent': parent
         , 'tags': [tag for tag in msg.tags if tag != network['name']]
         , 'body': u''.join((msg.body, format_origin_line()))
         , 'ctime': to_utctime(msg.ctime)
@@ -83,7 +83,7 @@ def push_tcp(network, msg, parent, origin_line):
     from base64 import standard_b64encode
 
     logger = logging.getLogger()
-    pushmsg = prepare_message(msg, network)
+    pushmsg = prepare_message(msg, network, parent)
     pushmsg['parent'] = parent
 
     try:
@@ -150,7 +150,7 @@ def push_rest(network, msg, parent, origin_line, ca_path=True):
     import json
     import logging
 
-    msg_data = prepare_message(msg, network)
+    msg_data = prepare_message(msg, network, parent)
     logger = logging.getLogger()
     url = '%smessages/%s/' % (network['url_base'], network['name'])
     data = {'message': json.dumps(msg_data)}
