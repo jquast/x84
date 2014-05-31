@@ -202,11 +202,11 @@ def lc_retrieve():
     rstr = u''
     nicks = []
     for tm_lc, (handle, _nc, origin) in (reversed(sorted(sortdb.items()))):
-        rstr = u''.join(rstr,
-                        term.ljust(handle, (padd_handle - 1)),
-                        term.red(origin.ljust(padd_origin)),
-                        timeago(time.time() - tm_lc),
-                        u'\n')
+        rstr = u''.join((rstr,
+                         term.ljust(handle, (padd_handle - 1)),
+                         term.red(origin.ljust(padd_origin)),
+                         timeago(time.time() - tm_lc),
+                         u'\n'))
         nicks.append(handle)
     return (nicks, rstr.rstrip())
 
