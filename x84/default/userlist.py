@@ -37,7 +37,7 @@ def waitprompt():
     echo(u''.join(term.move_x(0),
                   term.clear_eol,
                   term.move_up,
-                  term.green(u'-' * (term.width - 1))
+                  term.green(u'-' * (term.width - 1)),
                   u'\r\n'))
     return keypressed
 
