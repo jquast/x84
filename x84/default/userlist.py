@@ -47,7 +47,7 @@ def main():
     session.activity = 'Viewing Userlist'
     banner_height = banner()
     firstpage = True
-    handles = sorted(list_users(), key=str.lower)
+    handles = sorted(list_users(), key=unicode.lower)
 
     at_first_page = lambda counter: (
         firstpage and counter == term.height - banner_height)
