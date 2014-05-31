@@ -11,10 +11,10 @@ import os
 
 weather_icons = os.path.join(os.path.abspath(
     os.path.dirname(__file__)), 'art', 'weather')
-panel_width = 16
+panel_width = 15
 panel_height = 8
-top_margin = 3
-next_margin = 3
+top_margin = 1
+next_margin = 2
 timeout_fch = 3  # timeout of fahrenheit vs. centigrade prompt
 cf_key = u'!'
 
@@ -80,7 +80,7 @@ def disp_found(num):
     from x84.bbs import getterminal, echo
     term = getterminal()
     disp_n = term.bold_white(u'{}'.format(num))
-    locations = term.yellow(u'lOCAtiON{s} diSCOVEREd'.format(
+    locations = term.yellow(u'Location{s} discovered'.format(
         s=u's' if num > 1 else u'',))
     dotdot = term.bold_black(u'...')
     echo(u'\r{disp_n} {locations} {dotdot}'.format(
@@ -92,20 +92,25 @@ def disp_search_help():
     from x84.bbs import getterminal, echo
     term = getterminal()
 
-    enter = term.yellow(u'ENtER US')
-    postal = term.bold_yellow(u'POStAl COdE')
-    or_nearest = term.yellow(u', OR NEARESt')
-    int_city = term.bold_yellow(u'iNtERNAtiONAl CitY.')
+    enter = term.yellow(u'Enter U.S.')
+    postal = term.bold_yellow(u'postal code')
+    or_nearest = term.yellow(u', or nearest')
+    int_city = term.bold_yellow(u'international citY.')
     keyhelp = (u'{t.bold_yellow}({t.normal}'
-               u'{t.underline_yellow}ESCAPE{t.normal}'
+               u'{t.underline_yellow}Escape{t.normal}'
                u'{t.bold_white}:{t.normal}'
-               u'{t.yellow}EXit{t.normal}'
+               u'{t.yellow}exit{t.normal}'
                u'{t.bold_yellow}){t.normal}'.format(t=term))
 
     echo(u'\r\n\r\n' + term.normal)
-    echo(u''.join((term.wrap(u'{enter} {postal}{or_nearest} {int_city} {keyhelp}'.format(
-        enter=enter, postal=postal, or_nearest=or_nearest,
-        int_city=int_city, keyhelp=keyhelp), term.width))))
+    echo(u''.join((
+        term.wrap(u'{enter} {postal}{or_nearest} {int_city} {keyhelp}'
+                  .format(enter=enter, postal=postal,
+                          or_nearest=or_nearest,
+                          int_city=int_city,
+                          keyhelp=keyhelp),
+                  term.width)
+    )))
 
 
 def fetch_weather(postal):
@@ -143,9 +148,9 @@ def do_search(search):
         disp_notfound()
     elif resp.status_code != 200:
         # todo: logger.error
-        echo(u'\r\n' + u'StAtUS COdE: %s\r\n\r\n' % (resp.status_code,))
+        echo(u'\r\n' + u'Status Code: %s\r\n\r\n' % (resp.status_code,))
         echo(repr(resp.content))
-        echo(u'\r\n\r\n' + 'PRESS ANY kEY')
+        echo(u'\r\n\r\n' + 'Press any key')
         getch()
     else:
         #print resp.content
@@ -198,12 +203,12 @@ def get_centigrade():
     term = getterminal()
     session = getsession()
     echo(u'\r\n\r\n')
-    echo(term.yellow(u'CElCiUS'))
+    echo(term.yellow(u'Celcius'))
     echo(term.bold_yellow(u'('))
     echo(term.bold_yellow_reverse(u'C'))
     echo(term.bold_yellow(u')'))
     echo(u' or ')
-    echo(term.yellow(u'fAhRENhEit'))
+    echo(term.yellow(u'Fahrenheit'))
     echo(term.bold_yellow(u'('))
     echo(term.bold_yellow_reverse(u'F'))
     echo(term.bold_yellow(u')'))
@@ -231,13 +236,13 @@ def chk_centigrade():
     echo(u'\r\n\r\n')
     echo(u'USiNG ')
     if session.user.get('centigrade', None):
-        echo(term.yellow(u'CElCiUS'))
+        echo(term.yellow(u'Celcius'))
     else:
-        echo(term.yellow(u'fAhRENhEit'))
+        echo(term.yellow(u'Fahrenheit'))
     echo(term.bold_black('...'))
-    echo(u' PRESS ')
+    echo(u' press ')
     echo(term.bold_yellow_reverse(cf_key))
-    echo(u' tO ChANGE.')
+    echo(u' to change.')
     if getch(timeout=timeout_fch) == cf_key:
         get_centigrade()
 
@@ -254,9 +259,9 @@ def chk_save_location(location):
 
     # prompt to store (unsaved/changed) location
     echo(u'\r\n\r\n')
-    echo(term.yellow(u'SAVE lOCAtION'))
+    echo(term.yellow(u'Save Location'))
     echo(term.bold_yellow(u' ('))
-    echo(term.bold_black(u'PRiVAtE'))
+    echo(term.bold_black(u'private'))
     echo(term.bold_yellow(u') '))
     echo(term.yellow(u'? '))
     echo(term.bold_yellow(u'['))
@@ -287,7 +292,7 @@ def get_zipsearch(zipcode=u''):
 
 def chose_location_dummy(locations):
     """
-    dummy pager for chosing a location
+    dummy pager to chose location
     """
     from x84.bbs import getterminal, echo, getch, LineEditor
     term = getterminal()
@@ -299,7 +304,7 @@ def chose_location_dummy(locations):
         term.yellow(u','),
         term.underline_yellow('Escape'),
         term.bold_white(u':'),
-        term.yellow('EXit'),
+        term.yellow('exit'),
         term.bold_yellow(u')'), u' ',
         term.reverse_yellow(':'),)
     max_nwidth = len('%d' % (len(locations) - 1,))
@@ -407,7 +412,7 @@ def location_prompt(location, msg='WEAthER'):
     from x84.bbs import getterminal, echo, getch
     term = getterminal()
     echo(u''.join((u'\r\n\r\n',
-                   term.yellow(u'diSPlAY %s fOR ' % (msg,)),
+                   term.yellow(u'Display %s for ' % (msg,)),
                    term.bold('%(city)s, %(state)s' % location),
                    term.yellow(' ? '),
                    term.bold_yellow(u'['),
@@ -448,20 +453,20 @@ def display_panel(weather, column, centigrade):
 
     # display WeatherIcon ansi art,
     for row_idx, art_row in enumerate(get_icon(weather)):
-        echo(term.move(row_idx + top_margin + 2, column))
+        echo(term.move(row_idx + top_margin + 1, column))
         echo(art_row)
     echo(term.normal)
 
     degree = from_cp437(''.join([chr(248)]))
     # display days' high,
-    echo(term.move(panel_height + top_margin + 2, column))
+    echo(term.move(panel_height + top_margin + 1, column))
     high = weather.get('High_Temperature', None)
     high, conv = temp_conv(high, centigrade)
     echo(u'High: {high:>2}{degree}{conv}'.format(
         high=high, degree=degree, conv=conv).rjust(panel_width - 3))
 
     # display days' low,
-    echo(term.move(panel_height + top_margin + 3, column))
+    echo(term.move(panel_height + top_margin + 2, column))
     low = weather.get('Low_Temperature', None)
     low, conv = temp_conv(low, centigrade)
     echo(u'Low: {low:>2}{degree}{conv}'.format(
@@ -471,9 +476,8 @@ def display_panel(weather, column, centigrade):
     weather_txt = unicode(weather.get('TXT_Short', ''))
     txt_wrapped = textwrap.wrap(weather_txt, (panel_width - 2))
 
-    row_loc = panel_height + top_margin + 5
     for row_idx, txt_row in enumerate(txt_wrapped):
-        row_loc = panel_height + top_margin + row_idx + 5
+        row_loc = panel_height + top_margin + row_idx + 4
         echo(term.move(row_loc, column + 1))
         echo(txt_row.center(panel_width - 2))
     return row_loc
@@ -489,7 +493,7 @@ def display_weather(todays, weather, centigrade):
     term = getterminal()
 
     echo(term.height * u'\r\n')
-    echo(term.move(1, 1))
+    echo(term.move(0, 0))
     at = term.yellow_bold('At')
     city = term.bold(todays.get('City', u''))
     state = todays.get('State', u'')
@@ -526,20 +530,21 @@ def display_weather(todays, weather, centigrade):
     wrapped = textwrap.wrap(
         u'{0}: {1}. {2} {3}, {4}, {5}.'.format(
             current_0, current_1, current_2, current_3,
-            current_4, current_5), min(term.width - panel_width - 5, 40))
+            current_4, current_5), min(term.width - panel_width - 2, 40))
     row_num = 0
 
     art = get_icon(todays)
-    for row_num, (row_txt, art_txt) in enumerate(
-            itertools.izip_longest(wrapped, art)):
+    joined_art_conditions = list(itertools.izip_longest(wrapped, art))
+    last_line = lambda row_num: row_num == len(joined_art_conditions) - 1
+    for row_num, (row_txt, art_txt) in enumerate(joined_art_conditions):
         echo(term.move(bottom + next_margin + row_num, 1))
         echo(art_txt)
-        if row_txt:
+        if not row_txt and not last_line(row_num):
+            echo(u'\r\n')
+        elif row_txt:
             echo(term.move(bottom + next_margin + row_num, panel_width + 5))
             echo(term.normal)
-            echo(row_txt + u'\r\n')
-        else:
-            echo(u'\r\n')
+            echo(row_txt)
 
 
 def main():
@@ -576,7 +581,7 @@ def main():
         while True:
             centigrade = session.user.get('centigrade', False)
             display_weather(todays, forecast, centigrade)
-            echo(u'\r\n')
+            echo(term.move_x(panel_width + 5))
             echo(term.yellow_reverse(u'--ENd Of tRANSMiSSiON--'))
             # allow re-displaying weather between C/F, even at EOT prompt
             if getch() == cf_key:
