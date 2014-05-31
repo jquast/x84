@@ -1,5 +1,5 @@
 """ Userlister for x/84 bbs, https://github.com/jquast/x84 """
-__version__ = 1.0
+__version__ = 1.1
 __author__ = 'Hellbeard'
 
 from x84.bbs import getsession, getterminal, echo, getch
@@ -15,29 +15,45 @@ def banner():
     """ Display banner """
     term = getterminal()
     echo(term.clear)
-    artfile = os.path.join(os.path.dirname(__file__), 'art', 'userlist.ans')
-    for line in showcp437(artfile):
+    artfile = os.path.join(os.path.dirname(__file__), 'userlist.ans')
+    for line_no, line in enumerate(showcp437(artfile)):
         echo(line)
+    else:
+        line_no = 0
     echo(u'\r\n')
+    return line_no
 
 
 def waitprompt():
     """ Display "press enter" prompt and returns key input """
     term = getterminal()
-    echo(u'\n\r')
-    echo(term.magenta(u'(') + term.green(u'..'))
-    echo(term.white(u' press any key to continue ') + term.green(u'..'))
- 
-    echo(term.magenta(u')'))
+    echo(u''.join(u'\r\n',
+                  term.magenta(u'('),
+                  term.green(u'..'),
+                  term.white(u' press any key to continue '),
+                  term.green(u'..'),
+                  term.magenta(u')')))
     keypressed = getch()
+    echo(u''.join(term.move_x(0),
+                  term.clear_eol,
+                  term.move_up,
+                  term.green(u'-' * (term.width - 1))
+                  u'\r\n'))
     return keypressed
-	
+
+
 def main():
     session, term = getsession(), getterminal()
     session.activity = 'Viewing Userlist'
-    banner()
+    banner_height = banner()
     firstpage = True
-    handles = sorted(list_users(), key=lambda s: s.lower())
+    handles = sorted(list_users(), key=str.lower)
+
+    at_first_page = lambda counter: (
+        firstpage and counter == term.height - banner_height)
+    at_next_page = lambda counter: (
+        0 == counter % (term.height - 2))
+
     for counter, handle in enumerate(handles, 1):
         user = get_user(handle)
         origin = user.location
@@ -47,13 +63,8 @@ def main():
         echo(term.ljust(term.green(origin), 27))
         echo(term.bright_white(ago))
         echo(u'\r\n')
-        # first page only, prompt stops at height - BANNER_HEIGHT
-        if (firstpage and counter == term.height - BANNER_HEIGHT or
-                counter % (term.height - 1) == 0):
-            if waitprompt() == term.KEY_ESCAPE:
+        if at_first_page(counter) or at_next_page(counter):
+            if waitprompt() in (term.KEY_ESCAPE, 'q', 'Q'):
                 return
-            else:
-                echo(term.move_x(0) + term.clear_eol + term.move_up)
-                firstpage = False
-
+            firstpage = False
     waitprompt()
