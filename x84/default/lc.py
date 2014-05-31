@@ -202,14 +202,15 @@ def lc_retrieve():
     rstr = u''
     nicks = []
     for tm_lc, (handle, _nc, origin) in (reversed(sorted(sortdb.items()))):
-        try:
-            is_sysop = 'sysop' in get_user(handle).groups
-        except KeyError:
-            # anonymous/deleted accts,
-            is_sysop = False
-        rstr += (term.bold_red(u'@') if is_sysop else u''
-                 ) + (term.ljust(handle,
-                     (padd_handle - (2 if is_sysop else 1))))
+# makes it too slow,
+#        try:
+#            is_sysop = 'sysop' in get_user(handle).groups
+#        except KeyError:
+#            # anonymous/deleted accts,
+#            is_sysop = False
+#        rstr += (term.bold_red(u'@') if is_sysop else u''
+#                 ) + (term.ljust(handle,
+#                     (padd_handle - (2 if is_sysop else 1))))
         rstr += term.red(origin.ljust(padd_origin))
         rstr += timeago(time.time() - tm_lc)
         rstr += u'\n'
