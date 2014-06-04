@@ -9,6 +9,8 @@ def refresh():
     #         Too many local variables
     from x84.bbs import getsession, getterminal, echo, showcp437, ini
     import os
+    import logging
+    logger = logging.getLogger()
     session, term = getsession(), getterminal()
     session.activity = u'Main menu'
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'main.asc')
@@ -43,6 +45,30 @@ def refresh():
             ini.CFG.get('dosemu', 'lord_path') != 'no'):
         entries.insert(0, ('#', 'PlAY lORd!'))
 
+    # add sesame doors to menu if enabled
+    if ini.CFG.has_section('sesame'):
+        from ConfigParser import NoOptionError
+        for door in ini.CFG.options('sesame'):
+            if '_' in door:
+                continue
+
+            # .. but only if we have the binary
+            if not os.path.exists(ini.CFG.get('sesame', door)):
+                continue
+
+            # .. and a key is configured
+            try:
+                key = ini.CFG.get('sesame', '{}_key'.format(door))
+            except NoOptionError:
+                logger.error("no key configured for sesame door '{}'".format(
+                    door,
+                ))
+            else:
+                logger.debug("added sesame door '{}' with key '{}'".format(
+                    door, key
+                ))
+                entries.insert(0, (key, 'PlAY {}'.format(door)))
+
     if 'sysop' in session.user.groups:
         entries += (('v', 'idEO CASSEttE'),)
     buf_str = u''
@@ -69,7 +95,8 @@ def main():
     """ Main procedure. """
     # pylint: disable=R0912
     #         Too many branches
-    from x84.bbs import getsession, getch, goto, gosub
+    from x84.bbs import getsession, getch, goto, gosub, ini
+    from ConfigParser import Error as ConfigError
     session = getsession()
 
     inp = -1
@@ -120,4 +147,18 @@ def main():
             # video cassette player
             gosub('ttyplay')
         else:
-            dirty = False
+            handled = False
+            try:
+                for option in ini.CFG.options('sesame'):
+                    if option.endswith('_key'):
+                        door = option.replace('_key', '')
+                        key = ini.CFG.get('sesame', option)
+                        if inp == key:
+                            gosub('sesame', door)
+                            handled = True
+                            break
+            except ConfigError:
+                pass
+
+            if not handled:
+                dirty = False

@@ -93,6 +93,25 @@ class Session(object):
         self._ttyrec_usec = -1
         self._ttyrec_len_text = 0
 
+    def to_dict(self):
+        """
+        Returns a dictionary containing information about this session object.
+        """
+        return {
+            attr: getattr(self, attr)
+            for attr in (
+                'connect_time',
+                'last_input_time',
+                'idle',
+                'activity',
+                'handle',
+                'user',
+                'encoding',
+                'pid',
+                'node',
+            )
+        }
+
     @property
     def duration(self):
         """

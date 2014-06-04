@@ -199,6 +199,17 @@ def init_bbs_ini():
     cfg_bbs.set('dosemu', 'lord_args',
             '-quiet -I \'$_com1 = "virtual"\' \'X:\\LORD\\START.BAT %%#\'')
 
+    cfg_bbs.add_section('sesame')
+    cfg_bbs.set('sesame', 'CavesOfPhear', '/usr/bin/phear')
+    cfg_bbs.set('sesame', 'CavesOfPhear_key', '!')
+    cfg_bbs.set('sesame', 'FrozenDepths', '/usr/bin/frozendepths')
+    cfg_bbs.set('sesame', 'FrozenDepths_key', '@')
+    cfg_bbs.set('sesame', 'DopeWars',
+        '/usr/bin/dopewars -a -P {session[handle]} --single-player -u none')
+    cfg_bbs.set('sesame', 'DopeWars_key', '$')
+    cfg_bbs.set('sesame', 'MyMan', '/usr/bin/myman')
+    cfg_bbs.set('sesame', 'MyMan_key', '&')
+
     cfg_bbs.add_section('ttyplay')
     cfg_bbs.set('ttyplay', 'exe', '/usr/bin/ttyplay')
     return cfg_bbs
