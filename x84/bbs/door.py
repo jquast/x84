@@ -265,7 +265,8 @@ class Door(object):
     master_fd = None
 
     def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
-                 env_term=None, env_path=None, env_home=None, cp437=False):
+                 env_term=None, env_path=None, env_home=None, cp437=False,
+                 env={}):
         # pylint: disable=R0913
         #        Too many arguments (7/5)
         """
@@ -299,7 +300,7 @@ class Door(object):
             self.env_home = os.getenv('HOME')
         else:
             self.env_home = env_home
-        self.env = None # add additional env variables ...
+        self.env = env # add additional env variables ...
         self.cp437 = cp437
         self._utf8_decoder = codecs.getincrementaldecoder('utf8')()
 
@@ -310,7 +311,7 @@ class Door(object):
         IPC data to and from the slave pty until child process exits.
         """
         logger = logging.getLogger()
-        env = dict() if self.env is None else self.env
+        env = self.env.copy()
         env.update({'LANG': self.env_lang,
                'TERM': self.env_term,
                'PATH': self.env_path,
