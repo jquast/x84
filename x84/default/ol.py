@@ -180,22 +180,19 @@ def get_pager():
 
 
 def banner():
-    """ Return banner """
-    from x84.bbs import getterminal, from_cp437
+    """ Return centered banner """
+    from x84.bbs import getterminal, from_cp437, showcp437
     import os
     term = getterminal()
     output = u''
     output += u'\r\n\r\n' + term.normal
     if term.width >= 78:
         output += term.home + term.normal + term.clear
-        # xzip's ansi is line-clean, center-align with terminal width,
-        artfile = os.path.join(os.path.dirname(__file__), 'ol.ans')
-        art = [line.rstrip()
-               for line in from_cp437(open(artfile).read()).splitlines()]
-        max_ans = max([term.length(line) for line in art])
-        for line in art:
-            output += term.center(term.ljust(line.rstrip(), max_ans)).rstrip() + '\r\n'
-    return output + term.normal
+        artfile = os.path.join(os.path.dirname(__file__), 'art', 'ol.ans')
+
+        for line in showcp437(artfile):
+           output = output + term.move_x((term.width/2)-40)+line
+        return output + term.normal
 
 
 def redraw(pager, selector):
