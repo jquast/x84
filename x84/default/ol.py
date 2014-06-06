@@ -226,8 +226,8 @@ def dummy_pager():
     prompt_ole = u'\r\n\r\nSAY somethiNG ?! [yn]'
     buf = list()
     for record in get_oltxt():
-        buf.extend(term.rstrip(record).term.wrap(
-            term.width - indent).split('\r\n'))
+        buf.extend(term.wrap(term.rstrip(record),
+                             term.width - indent))
     echo((u'\r\n' + term.normal).join(buf[tail * -1:]))
     echo(prompt_ole)
     while True:
