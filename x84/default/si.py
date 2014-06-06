@@ -150,7 +150,7 @@ def main():
         """ erase old star before moving .. """
         if show_star:
             _char, xloc, yloc = stars[star_idx]
-            echo(''.join((term.move(int(yloc), int(xloc)), term.normal,
+            echo(u''.join((term.move(int(yloc), int(xloc)), term.normal,
                           char_at_pos(int(yloc), int(xloc), txt_y, txt_x),)))
 
     def melt():
@@ -161,7 +161,7 @@ def main():
             if 0 == melting[(yloc, xloc)]:
                 del melting[(yloc, xloc)]
         for (yloc, xloc), phase in melting.items():
-            echo(''.join((term.move(yloc, xloc), melt_colors[phase - 1],
+            echo(u''.join((term.move(yloc, xloc), melt_colors[phase - 1],
                           char_at_pos(yloc, xloc, txt_y, txt_x),)))
             melted(yloc, xloc)
 

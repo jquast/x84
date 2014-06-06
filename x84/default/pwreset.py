@@ -86,7 +86,7 @@ def main(handle):
         smtp.quit()
     except Exception as err:
         logger.exception(err)
-        echo('u\r\n\r\n' + term.bold_red(str(err)) + u'\r\n')
+        echo(u'u\r\n\r\n' + term.bold_red(str(err)) + u'\r\n')
         getch(2)
         return False
 

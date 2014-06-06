@@ -23,7 +23,7 @@ def dummy_pager(news_txt):
             if inp in ('n', u'N'):
                 nonstop = True
             echo(u'\r\n')
-    echo('\r\npress any key .. ')
+    echo(u'\r\npress any key .. ')
     getch()
     return
 

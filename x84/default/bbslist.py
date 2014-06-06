@@ -90,7 +90,7 @@ def wait_for(thread):
         echo(u"\r\n\r\nfEtchiNG bbS-SCENE.ORG bbS liSt.. "
              u"(%s)s\b\b%s" % (' ' * 2, '\b' * 2,))
         for num in range(wait_fetch):
-            echo('%2d%s' % (wait_fetch - num - 1, u'\b' * 2,))
+            echo(u'%2d%s' % (wait_fetch - num - 1, u'\b' * 2,))
             if not thread.is_alive():
                 return
             thread.join(1)
@@ -199,7 +199,7 @@ def view_ansi(key):
         ansi_txt = from_cp437(sauce.SAUCE(data=req.content).__str__())
         echo(ansi_txt)
     else:
-        echo('no ansi available (%s)' % (ansiurl,))
+        echo(u'no ansi available (%s)' % (ansiurl,))
     # move to bottom of screen and getch
     echo(u''.join((
         term.move(term.height, 0),
@@ -495,13 +495,13 @@ def more(cont=False):
         prompt += u', ' + fancy_blue(' ', 'more')
     prompt += u': '
     while True:
-        echo('\r\n' + Ansi(prompt).wrap(term.width - (term.width / 3)))
+        echo(u'\r\n' + Ansi(prompt).wrap(term.width - (term.width / 3)))
         inp = getch()
         if inp in (u'q', 'Q'):
             return True
         elif inp is not None and type(inp) is not int:
             if cont and inp == u' ':
-                echo('\r\n\r\n')
+                echo(u'\r\n\r\n')
                 return False
             if inp.lower() in u'acrtviACRTVI':
                 # these keystrokes require a bbs key argument,
@@ -549,7 +549,7 @@ def dummy_pager():
                 echo(term.bold_blue(key) + term.bold_black('. '))
                 for num, line in enumerate(wrapd.split('\r\n')):
                     if num != 0:
-                        echo(' ' * hindent)
+                        echo(u' ' * hindent)
                     echo(line + '\r\n')
                     nlines += 1
             if nlines and (nlines % (term.height - vindent) == 0):
@@ -613,7 +613,7 @@ def add_bbs():
     DBProxy('bbslist')[key] = bbs
     DBProxy('bbslist', 'comments')[key] = list()
     DBProxy('bbslist', 'ratings')[key] = list()
-    echo('\r\n\r\n' + saved_msg % (key) + '\r\n')
+    echo(u'\r\n\r\n' + saved_msg % (key) + '\r\n')
     session.send_event('global', ('bbslist_update', None,))
     session.buffer_event('bbslist_update')
     if ini.CFG.has_section('bbs-scene'):
