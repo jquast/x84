@@ -1,0 +1,41 @@
+[0;40;37m
+[27C[36m_[37m[26C[36m_
+[37m[25C[36m _\\________________________//_
+[37m[24C[36m _) \[37m [1;36mbULLETin bOARd sYSTEm[0m [36m/ [37m [36m(_
+[37m[24C[36m_)[32m::::::::[36m [32m:[36m [32m:[37m   [1;35m____[0m [32m::::::::::[36m(_
+[37m[24C[36m\_[37m    [1;35m _______/\/   /__[0m[8C[36m _/
+[1m [0m    [1;31m.[0m    [1;35m______/\[0m  [1;35m__/\__[0;36m)[1;35m____\   _____\  __  \_______[0;36m([1;35m_______/\_________[31m.
+[36m [0;31m  [37m [1;31m,$,[0;31m [37m  [1;35m\_   ___\/ [0m [1;35m   [0m [1;35m ___[0m  [1;35m\[0m [1;35m \  / [0m [1;35m /[0m [1;35m \[0m   [1;35m __  _   [0m [1;35m__[0m [1;35m _[0m [1;35m  ___[0m   [1;31m,$,
+[0m [1;31m'l$$$[0;31m$$l`[37m [1;35m \  \[34m  [35m/   /\[34m [0m  [1;35m\_/  /\  \/ [0m [1;35m /[0m  [1;35m /[0m   [1;35m/ /[0m [1;35m /   / /[0m [1;35m /\  \_/[31m'l$$$[0;31m$$l`
+[37m  [1;31m,$$[0;31m$$$,[45;30m    [1;35m\[0;45;30m  [1;35m\/[0;45;30m   [1;35m/__\[0;45;30m   [1;35m\__/[0;45;30m  [1;35m\  \  /___/   /_/__/   /_/__/__\  \  [40;31m,$$[0;31m$$$,
+[37m [1;31m,$l[0;31m` 'l$,[37m [35m __\[37m[5C[35m//   __  \    /   _   //   __  \    __  \_   _\  \[1;31m,$l[0;31m` 'l$,
+[37m[7C[35m____/   _   //    \/   \__/ [1;30m::[0;35m /\_// [1;30m::[0;35m \/  / [1;30m::[0;35m \/  //   \/[1;30m:::[0;35m\____
+[37m [35m/[37m [35m/////_[37m[5C[35m/\__/ \ [1;30m::[0;35m /\______    /    \    /\_/\    /\_/ \   /_______///[37m [35m//
+[37m   [36m______[35m\[1;30m:::[0;35m/[36m_______[35m\__/[36m_____[37m [36m\ [35m\__/[37m[6C[35m\__/[1m [0m [36m/[37m [36m_[35m\__/[36m______[35m\_/[36m____________
+[37m  [36m_)[1m%%%%%%[0;35m\_/[1;36m%%%%%%%%%%%%%%%%[0;36m/_[37m [36m\_[37m    [1;36mX[35m/[0m [1;36m84[0m    [36m_/ _\[1m%%%%%%%%%%%%%%%%%%%%%%%%[0;36m(_
+[37m [36m_)[1m%%%%%%%%%%%%%%%%%%%%%%%%%[0;36m/[37m [36m(_[37m [36m )___________( [37m [36m_) \[1m%%%%%%%%%%%%%%%%%%%%%%%%[0;36m(_
+[37m [36m\[1m%%%%%%%%%%%%%%%%%%%%%%%%%[0;36m/___(_ -------------[37m [36m_)___\[1m%%%%%%%%%%%%%%%%%%%[0;36m([1mgRK[0;36m)/
+[37m  [36m`-----------------------'/[32m:::::::::: ::: ::::::::::[36m\`----------------------'
+
+
+[33mA python Telnet server for modern UTF-8 and classic network virtual terminals.
+x/84 supplies a scripting engine for developing MUD or BBS engines.
+Technologies used in x/84 are derived from miniboa (Apache 2.0 Licensed) for
+telnet, blessings (MIT Licensed) for terminal capabilities, and sqlitedict
+(Public Domain) for persistent data. Recordings of sessions are stored in
+ttyplay-compatible format files.
+
+[36mAsynchronous inter-process communication between sessions is provided through
+an event queuing framework, for scripting of 'shared' experiences. Several
+examples of these are provided, such as chat.py. The default board provides
+several activities.
+
+[33mA Posix operating system is required. Alternative implementations of python may
+work. Portability is as equal to python, and has been tested on Raspberry Pi,
+Android, Mac, OpenBSD, Solaris, etc.
+
+[36mANSI Art, such as found on ACiD dark domains DVD, is translated for reasonably
+accurate reproductions for both UTF-8 and IBM CP437 terminals. This allows
+classic DOS art to be used on modern terminals such as Terminal.app, or
+classic emulating terminals such as syncterm. Artwork with Sauce records are
+also supported.
