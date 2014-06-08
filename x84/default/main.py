@@ -24,6 +24,7 @@ def refresh():
         echo(line)
     echo(u'\r\n\r\n')
     entries = [
+        ('$', 'rEAD bUllETiNS'),
         ('b', 'bS NEXUS'),
         ('l', 'ASt CAllS'),
         ('o', 'NE liNERS'),
@@ -108,6 +109,8 @@ def main():
         dirty = True
         if inp == u'*':
             goto('main')  # reload main menu using hidden option '*'
+        elif inp == u'$':
+            gosub('bulletins')
         elif inp == u'b':
             gosub('bbslist')
         elif inp == u'l':
