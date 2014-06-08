@@ -1,8 +1,9 @@
 1.2.0
-  - *removed*: x84.bbs.log.ColoredConsoleHandler, causes terminal
-    issues as it shares the same curses 'curterm' variable. If this
-    is in your default.ini, *please remove it*, simply delete the
-    line, "class = x84.bbs.log.ColoredConsoleHandler"
+  - *removed*: x84.bbs.log.ColoredConsoleHandler.
+    If you see exception: ``ImportError: No module named log``
+    simply change line, ``class = x84.bbs.log.ColoredConsoleHandler``
+    to new line, ``class = logging.StreamHandler``
+    in your ~/.x84/logging.ini or /etc/x84/logging.ini file!
   - new bulletins, userlist, from hellbeard
   - new door 'sesame.py' script, from maze
   - project 'blessed' has been merged. Some minor API changes that
