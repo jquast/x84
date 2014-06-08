@@ -292,7 +292,7 @@ def post_bbs_scene(oneliner, dumb=True):
     yloc = term.height - 3
     if dumb:
         # post to bbs-scene.org ?
-        echo('\r\n\r\n' + term.bold_blue(prompt_api) + u' [yn]')
+        echo(u'\r\n\r\n' + term.bold_blue(prompt_api) + u' [yn]')
         inp = getch(1)
         while inp not in (u'y', u'Y', u'n', u'N'):
             inp = getch()
@@ -349,7 +349,7 @@ def post_bbs_scene(oneliner, dumb=True):
         # clear line w/selector
         echo(term.move(sel.yloc, 0) + term.clear_eol)
     else:
-        echo('\r\n\r\n' + heard_api)
+        echo(u'\r\n\r\n' + heard_api)
         getch(2)
     return thread
 

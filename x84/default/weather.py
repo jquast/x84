@@ -212,7 +212,7 @@ def get_centigrade():
     echo(term.bold_yellow(u'('))
     echo(term.bold_yellow_reverse(u'F'))
     echo(term.bold_yellow(u')'))
-    echo('? ')
+    echo(u'? ')
     while True:
         inp = getch()
         if inp in (u'c', u'C'):

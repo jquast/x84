@@ -135,10 +135,10 @@ def prompt_ok():
 
     def prompt_ok_dumb():
         """ Dummy terminal prompt for confirm/cancel. """
-        echo('\r\n\r\n%s\r\n' % (prompt_confirm,))
-        echo('1 - %s\r\n' % (prompt_continue,))
-        echo('2 - %s\r\n\r\n' % (prompt_chg,))
-        echo('select (1, 2) --> ')
+        echo(u'\r\n\r\n%s\r\n' % (prompt_confirm,))
+        echo(u'1 - %s\r\n' % (prompt_continue,))
+        echo(u'2 - %s\r\n\r\n' % (prompt_chg,))
+        echo(u'select (1, 2) --> ')
         while True:
             inp = getch()
             if inp == u'1':

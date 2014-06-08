@@ -25,7 +25,7 @@ def migrate_105lc():
     for handle in list_users():
         user = get_user(handle)
         lc[(handle)] = (user.lastcall, user.calls, user.location)
-        echo('\r\n' + user.handle + '.')
+        echo(u'\r\n' + user.handle + '.')
     echo ('\r\n\r\nlast callers db rebuilt!')
 
 
@@ -81,5 +81,5 @@ def merge_mystic():
         user.groups.add('old-school')
         if do_write:
             user.save()
-    echo('\r\n\r\n%d lines processed.' % (lno,))
+    echo(u'\r\n\r\n%d lines processed.' % (lno,))
     getch()
