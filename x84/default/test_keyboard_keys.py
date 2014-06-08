@@ -25,7 +25,7 @@ def main():
             bottom = max(bottom, attr['row'])
         echo(term.move(term.height, 0)
                          + 'level: %s score: %s' % (level, score,))
-        sys.stdout.flush()
+
         if bottom >= (term.height - 5):
             echo(
                 '\r\n' * (term.height / 2) +
