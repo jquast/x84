@@ -1,3 +1,17 @@
+1.1.1
+  - *removed*: x84.bbs.log.ColoredConsoleHandler, causes terminal
+    issues as it shares the same curses 'curterm' variable. If this
+    is in your default.ini, *please remove it*, simply delete the
+    line, "class = x84.bbs.log.ColoredConsoleHandler"
+  - new bulletins, userlist, from hellbeard
+  - new door 'sesame.py' script, from maze
+  - project 'blessed' has been merged. Some minor API changes that
+    currently just emit a DeprecationWarning, will be removed in 2.0,
+    especially in regards to sequence-safe textwrap() function, one
+    should instead use term.wrap().
+  - project 'wcwidth' has been merged. No change.
+  - move_x now works for screen/etc. TERM types (fixed in blessed).
+
 1.1.0
   - resolve issue #53: using upstream 'blessed' fork.
   - fix issue #38: chat buffer lost on resize

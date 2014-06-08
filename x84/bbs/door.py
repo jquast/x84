@@ -377,7 +377,7 @@ class Door(object):
         constructor, convert to utf8 glyphs using cp437 encoding; otherwise
         decode output as utf8. """
         from x84.bbs.cp437 import CP437
-        
+
         if self.cp437:
             return u''.join((CP437[ord(ch)] for ch in data))
 

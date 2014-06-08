@@ -235,8 +235,6 @@ def init_log_ini():
     cfg_log.set('handlers', 'keys', 'console, rotate_daily')
 
     cfg_log.add_section('handler_console')
-    cfg_log.set('handler_console', 'class',
-                'x84.bbs.log.ColoredConsoleHandler')
     cfg_log.set('handler_console', 'formatter', 'default')
     cfg_log.set('handler_console', 'args', 'tuple()')
 
