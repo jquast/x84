@@ -4,11 +4,12 @@
 def main():
     """ Main procedure. """
     # by default, nothing is done.
-    from x84.bbs import getsession
+    from x84.bbs import getsession, gosub
     assert 'sysop' in getsession().user.groups
 
     #return migrate_105lc()
-    return nothing()
+    #return nothing()
+    return gosub('test_keyboard_keys')
 
     # but this is a great way to make data manipulations,
     # exampled here is importing of a .csv import of
