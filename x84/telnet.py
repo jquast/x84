@@ -438,7 +438,6 @@ class TelnetClient(object):
         if sent < len(ready_bytes):
             # re-buffer data that could not be pushed to socket;
             self.send_buffer.fromstring(ready_bytes[sent:])
-            print('rebuffer', ready_bytes - sent)
         else:
             # When a process has completed sending data to an NVT printer
             # and has no queued input from the NVT keyboard for further
@@ -448,7 +447,7 @@ class TelnetClient(object):
             if (not self.input_ready()
                     and self.check_local_option(SGA) is False
                     and not self._check_reply_pending(SGA)):
-                sent += send(bytes(''.join((IAC, GA))))
+                sent += _send(bytes(''.join((IAC, GA))))
         return sent
 
     def fileno(self):
