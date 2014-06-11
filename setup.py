@@ -27,6 +27,7 @@ setup(name='x84',
           'sqlitedict >=1.0.8',
           'blessed >=1.8.9',
           'wcwidth >=0.1.0',
+          'paramiko >=1.14.0',
       ],
       scripts=['bin/x84'],
       classifiers=[

@@ -41,6 +41,7 @@ def main():
     path_pip = os.path.join(path_install, 'bin', 'pip')
 
     # install all required modules,
+    print('virtualenv is ' + path_install)
     virtualenv.create_environment(path_install)
     for pkg in open(path_requirements):
         subprocess.call([path_pip, 'install', pkg])

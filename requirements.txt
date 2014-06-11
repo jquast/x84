@@ -2,3 +2,4 @@ sqlitedict
 sauce
 requests
 blessed
+paramiko

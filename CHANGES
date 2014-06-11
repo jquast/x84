@@ -12,6 +12,13 @@
     should instead use term.wrap().
   - project 'wcwidth' has been merged. No change.
   - move_x now works for screen/etc. TERM types (fixed in blessed).
+  - ssh server support: for existing servers, simply add a new section
+    to your default.ini::
+	[ssh]
+	addr = 127.0.0.1
+	port = 6022
+	hostkey = /my/path/to/.x84/ssh_host_rsa_key
+	hostkeybits = 2048
 
 1.1.0
   - resolve issue #53: using upstream 'blessed' fork.
