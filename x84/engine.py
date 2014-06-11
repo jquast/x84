@@ -236,7 +236,7 @@ def session_send(terminals):
         elif tty.timeout and tty.client.idle() > tty.timeout:
             kill_session(tty.client, 'timeout')
 
-def handle_lock(locks, tty, event, data, tap_events):
+def handle_lock(locks, tty, event, data, tap_events, log):
     """
     handle locking event of (lock-key, (method, stale))
     """
@@ -374,7 +374,7 @@ def session_recv(locks, terminals, log, tap_events):
 
             # 'lock': access fine-grained bbs-global locking
             elif event.startswith('lock'):
-                handle_lock(locks, tty, event, data, tap_events)
+                handle_lock(locks, tty, event, data, tap_events, log)
 
             else:
                 assert False, 'unhandled %r' % ((event, data),)
