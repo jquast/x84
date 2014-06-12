@@ -180,11 +180,18 @@ class Msg(object):
             parent_msg = None
             parent_msg = get_msg(self.parent)
 
-            if not hasattr(parent_msg, 'children'):
-                parent_msg.children = set(
-                )  # intermediary conversion; deleteme
-            parent_msg.children.add(self.idx)
-            parent_msg.save()
+            if self.idx != parent_msg.idx:
+                if not hasattr(parent_msg, 'children'):
+                    parent_msg.children = set(
+                    )  # intermediary conversion; deleteme
+                parent_msg.children.add(self.idx)
+                parent_msg.save()
+            else:
+                logger.error(u'Parent idx same as message idx; stripping parent')
+                self.parent = None
+                db_msg.acquire()
+                db_msg['%d' % (self.idx)] = self
+                db_msg.release()
 
         # queue for network posting, if any
         while True and not noqueue and new:
