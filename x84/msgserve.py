@@ -143,17 +143,17 @@ def main():
         return
 
     if 'action' not in data.keys():
-        server_error(logger, queue, u'Action not specified')
+        server_error(logger, queue, u'[%s] Action not specified' % data['network'], u'No action given')
         return
 
     if 'auth' not in data.keys():
-        server_error(logger, queue, u'Auth token missing')
+        server_error(logger, queue, u'[%s] Auth token missing' % data['network'], u'No auth token given')
         return
 
     auth = data['auth'].split('|')
 
     if len(auth) != 3:
-        server_error(logger, queue, u'Improper token')
+        server_error(logger, queue, u'[%s] Improper token' % data['network'], u'Bad token given')
         return
 
     board_id = int(auth[0])
@@ -161,34 +161,34 @@ def main():
     when = int(auth[2])
     now = int(time.time())
     netcfg = 'msgnet_%s' % data['network']
-    logger.info(u"client %d connecting for '%s' %s" % (board_id, data['network'], data['action']))
+    logger.debug(u"[%s] client %d connecting for %s" % (data['network'], board_id, data['action']))
 
     if not ini.CFG.has_option(netcfg, 'keys_db_name'):
-        server_error(logger, queue, u'No keys database config for this network', u'Server error')
+        server_error(logger, queue, u'[%s] No keys database config' % data['network'], u'Server error')
         return
 
     keysdb = DBProxy(ini.CFG.get(netcfg, 'keys_db_name'))
 
     if str(board_id) not in keysdb.keys():
-        server_error(logger, queue, u'No such key for this network')
+        server_error(logger, queue, u'[%s] No such key for this network' % data['network'], u'Invalid key')
         return
 
     board_key = keysdb[str(board_id)]
 
     if when > now or now - when > 15:
-        server_error(logger, queue, u'Expired token')
+        server_error(logger, queue, u'[%s] Expired token' % data['network'], u'Expired token')
         return
 
     if token != hashlib.sha256('%s%d' % (board_key, when)).hexdigest():
-        server_error(logger, queue, u'Invalid token')
+        server_error(logger, queue, u'[%s] Invalid token' % data['network'], u'Bad token')
         return
 
     if not ini.CFG.has_option(netcfg, 'source_db_name'):
-        server_error(logger, queue, u'Source DB not configured', u'Server error')
+        server_error(logger, queue, u'[%s] Source DB not configured' % data['network'], u'Server error')
         return
 
     if not ini.CFG.has_option(netcfg, 'trans_db_name'):
-        server_error(logger, queue, u'Translation DB not configured', u'Server error')
+        server_error(logger, queue, u'[%s] Translation DB not configured' % data['network'], u'Server error')
         return
 
     tagdb = DBProxy(msgbase.TAGDB)
@@ -214,7 +214,7 @@ def main():
 
         for m in tagdb[data['network']]:
             if count == 20:
-                logger.info(u'Too many messages, stopping for now')
+                logger.info(u'Too many messages, sending partial response')
                 break
 
             if last != None and int(m) <= last:
@@ -238,6 +238,11 @@ def main():
                 , u'body': msg.body
             }
             msgs.append(pushmsg)
+
+        howmany = len(msgs)
+
+        if howmany > 0:
+            logger.info(u'[%s] Delivered %d messages to board %d' % (data['network'], howmany, int(board_id)))
 
         queue.put({u'response': True, u'messages': msgs})
     elif data['action'] == 'push':
