@@ -25,95 +25,6 @@ def prepare_message(msg, network, parent):
     }
 
 """
-TCP network client methods
-"""
-
-def pull_tcp(network, last):
-    import socket
-    import json
-    import logging
-    from x84.bbs.aes import decryptData
-    from base64 import standard_b64decode
-    from x84.bbs.msgbase import format_origin_line, to_localtime, to_utctime
-
-    logger = logging.getLogger()
-    data = {'auth': get_token(network), 'network': network['name'], 'action': 'pull'}
-
-    if last != None:
-        data['last'] = last
-
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((network['addr'], int(network['port'])))
-        sfile = s.makefile('w+')
-        sfile.write(json.dumps(data) + u'\n')
-        sfile.flush()
-        result = sfile.readline().strip()
-        result = json.loads(result)
-        s.shutdown(socket.SHUT_RDWR)
-        s.close()
-
-        if result['response'] == True:
-            try:
-                if 'messages' not in result.keys() or result['messages'] is None or len(result['messages']) == 0:
-                    logger.info(u'[%s] Empty result' % network['name'])
-                    return False
-
-                dec = json.loads(decryptData(network['token'].decode('hex'), standard_b64decode(result['messages'])))
-                return dec
-            except Exception, e:
-                logger.exception(u'[%s] Decryption exception: %s' % (network['name'], str(e)))
-                return False
-        else:
-            if 'message' in result.keys():
-                logger.error(u'[%s] Server error: %s' % (network['name'], result['message']))
-            else:
-                logger.error(u'[%s] Server error' % network['name'])
-
-            return False
-    except Exception, e:
-        logger.exception(u'[%s] Exception: %s' % (network['name'], str(e)))
-        return False
-
-def push_tcp(network, msg, parent, origin_line):
-    import socket
-    import json
-    import logging
-    from x84.bbs.aes import encryptData
-    from base64 import standard_b64encode
-
-    logger = logging.getLogger()
-    pushmsg = prepare_message(msg, network, parent)
-    pushmsg['parent'] = parent
-
-    try:
-        pushmsg = standard_b64encode(encryptData(network['token'].decode('hex'), json.dumps(pushmsg)))
-    except Exception, e:
-        logger.exception(u'[%s] Encryption exception: %s' % (network['name'], str(e)))
-        return False
-
-    data = {'auth': get_token(network), 'network': network['name'], 'action': 'push', 'message': pushmsg}
-
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((network['addr'], int(network['port'])))
-        sfile = s.makefile('w+')
-        sfile.write(json.dumps(data) + u'\n')
-        sfile.flush()
-        result = json.loads(sfile.readline().strip())
-        s.shutdown(socket.SHUT_RDWR)
-        s.close()
-
-        if result[u'response'] == True:
-            return result[u'id']
-        else:
-            logger.error(u'[%s] Server error: %s' % (network['name'], result['message']))
-            return False
-    except Exception, e:
-        logger.exception(u'[%s] Exception: %s' % (network['name'], str(e)))
-        return False
-
-"""
 REST network client methods
 """
 
@@ -128,8 +39,8 @@ def pull_rest(network, last, ca_path=True):
 
     try:
         r = requests.get(url, headers={'Auth-X84net': get_token(network)}, verify=ca_path)
-    except Exception, err:
-        logger.exception(u'[%s] Request error: %s' % (network['name'], str(err)))
+    except Exception, e:
+        logger.exception(u'[%s] Request error: %s' % (network['name'], str(e)))
         return False
 
     # oh noes!
@@ -140,9 +51,8 @@ def pull_rest(network, last, ca_path=True):
     try:
         response = json.loads(r.text)
         return response['messages']
-    except Exception, err:
-        print r.text
-        logger.exception(u'[%s] JSON error: %s' % (network['name'], str(err)))
+    except Exception, e:
+        logger.exception(u'[%s] JSON error: %s' % (network['name'], str(e)))
         return False
 
 def push_rest(network, msg, parent, origin_line, ca_path=True):
@@ -240,10 +150,7 @@ def main():
         ca_path = os.path.expanduser(cfg_bbs.get(netcfg, 'ca_path'))
 
     # handle supported networks
-    for i in [net for net in networks if net['type'] in ['rest', 'tcp']]:
-        # don't poll tcp-based networks we host ourselves
-        if net['type'] == 'tcp' and net['name'] in server_tags:
-            continue
+    for i in [net for net in networks if net['type'] in ['rest']]:
 
         """ pull messages """
 
@@ -270,8 +177,6 @@ def main():
 
         if net['type'] == 'rest':
             msgs = pull_rest(net, last, ca_path)
-        elif net['type'] == 'tcp':
-            msgs = pull_tcp(net, last)
         # <-- redis, etc. would go here
 
         if msgs != False:
@@ -291,7 +196,6 @@ def main():
             newm.author = m['author']
             newm.subject = m['subject']
             newm.body = m['body']
-            # newm.ctime = to_localtime(m['ctime'])
             newm.tags = set(m['tags'])
             newm.tags.add(u''.join((net['name'])))
 
@@ -351,8 +255,7 @@ def main():
 
             if net['type'] == 'rest':
                 transid = push_rest(net, msg, trans_parent, origin_line, ca_path)
-            elif net['type'] == 'tcp':
-                transid = push_tcp(net, msg, trans_parent, origin_line)
+            # <-- redis, etc. would go here
 
             if transid is False:
                 logger.error(u'[%s] Message not posted (msgid %s)' % (net['name'], m))
@@ -383,15 +286,18 @@ def main():
 fire up a thread to poll for messages
 """
 def do_poll():
-    from x84.telnet import TelnetClient
-    from x84.terminal import ConnectTelnet
+    def read_forever(client):
+        client.read_all()
+
+    import telnetlib
+    from threading import Thread
+    from x84.bbs import session
     from x84.bbs.ini import CFG
-    import socket
-    pitcher = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    pitcher.settimeout(10)
-    pitcher.connect(('localhost', CFG.getint('session', 'blackhole_port')))
-    tc = TelnetClient(pitcher, ('msgpoll', 0))
-    tc.env['TERM'] = 'xterm-256color'
-    c = ConnectTelnet(tc)
-    c._set_socket_opts()
-    c._spawn_session()
+    session.BOTLOCK.acquire()
+    client = telnetlib.Telnet()
+    client.open(CFG.get('telnet', 'addr'), CFG.getint('telnet', 'port'))
+    session.BOTQUEUE.put('msgpoll')
+    t = Thread(target=read_forever, args=[client])
+    t.daemon = True
+    t.start()
+    session.BOTLOCK.release()

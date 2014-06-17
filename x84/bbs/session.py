@@ -14,6 +14,7 @@ import os
 import io
 
 SESSION = None
+BOTQUEUE = None
 
 def getsession():
     """
@@ -61,6 +62,7 @@ class Session(object):
         # pylint: disable=W0603
         #        Using the global statement
         global SESSION
+        global BOTQUEUE
         assert SESSION is None, 'Session may be instantiated only once'
         SESSION = self
         self.iqueue = inp_queue
@@ -96,16 +98,24 @@ class Session(object):
         # detect if this is a "robot" user and handle it accordingly
         addr, port = sid.split(':', 1)
 
-        if int(port) == 0:
-            robots = [robot.strip() for robot in ini.CFG.get('bots', 'names').split(',')]
+        if addr == '127.0.0.1':
+            from x84.bbs import User
+            from Queue import Empty
 
-            if addr in robots:
-                self._script_stack.pop()
+            try:
+                whoami = BOTQUEUE.get(True, 1)
+                robots = [robot.strip() for robot in ini.CFG.get('bots', 'names').split(',')]
 
-                if ini.CFG.has_option('bots', addr):
-                    self._script_stack.append((ini.CFG.get('bots', addr),))
-                else:
-                    self._script_stack.append(('bots',))
+                if whoami in robots:
+                    self._user = User(whoami)
+                    self._script_stack.pop()
+
+                    if ini.CFG.has_option('bots', addr):
+                        self._script_stack.append((ini.CFG.get('bots', whoami),))
+                    else:
+                        self._script_stack.append(('bots',))
+            except Empty:
+                pass
 
     def to_dict(self):
         """
