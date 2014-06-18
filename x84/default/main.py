@@ -31,6 +31,7 @@ def refresh():
         ('w', "hO'S ONliNE"),
         ('n', 'EWS'),
         ('c', 'hAt'),
+        ('i', 'RC chAt'),
         ('!', 'ENCOdiNG'),
         ('t', 'EtRiS'),
         ('s', 'YS. iNfO'),
@@ -135,6 +136,8 @@ def main():
             gosub('tetris')
         elif inp == u'c':
             gosub('chat')
+        elif inp == u'i':
+            gosub('ircchat')
         elif inp == u'p':
             gosub('writemsg')
         elif inp == u'r':

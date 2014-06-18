@@ -163,9 +163,9 @@ def init_bbs_ini():
     cfg_bbs.set('session', 'default_encoding', 'utf8')
 
     cfg_bbs.add_section('irc')
-    cfg_bbs.set('irc', 'server', 'efnet.xs4all.nl')
+    cfg_bbs.set('irc', 'server', 'irc.efnet.org')
     cfg_bbs.set('irc', 'port', '6667')
-    cfg_bbs.set('irc', 'channel', '#prsv')
+    cfg_bbs.set('irc', 'channel', '#1984')
 
     cfg_bbs.add_section('nethack')
     cfg_bbs.set('nethack', 'enabled', 'yes')
