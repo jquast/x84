@@ -25,4 +25,4 @@ issue31() {
 }
 [ -z "$py2" ] && issue31
 echo $py2 -m x84.engine
-$py2 -m x84.engine
+$py2 -m x84.engine "$@"
