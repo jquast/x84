@@ -115,7 +115,6 @@ class Session(object):
                     else:
                         self._script_stack.append(('bots',))
             except Empty:
-                print 'empty'
                 pass
 
     def to_dict(self):
