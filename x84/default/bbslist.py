@@ -345,7 +345,7 @@ def get_swinfo(entry, pager):
             "UTF8 encoding.\r\n\r\n"
             "  " + term.bold_blue('https://github.com/jquast/x84/\r\n')
             + "\r\n\r\nAuthor: dingo, jojo\r\n"
-            "IRC: #prsv on irc.efnet.org")
+            "IRC: #1984 on irc.efnet.org")
         output += pager.title(u'- about ' + style('X/84') + u' -')
     else:
         output = pager.update(u' no information about ' + entry + ' !\r\n')
