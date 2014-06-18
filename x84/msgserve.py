@@ -1,5 +1,5 @@
 """
-x84net message network client/server
+x84net message network server
 """
 
 import web
@@ -88,27 +88,9 @@ class messages():
             logger.error(u'Unable to serialize: %r' % response)
             raise web.HTTPError('500 Server Error', {}, json.dumps({u'response': False, u'message': u'Error'}))
 
-""" fire up the server """
-def start():
-    from x84.bbs import ini
-    from web.wsgiserver import CherryPyWSGIServer
-    from threading import Lock
-    from multiprocessing import Queue
-
-    CherryPyWSGIServer.ssl_certificate = ini.CFG.get('web', 'cert')
-    CherryPyWSGIServer.ssl_private_key = ini.CFG.get('web', 'key')
-
-    if ini.CFG.has_option('web', 'chain'):
-        CherryPyWSGIServer.ssl_certificate_chain = ini.CFG.get('web', 'chain')
-
-    urls = (
-        '/messages/([^/]+)/([^/]*)/?', 'messages'
-        )
-
-    app = web.application(urls, globals())
-    web.httpserver.runsimple(app.wsgifunc(), (ini.CFG.get('web', 'addr'), ini.CFG.getint('web', 'port')))
-
-""" functions for processing the request within x84 """
+"""
+functions for processing the request within x84
+"""
 
 """ helper method for logging and returning errors """
 def server_error(logger, queue, logtext, message=None):

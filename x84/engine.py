@@ -20,9 +20,6 @@ __credits__ = [
 ]
 __license__ = 'ISC'
 
-import SocketServer
-import socket
-
 def main():
     """
     x84 main entry point. The system begins and ends here.
@@ -406,10 +403,10 @@ def _loop(servers):
     tap_events = CFG.getboolean('session', 'tap_events')
     locks = dict()
 
-    # queue for bot connection auth
-    session.BOTQUEUE = Queue()
-    session.BOTACK = Condition()
-    session.BOTLOCK = Lock()
+    # bot coordination
+    if CFG.has_section('bots'):
+        session.BOTQUEUE = Queue()
+        session.BOTLOCK = Lock()
 
     # web server
     web_modules = set()
@@ -417,22 +414,16 @@ def _loop(servers):
     if CFG.has_section('web'):
         try:
             import web, OpenSSL
-            from x84 import msgserve
-            from x84.msgserve import MessageNetworkServer
-            from threading import Thread, Lock
-            from multiprocessing import Queue
-
-            MessageNetworkServer.iqueue = Queue()
-            MessageNetworkServer.oqueue = Queue()
-            MessageNetworkServer.lock = Lock()
-            t = Thread(target=msgserve.start)
+            from x84 import webserve
+            from threading import Thread
+            web_modules = set([key.strip() for key in CFG.get('web', 'modules').split(',')])
+            t = Thread(target=webserve.start, args=(web_modules,))
             t.daemon = True
             t.start()
-            web_modules = set([key.strip() for key in CFG.get('web', 'modules').split(',')])
         except Exception, e:
-            log.error('%s' % str(e))
+            log.error('%r' % e)
 
-    # setup message polling mechanism; uses black hole socket
+    # setup message polling mechanism
     poll_interval = None
     last_poll = None
 
@@ -441,20 +432,23 @@ def _loop(servers):
         poll_interval = CFG.getint('msg', 'poll_interval')
         last_poll = int(time.time()) - poll_interval
 
-    # x84net message server; uses black hole socket
+    # x84net message server
     if 'msgserve' in web_modules:
-        def read_forever(client):
+        def read_forever():
+            import telnetlib
+            client = telnetlib.Telnet(CFG.get('telnet', 'addr'), CFG.getint('telnet', 'port'))
             client.read_all()
 
-        import telnetlib
+        from threading import Thread, Lock
+        from multiprocessing import Queue
+        from x84.msgserve import MessageNetworkServer
 
+        MessageNetworkServer.iqueue = Queue()
+        MessageNetworkServer.oqueue = Queue()
+        MessageNetworkServer.lock = Lock()
         session.BOTLOCK.acquire()
-        client = telnetlib.Telnet()
-        client.open('localhost', 23)
         session.BOTQUEUE.put('msgserve')
-
-        from threading import Thread
-        t = Thread(target=read_forever, args=[client])
+        t = Thread(target=read_forever)
         t.daemon = True
         t.start()
         session.BOTLOCK.release()

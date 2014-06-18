@@ -61,8 +61,7 @@ class Session(object):
         from x84.bbs import ini
         # pylint: disable=W0603
         #        Using the global statement
-        global SESSION
-        global BOTQUEUE
+        global SESSION, BOTQUEUE
         assert SESSION is None, 'Session may be instantiated only once'
         SESSION = self
         self.iqueue = inp_queue
@@ -98,15 +97,15 @@ class Session(object):
         # detect if this is a "robot" user and handle it accordingly
         addr, port = sid.split(':', 1)
 
-        if addr == '127.0.0.1':
-            from x84.bbs import User
+        if ini.CFG.has_section('bots') and addr == '127.0.0.1':
             from Queue import Empty
 
             try:
-                whoami = BOTQUEUE.get(True, 1)
+                whoami = BOTQUEUE.get(True, 0.1)
                 robots = [robot.strip() for robot in ini.CFG.get('bots', 'names').split(',')]
 
                 if whoami in robots:
+                    from x84.bbs import User
                     self._user = User(whoami)
                     self._script_stack.pop()
 
@@ -115,6 +114,7 @@ class Session(object):
                     else:
                         self._script_stack.append(('bots',))
             except Empty:
+                print 'empty'
                 pass
 
     def to_dict(self):
