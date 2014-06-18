@@ -419,7 +419,9 @@ def main(channel=None, caller=None):
                         pager = get_pager(pager)
                         echo(refresh(pager, readline, init=True))
                 elif (0 != len(readline.content.strip())):
-                    say(channel, readline.content)
+                    line = readline.content.strip()
+                    server.privmsg(channel, line)
+                    pager.append(format_chat(server.nickname, channel, line))
                     dirty = time.time()
                 readline = get_inputbar(pager)
                 echo(readline.refresh())
