@@ -15,6 +15,7 @@ import io
 
 SESSION = None
 BOTQUEUE = None
+BOTLOCK = None
 
 def getsession():
     """
@@ -61,7 +62,7 @@ class Session(object):
         from x84.bbs import ini
         # pylint: disable=W0603
         #        Using the global statement
-        global SESSION, BOTQUEUE
+        global SESSION, BOTQUEUE, BOTLOCk
         assert SESSION is None, 'Session may be instantiated only once'
         SESSION = self
         self.iqueue = inp_queue
