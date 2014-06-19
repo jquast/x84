@@ -1,5 +1,43 @@
 """
 x84net message network polling mechanism for x/84, https://github.com/jquast/x84
+
+To configure message polling, add a tag for the network to the 'server_tags'
+attribute in the [msg] section of your default.ini.
+Next, create a section using the name of that tag, prefixed with 'msgnet_'.
+(Example: if the tag is 'x84net', create a 'msgnet_x84net' section.)
+
+The following attributes are required:
+ - type: Must be 'rest', as REST APIs are the only supported type (for now).
+ - url_base: The base URL for the message network's REST API.
+ - board_id: Your board's ID in the network.
+ - token: Your board's secure token, assigned to you by the network admin.
+ - trans_db_name: The alphanumeric name of the translation database.
+ - queue_db_name: The alphanumeric name of the queue database.
+ - last_file: The filename of the file that stores the last-retrieved message
+   index number (relative to your data directory)
+
+The following attribute is optional:
+ - ca_path: The path to a CA bundle if the server's CA is not already
+   included in your operating system.
+
+If you wish to tag your messages with a custom origin line when they are
+delivered to the network hub, add an 'origin_line' attribute to the [msg]
+section of your default.ini.
+
+Example default.ini configuration:
+
+[msg]
+server_tags = x84net
+origin_line = Sent from The Best BBS In The World, baby!
+
+[msgnet_x84net]
+type = rest
+url_base = https://some.server:8443/api/messages/
+board_id = 1
+token = somereallylongtoken
+trans_db_name = x84nettrans
+queue_db_name = x84netqueue
+last_file = x84net_last
 """
 
 def get_token(network):

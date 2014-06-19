@@ -1,5 +1,25 @@
 """
 web server for x/84, https://github.com/jquast/x84
+
+To configure the web server, add a [web] section to your default.ini.
+
+The following attributes are required:
+ - addr: The address to bind to. Must be resolvable.
+ - port: The port number to bind to.
+ - cert: The SSL certificate.
+ - key: The SSL certificate's key.
+
+The following attribute is optional:
+ - chain: The SSL chain certificate.
+
+Example:
+
+[web]
+addr = 0.0.0.0
+port = 8443
+cert = /home/bbs/ssl.cer
+key = /home/bbs/ssl.key
+chain = /home/bbs/ca.cer
 """
 
 import web

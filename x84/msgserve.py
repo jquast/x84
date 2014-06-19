@@ -1,5 +1,41 @@
 """
 x84net message network server for x/84, https://github.com/jquast/x84
+
+To configure the message network server, you must first configure the
+web server. See webserve.py for more information.
+
+Add 'msgserve' to your 'modules' in the [web] section of default.ini.
+Next, you will need to add the tag for the network to the 'server_tags'
+attribute of the [msg] section.
+Finally, create a section in default.ini with the name of that tag,
+prefixed with 'msgnet_'. If your network name is 'x84net', for example,
+you would create a [msgnet_x84net] section.
+
+The following attributes are required:
+ - trans_db_name: The alphanumeric name of the translation database.
+ - keys_db_name: The alphanumeric name of the keys database.
+ - source_db_name: The alphanumeric name of the source database.
+
+You must assign each board in the network an ID (an integer) and
+a key in the keys database. Use a script invoked by gosub() to
+leverage DBProxy for this, like so:
+
+    from x84.bbs import DBProxy, ini.CFG
+    db = DBProxy(ini.CFG.get('msgnet_x84net', 'keys_db_name'))
+    db.acquire()
+    db['1'] = 'somereallylongkey'
+    db.release()
+
+Example default.ini settings:
+
+[msg]
+# other stuff goes here
+server_tags = x84net
+
+[msgnet_x84net]
+trans_db_name = x84nettrans
+keys_db_name = x84netkeys
+source_db_name = x84netsrc
 """
 
 import web
