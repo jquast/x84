@@ -277,7 +277,7 @@ class Session(object):
             if stop:
                 self.write(self.terminal.red_reverse('stop'))
             else:
-                self.write(self.terminal.bold_green('continue'))
+                self.write(self.terminal.bold_green(u'continue'))
                 self.write(u' ' + self.terminal.bold_cyan(
                     self._script_stack[-1][0]))
             self.write(u' after general exception in %s\r\n' % (
