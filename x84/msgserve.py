@@ -1,18 +1,22 @@
 """
-x84net message network server
+x84net message network server for x/84, https://github.com/jquast/x84
 """
 
 import web
 
-""" server queues and locking mechanism """
 class MessageNetworkServer():
+    """ server queues and locking mechanism """
     iqueue = None
     oqueue = None
     lock = None
 
-""" api endpoint """
 class messages():
+    """
+    message network server api endpoint
+    """
+
     def GET(self, network, last):
+        """ GET method - pull messages """
         import json
         import Queue
         import logging
@@ -52,6 +56,7 @@ class messages():
             raise web.HTTPError('500 Server Error', {}, json.dumps({u'response': False, u'message': u'Error'}))
 
     def PUT(self, network, null):
+        """ PUT method - post messages """
         import json
         import Queue
         import logging
@@ -92,15 +97,15 @@ class messages():
 functions for processing the request within x84
 """
 
-""" helper method for logging and returning errors """
 def server_error(logger, queue, logtext, message=None):
+    """ helper method for logging and returning errors """
     if message is None:
         message = logtext
     logger.error(logtext)
     queue.put({u'response': False, u'message': message})
 
-""" server request handling process """
 def main():
+    """ server request handling process """
     from x84.bbs import ini, msgbase, DBProxy, getsession, echo, getterminal
     from x84.bbs.msgbase import to_utctime, to_localtime, Msg
     import hashlib

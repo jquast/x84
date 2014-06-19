@@ -14,6 +14,7 @@ logger = logging.getLogger()
 
 
 def to_localtime(t):
+    """ convert given UTC time to local time """
     import datetime
     import dateutil.tz
 
@@ -25,6 +26,7 @@ def to_localtime(t):
     return ltime.replace(tzinfo=None)
 
 def to_utctime(t):
+    """ convert given local time to UTC time """
     import datetime
     import dateutil.tz
 
@@ -35,6 +37,7 @@ def to_utctime(t):
     return utime.replace(tzinfo=None).isoformat(' ').partition('.')[0]
 
 def get_origin_line():
+    """ pull the origin line from config """
     from x84.bbs import ini
 
     if ini.CFG.has_option('msg', 'origin_line'):
@@ -43,6 +46,7 @@ def get_origin_line():
     return 'Sent from %s' % ini.CFG.get('system', 'bbsname')
 
 def format_origin_line():
+    """ format the origin line in preparation for appending to a message """
     return u''.join((u'\r\n---\r\n', get_origin_line()))
 
 def get_msg(idx=0):

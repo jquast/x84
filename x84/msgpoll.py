@@ -1,17 +1,17 @@
 """
-x84net message network polling mechanism
+x84net message network polling mechanism for x/84, https://github.com/jquast/x84
 """
 
-""" get token for authentication """
 def get_token(network):
+    """ get token for authentication """
     import time
     import hashlib
 
     t = int(time.time())
     return '%s|%s|%s' % (network['board_id'], hashlib.sha256('%s%s' % (network['token'], t)).hexdigest(), t)
 
-""" turn a Msg object into a dict for transfer """
 def prepare_message(msg, network, parent):
+    """ turn a Msg object into a dict for transfer """
     from x84.bbs.msgbase import format_origin_line, to_utctime
 
     return {
@@ -29,6 +29,7 @@ REST network client methods
 """
 
 def pull_rest(network, last, ca_path=True):
+    """ pull messages for a given network newer than the 'last' message idx """
     import requests
     import json
     import logging
@@ -56,6 +57,7 @@ def pull_rest(network, last, ca_path=True):
         return False
 
 def push_rest(network, msg, parent, origin_line, ca_path=True):
+    """ push message for a given network and append an origin line """
     import requests
     import json
     import logging
@@ -84,8 +86,8 @@ def push_rest(network, msg, parent, origin_line, ca_path=True):
         logger.exception(u'[%s] JSON error: %s' % (network['name'], str(err)))
         return False
 
-""" message polling process """
 def main():
+    """ message polling process """
     import logging
     import x84.bbs.ini
     from x84.bbs import Msg, msgbase, DBProxy
@@ -282,10 +284,8 @@ def main():
 
     logger.debug(u'Message poll/publish complete')
 
-"""
-fire up a thread to poll for messages
-"""
 def do_poll():
+    """ fire up a thread to poll for messages """
     def read_forever(client):
         client.read_all()
 

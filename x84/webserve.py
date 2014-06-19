@@ -1,10 +1,11 @@
 """
-x84 web server
+web server for x/84, https://github.com/jquast/x84
 """
 
 import web
 
 def start(web_modules):
+    """ fire up a web server with the given modules as endpoints """
     from x84.bbs import ini
     import logging
     from web.wsgiserver import CherryPyWSGIServer
