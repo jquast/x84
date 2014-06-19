@@ -5,5 +5,3 @@ blessed
 paramiko
 irc
 python-dateutil
-irc
-python-dateutil
