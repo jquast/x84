@@ -17,10 +17,10 @@ Contents:
    install
    clients
    port23
-   default_api
-   bbs_api
    developers
    others
+   handbook/index
+   api/index
 
 Support
 =======
