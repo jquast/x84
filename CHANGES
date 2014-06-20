@@ -14,11 +14,35 @@
   - move_x now works for screen/etc. TERM types (fixed in blessed).
   - ssh server support: for existing servers, simply add a new section
     to your default.ini::
-	[ssh]
-	addr = 127.0.0.1
-	port = 6022
-	hostkey = /my/path/to/.x84/ssh_host_rsa_key
-	hostkeybits = 2048
+    [ssh]
+    addr = 127.0.0.1
+    port = 6022
+    hostkey = /my/path/to/.x84/ssh_host_rsa_key
+    hostkeybits = 2048
+  - rudimentary web.py-based web server module (webserve.py) for API
+    endpoints.
+    This requires both pyOpenSSL and web.py packages, which are not
+    installed by default by setup.py. It is configured with the [web]
+    default.ini section (the "chain" setting is optional; only use it
+    if you have a chained cert):
+    [web]
+    addr = 0.0.0.0
+    port = 1984
+    cert = /home/bbs/ssl.cer
+    key = /home/bbs/ssl.key
+    chain = /home/bbs/chain.cer
+  - "bot" connections for interacting with userspace (default/bots.py).
+    These are setup with the [bots] default.ini section. The assumed
+    usernames of each bot are listed in the 'names' attribute. If you
+    want a bot to be shipped off to a script other than bots.py when
+    its telnet process connects to the board, you may assign it
+    using the bot's username. ('mybot' would launch 'some_script.py'
+    in the example below.)
+    [bots]
+    names = msgserve, msgpoll, mybot
+    mybot = some_script
+  - message network server web API endpoint (msgserve.py).
+  - message network client for pull/push (msgpoll.py).
 
 1.1.0
   - resolve issue #53: using upstream 'blessed' fork.

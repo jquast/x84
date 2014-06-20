@@ -14,6 +14,8 @@ import os
 import io
 
 SESSION = None
+BOTQUEUE = None
+BOTLOCK = None
 
 def getsession():
     """
@@ -60,7 +62,7 @@ class Session(object):
         from x84.bbs import ini
         # pylint: disable=W0603
         #        Using the global statement
-        global SESSION
+        global SESSION, BOTQUEUE, BOTLOCk
         assert SESSION is None, 'Session may be instantiated only once'
         SESSION = self
         self.iqueue = inp_queue
@@ -92,6 +94,28 @@ class Session(object):
         self._ttyrec_sec = -1
         self._ttyrec_usec = -1
         self._ttyrec_len_text = 0
+
+        # detect if this is a "robot" user and handle it accordingly
+        addr, port = sid.split(':', 1)
+
+        if ini.CFG.has_section('bots') and addr == '127.0.0.1':
+            from Queue import Empty
+
+            try:
+                whoami = BOTQUEUE.get(True, 0.1)
+                robots = [robot.strip() for robot in ini.CFG.get('bots', 'names').split(',')]
+
+                if whoami in robots:
+                    from x84.bbs import User
+                    self._user = User(whoami)
+                    self._script_stack.pop()
+
+                    if ini.CFG.has_option('bots', addr):
+                        self._script_stack.append((ini.CFG.get('bots', whoami),))
+                    else:
+                        self._script_stack.append(('bots',))
+            except Empty:
+                pass
 
     def to_dict(self):
         """
@@ -253,7 +277,7 @@ class Session(object):
             if stop:
                 self.write(self.terminal.red_reverse('stop'))
             else:
-                self.write(self.terminal.bold_green('continue'))
+                self.write(self.terminal.bold_green(u'continue'))
                 self.write(u' ' + self.terminal.bold_cyan(
                     self._script_stack[-1][0]))
             self.write(u' after general exception in %s\r\n' % (
