@@ -1,85 +1,82 @@
 Developer Environment
 =====================
 
-For developing from git, simply clone and execute the ./x84/bin/dev-setup python script with the target interpreter, specifying a ``virtual env`` folder. Source the ``*virtual env*/bin/activate`` file so that subsequent *pip* commands affect only that specific environment. Target environment for x/84 is currently python 2.7.
+If you're new to python, the following is step-by-step instructions for
+creating a developer environment for making your own customizations of
+x/84's engine and api.  You may also simply install x/84 using pip_ or
+easy_install_.
 
-1. Clone the github repository::
+Virtualenv
+``````````
 
-     git clone 'https://github.com/jquast/x84.git'``
+Optional but recommended. Using virtualenv and virtualenvwrapper_ ensures
+you can install x/84 and its dependencies without root access, and quickly
+activate the environment at any time.
 
-2. Use ``dev-setup.py`` to create a target virtualenv (virtualenv provided)::
+1. Install virtualenvwrapper_::
 
-     python2.7 ./x84/bin/dev-setup.py ./x84-ENV26
+   pip install virtualenvwrapper
 
-3. Launch x/84 using virtualenv::
+2. Load virtualenvwrapper_::
 
-     ./x84/bin/x84-dev
+   . `which virtualenvwrapper.sh`
 
-Tracking head branch with pip
-`````````````````````````````
+3. And add the following to your ``~/.profile`` to make this automatic for all
+  login shells::
 
-It is possible, without directly using git, to install the latest branch directly from github using pip::
+   [ ! -z `which virtualenvwrapper.sh` ] && . `which virtualenvwrapper.sh`
 
-  pip install git+https://github.com/jquast/x84.git
+4. Finally, make a virtualenv (named 'x84') using python version 2.7::
 
-And then subsequently upgrade after any commits have been pushed::
+   mkvirtualenv -p `which python2.7` x84
 
-  pip install --upgrade git+https://github.com/jquast/x84.git
+5. Anytime you want to develop x/84, use the command::
 
-You may then start x84 normally as you would if installed using pip::
+   workon x84
 
-  sudo privbind -u nobody -g nobody x84
+There are techniques to automatically load the x84 virtualenv when
+you change to the project's folder. See `virtualenv tips and tricks`_
+if you're interested.
 
-Engine internals
-================
+Clone from Github
+`````````````````
 
-x/84 is configured as a seperate 'kernel' and 'userland' scripting path to be optionally located at two different filepaths.
+Clone the latest master branch from the github repository::
 
-Kernel
-``````
+  git clone 'https://github.com/jquast/x84.git'``
+  cd x84
 
-Any changes to engine internals bump release majors. Scripts are encouraged to require as little modification as possible over time to maintain compatibility with major releases.
+Run setup.py develop
+````````````````````
 
-engine.py
----------
+Run 'setup.py develop'::
 
-.. automodule:: x84.engine
-   :members:
+   ./setup.py develop
 
-terminal.py
------------
+Starting x/84
+`````````````
 
-.. automodule:: x84.terminal
-   :members:
+1. Active your virtualenv if you haven't already::
 
-telnet.py
----------
+   workon x84
 
-.. automodule:: x84.telnet
-   :members:
+2. And Launch x/84 server::
 
-blessings.py
-------------
-.. automodule:: x84.blessings
-   :members:
+   x84
 
-db.py
------
 
-.. automodule:: x84.db
-   :members:
+Engine and Internals
+====================
 
+x/84 is designed in three distinct parts: The Engine_, Userland_, and
+the default 'bbs board'.
 
 Userland
 ````````
 
-Procedures not necessarily exposed that are internal to the child process executed by terminal.py_ on connect. Though most of this is accessible by the child process for scripting, their use or documentation isn't considered very useful to a general audience.
-
-wcwidth.py
------------
-
-.. automodule:: x84.bbs.wcwidth
-  :members:
+The following are helper modules used by the internal API but are not
+published as such. Their use or documentation isn't considered very
+useful to a general audience.
 
 log.py
 ------
@@ -104,3 +101,45 @@ exception.py
 
 .. automodule:: x84.bbs.exception
    :members:
+
+Engine
+``````
+
+The engine launches the configured servers and begins the subprocess
+for connecting sessions. Its internal structure should not be of concern
+for most customizations, but contributions welcome!
+
+engine.py
+---------
+
+.. automodule:: x84.engine
+   :members:
+
+terminal.py
+-----------
+
+.. automodule:: x84.terminal
+   :members:
+
+telnet.py
+---------
+
+.. automodule:: x84.telnet
+   :members:
+
+ssh.py
+---------
+
+.. automodule:: x84.telnet
+   :members:
+
+db.py
+-----
+
+.. automodule:: x84.db
+   :members:
+
+.. _virtualenvwrapper: https://pypi.python.org/pypi/virtualenvwrapper
+.. _`virtualenv tips and tricks`: http://virtualenvwrapper.readthedocs.org/en/latest/tips.html#automatically-run-workon-when-entering-a-directory
+.. _pip: https://pypi.python.org/pypi/pip
+.. _easy_install: https://pypi.python.org/pypi/setuptools
