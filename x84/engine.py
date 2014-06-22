@@ -20,7 +20,6 @@ __credits__ = [
 ]
 __license__ = 'ISC'
 
-
 def main():
     """
     x84 main entry point. The system begins and ends here.
@@ -386,11 +385,14 @@ def _loop(servers):
     # pylint: disable=R0912,R0914,R0915
     #         Too many local variables (24/15)
     import logging
+    import os
     import select
     import socket
-
     from x84.terminal import get_terminals, kill_session
     from x84.bbs.ini import CFG
+    from x84.bbs import session
+    from multiprocessing import Queue
+    from threading import Lock, Condition
 
     log = logging.getLogger(__name__)
 
@@ -400,6 +402,56 @@ def _loop(servers):
     timeout_ipc = CFG.getint('system', 'timeout_ipc')
     tap_events = CFG.getboolean('session', 'tap_events')
     locks = dict()
+
+    # bot coordination
+    if CFG.has_section('bots'):
+        session.BOTQUEUE = Queue()
+        session.BOTLOCK = Lock()
+
+    # web server
+    web_modules = set()
+
+    if CFG.has_section('web'):
+        try:
+            import web, OpenSSL
+            from x84 import webserve
+            from threading import Thread
+            web_modules = set([key.strip() for key in CFG.get('web', 'modules').split(',')])
+            t = Thread(target=webserve.start, args=(web_modules,))
+            t.daemon = True
+            t.start()
+        except Exception, e:
+            log.error('%r' % e)
+
+    # setup message polling mechanism
+    poll_interval = None
+    last_poll = None
+
+    if CFG.has_option('msg', 'poll_interval'):
+        import time
+        poll_interval = CFG.getint('msg', 'poll_interval')
+        last_poll = int(time.time()) - poll_interval
+
+    # x84net message server
+    if 'msgserve' in web_modules:
+        def read_forever():
+            import telnetlib
+            client = telnetlib.Telnet(CFG.get('telnet', 'addr'), CFG.getint('telnet', 'port'))
+            client.read_all()
+
+        from threading import Thread, Lock
+        from multiprocessing import Queue
+        from x84.msgserve import MessageNetworkServer
+
+        MessageNetworkServer.iqueue = Queue()
+        MessageNetworkServer.oqueue = Queue()
+        MessageNetworkServer.lock = Lock()
+        session.BOTLOCK.acquire()
+        session.BOTQUEUE.put('msgserve')
+        t = Thread(target=read_forever)
+        t.daemon = True
+        t.start()
+        session.BOTLOCK.release()
 
     while True:
         # shutdown, close & delete inactive clients,
@@ -428,6 +480,16 @@ def _loop(servers):
 
         # receive new data from tcp clients.
         client_recv(servers, log)
+
+        # fire up message polling process if enabled
+        if poll_interval is not None:
+            import time
+            now = int(time.time())
+
+            if now - last_poll >= poll_interval:
+                from x84.msgpoll import do_poll
+                do_poll()
+                last_poll = now
 
         terms = get_terminals()
 

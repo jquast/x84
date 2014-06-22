@@ -13,11 +13,48 @@ TAGDB = 'tags'
 logger = logging.getLogger()
 
 
+def to_localtime(t):
+    """ convert given UTC time to local time """
+    import datetime
+    import dateutil.tz
+
+    utcz = dateutil.tz.tzutc()
+    locz = dateutil.tz.tzlocal()
+    utime = datetime.datetime.strptime(t, '%Y-%m-%d %H:%M:%S')
+    utime = utime.replace(tzinfo=utcz)
+    ltime = utime.astimezone(locz)
+    return ltime.replace(tzinfo=None)
+
+def to_utctime(t):
+    """ convert given local time to UTC time """
+    import datetime
+    import dateutil.tz
+
+    utcz = dateutil.tz.tzutc()
+    locz = dateutil.tz.tzlocal()
+    ltime = t.replace(tzinfo=locz)
+    utime = ltime.astimezone(utcz)
+    return utime.replace(tzinfo=None).isoformat(' ').partition('.')[0]
+
+def get_origin_line():
+    """ pull the origin line from config """
+    from x84.bbs import ini
+
+    if ini.CFG.has_option('msg', 'origin_line'):
+        return ini.CFG.get('msg', 'origin_line')
+
+    return 'Sent from %s' % ini.CFG.get('system', 'bbsname')
+
+def format_origin_line():
+    """ format the origin line in preparation for appending to a message """
+    return u''.join((u'\r\n---\r\n', get_origin_line()))
+
 def get_msg(idx=0):
     """
     Return Msg record instance by index ``idx``.
     """
-    return DBProxy(MSGDB)['%d' % (idx,)]
+    db = DBProxy(MSGDB)
+    return db['%d' % int(idx)]
 
 
 def list_msgs(tags=None):
@@ -37,7 +74,8 @@ def list_tags():
     """
     Return set of available tags.
     """
-    return [_tag.decode('utf8') for _tag in DBProxy(TAGDB).keys()]
+    db = DBProxy(TABDB)
+    return [_tag.decode('utf8') for _tag in db.keys()]
 
 
 class Msg(object):
@@ -84,9 +122,12 @@ class Msg(object):
 
     def __init__(self, recipient=None, subject=u'', body=u''):
         from x84.bbs.session import getsession
+        global MSGDB
+        global TAGDB
         self._ctime = datetime.datetime.now()
         self._stime = None
-        self.author = getsession().handle
+        session = getsession()
+        self.author = session.handle if session != None else None
         self.recipient = recipient
         self.subject = subject
         self.body = body
@@ -95,17 +136,25 @@ class Msg(object):
         self.children = set()
         self.parent = None
 
-    def save(self):
+    def save(self, noqueue=False, ctime=None):
         """
         Save message in 'Msgs' sqlite db, and record index in 'tags' db.
         """
+        import sqlitedict
+        import os
+        from x84.bbs import ini, DBProxy
+
+        datapath = os.path.expanduser(ini.CFG.get('system', 'datapath'))
         db_msg = DBProxy(MSGDB)
         new = self.idx is None or self._stime is None
         # persist message record to MSGDB
         db_msg.acquire()
         if new:
             self.idx = max([int(key) for key in db_msg.keys()] or [-1]) + 1
-            self._stime = datetime.datetime.now()
+            if ctime != None:
+                self._ctime = self._stime = ctime
+            else:
+                self._stime = datetime.datetime.now()
             new = True
         db_msg['%d' % (self.idx,)] = self
         db_msg.release()
@@ -113,6 +162,7 @@ class Msg(object):
         # persist message idx to TAGDB
         db_tag = DBProxy(TAGDB)
         db_tag.acquire()
+
         for tag, msgs in db_tag.iteritems():
             if tag in self.tags and not self.idx in msgs:
                 msgs.add(self.idx)
@@ -131,12 +181,58 @@ class Msg(object):
             self.parent = None
         assert self.parent not in self.children
         if self.parent is not None:
+            parent_msg = None
             parent_msg = get_msg(self.parent)
-            if not hasattr(parent_msg, 'children'):
-                parent_msg.children = set(
-                )  # intermediary conversion; deleteme
-            parent_msg.children.add(self.idx)
-            parent_msg.save()
+
+            if self.idx != parent_msg.idx:
+                if not hasattr(parent_msg, 'children'):
+                    parent_msg.children = set(
+                    )  # intermediary conversion; deleteme
+                parent_msg.children.add(self.idx)
+                parent_msg.save()
+            else:
+                logger.error(u'Parent idx same as message idx; stripping parent')
+                self.parent = None
+                db_msg.acquire()
+                db_msg['%d' % (self.idx)] = self
+                db_msg.release()
+
+        # queue for network posting, if any
+        while True and not noqueue and new:
+            from x84.bbs import ini
+            if not ini.CFG.has_option('msg', 'network_tags'):
+                break
+            networks_ini = ini.CFG.get('msg', 'network_tags')
+            networks = [key.strip() for key in networks_ini.split(',')]
+            if len(networks) == 0:
+                break
+            server_tags = []
+            if ini.CFG.has_option('msg', 'server_tags'):
+                servers_ini = ini.CFG.get('msg', 'server_tags')
+                server_tags = [key.strip() for key in servers_ini.split(',')]
+            origin_line = format_origin_line()
+            for t in self.tags:
+                if t in server_tags:
+                    # message is for a network we host
+                    transdb_name = ini.CFG.get('msgnet_%s' % t, 'trans_db_name')
+                    transdb = DBProxy(transdb_name)
+                    transdb.acquire()
+                    self.body = u''.join((self.body, origin_line))
+                    self.save()
+                    transdb[self.idx] = self.idx
+                    transdb.release()
+                    logger.info(u'[%s] Added origin line (msgid %d)' % (t, self.idx))
+                    break
+                elif t in networks:
+                    # message is for a network we do not host
+                    queuedb_name = ini.CFG.get('msgnet_%s' % t, 'queue_db_name')
+                    queuedb = DBProxy(queuedb_name)
+                    queuedb.acquire()
+                    queuedb[self.idx] = t
+                    queuedb.release()
+                    logger.info(u'[%s] Message (msgid %s) queued for delivery' % (t, self.idx))
+                    break
+            break
 
         logger.info(u"saved %s%s%s, addressed to '%s'.",
                     'new ' if new else u'',

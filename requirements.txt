@@ -3,3 +3,5 @@ sauce
 requests
 blessed
 paramiko
+irc
+python-dateutil

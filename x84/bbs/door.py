@@ -543,3 +543,200 @@ class DOSDoor(Door):
         # also, fight against 'set scrolling region' by resetting, LORD
         # contains, for example: \x1b[3;22r after 'E'nter the realm :-(
         echo(u"\x1b[r")
+
+def launch(
+        dos=None, cp437=True, drop_type=None
+        , drop_folder=None, name=None, args=''
+        , forcesize=None, activity=None, command=None
+        , nodes=None, forcesize_func=None, env_term=None
+        ):
+    """
+    helper function for launching doors with inline configuration
+    also handles resizing of screens and virtual node pools
+
+    the forcesize_func may be overridden if the sysop wants to use
+    their own function for presenting the screen resize prompt.
+
+    virtual node pools are per-door, based on the 'name' argument, up
+    to a maximum determined by the 'nodes' argument.
+    name='Netrunner' nodes=4 would mean that the door, Netrunner, has
+    a virtual node pool with 4 possible nodes in it. When 4 people
+    are already playing the game, additional users will be notified
+    that there are no nodes available for play until one of them is
+    released.
+
+    for DOS doors, the [dosemu] section of default.ini is used for
+    defaults:
+
+    default.ini
+    ---
+    [dosemu]
+    bin = /usr/bin/dosemu
+    home = /home/bbs
+    path = /usr/bin:/usr/games:/usr/local/bin
+    opts = -u virtual -f /home/bbs/dosemu.conf -o /home/bbs/dosemu%%#.log %%c 2> /home/bbs/dosemu_boot%%#.log
+    dropdir = /home/bbs/dos
+    nodes = 4
+
+    in 'opts', %%# becomes the virtual node number, %%c becomes the 'command'
+    argument.
+
+    'dropdir' is where dropfiles will be created if unspecified. you can
+    give each door a dropdir for each node if you like, for ultimate
+    compartmentalization -- just set the 'dropdir' argument when calling
+    this function.
+
+    -u virtual can be used to add a section to your dosemu.conf for
+    virtualizing the com port (which allows you to use the same dosemu.conf
+    locally by omitting '-u virtual'):
+
+    dosemu.conf
+    ---
+    $_cpu = (80386)
+    $_hogthreshold = (20)
+    $_layout = "us"
+    $_external_charset = "utf8"
+    $_internal_charset = "cp437"
+    $_term_update_freq = (4)
+    $_rdtsc = (on)
+    $_cpuspeed = (166.666)
+    ifdef u_virtual
+            $_com1 = "virtual"
+    endif
+    """
+    from x84.bbs import getsession, getterminal, echo, ini
+    from x84.bbs import DOSDoor, Door, Dropfile
+    import os, shlex, logging
+
+    session, term = getsession(), getterminal()
+    logger = logging.getLogger()
+    echo(term.clear)
+
+    with term.fullscreen():
+        store_rows, store_cols = None, None
+
+        if env_term is None:
+            env_term = session.env['TERM']
+
+        strnode = None
+        (dosbin, doshome, dospath, dosopts, dosdropdir, dosnodes) = (
+            ini.CFG.get('dosemu', 'bin')
+            , ini.CFG.get('dosemu', 'home')
+            , ini.CFG.get('dosemu', 'path')
+            , ini.CFG.get('dosemu', 'opts')
+            , ini.CFG.get('dosemu', 'dropdir')
+            , int(ini.CFG.get('dosemu', 'nodes'))
+        )
+
+        if drop_folder != None and drop_type == None:
+            drop_type = 'DOORSYS'
+
+        if drop_type != None and drop_folder == None:
+            drop_folder = dosdropdir
+
+        if drop_folder or drop_type:
+            if name == None:
+                raise Exception('name must be passed for doors that use node pools')
+
+            for node in range(nodes if nodes != None else dosnodes):
+                event = 'lock-%s/%d' % (name, node)
+                session.send_event(event, ('acquire', None))
+                data = session.read_event(event)
+
+                if data is True:
+                    strnode = str(node + 1)
+                    break
+
+            if strnode == None:
+                logger.warn('No virtual nodes left in pool: %s' % name)
+                echo(term.bold_red(u'This door is currently at maximum capacity. Please try again later.'))
+                term.inkey(5)
+                return
+
+            logger.info('Requisitioned virtual node %s-%s' % (name, strnode))
+            dosopts = dosopts.replace('%#', strnode)
+            dosdropdir = dosdropdir.replace('%#', strnode)
+            drop_folder = drop_folder.replace('%#', strnode)
+            args = args.replace('%#', strnode)
+
+        try:
+            if dos != None or forcesize != None:
+                if forcesize is None:
+                    forcesize = [80, 25]
+
+                want_cols, want_rows = forcesize
+
+                if want_cols != term.width or want_rows != term.height:
+                    store_cols, store_rows = term.width, term.height
+                    echo(u'\x1b[8;%d;%dt' % (want_rows, want_cols,))
+                    term.inkey(timeout=0.25)
+
+                dirty = True
+
+                if not (term.width == want_cols and term.height == want_rows):
+                    if forcesize_func != None:
+                        forcesize_func()
+                    else:
+                        while not (term.width == want_cols and term.height == want_rows):
+                            if session.poll_event('refresh'):
+                                dirty = True
+
+                            if dirty:
+                                dirty = False
+                                echo(term.clear)
+                                echo(term.bold_cyan(u'o' + (u'-' * (forcesize[0] - 2)) + u'>\r\n' + (u'|\r\n') * (forcesize[1] - 2)))
+                                echo(u''.join((term.bold_cyan(u'V'), term.bold(u' Please resize your screen to %sx%s and/or press ENTER to continue' % (want_cols, want_rows)))))
+
+                            ret = term.inkey(timeout=0.25)
+
+                            if ret in (term.KEY_ENTER, u'\r', u'\n'):
+                                break
+
+                if term.width != want_cols or term.height != want_rows:
+                    echo(u'\r\nYour dimensions: %s by %s; emulating %s by %s' % (
+                        term.width, term.height, want_cols, want_rows,))
+                    # hand-hack, its ok ... really
+                    store_cols, store_rows = term.width, term.height
+                    term.columns, term.rows = want_cols, want_rows
+                    term.inkey(timeout=2)
+
+            if activity != None:
+                session.activity = activity
+            elif name != None:
+                session.activity = 'Playing %s' % name
+            else:
+                session.activity = 'Playing a door game'
+
+            if drop_folder != None:
+                if not os.path.isabs(drop_folder):
+                    drop_folder = os.path.join(dosdropdir, drop_folder)
+
+                Dropfile(getattr(Dropfile, drop_type)).save(drop_folder)
+
+            door = None
+
+            if dos != None:
+                cmd = None
+
+                if command != None:
+                    cmd = command
+                else:
+                    cmd = dosbin
+                    args = dosopts.replace('%c', '"' + args + '"')
+
+                door = DOSDoor(cmd, shlex.split(args), cp437=True, env_home=doshome, env_path=dospath, env_term=env_term)
+            else:
+                door = Door(command, shlex.split(args), cp437=cp437, env_term=env_term)
+
+            door.run()
+        except:
+            raise
+        finally:
+            if store_rows != None and store_cols != None:
+                term.rows, term.columns = store_rows, store_cols
+                echo(u'\x1b[8;%d;%dt' % (store_rows, store_cols,))
+                term.inkey(timeout=0.25)
+
+            if name != None and drop_type:
+                session.send_event(event='lock-%s/%d' % (name, int(strnode) - 1), data=('release', None))
+                logger.info('Released virtual node %s-%s' % (name, strnode))

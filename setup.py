@@ -172,6 +172,7 @@ setup(name='x84',
           'sqlitedict >=1.0.8',
           'blessed >=1.8.9',
           'wcwidth >=0.1.0',
+          'python-dateutil >=2.2',
       ] + get_maybe_requires(),
       scripts=['bin/x84'],
       classifiers=[
