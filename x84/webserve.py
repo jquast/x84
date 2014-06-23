@@ -32,16 +32,31 @@ def start(web_modules):
     from threading import Thread
     import logging
     import imp
+    import sys
+    import os
+    from x84.bbs.ini import CFG
 
     global QUEUES, LOCKS
     logger = logging.getLogger()
+    sys.path.insert(0, os.path.expanduser(CFG.get('system', 'scriptpath')))
     QUEUES = dict()
     LOCKS = dict()
     urls = list()
     funcs = globals()
 
     for mod in web_modules:
-        module = __import__('x84.webmodules.%s' % mod, fromlist=('x84.webmodules',))
+        module = None
+
+        # first check for it in the scripttpath's webmodules dir
+        try:
+            module = __import__('webmodules.%s' % mod, fromlist=('webmodules',))
+        except ImportError:
+            pass
+
+        # fallback to the engine's webmodules dir
+        if module is None:
+            module = __import__('x84.webmodules.%s' % mod, fromlist=('x84.webmodules',))
+
         api = module.web_module()
         urls += api['urls']
 
