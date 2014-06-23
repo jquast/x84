@@ -24,27 +24,44 @@ chain = /home/bbs/ca.cer
 
 import web
 
+QUEUES = None
+LOCKS = None
+
 def start(web_modules):
     """ fire up a web server with the given modules as endpoints """
-    from x84.bbs import ini
+    from threading import Thread
     import logging
-    from web.wsgiserver import CherryPyWSGIServer
-    # @TODO use functions to dynamically import web.py endpoint classes
-    from x84.msgserve import messages
 
+    global QUEUES, LOCKS
     logger = logging.getLogger()
+    QUEUES = dict()
+    LOCKS = dict()
+    urls = list()
+    funcs = globals()
+
+    for mod in web_modules:
+        exec 'from x84.webmodules import %s' % mod
+        exec 'api = %s.web_module()' % mod
+        urls += api['urls']
+
+        for key in api['funcs']:
+            funcs[key] = api['funcs'][key]
+
+    t = Thread(target=server_thread, args=(urls, funcs,))
+    t.daemon = True
+    t.start()
+    logger.info(u'Web modules: %s' % u', '.join(web_modules))
+
+def server_thread(urls, funcs):
+    """ thread for running the web server """
+    from x84.bbs import ini
+    from web.wsgiserver import CherryPyWSGIServer
+
     CherryPyWSGIServer.ssl_certificate = ini.CFG.get('web', 'cert')
     CherryPyWSGIServer.ssl_private_key = ini.CFG.get('web', 'key')
 
     if ini.CFG.has_option('web', 'chain'):
         CherryPyWSGIServer.ssl_certificate_chain = ini.CFG.get('web', 'chain')
 
-    urls = list()
-
-    if 'msgserve' in web_modules:
-        global messages
-        urls += ('/messages/([^/]+)/([^/]*)/?', 'messages')
-
-    app = web.application(urls, globals())
-    logger.info(u'Web modules: %s' % u', '.join(web_modules))
+    app = web.application(urls, funcs)
     web.httpserver.runsimple(app.wsgifunc(), (ini.CFG.get('web', 'addr'), ini.CFG.getint('web', 'port')))

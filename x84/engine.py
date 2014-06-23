@@ -415,11 +415,8 @@ def _loop(servers):
         try:
             import web, OpenSSL
             from x84 import webserve
-            from threading import Thread
             web_modules = set([key.strip() for key in CFG.get('web', 'modules').split(',')])
-            t = Thread(target=webserve.start, args=(web_modules,))
-            t.daemon = True
-            t.start()
+            webserve.start(web_modules)
         except Exception, e:
             log.error('%r' % e)
 
@@ -431,34 +428,6 @@ def _loop(servers):
         import time
         poll_interval = CFG.getint('msg', 'poll_interval')
         last_poll = int(time.time()) - poll_interval
-
-    # x84net message server
-    if 'msgserve' in web_modules:
-        def read_forever():
-            import telnetlib
-            import os
-            from functools import partial
-            from x84.bbs import telnet
-            from blessed import Terminal as BlessedTerminal
-            client = telnetlib.Telnet()
-            client.set_option_negotiation_callback(partial(telnet.callback_cmdopt
-                , env_term='xterm-256color', term=BlessedTerminal()))
-            client.open(CFG.get('telnet', 'addr'), CFG.getint('telnet', 'port'))
-            client.read_all()
-
-        from threading import Thread, Lock
-        from multiprocessing import Queue
-        from x84.msgserve import MessageNetworkServer
-
-        MessageNetworkServer.iqueue = Queue()
-        MessageNetworkServer.oqueue = Queue()
-        MessageNetworkServer.lock = Lock()
-        session.BOTLOCK.acquire()
-        session.BOTQUEUE.put('msgserve')
-        t = Thread(target=read_forever)
-        t.daemon = True
-        t.start()
-        session.BOTLOCK.release()
 
     while True:
         # shutdown, close & delete inactive clients,
