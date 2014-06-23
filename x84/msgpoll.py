@@ -328,11 +328,17 @@ def do_poll():
         client.read_all()
 
     import telnetlib
+    import os
+    from functools import partial
     from threading import Thread
+    from blessed import Terminal as BlessedTerminal
     from x84.bbs import session
     from x84.bbs.ini import CFG
+    from x84.bbs import telnet
     session.BOTLOCK.acquire()
     client = telnetlib.Telnet()
+    client.set_option_negotiation_callback(partial(telnet.callback_cmdopt
+        , env_term='xterm-256color', term=BlessedTerminal()))
     client.open(CFG.get('telnet', 'addr'), CFG.getint('telnet', 'port'))
     session.BOTQUEUE.put('msgpoll')
     t = Thread(target=read_forever, args=[client])

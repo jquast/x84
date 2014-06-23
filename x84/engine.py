@@ -436,7 +436,14 @@ def _loop(servers):
     if 'msgserve' in web_modules:
         def read_forever():
             import telnetlib
-            client = telnetlib.Telnet(CFG.get('telnet', 'addr'), CFG.getint('telnet', 'port'))
+            import os
+            from functools import partial
+            from x84.bbs import telnet
+            from blessed import Terminal as BlessedTerminal
+            client = telnetlib.Telnet()
+            client.set_option_negotiation_callback(partial(telnet.callback_cmdopt
+                , env_term='xterm-256color', term=BlessedTerminal()))
+            client.open(CFG.get('telnet', 'addr'), CFG.getint('telnet', 'port'))
             client.read_all()
 
         from threading import Thread, Lock
