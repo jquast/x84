@@ -417,7 +417,7 @@ def _loop(servers):
             from x84 import webserve
             web_modules = set([key.strip() for key in CFG.get('web', 'modules').split(',')])
             webserve.start(web_modules)
-        except Exception, e:
+        except ImportError, e:
             log.error('%r' % e)
 
     # setup message polling mechanism

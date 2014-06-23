@@ -31,6 +31,7 @@ def start(web_modules):
     """ fire up a web server with the given modules as endpoints """
     from threading import Thread
     import logging
+    import imp
 
     global QUEUES, LOCKS
     logger = logging.getLogger()
@@ -40,8 +41,8 @@ def start(web_modules):
     funcs = globals()
 
     for mod in web_modules:
-        exec 'from x84.webmodules import %s' % mod
-        exec 'api = %s.web_module()' % mod
+        module = __import__('x84.webmodules.%s' % mod, fromlist=('x84.webmodules',))
+        api = module.web_module()
         urls += api['urls']
 
         for key in api['funcs']:
