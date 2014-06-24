@@ -21,7 +21,7 @@ SYNCTERM_FONTMAP = (
     "cp850", "cp850", "cp885", "cp1251", "iso8859_7", "koi8-r_c",
     "iso8859_4", "iso8859_1", "cp866", "cp437", "cp866", "cp885",
     "cp866_u", "iso8859_1", "cp1131", "c64_upper", "c64_lower",
-    "c128_upper", "c128_lower", "atari", "p0t_noodle", "mo_soul",
+    "c128_upper", "c128_lower", "atari", "pot_noodle", "mo_soul",
     "microknight", "topaz",)
 
 
