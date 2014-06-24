@@ -328,7 +328,6 @@ def do_poll():
         client.read_all()
 
     import telnetlib
-    import os
     from functools import partial
     from threading import Thread
     from x84.bbs import session
