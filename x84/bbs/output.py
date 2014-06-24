@@ -10,21 +10,38 @@ from blessed.sequences import Sequence, measure_length
 
 __all__ = ['echo', 'timeago', 'encode_pipe', 'decode_pipe']
 
-def syncterm_setfont(fontname):
-    fontname = fontname.lower()
-    if fontname == 'topaz':
-        ansicode = '\x1b[0;40 D'
-    if fontname == 'microknight':
-        ansicode = '\x1b[0;39 D'
-    if fontname == 'potnoodle':
-        ansicode = '\x1b[0;37 D'
-    if fontname == 'mosoul':
-        ansicode = '\x1b[0;38 D'
-    if fontname == 'cp437thin':
-        ansicode = '\x1b[0;26 D'
-    if fontname == 'cp437':
-        ansicode = '\x1b[0;0 D'
-    return ansicode
+#: A mapping of SyncTerm fonts/code pages to their sequence value.
+#: Where matching, their python-standard encoding value is used, (fe. 'cp437').
+#: Otherwise, the lower-case named of the font is used. This is derived from,
+#: http://cvs.synchro.net/cgi-bin/viewcvs.cgi/*checkout*/src/conio/cterm.txt
+SYNCTERM_FONTMAP = (
+    "cp437", "cp1251", "koi8_r", "iso8859_2", "iso8859_4", "cp866",
+    "iso8859_9", "haik8", "iso8859_8", "koi8_u", "iso8859_15", "iso8859_4",
+    "koi8_r_b", "iso8859_4", "iso8859_5", "ARMSCII_8", "iso8859_15",
+    "cp850", "cp850", "cp885", "cp1251", "iso8859_7", "koi8-r_c",
+    "iso8859_4", "iso8859_1", "cp866", "cp437", "cp866", "cp885",
+    "cp866_u", "iso8859_1", "cp1131", "c64_upper", "c64_lower",
+    "c128_upper", "c128_lower", "atari", "p0t_noodle", "mo_soul",
+    "microknight", "topaz",)
+
+
+def syncterm_setfont(font_name, font_page=0):
+    """ Send SyncTerm-specific terminal sequence for selecting a Font Codepage.
+
+        Available fonts are described in global constant SYNCTERM_FONTMAP.
+    """
+    # font_code is the index of font_name in SYNCTERM_FONTMAP, so that
+    # syncterm_setfont('topaz') becomes value 40, and returns sequence
+    # "\x1b[0;40 D'
+    try:
+        font_code = SYNCTERM_FONTMAP.index(font_name)
+    except IndexError:
+        raise ValueError("The specified font_name={0!r} is not any of the "
+                         "available fonts specified in module {1}, table "
+                         "SYNCTERM_FONTMAP. Available values: {2!r}".format(
+                             font_name, __name__, SYNCTERM_FONTMAP))
+    return '\x1b[{0};{1} D'.format(font_page, font_code)
+
 
 def echo(ucs):
     """

@@ -1,14 +1,14 @@
 """
 x/84 bbs module, https://github.com/jquast/x84
 """
-
-
 from x84.bbs.userbase import list_users, get_user, find_user, User, Group
 from x84.bbs.msgbase import list_msgs, get_msg, list_tags, Msg
 from x84.bbs.exception import Disconnected, Goto
 from x84.bbs.editor import LineEditor, ScrollingEditor
-from x84.bbs.output import echo, timeago, encode_pipe, decode_pipe
-from x84.bbs.output import Ansi, ansiwrap  # deprecated
+from x84.bbs.output import (echo, timeago, encode_pipe, decode_pipe,
+                            syncterm_setfont,
+                            Ansi, ansiwrap  # deprecated
+                            )
 from x84.bbs.ansiwin import AnsiWindow
 from x84.bbs.selector import Selector
 from x84.bbs.lightbar import Lightbar
@@ -17,13 +17,16 @@ from x84.bbs.dbproxy import DBProxy
 from x84.bbs.pager import Pager
 from x84.bbs.door import Door, DOSDoor, Dropfile
 
-__all__ = ['list_users', 'get_user', 'find_user', 'User', 'Group',
-    'list_msgs', 'get_msg', 'list_tags', 'Msg',
-    'LineEditor', 'ScrollingEditor', 'echo', 'timeago', 'Ansi',
-    'ansiwrap', 'AnsiWindow', 'Selector', 'Lightbar', 'from_cp437',
-    'DBProxy', 'Pager', 'Door', 'DOSDoor', 'goto', 'disconnect',
-    'getsession', 'getterminal', 'getch', 'gosub', 'ropen',
-    'showcp437', 'Dropfile', 'encode_pipe', 'decode_pipe',]
+
+__all__ = ['list_users', 'get_user', 'find_user', 'User', 'Group', 'list_msgs',
+           'get_msg', 'list_tags', 'Msg', 'LineEditor', 'ScrollingEditor',
+           'echo', 'timeago', 'Ansi', 'ansiwrap', 'AnsiWindow', 'Selector',
+           'Lightbar', 'from_cp437', 'DBProxy', 'Pager', 'Door', 'DOSDoor',
+           'goto', 'disconnect', 'getsession', 'getterminal', 'getch', 'gosub',
+           'ropen', 'showcp437', 'Dropfile', 'encode_pipe', 'decode_pipe',
+           'syncterm_setfont',
+           ]
+
 
 def goto(*args):
     """
@@ -122,4 +125,3 @@ def showcp437(filepattern):
             yield u'\r\n' + msg_cancel + u'\r\n'
             return
         yield line + u'\r\n'
-
