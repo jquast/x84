@@ -16,8 +16,8 @@ def main(host, port=None, encoding='cp437'):
     #         Too many branches
     #         Too many statements
     import telnetlib
-    import struct
-    from x84.bbs import getsession, getterminal, echo, getch, from_cp437
+    from functools import partial
+    from x84.bbs import getsession, getterminal, echo, getch, from_cp437, telnet
     import logging
     log = logging.getLogger()
 
@@ -26,35 +26,8 @@ def main(host, port=None, encoding='cp437'):
     session.activity = 'connecting to %s' % (host,)
     port = int(port) if port is not None else 23
     telnet_client = telnetlib.Telnet()
-
-    def callback_cmdopt(socket, cmd, opt):
-        """ Callback for telnetlib.Telnet.set_option_negotiation_callback. """
-        if cmd == telnetlib.WILL:
-            if opt in (telnetlib.ECHO, telnetlib.SGA):
-                socket.sendall(telnetlib.IAC + telnetlib.DO + opt)
-        elif cmd == telnetlib.DO:
-            if opt == telnetlib.SGA:
-                socket.sendall(telnetlib.IAC + telnetlib.WILL + opt)
-            elif opt == telnetlib.TTYPE:
-                socket.sendall(telnetlib.IAC + telnetlib.WILL + opt)
-                socket.sendall(telnetlib.IAC + telnetlib.SB
-                               + telnetlib.TTYPE + IS + session.env.get('TERM')
-                               + chr(0) + telnetlib.IAC + telnetlib.SE)
-            elif opt == telnetlib.NAWS:
-                socket.sendall(telnetlib.IAC + telnetlib.WILL + opt)
-                socket.sendall(telnetlib.IAC + telnetlib.SB
-                               + telnetlib.NAWS
-                               + struct.pack('!HH', term.width, term.height)
-                               + telnetlib.IAC + telnetlib.SE)
-            else:
-                socket.sendall(telnetlib.IAC + telnetlib.WONT + opt[0])
-        elif cmd == telnetlib.SB:
-            if opt[0] == telnetlib.TTYPE and opt[1] == SEND:
-                socket.sendall(telnetlib.IAC + telnetlib.SB
-                               + telnetlib.TTYPE + IS + session.env.get('TERM')
-                               + chr(0) + telnetlib.IAC + telnetlib.SE)
-    telnet_client.set_option_negotiation_callback(callback_cmdopt)
-
+    telnet_client.set_option_negotiation_callback(partial(telnet.callback_cmdopt
+        , env_term=session.env['TERM'], height=term.height, width=term.width))
     echo(u"\r\n\r\nEscape character is 'ctrl-^.'")
     if not session.user.get('expert', False):
         getch(3)

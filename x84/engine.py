@@ -415,12 +415,9 @@ def _loop(servers):
         try:
             import web, OpenSSL
             from x84 import webserve
-            from threading import Thread
             web_modules = set([key.strip() for key in CFG.get('web', 'modules').split(',')])
-            t = Thread(target=webserve.start, args=(web_modules,))
-            t.daemon = True
-            t.start()
-        except Exception, e:
+            webserve.start(web_modules)
+        except ImportError, e:
             log.error('%r' % e)
 
     # setup message polling mechanism
@@ -431,27 +428,6 @@ def _loop(servers):
         import time
         poll_interval = CFG.getint('msg', 'poll_interval')
         last_poll = int(time.time()) - poll_interval
-
-    # x84net message server
-    if 'msgserve' in web_modules:
-        def read_forever():
-            import telnetlib
-            client = telnetlib.Telnet(CFG.get('telnet', 'addr'), CFG.getint('telnet', 'port'))
-            client.read_all()
-
-        from threading import Thread, Lock
-        from multiprocessing import Queue
-        from x84.msgserve import MessageNetworkServer
-
-        MessageNetworkServer.iqueue = Queue()
-        MessageNetworkServer.oqueue = Queue()
-        MessageNetworkServer.lock = Lock()
-        session.BOTLOCK.acquire()
-        session.BOTQUEUE.put('msgserve')
-        t = Thread(target=read_forever)
-        t.daemon = True
-        t.start()
-        session.BOTLOCK.release()
 
     while True:
         # shutdown, close & delete inactive clients,

@@ -39,12 +39,7 @@ source_db_name = x84netsrc
 """
 
 import web
-
-class MessageNetworkServer():
-    """ server queues and locking mechanism """
-    iqueue = None
-    oqueue = None
-    lock = None
+from x84.webserve import QUEUES, LOCKS
 
 class messages():
     """
@@ -74,16 +69,16 @@ class messages():
             , 'last': last
         }
 
-        MessageNetworkServer.lock.acquire()
-        MessageNetworkServer.iqueue.put(data)
+        LOCKS['x84net'].acquire()
+        QUEUES['x84neti'].put(data)
 
         try:
-            response = MessageNetworkServer.oqueue.get(True, 60)
+            response = QUEUES['x84neto'].get(True, 60)
         except Queue.Empty:
             logger.error(u'Empty queue')
             raise web.HTTPError('500 Server Error', {}, json.dumps({u'response': False, u'message': u'No response'}))
         finally:
-            MessageNetworkServer.lock.release()
+            LOCKS['x84net'].release()
 
         try:
             return json.dumps(response)
@@ -112,16 +107,16 @@ class messages():
             , 'message': json.loads(webdata.message)
         }
 
-        MessageNetworkServer.lock.acquire()
-        MessageNetworkServer.iqueue.put(data)
+        LOCKS['x84net'].acquire()
+        QUEUES['x84neti'].put(data)
 
         try:
-            response = MessageNetworkServer.oqueue.get(True, 60)
+            response = QUEUES['x84neto'].get(True, 60)
         except Queue.Empty:
             logger.error(u'Empty queue')
             raise web.HTTPError('500 Server Error', {}, json.dumps({u'response': False, u'message': u'No response'}))
         finally:
-            MessageNetworkServer.lock.release()
+            LOCKS['x84net'].release()
 
         try:
             return json.dumps(response)
@@ -155,11 +150,11 @@ def main():
     term = getterminal()
 
     try:
-        data = MessageNetworkServer.iqueue.get(True, 60)
+        data = QUEUES['x84neti'].get(True, 60)
     except Queue.Empty:
         return
 
-    queue = MessageNetworkServer.oqueue
+    queue = QUEUES['x84neto']
 
     if 'network' not in data.keys():
         server_error(logger, queue, u'Network not specified')
@@ -300,3 +295,36 @@ def main():
         queue.put({u'response': True, u'id': msg.idx})
     else:
         server_error(logger, queue, u'Unknown action: %s' % data['action'])
+
+def web_module():
+    def read_forever():
+        import telnetlib
+        import os
+        from functools import partial
+        from x84.bbs import telnet
+        from x84.bbs.ini import CFG
+        client = telnetlib.Telnet()
+        client.set_option_negotiation_callback(partial(telnet.callback_cmdopt
+            , env_term='xterm-256color'))
+        client.open(CFG.get('telnet', 'addr'), CFG.getint('telnet', 'port'))
+        client.read_all()
+
+    from threading import Thread, Lock
+    from multiprocessing import Queue
+    from x84.bbs import session
+    from x84.webserve import QUEUES, LOCKS
+
+    QUEUES['x84neti'] = Queue()
+    QUEUES['x84neto'] = Queue()
+    LOCKS['x84net'] = Lock()
+    session.BOTLOCK.acquire()
+    session.BOTQUEUE.put('msgserve')
+    t = Thread(target=read_forever)
+    t.daemon = True
+    t.start()
+    session.BOTLOCK.release()
+
+    return {
+        'urls': ('/messages/([^/]+)/([^/]*)/?', 'messages')
+        , 'funcs': { 'messages': messages }
+        }
