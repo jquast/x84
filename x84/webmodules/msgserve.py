@@ -303,10 +303,9 @@ def web_module():
         from functools import partial
         from x84.bbs import telnet
         from x84.bbs.ini import CFG
-        from blessed import Terminal as BlessedTerminal
         client = telnetlib.Telnet()
         client.set_option_negotiation_callback(partial(telnet.callback_cmdopt
-            , env_term='xterm-256color', term=BlessedTerminal()))
+            , env_term='xterm-256color'))
         client.open(CFG.get('telnet', 'addr'), CFG.getint('telnet', 'port'))
         client.read_all()
 

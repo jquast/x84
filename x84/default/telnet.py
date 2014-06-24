@@ -27,7 +27,7 @@ def main(host, port=None, encoding='cp437'):
     port = int(port) if port is not None else 23
     telnet_client = telnetlib.Telnet()
     telnet_client.set_option_negotiation_callback(partial(telnet.callback_cmdopt
-        , env_term=session.env['TERM'], term=term))
+        , env_term=session.env['TERM'], height=term.height, width=term.width))
     echo(u"\r\n\r\nEscape character is 'ctrl-^.'")
     if not session.user.get('expert', False):
         getch(3)

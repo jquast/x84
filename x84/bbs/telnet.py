@@ -2,13 +2,17 @@
 telnet extras for x/x84 bbs, https://github.com/jquast/x84
 """
 
-def callback_cmdopt(socket, cmd, opt, env_term=None, term=None):
+def callback_cmdopt(socket, cmd, opt, env_term=None, width=None, height=None):
 	""" Callback for telnetlib.Telnet.set_option_negotiation_callback. """
 	import telnetlib
 	import struct
 	IS = chr(0)  # Sub-process negotiation IS command
 	if env_term is None:
-		env_term = 'vt220'
+	    env_term = 'vt220'
+        if width is None:
+            width = 80
+        if height is None:
+            height = 24
 	if cmd == telnetlib.WILL:
 		if opt in (telnetlib.ECHO, telnetlib.SGA):
 			socket.sendall(telnetlib.IAC + telnetlib.DO + opt)
@@ -24,7 +28,7 @@ def callback_cmdopt(socket, cmd, opt, env_term=None, term=None):
 			socket.sendall(telnetlib.IAC + telnetlib.WILL + opt)
 			socket.sendall(telnetlib.IAC + telnetlib.SB
 						   + telnetlib.NAWS
-						   + struct.pack('!HH', term.width, term.height)
+						   + struct.pack('!HH', width, height)
 						   + telnetlib.IAC + telnetlib.SE)
 		else:
 			socket.sendall(telnetlib.IAC + telnetlib.WONT + opt[0])
