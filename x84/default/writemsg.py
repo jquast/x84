@@ -389,6 +389,14 @@ def main(msg=None):
                 )))
             term.inkey(timeout=7)
             continue
+        if is_network_msg and u'public' not in msg.tags:
+            echo(u''.join((
+                u'\r\n'
+                , term.bold_yellow_on_red(u" YOU ShOUldN't SENd PRiVAtE MESSAGES OVER tHE NEtWORk... ")
+                , u'\r\n'
+                )))
+            term.inkey(timeout=7)
+            continue
         display_msg(msg)
         if not prompt_send():
             break
