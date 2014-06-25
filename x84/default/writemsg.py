@@ -51,7 +51,7 @@ def display_msg(msg):
     return
 
 
-def prompt_recipient(msg):
+def prompt_recipient(msg, is_network_msg):
     """ Prompt for recipient of message. """
     # pylint: disable=R0914
     #         Too many local variables
@@ -72,6 +72,8 @@ def prompt_recipient(msg):
     recipient = lne.read()
     if recipient is None or lne.quit:
         return False
+    if is_network_msg:
+        return recipient
     userlist = list_users()
     if recipient in userlist:
         msg.recipient = recipient
@@ -313,10 +315,51 @@ def prompt_abort():
     return False
 
 
+def prompt_network(msg, network_tags):
+    """ Prompt for network message """
+    from x84.bbs import getterminal, echo, Lightbar, Selector
+    from x84.bbs.ini import CFG
+
+    term = getterminal()
+    inp = Selector(yloc=term.height - 1,
+                   xloc=term.width - 22,
+                   width=20,
+                   left=u'YES', right=u'NO')
+    blurb = u'iS thiS A NEtWORk MESSAGE?'
+    echo(u'\r\n\r\n')
+    echo(term.move(inp.yloc, inp.xloc - len(blurb)))
+    echo(term.bold_yellow(blurb))
+    selection = inp.read()
+    echo(term.move(inp.yloc, 0) + term.clear_eol)
+
+    if selection == u'NO':
+        return False
+
+    lb = Lightbar(40, 20, term.height / 2 - 20, term.width / 2 - 10)
+    lb.update([(tag, tag,) for tag in network_tags])
+    echo(u''.join((
+        term.clear
+        , term.move(term.height / 2 - 21, term.width / 2 - 10)
+        , term.bold_white(u'ChOOSE YOUR NEtWORk')
+        )))
+    network = lb.read()
+
+    if network is not None:
+        msg.tags = (u'public', network,)
+        return True
+
+    return False
+
 def main(msg=None):
     """ Main procedure. """
-    from x84.bbs import Msg, getsession
-    session = getsession()
+    from x84.bbs import Msg, getsession, echo, getterminal
+    from x84.bbs.ini import CFG
+    session, term = getsession(), getterminal()
+    network_tags = None
+
+    if CFG.has_option('msg', 'network_tags'):
+        network_tags = [tag.strip() for tag in CFG.get('msg', 'network_tags').split(',')]
+
     if msg is None:
         msg = Msg()
         msg.tags = ('public',)
@@ -324,7 +367,10 @@ def main(msg=None):
     while True:
         session.activity = 'Constructing a %s message' % (
             u'public' if u'public' in msg.tags else u'private',)
-        if not prompt_recipient(msg):
+        is_network_msg = False
+        if network_tags:
+            is_network_msg = prompt_network(msg, network_tags)
+        if not prompt_recipient(msg, is_network_msg):
             break
         if not prompt_subject(msg):
             break
@@ -335,9 +381,18 @@ def main(msg=None):
         # XXX
         if not prompt_tags(msg):
             break
+        if is_network_msg and len([tag for tag in network_tags if tag in msg.tags]) == 0:
+            echo(u''.join((
+                u'\r\n'
+                , term.bold_yellow_on_red(u' YOU tOld ME thiS WAS A NEtWORk MESSAGE. WhY did YOU liE?! ')
+                , u'\r\n'
+                )))
+            term.inkey(timeout=7)
+            continue
         display_msg(msg)
         if not prompt_send():
             break
+
         msg.save()
         return True
     return False
