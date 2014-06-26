@@ -41,6 +41,10 @@ source_db_name = x84netsrc
 import web
 from x84.webserve import QUEUES, LOCKS
 
+OUTQUEUE = 'x84net-out'
+INQUEUE = 'x4net-in'
+LOCK = 'x84net'
+
 class messages():
     """
     message network server api endpoint
@@ -52,6 +56,7 @@ class messages():
         import Queue
         import logging
 
+        global LOCK, INQUEUE, OUTQUEUE
         logger = logging.getLogger()
 
         if len(last) <= 0:
@@ -69,16 +74,16 @@ class messages():
             , 'last': last
         }
 
-        LOCKS['x84net'].acquire()
-        QUEUES['x84neti'].put(data)
+        LOCKS[LOCK].acquire()
+        QUEUES[INQUEUE].put(data)
 
         try:
-            response = QUEUES['x84neto'].get(True, 60)
+            response = QUEUES[OUTQUEUE].get(True, 60)
         except Queue.Empty:
             logger.error(u'Empty queue')
             raise web.HTTPError('500 Server Error', {}, json.dumps({u'response': False, u'message': u'No response'}))
         finally:
-            LOCKS['x84net'].release()
+            LOCKS[LOCK].release()
 
         try:
             return json.dumps(response)
@@ -92,6 +97,7 @@ class messages():
         import Queue
         import logging
 
+        global LOCK, INQUEUE, OUTQUEUE
         logger = logging.getLogger()
 
         if not 'HTTP_AUTH_X84NET' in web.ctx.env.keys():
@@ -107,16 +113,16 @@ class messages():
             , 'message': json.loads(webdata.message)
         }
 
-        LOCKS['x84net'].acquire()
-        QUEUES['x84neti'].put(data)
+        LOCKS[LOCK].acquire()
+        QUEUES[INQUEUE].put(data)
 
         try:
-            response = QUEUES['x84neto'].get(True, 60)
+            response = QUEUES[OUTQUEUE].get(True, 60)
         except Queue.Empty:
             logger.error(u'Empty queue')
             raise web.HTTPError('500 Server Error', {}, json.dumps({u'response': False, u'message': u'No response'}))
         finally:
-            LOCKS['x84net'].release()
+            LOCKS[LOCK].release()
 
         try:
             return json.dumps(response)
@@ -145,16 +151,17 @@ def main():
     import json
     import Queue
 
+    global LOCK, INQUEUE, OUTQUEUE
     session = getsession()
     logger = logging.getLogger()
     term = getterminal()
 
     try:
-        data = QUEUES['x84neti'].get(True, 60)
+        data = QUEUES[INQUEUE].get(True, 60)
     except Queue.Empty:
         return
 
-    queue = QUEUES['x84neto']
+    queue = QUEUES[OUTQUEUE]
 
     if 'network' not in data.keys():
         server_error(logger, queue, u'Network not specified')
@@ -314,9 +321,10 @@ def web_module():
     from x84.bbs import session
     from x84.webserve import QUEUES, LOCKS
 
-    QUEUES['x84neti'] = Queue()
-    QUEUES['x84neto'] = Queue()
-    LOCKS['x84net'] = Lock()
+    global LOCK, INQUEUE, OUTQUEUE
+    QUEUES[INQUEUE] = Queue()
+    QUEUES[OUTQUEUE] = Queue()
+    LOCKS[LOCK] = Lock()
     session.BOTLOCK.acquire()
     session.BOTQUEUE.put('msgserve')
     t = Thread(target=read_forever)
