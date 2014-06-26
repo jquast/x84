@@ -41,6 +41,7 @@ source_db_name = x84netsrc
 INQUEUE = None
 OUTQUEUE = None
 LOCK = None
+QUEUE_TIMEOUT = QUEUE_TIMEOUT
 
 import web
 
@@ -56,7 +57,7 @@ class messages():
         import logging
         from x84.webserve import queues, locks
 
-        global INQUEUE, OUTQUEUE, LOCK
+        global INQUEUE, OUTQUEUE, LOCK, QUEUE_TIMEOUT
         logger = logging.getLogger()
 
         if len(last) <= 0:
@@ -78,7 +79,7 @@ class messages():
         queues[INQUEUE].put(data)
 
         try:
-            response = queues[OUTQUEUE].get(True, 60)
+            response = queues[OUTQUEUE].get(True, QUEUE_TIMEOUT)
         except Queue.Empty:
             logger.error(u'Empty queue')
             raise web.HTTPError('500 Server Error', {}, json.dumps({u'response': False, u'message': u'No response'}))
@@ -98,7 +99,7 @@ class messages():
         import logging
         from x84.webserve import queues, locks
 
-        global INQUEUE, OUTQUEUE, LOCK
+        global INQUEUE, OUTQUEUE, LOCK, QUEUE_TIMEOUT
         logger = logging.getLogger()
 
         if not 'HTTP_AUTH_X84NET' in web.ctx.env.keys():
@@ -118,7 +119,7 @@ class messages():
         queues[INQUEUE].put(data)
 
         try:
-            response = queues[OUTQUEUE].get(True, 60)
+            response = queues[OUTQUEUE].get(True, QUEUE_TIMEOUT)
         except Queue.Empty:
             logger.error(u'Empty queue')
             raise web.HTTPError('500 Server Error', {}, json.dumps({u'response': False, u'message': u'No response'}))
@@ -153,13 +154,13 @@ def main():
     import json
     import Queue
 
-    global INQUEUE, OUTQUEUE, LOCK
+    global INQUEUE, OUTQUEUE, LOCK, QUEUE_TIMEOUT
     session = getsession()
     logger = logging.getLogger()
     term = getterminal()
 
     try:
-        data = queues[INQUEUE].get(True, 60)
+        data = queues[INQUEUE].get(True, QUEUE_TIMEOUT)
     except Queue.Empty:
         return
 
@@ -323,7 +324,7 @@ def web_module():
     from x84.bbs import session
     from x84.webserve import queues, locks
 
-    global INQUEUE, OUTQUEUE, LOCK
+    global INQUEUE, OUTQUEUE, LOCK, QUEUE_TIMEOUT
     queues[INQUEUE] = Queue()
     queues[OUTQUEUE] = Queue()
     locks[LOCK] = Lock()
