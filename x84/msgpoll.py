@@ -89,7 +89,7 @@ def pull_rest(network, last, ca_path=True):
 
     try:
         response = json.loads(r.text)
-        return response['messages']
+        return response['messages'] if response['response'] else []
     except Exception, e:
         logger.exception(u'[%s] JSON error: %s' % (network['name'], str(e)))
         return False
@@ -119,7 +119,7 @@ def push_rest(network, msg, parent, origin_line, ca_path=True):
 
     try:
         response = json.loads(r.text)
-        return response['id']
+        return response['id'] if response['response'] else False
     except Exception, err:
         logger.exception(u'[%s] JSON error: %s' % (network['name'], str(err)))
         return False
