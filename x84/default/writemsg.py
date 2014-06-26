@@ -381,22 +381,31 @@ def main(msg=None):
         # XXX
         if not prompt_tags(msg):
             break
-        if is_network_msg and len([tag for tag in network_tags if tag in msg.tags]) == 0:
-            echo(u''.join((
-                u'\r\n'
-                , term.bold_yellow_on_red(u' YOU tOld ME thiS WAS A NEtWORk MESSAGE. WhY did YOU liE?! ')
-                , u'\r\n'
-                )))
-            term.inkey(timeout=7)
-            continue
-        if is_network_msg and u'public' not in msg.tags:
-            echo(u''.join((
-                u'\r\n'
-                , term.bold_yellow_on_red(u" YOU ShOUldN't SENd PRiVAtE MESSAGES OVER tHE NEtWORk... ")
-                , u'\r\n'
-                )))
-            term.inkey(timeout=7)
-            continue
+        if is_network_msg:
+            how_many = len([tag for tag in network_tags if tag in msg.tags])
+            if how_many == 0:
+                echo(u''.join((
+                    u'\r\n'
+                    , term.bold_yellow_on_red(u' YOU tOld ME thiS WAS A NEtWORk MESSAGE. WhY did YOU liE?! ')
+                    , u'\r\n'
+                    )))
+                term.inkey(timeout=7)
+                continue
+            if how_many > 1:
+                echo(u''.join((
+                    u'\r\n'
+                    , term.bold_yellow_on_red(u' ONlY ONE NEtWORk CAN bE POStEd tO At A tiME, SORRY ')
+                    , u'\r\n'
+                    )))
+                continue
+            if u'public' not in msg.tags:
+                echo(u''.join((
+                    u'\r\n'
+                    , term.bold_yellow_on_red(u" YOU ShOUldN't SENd PRiVAtE MESSAGES OVER tHE NEtWORk... ")
+                    , u'\r\n'
+                    )))
+                term.inkey(timeout=7)
+                continue
         display_msg(msg)
         if not prompt_send():
             break
