@@ -335,11 +335,11 @@ def prompt_network(msg, network_tags):
     if selection == u'NO':
         return False
 
-    lb = Lightbar(40, 20, term.height / 2 - 20, term.width / 2 - 10)
+    lb = Lightbar(20, 20, term.height / 2 - 10, term.width / 2 - 10)
     lb.update([(tag, tag,) for tag in network_tags])
     echo(u''.join((
         term.clear
-        , term.move(term.height / 2 - 21, term.width / 2 - 10)
+        , term.move(term.height / 2 - 11, term.width / 2 - 9)
         , term.bold_white(u'ChOOSE YOUR NEtWORk')
         )))
     network = lb.read()
