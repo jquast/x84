@@ -321,25 +321,3 @@ def main():
             logger.info(u'[%s] Published message (msgid %s) => %s' % (net['name'], m, transid))
 
     logger.debug(u'Message poll/publish complete')
-
-def do_poll():
-    """ fire up a thread to poll for messages """
-    def read_forever(client):
-        client.read_all()
-
-    import telnetlib
-    from functools import partial
-    from threading import Thread
-    from x84.bbs import session
-    from x84.bbs.ini import CFG
-    from x84.bbs import telnet
-    session.BOTLOCK.acquire()
-    client = telnetlib.Telnet()
-    client.set_option_negotiation_callback(partial(telnet.callback_cmdopt
-        , env_term='xterm-256color'))
-    client.open(CFG.get('telnet', 'addr'), CFG.getint('telnet', 'port'))
-    session.BOTQUEUE.put('msgpoll')
-    t = Thread(target=read_forever, args=[client])
-    t.daemon = True
-    t.start()
-    session.BOTLOCK.release()

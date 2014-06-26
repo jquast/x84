@@ -41,7 +41,7 @@ source_db_name = x84netsrc
 INQUEUE = None
 OUTQUEUE = None
 LOCK = None
-QUEUE_TIMEOUT = QUEUE_TIMEOUT
+QUEUE_TIMEOUT = 60
 
 import web
 
@@ -307,33 +307,17 @@ def main():
         server_error(logger, queue, u'Unknown action: %s' % data['action'])
 
 def web_module():
-    def read_forever():
-        import telnetlib
-        import os
-        from functools import partial
-        from x84.bbs import telnet
-        from x84.bbs.ini import CFG
-        client = telnetlib.Telnet()
-        client.set_option_negotiation_callback(partial(telnet.callback_cmdopt
-            , env_term='xterm-256color'))
-        client.open(CFG.get('telnet', 'addr'), CFG.getint('telnet', 'port'))
-        client.read_all()
-
-    from threading import Thread, Lock
+    """ Setup the module and return a dict of its REST API """
+    from threading import Lock
     from multiprocessing import Queue
-    from x84.bbs import session
     from x84.webserve import queues, locks
+    from x84.bbs.telnet import connect_bot
 
-    global INQUEUE, OUTQUEUE, LOCK, QUEUE_TIMEOUT
+    global INQUEUE, OUTQUEUE, LOCK
     queues[INQUEUE] = Queue()
     queues[OUTQUEUE] = Queue()
     locks[LOCK] = Lock()
-    session.BOTLOCK.acquire()
-    session.BOTQUEUE.put('msgserve')
-    t = Thread(target=read_forever)
-    t.daemon = True
-    t.start()
-    session.BOTLOCK.release()
+    connect_bot(u'msgserve')
 
     return {
         'urls': ('/messages/([^/]+)/([^/]*)/?', 'messages')
