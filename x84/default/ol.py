@@ -385,8 +385,7 @@ def main():
             thread = None
         while session.read_event('oneliner_update', 0.15):
             dirty = True
-        if dirty and (session.env.get('TERM') != 'unknown'
-                      and not session.user.get('expert', False)
+        if dirty and (not session.user.get('expert', False)
                       and term.width >= 78 and term.height >= 20):
             # smart terminal
             redraw(pager, selector)

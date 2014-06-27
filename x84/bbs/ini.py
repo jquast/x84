@@ -120,8 +120,11 @@ def init_bbs_ini():
     cfg_bbs.set('system', 'mail_addr',
                 '%s@%s' % (getpass.getuser(), socket.gethostname()))
     cfg_bbs.set('system', 'mail_smtphost', 'localhost')
-    # change 'ansi' termcaps to 'ansi-bbs', for SynchoTerm
-    cfg_bbs.set('system', 'termcap-ansi', 'ansi-bbs')
+    # one *Could* change 'ansi' termcaps to 'ansi-bbs', for SynchoTerm,
+    # but how do we identify that 'ansi-bbs' TERM is available on this
+    # system? hmm ..
+    ## cfg_bbs.set('system', 'termcap-ansi', 'ansi-bbs')
+    cfg_bbs.set('system', 'termcap-ansi', 'no')
     # change 'unknown' termcaps to 'vt220', for dumb terminals
     cfg_bbs.set('system', 'termcap-unknown', 'vt220')
     # could be information leak to sensitive sysops

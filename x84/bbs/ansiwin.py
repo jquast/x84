@@ -69,11 +69,10 @@ class AnsiWindow(object):
         self.colors['normal'] = term.normal
         if term.number_of_colors != 0:
             self.colors['border'] = term.cyan
-        # start with default 'ascii'
-        self.glyphs = GLYPHSETS['ascii'].copy()
-        # PC-DOS 'thin' on smart terminals
-        if session.env.get('TERM') != 'unknown':
-            self.glyphs = GLYPHSETS['thin'].copy()
+        # could be 'ascii' ..
+        ## self.glyphs = GLYPHSETS['ascii'].copy()
+        # but we chose PC-DOS 'thin' on smart terminals
+        self.glyphs = GLYPHSETS['thin'].copy()
 
     @property
     def xpadding(self):
