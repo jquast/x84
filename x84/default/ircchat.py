@@ -206,7 +206,6 @@ def main(channel=None, caller=None):
 
     def on_connect(sock):
         pager.append(format_server('connected'))
-        server.privmsg('maze', 'hi mom')
         dirty = time.time()
 
     def on_currenttopic(c, event):
