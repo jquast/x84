@@ -164,7 +164,10 @@ setup(name='x84',
       package_data={
           '': [readme],
           'x84.default': ['*.ans', '*.txt', ],
-          'x84.default.art': ['*.asc', '*.ans', '*.txt', 'weather/*.ans'],
+          'x84.default.art': ['*.asc', '*.ans', '*.txt',
+                              'weather/*',
+                              'bulletins/*/*',
+                              ],
       },
       install_requires=[
           'requests >=1.1.0',
