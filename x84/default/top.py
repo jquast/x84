@@ -55,7 +55,7 @@ def get_ynbar():
 
 
 def redraw_quicklogin(ynbar):
-    """ Redraq yes/no bar for quick login. """
+    """ Redraw yes/no bar for quick login. """
     from x84.bbs import getterminal
     prompt_ql = u' QUiCk lOGiN ?! '
     term = getterminal()
