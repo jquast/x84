@@ -463,8 +463,8 @@ def _loop(servers):
             now = int(time.time())
 
             if now - last_poll >= poll_interval:
-                from x84.msgpoll import do_poll
-                do_poll()
+                from x84.bbs.telnet import connect_bot
+                connect_bot(u'msgpoll')
                 last_poll = now
 
         terms = get_terminals()

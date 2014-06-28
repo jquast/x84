@@ -38,8 +38,12 @@ keys_db_name = x84netkeys
 source_db_name = x84netsrc
 """
 
+INQUEUE = None
+OUTQUEUE = None
+LOCK = None
+QUEUE_TIMEOUT = 60
+
 import web
-from x84.webserve import QUEUES, LOCKS
 
 class messages():
     """
@@ -51,7 +55,9 @@ class messages():
         import json
         import Queue
         import logging
+        from x84.webserve import queues, locks
 
+        global INQUEUE, OUTQUEUE, LOCK, QUEUE_TIMEOUT
         logger = logging.getLogger()
 
         if len(last) <= 0:
@@ -69,16 +75,16 @@ class messages():
             , 'last': last
         }
 
-        LOCKS['x84net'].acquire()
-        QUEUES['x84neti'].put(data)
+        locks[LOCK].acquire()
+        queues[INQUEUE].put(data)
 
         try:
-            response = QUEUES['x84neto'].get(True, 60)
+            response = queues[OUTQUEUE].get(True, QUEUE_TIMEOUT)
         except Queue.Empty:
             logger.error(u'Empty queue')
             raise web.HTTPError('500 Server Error', {}, json.dumps({u'response': False, u'message': u'No response'}))
         finally:
-            LOCKS['x84net'].release()
+            locks[LOCK].release()
 
         try:
             return json.dumps(response)
@@ -91,7 +97,9 @@ class messages():
         import json
         import Queue
         import logging
+        from x84.webserve import queues, locks
 
+        global INQUEUE, OUTQUEUE, LOCK, QUEUE_TIMEOUT
         logger = logging.getLogger()
 
         if not 'HTTP_AUTH_X84NET' in web.ctx.env.keys():
@@ -107,16 +115,16 @@ class messages():
             , 'message': json.loads(webdata.message)
         }
 
-        LOCKS['x84net'].acquire()
-        QUEUES['x84neti'].put(data)
+        locks[LOCK].acquire()
+        queues[INQUEUE].put(data)
 
         try:
-            response = QUEUES['x84neto'].get(True, 60)
+            response = queues[OUTQUEUE].get(True, QUEUE_TIMEOUT)
         except Queue.Empty:
             logger.error(u'Empty queue')
             raise web.HTTPError('500 Server Error', {}, json.dumps({u'response': False, u'message': u'No response'}))
         finally:
-            LOCKS['x84net'].release()
+            locks[LOCK].release()
 
         try:
             return json.dumps(response)
@@ -139,22 +147,24 @@ def main():
     """ server request handling process """
     from x84.bbs import ini, msgbase, DBProxy, getsession, echo, getterminal
     from x84.bbs.msgbase import to_utctime, to_localtime, Msg
+    from x84.webserve import queues, locks
     import hashlib
     import time
     import logging
     import json
     import Queue
 
+    global INQUEUE, OUTQUEUE, LOCK, QUEUE_TIMEOUT
     session = getsession()
     logger = logging.getLogger()
     term = getterminal()
 
     try:
-        data = QUEUES['x84neti'].get(True, 60)
+        data = queues[INQUEUE].get(True, QUEUE_TIMEOUT)
     except Queue.Empty:
         return
 
-    queue = QUEUES['x84neto']
+    queue = queues[OUTQUEUE]
 
     if 'network' not in data.keys():
         server_error(logger, queue, u'Network not specified')
@@ -297,32 +307,17 @@ def main():
         server_error(logger, queue, u'Unknown action: %s' % data['action'])
 
 def web_module():
-    def read_forever():
-        import telnetlib
-        import os
-        from functools import partial
-        from x84.bbs import telnet
-        from x84.bbs.ini import CFG
-        client = telnetlib.Telnet()
-        client.set_option_negotiation_callback(partial(telnet.callback_cmdopt
-            , env_term='xterm-256color'))
-        client.open(CFG.get('telnet', 'addr'), CFG.getint('telnet', 'port'))
-        client.read_all()
-
-    from threading import Thread, Lock
+    """ Setup the module and return a dict of its REST API """
+    from threading import Lock
     from multiprocessing import Queue
-    from x84.bbs import session
-    from x84.webserve import QUEUES, LOCKS
+    from x84.webserve import queues, locks
+    from x84.bbs.telnet import connect_bot
 
-    QUEUES['x84neti'] = Queue()
-    QUEUES['x84neto'] = Queue()
-    LOCKS['x84net'] = Lock()
-    session.BOTLOCK.acquire()
-    session.BOTQUEUE.put('msgserve')
-    t = Thread(target=read_forever)
-    t.daemon = True
-    t.start()
-    session.BOTLOCK.release()
+    global INQUEUE, OUTQUEUE, LOCK
+    queues[INQUEUE] = Queue()
+    queues[OUTQUEUE] = Queue()
+    locks[LOCK] = Lock()
+    connect_bot(u'msgserve')
 
     return {
         'urls': ('/messages/([^/]+)/([^/]*)/?', 'messages')

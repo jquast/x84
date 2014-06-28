@@ -51,7 +51,7 @@ def display_msg(msg):
     return
 
 
-def prompt_recipient(msg):
+def prompt_recipient(msg, is_network_msg):
     """ Prompt for recipient of message. """
     # pylint: disable=R0914
     #         Too many local variables
@@ -72,6 +72,8 @@ def prompt_recipient(msg):
     recipient = lne.read()
     if recipient is None or lne.quit:
         return False
+    if is_network_msg:
+        return recipient
     userlist = list_users()
     if recipient in userlist:
         msg.recipient = recipient
@@ -313,18 +315,65 @@ def prompt_abort():
     return False
 
 
+def prompt_network(msg, network_tags):
+    """ Prompt for network message """
+    from x84.bbs import getterminal, echo, Lightbar, Selector
+    from x84.bbs.ini import CFG
+
+    term = getterminal()
+    inp = Selector(yloc=term.height - 1,
+                   xloc=term.width - 22,
+                   width=20,
+                   left=u'YES', right=u'NO')
+    blurb = u'iS thiS A NEtWORk MESSAGE?'
+    echo(u'\r\n\r\n')
+    echo(term.move(inp.yloc, inp.xloc - len(blurb)))
+    echo(term.bold_yellow(blurb))
+    selection = inp.read()
+    echo(term.move(inp.yloc, 0) + term.clear_eol)
+
+    if selection == u'NO':
+        return False
+
+    lb = Lightbar(20, 20, term.height / 2 - 10, term.width / 2 - 10)
+    lb.update([(tag, tag,) for tag in network_tags])
+    echo(u''.join((
+        term.clear
+        , term.move(term.height / 2 - 11, term.width / 2 - 9)
+        , term.bold_white(u'ChOOSE YOUR NEtWORk')
+        )))
+    network = lb.read()
+
+    if network is not None:
+        msg.tags = (u'public', network,)
+        return True
+
+    return False
+
 def main(msg=None):
     """ Main procedure. """
-    from x84.bbs import Msg, getsession
-    session = getsession()
-    if msg is None:
+    from x84.bbs import Msg, getsession, echo, getterminal
+    from x84.bbs.ini import CFG
+    session, term = getsession(), getterminal()
+    new_message = True if msg is None else False
+    network_tags = None
+    is_network_msg = False
+
+    if CFG.has_option('msg', 'network_tags'):
+        network_tags = [tag.strip() for tag in CFG.get('msg', 'network_tags').split(',')]
+
+    if new_message:
         msg = Msg()
         msg.tags = ('public',)
+    else:
+        is_network_msg = True if len([tag for tag in network_tags if tag in msg.tags]) > 0 else False
     banner()
     while True:
         session.activity = 'Constructing a %s message' % (
             u'public' if u'public' in msg.tags else u'private',)
-        if not prompt_recipient(msg):
+        if network_tags and new_message:
+            is_network_msg = prompt_network(msg, network_tags)
+        if not prompt_recipient(msg, is_network_msg):
             break
         if not prompt_subject(msg):
             break
@@ -335,9 +384,35 @@ def main(msg=None):
         # XXX
         if not prompt_tags(msg):
             break
+        if is_network_msg:
+            how_many = len([tag for tag in network_tags if tag in msg.tags])
+            if how_many == 0:
+                echo(u''.join((
+                    u'\r\n'
+                    , term.bold_yellow_on_red(u' YOU tOld ME thiS WAS A NEtWORk MESSAGE. WhY did YOU liE?! ')
+                    , u'\r\n'
+                    )))
+                term.inkey(timeout=7)
+                continue
+            if how_many > 1:
+                echo(u''.join((
+                    u'\r\n'
+                    , term.bold_yellow_on_red(u' ONlY ONE NEtWORk CAN bE POStEd tO At A tiME, SORRY ')
+                    , u'\r\n'
+                    )))
+                continue
+            if u'public' not in msg.tags:
+                echo(u''.join((
+                    u'\r\n'
+                    , term.bold_yellow_on_red(u" YOU ShOUldN't SENd PRiVAtE MESSAGES OVER tHE NEtWORk... ")
+                    , u'\r\n'
+                    )))
+                term.inkey(timeout=7)
+                continue
         display_msg(msg)
         if not prompt_send():
             break
+
         msg.save()
         return True
     return False

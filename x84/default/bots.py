@@ -11,15 +11,15 @@ def main():
     session = getsession()
 
     if session.user.handle == u'msgserve':
-        from x84 import msgserve
-        from x84.msgserve import MessageNetworkServer
+        from x84.webserve import queues
+        from x84.webmodules import msgserve
         session.send_event('set-timeout', 0)
         session.activity = u'Serving messages'
         while True:
             try:
                 msgserve.main()
             except KeyboardInterrupt:
-                MessageNetworkServer.oqueue.put({u'response': False, u'message': u'Error'})
+                queues[msgserve.OUTQUEUE].put({u'response': False, u'message': u'Error'})
                 break
     elif session.user.handle == u'msgpoll':
         from x84 import msgpoll

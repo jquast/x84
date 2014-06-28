@@ -89,7 +89,7 @@ def pull_rest(network, last, ca_path=True):
 
     try:
         response = json.loads(r.text)
-        return response['messages']
+        return response['messages'] if response['response'] else []
     except Exception, e:
         logger.exception(u'[%s] JSON error: %s' % (network['name'], str(e)))
         return False
@@ -119,7 +119,7 @@ def push_rest(network, msg, parent, origin_line, ca_path=True):
 
     try:
         response = json.loads(r.text)
-        return response['id']
+        return response['id'] if response['response'] else False
     except Exception, err:
         logger.exception(u'[%s] JSON error: %s' % (network['name'], str(err)))
         return False
@@ -321,25 +321,3 @@ def main():
             logger.info(u'[%s] Published message (msgid %s) => %s' % (net['name'], m, transid))
 
     logger.debug(u'Message poll/publish complete')
-
-def do_poll():
-    """ fire up a thread to poll for messages """
-    def read_forever(client):
-        client.read_all()
-
-    import telnetlib
-    from functools import partial
-    from threading import Thread
-    from x84.bbs import session
-    from x84.bbs.ini import CFG
-    from x84.bbs import telnet
-    session.BOTLOCK.acquire()
-    client = telnetlib.Telnet()
-    client.set_option_negotiation_callback(partial(telnet.callback_cmdopt
-        , env_term='xterm-256color'))
-    client.open(CFG.get('telnet', 'addr'), CFG.getint('telnet', 'port'))
-    session.BOTQUEUE.put('msgpoll')
-    t = Thread(target=read_forever, args=[client])
-    t.daemon = True
-    t.start()
-    session.BOTLOCK.release()
