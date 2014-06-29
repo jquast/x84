@@ -75,8 +75,8 @@ def init_term(out_queue, lock, env):
     from x84.bbs.ipc import IPCStream
     log = logging.getLogger()
     ttype = env.get('TERM', 'unknown')
-    if (ttype == 'ansi'
-            and CFG.getboolean('system', 'termcap-ansi') != 'no'):
+    if (ttype == 'ansi' and CFG.get('system', 'termcap-ansi')
+            not in ('no', 'ansi')):
         # special workaround for systems with 'ansi-bbs' termcap,
         # translate 'ansi' -> 'ansi-bbs'
         # http://wiki.synchro.net/install:nix?s[]=termcap#terminal_capabilities

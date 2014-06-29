@@ -218,6 +218,7 @@ def client_recv(servers, log):
                     log.info('%s Disconnected: %s.', client.addrport(), err)
                     kill_session(client, 'disconnected on recv')
 
+
 def client_send(terminals, log):
     """
     Test all clients for send_ready(). If any data is available, then
@@ -234,6 +235,7 @@ def client_send(terminals, log):
             except Disconnected as err:
                 log.info('%s Disconnected: %s.', sid, err)
                 kill_session(tty.client, 'disconnected on send')
+
 
 def session_send(terminals):
     """
@@ -253,6 +255,7 @@ def session_send(terminals):
         elif tty.timeout and tty.client.idle() > tty.timeout:
             kill_session(tty.client, 'timeout')
 
+
 def handle_lock(locks, tty, event, data, tap_events, log):
     """
     handle locking event of (lock-key, (method, stale))
@@ -269,13 +272,13 @@ def handle_lock(locks, tty, event, data, tap_events, log):
                 if _sid == locks[event][1] and _sid != tty.sid:
                     log.debug('[%s] %r not acquired, held by %s.',
                               tty.sid, (event, data), _sid)
-                    held=_sid
+                    held = _sid
                     break
             if held is not False:
                 log.debug('[%s] %r discovered stale lock, previously '
                           'held by %s.', tty.sid, (event, data), held)
                 del locks[event]
-        if not event in locks:
+        if event not in locks:
             locks[event] = (time.time(), tty.sid)
             tty.iqueue.send((event, True,))
             if tap_events:
@@ -288,21 +291,21 @@ def handle_lock(locks, tty, event, data, tap_events, log):
                 tty.iqueue.send((event, True,))
                 locks[event] = (time.time(), tty.sid)
                 log.warn('[%s] %r stale %fs.',
-                            tty.sid, (event, data),
-                            time.time() - locks[event][0])
+                         tty.sid, (event, data),
+                         time.time() - locks[event][0])
             # signal busy with matching event, data=False
             else:
                 tty.iqueue.send((event, False,))
                 log.debug('[%s] %r not acquired.', tty.sid, (event, data))
 
     elif method == 'release':
-        if not event in locks:
-            log.error('[%s] %r failed: no match',
-                         tty.sid, (event, data))
+        if event not in locks:
+            log.error('[%s] %r failed: no match', tty.sid, (event, data))
         else:
             del locks[event]
             if tap_events:
                 log.debug('[%s] %r removed.', tty.sid, (event, data))
+
 
 def session_recv(locks, terminals, log, tap_events):
     """
@@ -324,7 +327,7 @@ def session_recv(locks, terminals, log, tap_events):
     disp_origin = lambda client: client.addrport().split(':', 1)[0]
 
     for sid, tty in terminals:
-        if tty.oqueue.poll():
+        while tty.oqueue.poll():
             try:
                 event, data = tty.oqueue.recv()
             except (EOFError, IOError) as err:
@@ -396,6 +399,7 @@ def session_recv(locks, terminals, log, tap_events):
             else:
                 assert False, 'unhandled %r' % ((event, data),)
 
+
 def _loop(servers):
     """
     Main event loop. Never returns.
@@ -404,12 +408,18 @@ def _loop(servers):
     #         Too many local variables (24/15)
     import logging
     import select
+    import sys
     from x84.terminal import get_terminals, kill_session
     from x84.bbs.ini import CFG
     from x84.bbs import session
     from multiprocessing import Queue
     from threading import Lock
-
+    SELECT_POLL = 0.15
+    WIN32 = sys.platform.lower() != 'win32'
+    if WIN32:
+        # poll much more often for windows until we come up with something
+        # better regarding checking for session output
+        SELECT_POLL = 0.05
     log = logging.getLogger(__name__)
 
     if not len(servers):
@@ -445,6 +455,8 @@ def _loop(servers):
         poll_interval = CFG.getint('msg', 'poll_interval')
         last_poll = int(time.time()) - poll_interval
 
+    session_fds = set()
+
     while True:
         # shutdown, close & delete inactive clients,
         for server in servers:
@@ -455,14 +467,16 @@ def _loop(servers):
 
         server_fds = [server.server_socket.fileno() for server in servers]
         client_fds = [fd for fd in server.client_fds() for server in servers]
-        session_fds = get_session_output_fds(servers)
-        check_r = server_fds + client_fds + session_fds
+        check_r = server_fds + client_fds
+        if not WIN32:
+            session_fds = get_session_output_fds(servers)
+            check_r += session_fds
 
         # We'd like to use timeout 'None', but the registration of
         # a new client in terminal.start_process surprises us with new
         # file descriptors for the session i/o. unless we loop for
         # additional `session_fds', a connecting client would block.
-        ready_r, _, _ = select.select(check_r, [], [], 0.15)
+        ready_r, _, _ = select.select(check_r, [], [], SELECT_POLL)
 
         for fd in ready_r:
             # see if any new tcp connections were made
@@ -486,7 +500,7 @@ def _loop(servers):
         terms = get_terminals()
 
         # receive new data from session terminals
-        if set(session_fds) & set(ready_r):
+        if WIN32 or set(session_fds) & set(ready_r):
             session_recv(locks, terms, log, tap_events)
 
         # send tcp data to clients
