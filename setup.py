@@ -187,7 +187,8 @@ setup(name='x84',
           'blessed >=1.9.1',
           'wcwidth >=0.1.1',
           'python-dateutil >=2.2',
-          'irc >=8.9.1'
+          'irc >=8.9.1',
+          'web.py >=0.37',
       ] + get_maybe_requires(),
       scripts=['bin/x84'],
       classifiers=[
