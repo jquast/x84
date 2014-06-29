@@ -75,8 +75,8 @@ class Status(object):
 
 
 # the currently supported overview headers
-overview_headers = ('Subject', 'From', 'Date', 'Message-ID', 'References',
-                    'Bytes', 'Lines', 'Xref')
+overview_headers = ('Subject:', 'From:', 'Date:', 'Message-ID:', 'References:',
+                    'Bytes:', 'Lines:', 'Xref:full')
 
 
 def db(schema, table='unnamed'):
@@ -84,6 +84,19 @@ def db(schema, table='unnamed'):
         os.path.join(ini.CFG.get('system', 'datapath'), schema + '.sqlite3'),
         table,
     )
+
+
+def get_group_stats(group):
+    tag = get_tag(group)
+    msgdb = db(MSGDB)
+    ids = []
+    for idx in msgdb:
+        msg = msgdb[idx]
+        if tag in map(string.lower, msg.tags):
+            ids.append(long(idx) + 1)
+
+    return len(ids), min(ids), max(ids), group
+
 
 def get_message(tag, idx):
     msgdb = db(MSGDB)
@@ -102,6 +115,8 @@ def get_message(tag, idx):
         time.mktime(msg.ctime.timetuple())
     ))
     headers.append('Message-Id: %s' % get_message_id(tag, idx))
+    if msg.parent:
+        headers.append('References: %s' % get_message_id(tag, msg.parent))
     return '\r\n'.join(headers), msg.body
 
 
@@ -190,6 +205,18 @@ def get_LIST_NEWSGROUPS():
     return '\r\n'.join(groups)
 
 
+def get_LISTGROUP(group):
+    tag = get_tag(group)
+    msgdb = db(MSGDB)
+    ids = []
+    for idx in msgdb:
+        if tag in map(string.lower, msgdb[idx].tags):
+            ids.append(str(long(idx) + 1))
+
+    ids.sort(lambda a, b: cmp(long(a), long(b)))
+    return '\r\n'.join(ids)
+
+
 def get_NEWGROUPS(ts, group='%'):
     return None
 
@@ -206,6 +233,56 @@ def get_XGTITLE(pattern=None):
         return '\r\n'.join(groups)
     else:
         return None
+
+
+def get_XHDR(group, header, style, ranges):
+    tag = get_tag(group)
+    if tag is None:
+        return ''
+
+    header = header.upper()
+
+    if style == 'range':
+        if len(ranges) == 2:
+            range_end = int(ranges[1]) - 1
+        else:
+            range_end = get_group_count(group)
+
+        ids = range(int(ranges[0]) - 1, range_end + 1)
+    else:
+        ids = (int(ranges[0]) - 1,)
+
+    headers = []
+    for idx in ids:
+        if header == 'MESSAGE-ID':
+            headers.append(get_message_id(group, idx))
+            continue
+
+        if header == 'XREF':
+            headers.append('%d %s %s:%d' % (
+                idx + 1,
+                ini.CFG.get('nntp', 'name'),
+                group,
+                idx + 1,
+            ))
+            continue
+
+        msg = get_message(tag, idx)
+        print msg
+        if header == 'BYTES':
+            headers.append('%d %d' % (idx + 1, len(msg[1])))
+
+        elif header == 'LINES':
+            headers.append('%d %d' % (idx + 1, len(msg[1].splitlines())))
+
+        else:
+            items = [line.split(': ') for line in msg[0].splitlines()]
+            h = dict((k.lower(), v) for k, v in items)
+            if header.lower() in h:
+                headers.append('%d %s' % (idx + 1, h[header.lower()]))
+
+    return '\r\n'.join(headers)
+
 
 def get_XOVER(group, start_idx, end_idx='ggg'):
     msgdb = db(MSGDB)
@@ -413,9 +490,9 @@ class NNTPHandler(SocketServer.StreamRequestHandler):
 
     def do_LIST(self):
         if len(self.tokens) == 2 and self.tokens[1].upper() == 'OVERVIEW.FMT':
-            return self.send_response("%s\r\n%s:\r\n." % (
+            return self.send_response("%s\r\n%s\r\n." % (
                 Status.OVERVIEWFMT,
-                ":\r\n".join(overview_headers)
+                "\r\n".join(overview_headers)
             ))
 
         elif len(self.tokens) == 2 and self.tokens[1].upper() == 'EXTENSIONS':
@@ -444,6 +521,36 @@ class NNTPHandler(SocketServer.StreamRequestHandler):
             info = get_XGTITLE()
 
         self.send_response("%s\r\n%s\r\n." % (Status.LISTNEWSGROUPS, info))
+
+    def do_LISTGROUP(self):
+        '''
+        LISTGROUP [ggg]
+        '''
+        if len(self.tokens) > 2:
+            return self.send_response(Error.CMDSYNTAXERROR)
+
+        if len(self.tokens) == 2:
+            if not has_GROUP(self.tokens[1]):
+                return self.send_response(Error.NOSUCHGROUP)
+            numbers = get_LISTGROUP(self.tokens[1])
+
+        else:
+            if self.selected_group == 'ggg':
+                return self.send_response(Error.NOGROUPSELECTED)
+            numbers = get_LISTGROUP(self.selected_group)
+
+        check = numbers.split('\r\n')
+        if len(check) > 0:
+            self.selected_article = check[0]
+            if len(self.tokens) == 2:
+                self.selected_group = self.tokens[1]
+        else:
+            self.selected_article = 'ggg'
+
+        self.send_response("%s\r\n%s\r\n." % (
+            Status.LISTGROUP % (get_group_stats(self.selected_group)),
+            numbers,
+        ))
 
     def do_MODE(self):
         if self.tokens[1].upper() == 'READER':
@@ -487,8 +594,8 @@ class NNTPHandler(SocketServer.StreamRequestHandler):
         if self.selected_group == 'ggg':
             return self.send_response(Error.NOGROUPSELECTED)
 
-        if (self.tokens[1].upper() != 'SUBJECT') and (self.tokens[1].upper() != 'FROM'):
-            return self.send_response(Error.CMDSYNTAXERROR)
+        #if (self.tokens[1].upper() != 'SUBJECT') and (self.tokens[1].upper() != 'FROM'):
+        #    return self.send_response(Error.CMDSYNTAXERROR)
 
         if len(self.tokens) == 2:
             if self.selected_article == 'ggg':
