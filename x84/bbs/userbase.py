@@ -45,7 +45,7 @@ def digestpw_bcrypt(password, salt=None):
     if not salt:
         salt = bcrypt.gensalt()
     if isinstance(password, unicode):
-        password = password.decode('utf8')
+        password = password.encode('utf8')
     return salt, bcrypt.hashpw(password, salt)
 
 
