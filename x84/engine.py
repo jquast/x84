@@ -438,9 +438,10 @@ def _loop(servers):
             import web      # NOQA
             import OpenSSL  # NOQA
             from x84 import webserve
-            module_names = CFG.get('web', 'modules').split(',')
-            web_modules = set(map(str.strip, module_names))
-            webserve.start(web_modules)
+            module_names = CFG.get('web', 'modules', '').split(',')
+            if module_names:
+                web_modules = set(map(str.strip, module_names))
+                webserve.start(web_modules)
         except ImportError as err:
             log.error(err)
 
