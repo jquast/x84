@@ -420,6 +420,15 @@ def _loop(servers):
         except ImportError, e:
             log.error('%r' % e)
 
+    # nntp server
+
+    if CFG.has_section('nntp'):
+        try:
+            from x84 import newsserve
+            newsserve.start()
+        except ImportError, e:
+            log.error('%r' % e)
+
     # setup message polling mechanism
     poll_interval = None
     last_poll = None
