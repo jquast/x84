@@ -118,7 +118,12 @@ def init_bbs_ini():
     # locks and sending input to sub-processes -- this can happen when the
     # system is under very heavy load -- like pasting wikipedia into the editor
     ## cfg_bbs.set('system', 'timeout_ipc', '1')  # XXX disabled
-    cfg_bbs.set('system', 'password_digest', 'internal')
+    try:
+        import bcrypt  # NOQA
+    except ImportError:
+        cfg_bbs.set('system', 'password_digest', 'internal')
+    else:
+        cfg_bbs.set('system', 'password_digest', 'bcrypt')
     cfg_bbs.set('system', 'mail_addr',
                 '%s@%s' % (getpass.getuser(), socket.gethostname()))
     cfg_bbs.set('system', 'mail_smtphost', 'localhost')
