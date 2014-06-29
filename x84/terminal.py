@@ -219,10 +219,10 @@ def start_process(inp_queue, out_queue, sid, env, lock, CFG, binary=False):
     """
     import x84.bbs.ini
     import x84.bbs.session
-    from x84.bbs.ini import CFG
     from x84.bbs.userbase import digestpw_init
     # intialize CFG to local instance
     x84.bbs.ini.CFG = CFG
+    from x84.bbs.ini import CFG
     # initialize selected encryption scheme
     digestpw_init(CFG.get('system', 'password_digest'))
 
