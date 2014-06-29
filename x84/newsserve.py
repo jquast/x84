@@ -75,8 +75,8 @@ class Status(object):
 
 
 # the currently supported overview headers
-overview_headers = ('Subject:', 'From:', 'Date:', 'Message-ID:', 'References:',
-                    'Bytes:', 'Lines:', 'Xref:full')
+overview_headers = (u'Subject:', u'From:', u'Date:', u'Message-ID:',
+                    u'References:', u'Bytes:', u'Lines:', u'Xref:full')
 
 
 def db(schema, table='unnamed'):
@@ -105,24 +105,26 @@ def get_message(tag, idx):
 
     msg = msgdb[str(idx)]
     headers = []
-    headers.append('From: <%s@%s>' % (msg.author, ini.CFG.get('nntp', 'name')))
+    headers.append(u'From: <%s@%s>' % (msg.author, ini.CFG.get('nntp', 'name')))
     recipients = []
     for tag in msg.tags:
-        recipients.append('<%s@msg.%s>' % (tag, ini.CFG.get('nntp', 'name')))
-    headers.append('To: %s' % ', '.join(recipients))
-    headers.append('Subject: %s' % msg.subject)
-    headers.append('Date: %s' % email.utils.formatdate(
+        recipients.append(u'<%s@msg.%s>' % (tag, ini.CFG.get('nntp', 'name')))
+    headers.append(u'To: %s' % ', '.join(recipients))
+    headers.append(u'Subject: %s' % msg.subject)
+    headers.append(u'Date: %s' % email.utils.formatdate(
         time.mktime(msg.ctime.timetuple())
     ))
-    headers.append('Message-Id: %s' % get_message_id(tag, idx))
+    headers.append(u'Message-Id: %s' % get_message_id(tag, idx))
     if msg.parent:
-        headers.append('References: %s' % get_message_id(tag, msg.parent))
-    return '\r\n'.join(headers), msg.body
+        headers.append(u'References: %s' % get_message_id(tag, msg.parent))
+    headers.append(u'Content-Type: text/plain; charset=UTF-8; format=flowed')
+    headers.append(u'Content-Transfer-Encoding: 8bit')
+    return u'\r\n'.join(headers), msg.body
 
 
 def get_message_id(group, idx):
     tag = get_tag(group)
-    return '<x84.%s@%s>' % (
+    return u'<x84.%s@%s>' % (
         long(idx) + 1,
         ini.CFG.get('nntp', 'name')
     )
@@ -259,7 +261,7 @@ def get_XHDR(group, header, style, ranges):
             continue
 
         if header == 'XREF':
-            headers.append('%d %s %s:%d' % (
+            headers.append(u'%d %s %s:%d' % (
                 idx + 1,
                 ini.CFG.get('nntp', 'name'),
                 group,
@@ -270,18 +272,18 @@ def get_XHDR(group, header, style, ranges):
         msg = get_message(tag, idx)
         print msg
         if header == 'BYTES':
-            headers.append('%d %d' % (idx + 1, len(msg[1])))
+            headers.append(u'%d %d' % (idx + 1, len(msg[1])))
 
         elif header == 'LINES':
-            headers.append('%d %d' % (idx + 1, len(msg[1].splitlines())))
+            headers.append(u'%d %d' % (idx + 1, len(msg[1].splitlines())))
 
         else:
             items = [line.split(': ') for line in msg[0].splitlines()]
             h = dict((k.lower(), v) for k, v in items)
             if header.lower() in h:
-                headers.append('%d %s' % (idx + 1, h[header.lower()]))
+                headers.append(u'%d %s' % (idx + 1, h[header.lower()]))
 
-    return '\r\n'.join(headers)
+    return u'\r\n'.join(headers)
 
 
 def get_XOVER(group, start_idx, end_idx='ggg'):
@@ -301,14 +303,14 @@ def get_XOVER(group, start_idx, end_idx='ggg'):
             if not tag in map(string.lower, msg.tags):
                 continue
 
-            xref = 'Xref: %s x84.%s %s' % (
+            xref = u'Xref: %s x84.%s %s' % (
                 ini.CFG.get('nntp', 'name'),
                 tag,
                 long(idx) + 1,
             )
 
             if msg.parent:
-                reference = 'x84.%d@%s' % (
+                reference = u'x84.%d@%s' % (
                     msg.parent + 1,
                     ini.CFG.get('nntp', 'name'),
                 )
@@ -318,14 +320,14 @@ def get_XOVER(group, start_idx, end_idx='ggg'):
             # message_number <tab> subject <tab> author <tab> date <tab>
             # message_id <tab> reference <tab> bytes <tab> lines
             # <tab> xref
-            overviews.append('\t'.join((
+            overviews.append(u'\t'.join((
                 str(long(idx) + 1),
                 msg.subject.replace('\t', '    '),
                 msg.author,
                 '0',
                 get_message_id(tag, idx),
                 reference,
-                str(len(msg.body)),
+                str(len(msg.body.encode('utf-8'))),
                 str(len(msg.body.splitlines())),
                 xref,
             )))
@@ -427,8 +429,13 @@ class NNTPHandler(SocketServer.StreamRequestHandler):
 
     def send_response(self, message):
         log.info('>>> %s' % message)
-        self.wfile.write(message + '\r\n')
-        self.wfile.flush()
+        #self.wfile.write(message + '\r\n')
+        #self.wfile.write(message + u'\r\n')
+        #self.wfile.flush()
+        line = message + u'\r\n'
+        while line:
+            sent = self.connection.send(line.encode('utf-8'))
+            line = line[sent:]
 
     # commands
 
