@@ -109,10 +109,10 @@ def init_bbs_ini():
     # use module-level 'default' folder
     cfg_bbs.set('system', 'scriptpath', os.path.abspath(
         os.path.join(os.path.dirname(__file__), os.path.pardir, 'default')))
-    cfg_bbs.set('system', 'datapath', os.path.join(os.path.expanduser(
-        os.path.join('~', '.x84', 'data')))
-    cfg_bbs.set('system', 'ttyrecpath', os.path.join(os.path.expanduser(
-        os.path.join('~', '.x84', 'ttyrecordings')))
+    cfg_bbs.set('system', 'datapath', os.path.expanduser(os.path.join(
+        os.path.join('~', '.x84', 'data'))))
+    cfg_bbs.set('system', 'ttyrecpath', os.path.expanduser(os.path.join(
+        os.path.join('~', '.x84', 'ttyrecordings'))))
     cfg_bbs.set('system', 'timeout', '1984')
     # for very slow systems, you may need to increase IPC timeout for acquiring
     # locks and sending input to sub-processes -- this can happen when the
@@ -265,7 +265,8 @@ def init_log_ini():
     cfg_log.set('handler_rotate_daily', 'suffix', '%Y%m%d')
     cfg_log.set('handler_rotate_daily', 'encoding', 'utf8')
     cfg_log.set('handler_rotate_daily', 'formatter', 'default')
-    daily_log = os.path.join(os.path.expanduser('~/.x84'), 'daily.log')
+    daily_log = os.path.join(os.path.expanduser(
+        os.path.join('~', '.x84', 'daily.log')))
     cfg_log.set('handler_rotate_daily', 'args',
                 '("' + daily_log + '", "midnight", 1, 60)')
 
