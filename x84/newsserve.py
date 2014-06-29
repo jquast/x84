@@ -429,9 +429,6 @@ class NNTPHandler(SocketServer.StreamRequestHandler):
 
     def send_response(self, message):
         log.info('>>> %s' % message)
-        #self.wfile.write(message + '\r\n')
-        #self.wfile.write(message + u'\r\n')
-        #self.wfile.flush()
         line = message + u'\r\n'
         while line:
             sent = self.connection.send(line.encode('utf-8'))
@@ -600,9 +597,6 @@ class NNTPHandler(SocketServer.StreamRequestHandler):
 
         if self.selected_group == 'ggg':
             return self.send_response(Error.NOGROUPSELECTED)
-
-        #if (self.tokens[1].upper() != 'SUBJECT') and (self.tokens[1].upper() != 'FROM'):
-        #    return self.send_response(Error.CMDSYNTAXERROR)
 
         if len(self.tokens) == 2:
             if self.selected_article == 'ggg':
