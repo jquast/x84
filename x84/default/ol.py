@@ -335,6 +335,7 @@ def post_bbs_scene(oneliner, dumb=True):
         req = requests.post(url, auth=(usernm, passwd), data=data)
     except requests.ConnectionError as err:
         log.warn(err)
+        return
     else:
         if (req.status_code != 200 or
                 (xml.etree.ElementTree.XML(req.content)
