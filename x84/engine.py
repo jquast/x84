@@ -60,7 +60,7 @@ def parse_args():
     import os
 
     if sys.platform.lower().startswith('win32'):
-        system_path = os.path.join('C:', 'x84', 'default.ini')
+        system_path = os.path.join('C:', 'x84')
     else:
         system_path = os.path.join(os.path.sep, 'etc', 'x84')
 
