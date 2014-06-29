@@ -185,7 +185,7 @@ setup(name='x84',
           'sauce >=0.1.1',
           'sqlitedict >=1.0.8',
           'blessed >=1.9.1',
-          'wcwidth >=0.1.0',
+          'wcwidth >=0.1.1',
           'python-dateutil >=2.2',
           'irc >=8.9.1'
       ] + get_maybe_requires(),
