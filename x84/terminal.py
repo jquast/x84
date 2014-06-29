@@ -213,12 +213,19 @@ def start_process(inp_queue, out_queue, sid, env, lock, CFG, binary=False):
         inp_queue and out_queue: multiprocessing.Queue
         sid: string describing session source (fe. IP address & Port)
         env: dictionary of client environment variables (requires 'TERM')
+        lock: multiprocessing.Lock for events/db access
+        CFG: ConfigParser instance of bbs configuration
         binary: If client accepts BINARY, assume utf8 session encoding.
     """
     import x84.bbs.ini
     import x84.bbs.session
-    x84.bbs.ini.CFG = CFG
     from x84.bbs.ini import CFG
+    from x84.bbs.userbase import digestpw_init
+    # intialize CFG to local instance
+    x84.bbs.ini.CFG = CFG
+    # initialize selected encryption scheme
+    digestpw_init(CFG.get('system', 'password_digest'))
+
     # terminals of these types are forced to 'cp437' encoding,
     # we could also more safely assume iso8859-1, which is the
     # correct default encoding of those terminals, but we explicitly

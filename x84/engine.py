@@ -30,14 +30,10 @@ def main():
       --logger= location of alternate logging.ini file
     """
     import x84.bbs.ini
-    from x84.bbs.userbase import digestpw_init
 
     # load existing .ini files or create default ones.
     x84.bbs.ini.init(*parse_args())
     from x84.bbs.ini import CFG
-
-    # initialize selected encryption scheme
-    digestpw_init(CFG.get('system', 'password_digest'))
 
     # retrieve enabled servers
     servers = get_servers(CFG)
