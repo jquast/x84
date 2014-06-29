@@ -190,15 +190,16 @@ def accept(log, server, client_factory, connect_factory,
         log.error('accept error {0}:{1}'.format(*err))
 
 
-def get_session_fds(servers):
+def get_session_output_fds(servers):
     from x84.terminal import find_tty
     session_fds = []
     for server in servers:
         for client in server.clients.values():
             tty = find_tty(client)
             if tty is not None:
-                session_fds.extend([tty.oqueue.fileno(), tty.iqueue.fileno()])
+                session_fds.append(tty.oqueue.fileno())
     return session_fds
+
 
 def client_recv(servers, log):
     """
@@ -454,7 +455,7 @@ def _loop(servers):
 
         server_fds = [server.server_socket.fileno() for server in servers]
         client_fds = [fd for fd in server.client_fds() for server in servers]
-        session_fds = get_session_fds(servers)
+        session_fds = get_session_output_fds(servers)
         check_r = server_fds + client_fds + session_fds
 
         # We'd like to use timeout 'None', but the registration of
