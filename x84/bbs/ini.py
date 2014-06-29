@@ -54,7 +54,7 @@ def init(lookup_bbs, lookup_log):
         dir_name = os.path.dirname(cfg_logfile)
         if not os.path.isdir(dir_name):
             try:
-                os.mkdir(dir_name)
+                os.makedirs(dir_name)
             except OSError as err:
                 root.warn(err)
         try:
@@ -80,7 +80,7 @@ def init(lookup_bbs, lookup_log):
         dir_name = os.path.dirname(cfg_bbsfile)
         if not os.path.isdir(dir_name):
             try:
-                os.mkdir(dir_name)
+                os.makedirs(dir_name)
             except OSError as err:
                 root.warn(err)
         try:
