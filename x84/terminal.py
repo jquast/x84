@@ -207,7 +207,7 @@ def kill_session(client, reason='killed'):
 
 # pylint: disable=R0913
 #         Too many arguments (6/5)
-def start_process(inp_queue, out_queue, sid, env, lock, binary=False):
+def start_process(inp_queue, out_queue, sid, env, lock, CFG, binary=False):
     """
     A multiprocessing.Process target. Arguments:
         inp_queue and out_queue: multiprocessing.Queue
@@ -215,8 +215,10 @@ def start_process(inp_queue, out_queue, sid, env, lock, binary=False):
         env: dictionary of client environment variables (requires 'TERM')
         binary: If client accepts BINARY, assume utf8 session encoding.
     """
-    from x84.bbs.ini import CFG
+    import x84.bbs.ini
     import x84.bbs.session
+    x84.bbs.ini.CFG = CFG
+    from x84.bbs.ini import CFG
     # terminals of these types are forced to 'cp437' encoding,
     # we could also more safely assume iso8859-1, which is the
     # correct default encoding of those terminals, but we explicitly

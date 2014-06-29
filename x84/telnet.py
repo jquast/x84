@@ -1048,7 +1048,9 @@ class ConnectTelnet (threading.Thread):
         """
         Spawn a subprocess, avoiding GIL and forcing all shared data over a
         Queue. Previous versions of x/84 and prsv were single process,
-        thread-based, and shared variables.
+        thread-based, and shared variables.  This is not possible now that
+        we use ``blessed``, as a ``curses.setupterm`` may only be called
+        once for each process.
 
         All IPC communication occurs through the bi-directional queues.  The
         server end (engine.py) polls the out_queue, and places results
@@ -1058,6 +1060,7 @@ class ConnectTelnet (threading.Thread):
         if not self.client.active:
             self.log.debug('session aborted; socket was closed.')
             return
+        from x84.bbs.ini import CFG
         from multiprocessing import Process, Pipe, Lock
         from x84.telnet import BINARY
         inp_recv, inp_send = Pipe(duplex=False)
@@ -1066,7 +1069,7 @@ class ConnectTelnet (threading.Thread):
         is_binary = (self.client.check_local_option(BINARY)
                      and self.client.check_remote_option(BINARY))
         child_args = (inp_recv, out_send, self.client.addrport(),
-                      self.client.env, lock, is_binary)
+                      self.client.env, lock, CFG, is_binary)
         self.log.debug(self.__class__.__name__ + ' spawns process')
         proc = Process(target=start_process, args=child_args)
         proc.start()

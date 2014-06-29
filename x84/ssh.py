@@ -130,7 +130,6 @@ class SshClient(object):
                          ('COLUMNS', 80)])
         self.send_buffer = array.array('c')
         self.recv_buffer = array.array('c')
-        self.telnet_sb_buffer = array.array('c')
         self.bytes_received = 0
         self.connect_time = time.time()
         self.last_input_time = time.time()
@@ -314,7 +313,9 @@ class ConnectSsh (threading.Thread):
         """
         Spawn a subprocess, avoiding GIL and forcing all shared data over a
         Queue. Previous versions of x/84 and prsv were single process,
-        thread-based, and shared variables.
+        thread-based, and shared variables.  This is not possible now that
+        we use ``blessed``, as a ``curses.setupterm`` may only be called
+        once for each process.
 
         All IPC communication occurs through the bi-directional queues.  The
         server end (engine.py) polls the out_queue, and places results
@@ -324,14 +325,14 @@ class ConnectSsh (threading.Thread):
         if not self.client.active:
             self.log.debug('session aborted; socket was closed.')
             return
+        from x84.bbs.ini import CFG
         from multiprocessing import Process, Pipe, Lock
-        from x84.telnet import BINARY
         inp_recv, inp_send = Pipe(duplex=False)
         out_recv, out_send = Pipe(duplex=False)
         lock = Lock()
         is_binary = True
         child_args = (inp_recv, out_send, self.client.addrport(),
-                      self.client.env, lock, is_binary)
+                      self.client.env, lock, CFG, is_binary)
         self.log.debug(self.__class__.__name__ + ' spawns process')
         proc = Process(target=start_process, args=child_args)
         proc.start()
@@ -342,8 +343,6 @@ class ConnectSsh (threading.Thread):
         """
         XXX
         """
-        from x84.bbs.exception import Disconnected
-        from x84.bbs.ini import CFG
         try:
             self.client.transport = paramiko.Transport(self.client.sock)
             self.client.transport.load_server_moduli()
