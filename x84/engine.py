@@ -457,6 +457,24 @@ def _loop(servers):
         except ImportError as err:
             log.error(err)
 
+    # nntp server
+
+    if CFG.has_section('nntp'):
+        try:
+            from x84 import newsserve
+            newsserve.start()
+        except ImportError, e:
+            log.error('%r' % e)
+
+    # setup message polling mechanism
+    poll_interval = None
+    last_poll = None
+
+    if CFG.has_option('msg', 'poll_interval'):
+        import time
+        poll_interval = CFG.getint('msg', 'poll_interval')
+        last_poll = int(time.time()) - poll_interval
+
     while True:
         # shutdown, close & delete inactive clients,
         for server in servers:
