@@ -71,23 +71,23 @@ def init_term(out_queue, lock, env):
 
     A blessings-abstracted curses terminal is returned.
     """
-    from x84.bbs import ini
+    from x84.bbs.ini import CFG
     from x84.bbs.ipc import IPCStream
     log = logging.getLogger()
     ttype = env.get('TERM', 'unknown')
     if (ttype == 'ansi'
-            and ini.CFG.getBool('system', 'termcap-ansi') != 'no'):
+            and CFG.getBool('system', 'termcap-ansi') != 'no'):
         # special workaround for systems with 'ansi-bbs' termcap,
         # translate 'ansi' -> 'ansi-bbs'
         # http://wiki.synchro.net/install:nix?s[]=termcap#terminal_capabilities
-        env['TERM'] = ini.CFG.get('system', 'termcap-ansi')
+        env['TERM'] = CFG.get('system', 'termcap-ansi')
         log.debug('TERM %s transliterated to %s' % ( ttype, env['TERM'],))
     elif (ttype == 'unknown'
-            and ini.CFG.get('system', 'termcap-unknown') != 'no'):
+            and CFG.get('system', 'termcap-unknown') != 'no'):
         # instead of using 'unknown' as a termcap definition, try to use
         # the most broadly capable termcap possible, 'vt100', configurable with
         # default.ini
-        env['TERM'] = ini.CFG.get('system', 'termcap-unknown')
+        env['TERM'] = CFG.get('system', 'termcap-unknown')
         log.debug('TERM %s transliterated to %s' % ( ttype, env['TERM'],))
     else:
         log.debug('TERM is %s' % (ttype,))
@@ -215,7 +215,7 @@ def start_process(inp_queue, out_queue, sid, env, lock, binary=False):
         env: dictionary of client environment variables (requires 'TERM')
         binary: If client accepts BINARY, assume utf8 session encoding.
     """
-    import x84.bbs.ini
+    from x84.bbs.ini import CFG
     import x84.bbs.session
     # terminals of these types are forced to 'cp437' encoding,
     # we could also more safely assume iso8859-1, which is the
@@ -232,7 +232,7 @@ def start_process(inp_queue, out_queue, sid, env, lock, binary=False):
     # initialize blessings terminal based on env's TERM.
     term = init_term(out_queue, lock, env)
     # negotiate encoding; terminals with BINARY mode are utf-8
-    encoding = x84.bbs.ini.CFG.get('session', 'default_encoding')
+    encoding = CFG.get('session', 'default_encoding')
     if env.get('TERM', 'unknown') in cp437_ttypes:
         encoding = 'cp437'
     elif env.get('TERM', 'unknown').startswith('vt'):
