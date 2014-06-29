@@ -30,10 +30,11 @@ def init(lookup_bbs, lookup_log):
         Write Config to filepath.
         """
         if not os.path.exists(os.path.dirname(os.path.expanduser(filepath))):
-            print('Creating folder %s\n' % (os.path.dirname(os.path.expanduser(filepath)),))
-            os.mkdir(os.path.dirname(os.path.expanduser(filepath)))
-        print('Saving %s\n' % (filepath,))
-        cfg.write(open(os.path.expanduser(filepath), 'wb'))
+            dir_name = os.path.dirname(os.path.expanduser(filepath))
+            print('Creating folder {0}'.format(dir_name))
+            os.mkdir(dir_name)
+        print('Saving {0}'.format(filepath))
+        cfg.write(open(os.path.expanduser(filepath), 'w'))
 
     # exploit last argument, presumed to be within a folder
     # writable by our process, and where the ini is wanted
@@ -44,23 +45,23 @@ def init(lookup_bbs, lookup_log):
         cfg_logfile = os.path.expanduser(cfg_logfile)
         # load-only defaults,
         if os.path.exists(cfg_logfile):
-            print ('loading %s' % (cfg_logfile,))
+            print('loading {0}'.format((cfg_logfile)))
             logging.config.fileConfig(cfg_logfile)
             loaded = True
             break
     if not loaded:
         cfg_log = init_log_ini()
-        if not os.path.isdir(os.path.dirname(cfg_logfile)):
+        dir_name = os.path.dirname(cfg_logfile)
+        if not os.path.isdir(dir_name):
             try:
-                os.mkdir(os.path.dirname(cfg_logfile))
+                os.mkdir(dir_name)
             except OSError as err:
-                root.warn('%s', err)
+                root.warn(err)
         try:
             write_cfg(cfg_log, cfg_logfile)
-            root.info('Saved %s' % (cfg_logfile,))
+            root.info('Saved {0}'.format(cfg_logfile))
         except IOError as err:
-            root.error('%s', err)
-        print(cfg_logfile)
+            root.error(err)
         logging.config.fileConfig(cfg_logfile)
 
     loaded = False
@@ -76,16 +77,17 @@ def init(lookup_bbs, lookup_log):
             break
     if not loaded:
         cfg_bbs = init_bbs_ini()
-        if not os.path.isdir(os.path.dirname(cfg_bbsfile)):
+        dir_name = os.path.dirname(cfg_bbsfile)
+        if not os.path.isdir(dir_name):
             try:
-                os.mkdir(os.path.dirname(cfg_bbsfile))
+                os.mkdir(dir_name)
             except OSError as err:
-                root.warn('%s', err)
+                root.warn(err)
         try:
             write_cfg(cfg_bbs, cfg_bbsfile)
-            root.info('Saved %s' % (cfg_bbsfile,))
+            root.info('Saved {0}'.format(cfg_bbsfile))
         except IOError as err:
-            root.error('%s', err)
+            root.error(err)
 
     global CFG
     CFG = cfg_bbs
