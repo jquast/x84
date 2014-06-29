@@ -1,19 +1,47 @@
+'''
+NNTP gateway for BBS messages.
+
+Add the following settings to default.ini to enable::
+
+    [nntp]
+    addr = 0.0.0.0
+    port = 119
+    name = hostname.of.nntp.server
+    ; Set to "no" to have a read-only server
+    post = yes
+
+    ; If you want SSL, include:
+    ssl = yes
+    ssl_addr = 0.0.0.0
+    ssl_port = 563
+    cert = /home/bbs/ssl.cer
+    key = /home/bbs/ssl.key
+
+'''
+
 import datetime
+import email.parser
 import email.utils
+import io
 import logging
+import multiprocessing.dummy
 import os
 import socket
 import SocketServer
 import string
 from threading import Lock, Thread
 import time
+try:
+    import ssl
+except ImportError:
+    ssl = None
 
 import sqlitedict
 
-from x84.bbs import ini
+from x84.bbs import ini, session
 from x84.bbs.dbproxy import DBProxy
 from x84.bbs.msgbase import MSGDB, TAGDB
-from x84.bbs.session import Session
+from x84.bbs.userbase import USERDB
 from x84.terminal import Terminal
 
 
@@ -21,62 +49,83 @@ log = logging.getLogger()
 
 
 class Error(object):
-    AUTH_NO_PERMISSION = '502 No permission'
-    CMDSYNTAXERROR     = '501 Command syntax error (or un-implemented option)'
+    NOSUCHGROUP        = '411 No such news group'
+    NOGROUPSELECTED    = '412 No newsgroup has been selected'
     NOARTICLERETURNED  = '420 No article(s) selected'
     NOARTICLESELECTED  = '420 No current article has been selected'
-    NODESCAVAILABLE    = '481 Groups and descriptions unavailable'
-    NOGROUPSELECTED    = '412 No newsgroup has been selected'
-    NOIHAVEHERE        = '435 Article not wanted - do not send it'
     NONEXTARTICLE      = '421 No next article in this group'
     NOPREVIOUSARTICLE  = '422 No previous article in this group'
-    NOSTREAM           = '500 Command not understood'
-    NOSUCHARTICLE      = '430 No such article'
     NOSUCHARTICLENUM   = '423 No such article in this group'
-    NOSUCHGROUP        = '411 No such news group'
-    NOTCAPABLE         = '500 Command not recognized'
-    NOTPERFORMED       = '503 Program error, function not performed'
+    NOSUCHARTICLE      = '430 No such article'
+    NOIHAVEHERE        = '435 Article not wanted - do not send it'
     POSTINGFAILED      = '441 Posting failed'
+    NODESCAVAILABLE    = '481 Groups and descriptions unavailable'
+    NOENCRYPTION       = '483 Encryption or stronger authentication required'
+    NOSTREAM           = '500 Command not understood'
+    NOTCAPABLE         = '500 Command not recognized'
+    CMDSYNTAXERROR     = '501 Command syntax error (or un-implemented option)'
+    AUTH_NO_PERMISSION = '502 No permission'
+    NOTAVAILABLE       = '502 Command not available'
+    STARTTLSNOTALLOWED = '502 STARTTLS not allowed with active TLS layer'
+    NOTPERFORMED       = '503 Program error, function not performed'
     TIMEOUT            = '503 Timeout after %s seconds, closing connection.'
+    CANTINITTLS        = '580 Can not initiate TLS negotiation'
 
 
 class Status(object):
-    ARTICLE         = '220 %s %s All of the article follows'
-    AUTH_ACCEPTED   = '281 Authentication accepted'
-    AUTH_CONTINUE   = '381 More authentication information required'
-    AUTH_REQUIRED   = '480 Authentication required'
-    BODY            = '222 %s %s article retrieved - body follows'
-    CLOSING         = '205 Closing connection - goodbye!'
-    DATE            = '111 %s'
-    EXTENSIONS      = '215 Extensions supported by server.'
-    GROUPSELECTED   = '211 %s %s %s %s group selected'
-    HEAD            = '221 %s %s article retrieved - head follows'
     HELPMSG         = '100 Help text follows'
-    LIST            = '215 List of newsgroups follows'
-    LISTGROUP       = '211 %s %s %s %s Article numbers follow (multiline)'
-    LISTNEWSGROUPS  = '215 Information follows'
-    NEWGROUPS       = '231 List of new newsgroups follows'
-    NEWNEWS         = '230 List of new articles by message-id follows'
-    NOPOSTMODE      = '201 Hello, you can\'t post'
-    OVERVIEWFMT     = '215 Information follows'
+    CAPABILITYLIST  = '101 Capability list:'
+    DATE            = '111 %s'
     POSTMODE        = '200 Hello, you can post'
-    POSTSUCCESSFULL = '240 Article received ok'
-    READONLYSERVER  = '440 Posting not allowed'
-    READYNOPOST     = '201 %s X/84 server ready (no posting allowed)'
     READYOKPOST     = '200 %s X/84 server ready (posting allowed)'
-    SENDARTICLE     = '340 Send article to be posted'
     SERVER_VERSION  = '200 X/84'
+    NOPOSTMODE      = '201 Hello, you can\'t post'
+    READYNOPOST     = '201 %s X/84 server ready (no posting allowed)'
     SLAVE           = '202 Slave status noted'
-    STAT            = '223 %s %s article retrieved - request text separately'
-    XGTITLE         = '282 List of groups and descriptions follows'
+    CLOSING         = '205 Closing connection - goodbye!'
+    GROUPSELECTED   = '211 %s %s %s %s group selected'
+    LISTGROUP       = '211 %s %s %s %s Article numbers follow (multiline)'
+    EXTENSIONS      = '215 Extensions supported by server.'
+    LIST            = '215 List of newsgroups follows'
+    LISTNEWSGROUPS  = '215 Information follows'
+    OVERVIEWFMT     = '215 Information follows'
+    ARTICLE         = '220 %s %s All of the article follows'
+    HEAD            = '221 %s %s article retrieved - head follows'
     XHDR            = '221 Header follows'
-    XOVER           = '224 Overview information follows'
     XPAT            = '221 Header follows'
+    BODY            = '222 %s %s article retrieved - body follows'
+    STAT            = '223 %s %s article retrieved - request text separately'
+    XOVER           = '224 Overview information follows'
+    NEWNEWS         = '230 List of new articles by message-id follows'
+    NEWGROUPS       = '231 List of new newsgroups follows'
+    POSTSUCCESSFULL = '240 Article received ok'
+    AUTH_ACCEPTED   = '281 Authentication accepted'
+    XGTITLE         = '282 List of groups and descriptions follows'
+    CONTINUEWITHTLS = '382 Continue with TLS negotiation'
+    SENDARTICLE     = '340 Send article to be posted'
+    AUTH_CONTINUE   = '381 More authentication information required'
+    READONLYSERVER  = '440 Posting not allowed'
+    AUTH_REQUIRED   = '480 Authentication required'
+
+
+# supported capabilities
+CAPABILITIES = (
+    u'VERSION 2',
+    u'READER',
+)
 
 
 # the currently supported overview headers
-overview_headers = (u'Subject:', u'From:', u'Date:', u'Message-ID:',
-                    u'References:', u'Bytes:', u'Lines:', u'Xref:full')
+OVERVIEW_HEADERS = (
+    u'Subject:',
+    u'From:',
+    u'Date:',
+    u'Message-ID:',
+    u'References:',
+    u'Bytes:',
+    u'Lines:',
+    u'Xref:full',
+)
 
 
 def db(schema, table='unnamed'):
@@ -174,7 +223,7 @@ def get_GROUP(group):
         return False
 
 
-def get_LIST():
+def get_LIST(post):
     tagdb = db(TAGDB)
     msgdb = db(MSGDB)
     groups = {}
@@ -193,7 +242,12 @@ def get_LIST():
     output = []
     for group in sorted(groups):
         first, last = groups[group]
-        output.append('x84.%s %d %d n' % (group, first, last))
+        output.append('x84.%s %d %d %s' % (
+            group,
+            first,
+            last,
+            ['n', 'y'][int(post)]
+        ))
 
     return '\r\n'.join(output)
 
@@ -335,31 +389,116 @@ def get_XOVER(group, start_idx, end_idx='ggg'):
     return '\r\n'.join(overviews)
 
 
-if os.name == 'posix':
-    class NNTPServer(SocketServer.ForkingTCPServer):
-        allow_reuse_address = 1
+class NNTPServer(SocketServer.ForkingTCPServer):
+    allow_reuse_address = 1
 
-else:
-    class NNTPServer(SocketServer.ThreadingTCPServer):
-        allow_reuse_address = 1
+
+class ForkingSSLServer(SocketServer.ForkingMixIn, SocketServer.TCPServer):
+    def __init__(self, server_address, RequestHandlerClass,
+                 bind_and_activate=True, ssl_cert=None, ssl_key=None):
+        SocketServer.TCPServer.__init__(self, server_address, RequestHandlerClass, bind_and_activate)
+        self.ssl_cert = ssl_cert
+        self.ssl_key = ssl_key
+
+    def get_request(self):
+        client, address = self.socket.accept()
+        return ssl.wrap_socket(
+                client,
+                server_side=True,
+                certfile=self.ssl_cert,
+                keyfile=self.ssl_key,
+            ), address
+
+
+class NNTPSServer(ForkingSSLServer):
+    allow_reuse_address = 1
 
 
 class NNTPHandler(SocketServer.StreamRequestHandler):
     commands = (
-        'ARTICLE', 'AUTHINFO', 'BODY', 'DATE', 'GROUP', 'HDR', 'HEAD',
-        'HELP', 'IHAVE', 'LAST', 'LIST', 'LISTGROUP', 'MODE', 'NEWNEWS',
-        'NEWGROUPS', 'NEXT', 'OVER', 'POST', 'QUIT', 'SLAVE', 'STAT',
-        'XGTITLE', 'XHDR', 'XOVER', 'XPAT', 'XROVER', 'XVERSION',
+            'ARTICLE',
+            'AUTHINFO',
+            'BODY',
+            'CAPABILITIES',
+            'DATE',
+            'GROUP',
+            'HDR',
+            'HEAD',
+            'HELP',
+            'IHAVE',
+            'LAST',
+            'LIST',
+            'LISTGROUP',
+            'MODE',
+            'NEWNEWS',
+            'NEWGROUPS',
+            'NEXT',
+            'OVER',
+            'POST',
+            'QUIT',
+            'SLAVE',
+            'STARTTLS',
+            'STAT',
+            'XGTITLE',
+            'XHDR',
+            'XOVER',
+            'XPAT',
+            'XROVER',
+            'XVERSION',
     )
-    terminated = False
-    selected_article = 'ggg'
-    selected_group = 'ggg'
-    sending_article = 0
-    article_lines = []
+    auth              = False
+    auth_username     = None
+    terminated        = False
+    selected_article  = 'ggg'
+    selected_group    = 'ggg'
+    sending_article   = False
+    article_lines     = []
     broken_oe_checker = 0
 
     def __init__(self, *args, **kwargs):
         SocketServer.StreamRequestHandler.__init__(self, *args, **kwargs)
+
+    def setup(self):
+        SocketServer.StreamRequestHandler.setup(self)
+        self.peer = self.connection.getpeername()
+        log.info('Accepted new NNTP connection from %s:%d' % self.peer)
+        log.info('PID=%d' % os.getpid())
+
+        # Setup dummy Terminal and Session
+        inp_recv, inp_send = multiprocessing.Pipe(duplex=False)
+        out_recv, out_send = multiprocessing.Pipe(duplex=False)
+        lock = multiprocessing.Lock()
+
+        term = Terminal('dumb', io.BytesIO(), 25, 80)
+        session.SESSION = session.Session(
+            term,
+            inp_recv,
+            out_send,
+            '%s:%d' % self.peer,
+            {},
+            lock,
+        )
+
+    def finish(self):
+        self.peer = self.connection.getpeername()
+        SocketServer.StreamRequestHandler.finish(self)
+        log.info('Lost NNTP connection with %s:%d' % self.peer)
+        log.info('PID=%d' % os.getpid())
+
+    def authenticate(self, username, password):
+        from x84.bbs import get_user
+
+        if not username or not password:
+            return False
+
+        userdb = db(USERDB)
+        user = userdb[username]
+        if user.auth(password.decode('utf-8')):
+            self.auth = True
+        else:
+            self.auth = False
+
+        return self.auth
 
     def get_timestamp(self, date, times, gmt=True):
         # like the new NNTP draft explains...
@@ -371,14 +510,37 @@ class NNTPHandler(SocketServer.StreamRequestHandler):
                 year = "19%s" % (date[:2])
             else:
                 year = "20%s" % (date[:2])
-        ts = time.mktime((int(year), int(date[2:4]), int(date[4:6]), int(times[:2]), int(times[2:4]), int(times[4:6]), 0, 0, 0))
+        ts = time.mktime((
+            int(year),
+            int(date[2:4]),
+            int(date[4:6]),
+            int(times[:2]),
+            int(times[2:4]),
+            int(times[4:6]),
+            0, 0, 0
+        ))
         if gmt:
             return time.gmtime(ts)
         else:
             return time.localtime(ts)
 
+    @property
+    def readonly(self):
+        post = False
+        try:
+            post = ini.CFG.getboolean('nntp', 'post')
+        except:
+            pass
+
+        return not post
+
     def handle(self):
-        self.send_response(Status.READYNOPOST % ini.CFG.get('nntp', 'name'))
+        name = ini.CFG.get('nntp', 'name')
+
+        if not self.readonly:
+            self.send_response(Status.READYOKPOST % name)
+        else:
+            self.send_response(Status.READYNOPOST % name)
 
         while not self.terminated:
             if self.sending_article == 0:
@@ -394,6 +556,7 @@ class NNTPHandler(SocketServer.StreamRequestHandler):
                 log.info('<<< %s' % line)
             else:
                 line = self.inputline
+                log.info('<p<\n%s' % line.rstrip())
 
             if (not self.sending_article) and (line == ''):
                 self.broken_oe_checker += 1
@@ -404,20 +567,31 @@ class NNTPHandler(SocketServer.StreamRequestHandler):
             self.tokens = line.split(' ')
             command = self.tokens[0].upper()
             if command == 'POST':
-                self.send_response(Status.READONLYSERVER)
+                if self.readonly:
+                    self.send_response(Status.READONLYSERVER)
+                else:
+                    if not self.auth:
+                        self.send_response(Status.AUTH_REQUIRED)
+                    else:
+                        self.sending_article = True
+                        self.send_response(Status.SENDARTICLE)
 
             elif self.sending_article:
                 if self.inputline == '.\r\n':
-                    self.sending_article = 0
+                    self.sending_article = False
                     try:
                         self.do_POST()
                     except:
                         raise
                         self.send_response(Error.POSTINGFAILED)
                     continue
+                self.article_lines.append(line)
 
             else:
-                if command in self.commands:
+                if command not in ('AUTHINFO', 'MODE') and not self.auth:
+                    self.send_response(Status.AUTH_REQUIRED)
+
+                elif command in self.commands:
                     try:
                         getattr(self, 'do_%s' % command)()
                     except AttributeError:
@@ -472,6 +646,45 @@ class NNTPHandler(SocketServer.StreamRequestHandler):
                 result[1],
             ))
 
+    def do_AUTHINFO(self):
+        '''
+        AUTHINFO USER userame
+        AUTHINFO PASS password
+        AUTHINFO SIMPLE username password
+        '''
+        if len(self.tokens) != 3:
+            return self.send_response(Error.CMDSYNTAXERROR)
+
+        if self.readonly:  # Whatever :-)
+            return self.send_response(Status.AUTH_ACCEPTED)
+
+        if self.tokens[1].upper() == 'USER':
+            self.auth_username = self.tokens[2]
+            self.send_response(Status.AUTH_CONTINUE)
+
+        elif self.tokens[1].upper() == 'PASS':
+            if self.authenticate(self.auth_username, self.tokens[2]):
+                self.send_response(Status.AUTH_ACCEPTED)
+            else:
+                self.send_response(Error.AUTH_NO_PERMISSION)
+                self.auth_username = None
+
+    def do_CAPABILITIES(self):
+        capabilities = CAPABILITIES
+        try:
+            if ini.CFG.getboolean('nntp', 'ssl'):
+                capabilities += (u'STARTTLS',)
+        except:
+            pass
+
+        if not self.readonly and self.auth:
+            capabilities += (u'POST',)
+
+        self.send_response(u'%s\r\n%s\r\n.' % (
+            Status.CAPABILITYLIST,
+            u'\r\n'.join(capabilities),
+        ))
+
     def do_DATE(self):
         now = datetime.datetime.now()
         self.send_response(Status.DATE % (now.strftime('%Y%m%d%H%M%S')))
@@ -492,11 +705,14 @@ class NNTPHandler(SocketServer.StreamRequestHandler):
             self.tokens[1],
         ))
 
+    def do_HDR(self):
+        return self.do_XHDR()
+
     def do_LIST(self):
         if len(self.tokens) == 2 and self.tokens[1].upper() == 'OVERVIEW.FMT':
             return self.send_response("%s\r\n%s\r\n." % (
                 Status.OVERVIEWFMT,
-                "\r\n".join(overview_headers)
+                "\r\n".join(OVERVIEW_HEADERS)
             ))
 
         elif len(self.tokens) == 2 and self.tokens[1].upper() == 'EXTENSIONS':
@@ -511,7 +727,7 @@ class NNTPHandler(SocketServer.StreamRequestHandler):
         elif len(self.tokens) == 2:
             return self.send_response(Error.NOTPERFORMED)
 
-        result = get_LIST()
+        result = get_LIST(not self.readonly)
         self.send_response("%s\r\n%s\r\n." % (Status.LIST, result))
 
     def do_LIST_NEWSGROUPS(self):
@@ -584,12 +800,81 @@ class NNTPHandler(SocketServer.StreamRequestHandler):
     def do_OVER(self):
         return self.do_XOVER()
 
+    def do_POST(self):
+        from x84.bbs.msgbase import Msg
+
+        lines = ''.join(self.article_lines)
+        print repr(lines)
+        parser = email.parser.Parser()
+        parsed = parser.parsestr(lines)
+
+        for k, v in zip(parsed.keys(), parsed.values()):
+            print k, v
+
+        if not parsed.has_key('newsgroups'):
+            return self.send_response(Error.POSTINGFAILED + ': specify group')
+
+        if parsed.has_key('content-type'):
+            content_type = parsed['content-type'].split(';')[0]
+            if content_type != 'text/plain':
+                return self.send_response(Error.POSTINGFAILED + ': you are '
+                                          'sending %s, but you should send in '
+                                          'text/plain' % content_type)
+
+        tagdb = db(TAGDB)
+        tag = get_tag(parsed['newsgroups'])
+        if tag not in tagdb:
+            log.warning('No such tag "%s"' % tag)
+
+        codec = 'ascii'
+        codecs = filter(None, parsed.get_charsets())
+        if codecs:
+            codec = codecs[0]
+
+        body = parsed.get_payload()
+        try:
+            body = body.decode(codec)
+        except UnicodeDecodeError as error:
+            return self.send_response(Error.POSTINGFAILED + ': unable to '
+                                      'decode: %s' % str(error))
+
+        hdr = dict(zip(parsed.keys(), parsed.values()))
+        msg = Msg(
+            None,
+            hdr.get('subject', 'no subject'),
+            body,
+        )
+        msg.author = self.auth_username
+        msg.tags.add(tag)
+        msg.save()
+        self.send_response(Status.POSTSUCCESSFULL)
+
     def do_QUIT(self):
         self.terminated = True
         self.send_response(Status.CLOSING)
 
     def do_SLAVE(self):
         self.send_response(Status.SLAVE)
+
+    def do_STARTTLS(self):
+        has_ssl = False
+        try:
+            has_ssl = ini.CFG.getboolean('nntp', 'ssl')
+            ssl_crt = ini.CFG.get('nntp', 'cert')
+            ssl_key = ini.CFG.get('nntp', 'key')
+        except:
+            pass
+
+        if not has_ssl or ssl is None:
+            return self.send_response(Error.CANTINITTLS)
+
+        self.send_response(Status.CONTINUEWITHTLS)
+        self.connection = ssl.wrap_socket(
+            self.connection,
+            server_side=True,
+            keyfile=ssl_key,
+            certfile=ssl_crt,
+        )
 
     def do_XHDR(self):
         if (len(self.tokens) < 2) or (len(self.tokens) > 3):
@@ -687,6 +972,10 @@ class NNTPHandler(SocketServer.StreamRequestHandler):
         else:
             return self.send_response(Status.XOVER + '\r\n' + overviews + '\r\n.')
 
+    def do_XROVER(self):
+        self.tokens[1] = 'REFERENCES'
+        return self.do_XHDR()
+
 
 def start():
     import logging
@@ -697,11 +986,40 @@ def start():
     t.start()
     logger.info(u'NNTP Server starting')
 
+    has_ssl = False
+    try:
+        has_ssl = ini.CFG.getboolean('nntp', 'ssl')
+        ssl_crt = ini.CFG.get('nntp', 'cert')
+        ssl_key = ini.CFG.get('nntp', 'key')
+    except:
+        pass
+
+    if has_ssl and not ssl is None:
+        t = Thread(target=server_thread_ssl)
+        t.daemon = True
+        t.start()
+        logger.info(u'NNTP Server starting (SSL)')
+
+
+def setup_pipes():
+    pass
+
 
 def server_thread():
-    from x84.bbs import ini
-
     addr = ini.CFG.get('nntp', 'addr')
     port = ini.CFG.getint('nntp', 'port')
     server = NNTPServer((addr, port), NNTPHandler)
+    server.serve_forever()
+
+def server_thread_ssl():
+    addr = ini.CFG.get('nntp', 'ssl_addr')
+    port = ini.CFG.getint('nntp', 'ssl_port')
+    ssl_cert = ini.CFG.get('nntp', 'cert')
+    ssl_key = ini.CFG.get('nntp', 'key')
+    server = NNTPSServer(
+        (addr, port),
+        NNTPHandler,
+        ssl_cert=ssl_cert,
+        ssl_key=ssl_key,
+    )
     server.serve_forever()
