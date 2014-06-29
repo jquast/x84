@@ -40,284 +40,305 @@ queue_db_name = x84netqueue
 last_file = x84net_last
 """
 
+# local imports
+import logging
+import hashlib
+import time
+import json
+import os
+
+# 3rd party imports
+import requests
+
+
 def get_token(network):
     """ get token for authentication """
-    import time
-    import hashlib
+    tm_value = int(time.time())
+    token = hashlib.sha256('{0}{1}'.format(network['token'], tm_value))
+    return '{0}|{1}|{2}'.format(network['board_id'],
+                                token.hexdigest(),
+                                tm_value)
 
-    t = int(time.time())
-    return '%s|%s|%s' % (network['board_id'], hashlib.sha256('%s%s' % (network['token'], t)).hexdigest(), t)
 
 def prepare_message(msg, network, parent):
     """ turn a Msg object into a dict for transfer """
     from x84.bbs.msgbase import format_origin_line, to_utctime
 
     return {
-        'author': msg.author
-        , 'subject': msg.subject
-        , 'recipient': msg.recipient
-        , 'parent': parent
-        , 'tags': [tag for tag in msg.tags if tag != network['name']]
-        , 'body': u''.join((msg.body, format_origin_line()))
-        , 'ctime': to_utctime(msg.ctime)
+        'author': msg.author,
+        'subject': msg.subject,
+        'recipient': msg.recipient,
+        'parent': parent,
+        'tags': [tag for tag in msg.tags if tag != network['name']],
+        'body': u''.join((msg.body, format_origin_line())),
+        'ctime': to_utctime(msg.ctime)
     }
 
-"""
-REST network client methods
-"""
 
-def pull_rest(network, last, ca_path=True):
+def pull_rest(net, last_msg_id, log=None):
     """ pull messages for a given network newer than the 'last' message idx """
-    import requests
-    import json
-    import logging
-
-    logger = logging.getLogger()
-    url = '%smessages/%s/%s' % (network['url_base'], network['name'], last)
-    r = None
+    log = log or logging.getLogger(__name__)
+    url = '%smessages/%s/%s' % (net['url_base'], net['name'], last_msg_id)
 
     try:
-        r = requests.get(url, headers={'Auth-X84net': get_token(network)}, verify=ca_path)
-    except Exception, e:
-        logger.exception(u'[%s] Request error: %s' % (network['name'], str(e)))
+        req = requests.get(url,
+                           headers={'Auth-X84net': get_token(net)},
+                           verify=net['ca_path'])
+    except Exception, err:
+        log.exception('[{net[name]}] exception in pull_rest: {err}'
+                      .format(net=net, err=err))
         return False
 
-    # oh noes!
-    if r.status_code != 200:
-        logger.error(u'[%s] HTTP error: %s' % (network['name'], r.status_code))
+    if req.status_code != 200:
+        log.error('[{net[name]] HTTP error, code={req.status_code}'
+                  .format(net=net, req=req))
         return False
 
     try:
-        response = json.loads(r.text)
+        response = json.loads(req.text)
         return response['messages'] if response['response'] else []
-    except Exception, e:
-        logger.exception(u'[%s] JSON error: %s' % (network['name'], str(e)))
+    except Exception, err:
+        log.exception('[{net[name]}] JSON error: {err}'
+                      .format(net=net, err=err))
         return False
 
-def push_rest(network, msg, parent, origin_line, ca_path=True):
+
+def push_rest(net, msg, parent, log=None):
     """ push message for a given network and append an origin line """
-    import requests
-    import json
-    import logging
+    log = log or logging.getLogger(__name__)
 
-    msg_data = prepare_message(msg, network, parent)
-    logger = logging.getLogger()
-    url = '%smessages/%s/' % (network['url_base'], network['name'])
+    msg_data = prepare_message(msg, net, parent)
+    url = '{net[url_base]}messages/{net[name]/'.format(net=net)
     data = {'message': json.dumps(msg_data)}
-    r = None
 
     try:
-        r = requests.put(url, headers={'Auth-X84net': get_token(network)}, data=data, verify=ca_path)
+        req = requests.put(url,
+                           headers={'Auth-X84net': get_token(net)},
+                           data=data,
+                           verify=net['ca_path'])
     except Exception, err:
-        logger.exception(u'[%s] Request error: %s' % (network['name'], str(err)))
+        log.exception('[{net[name]}] exception in push_rest: {err}'
+                      .format(net=net, err=err))
         return False
 
-    # oh noes!
-    if r.status_code != 200:
-        logger.error(u'[%s] HTTP error: %s' % (network['name'], r.status_code))
+    if req.status_code != 200:
+        log.error('{net[name]} HTTP error, code={req.status_code}'
+                  .format(net=net, req=req))
         return False
 
     try:
-        response = json.loads(r.text)
-        return response['id'] if response['response'] else False
+        response = json.loads(req.text)
     except Exception, err:
-        logger.exception(u'[%s] JSON error: %s' % (network['name'], str(err)))
-        return False
+        log.exception('[{net[name]}] JSON error: {err}'
+                      .format(net=net, err=err))
+    else:
+        if response['response'] and 'id' in response:
+            return response['id']
+    return False
+
+
+def get_networks(cfg, log=None):
+    " Get configured message networks. "
+
+    log = log or logging.getLogger(__name__)
+
+    # pull list of network-associated tags
+    network_list = []
+    if cfg.has_option('msg', 'network_tags'):
+        net_names = cfg.get('msg', 'network_tags').split(',')
+        network_list = map(str.strip, net_names)
+
+    # expected configuration options,
+    net_options = ('url_base token board_id trans_db_name '
+                   'queue_db_name last_file'.split())
+
+    networks = list()
+    for net_name in network_list:
+        section = 'msgnet_{0}'.format(net_name)
+        net_type = cfg.get(section, 'type')
+        assert net_type == 'rest', ('Only "rest" is supported', net_type)
+        net = {'name': net_name, 'type': net_type}
+        if not cfg.has_section(section):
+            log.error('[{net_name}] No such config section: {section}'
+                      .format(net_name=net_name, section=section))
+            continue
+
+        for option in net_options:
+            if not cfg.has_option(section, option):
+                log.error('[{net_name}] No such config option: {option}'
+                          .format(net_name=net_name, option=option))
+                continue
+            net[option] = cfg.get(section, option)
+
+        # make last_file absolute path, relative to datapath
+        net['last_file'] = os.path.expanduser(cfg.get('system', 'datapath'))
+
+        if not cfg.has_option(section, 'ca_path'):
+            ca_path = True
+        else:
+            ca_path = os.path.expanduser(cfg.get(section, 'ca_path'))
+            if not os.path.isfile(ca_path):
+                log.warn("CFG option section {section}, File not found for "
+                         "{key} = {value}, default ca verify will be used. "
+                         .format(section=section,
+                                 key='ca_path',
+                                 value=ca_path))
+        net['ca_path'] = ca_path
+
+        networks.append(net)
+    return networks
+
+
+def poll_network_for_messages(net, log=None):
+    " pull for new messages of network, storing locally. "
+    from x84.bbs import Msg, DBProxy
+    from x84.bbs.msgbase import to_localtime
+    log = log or logging.getLogger(__name__)
+
+    last_msg_id, msgs = -1, []
+    try:
+        with open(net['last_file'], 'r') as last_fp:
+            last_msg_id = int(last_fp.read().strip())
+    except OSError as err:
+        try:
+            with open(net['last_file'], 'w') as last_fp:
+                last_fp.write(str(last_msg_id))
+
+            log.info('[{net[name]}] last_file created'.format(net=net))
+
+        except OSError as err:
+            log.error('[{net[name]}] skipping network: {err}'
+                      .format(net=net, err=err))
+            return None
+
+    msgs = pull_rest(net=net, last_msg_id=last_msg_id)
+
+    if msgs is not False:
+        log.info('{net[name]} Retrieved {num} messages'
+                 .format(net=net, num=len(msgs)))
+    else:
+        log.debug('{net[name]} no messages.'.format(net=net))
+        return None
+
+    transdb = DBProxy(net['trans_db_name'])
+    transkeys = transdb.keys()
+    msgs = sorted(msgs, cmp=lambda x, y: cmp(int(x['id']), int(y['id'])))
+
+    # store messages locally, saving their translated IDs to the transdb
+    for msg in msgs:
+        store_msg = Msg()
+        store_msg.recipient = msg['recipient']
+        store_msg.author = msg['author']
+        store_msg.subject = msg['subject']
+        store_msg.body = msg['body']
+        store_msg.tags = set(msg['tags'])
+        store_msg.tags.add(u''.join((net['name'])))
+
+        if msg['recipient'] is None and u'public' not in msg['tags']:
+            log.warn("{net[name]} No recipient (msg_id={msg[id]}), "
+                     "adding 'public' tag".format(net=net, msg=msg))
+            store_msg.tags.add(u'public')
+
+        if (msg['parent'] is not None and
+                str(msg['parent']) not in transkeys):
+            log.warn('{net[name]} No such parent message ({msg[parent], '
+                     'msg_id=msg[id]), removing reference.'
+                     .format(net=net, msg=msg))
+        elif msg['parent'] is not None:
+            store_msg.parent = int(transdb[msg['parent']])
+
+        if msg['id'] in transkeys:
+            log.warn('{net[name]} dupe (msg_id={msg[id]}) discarded.'
+                     .format(net=net, msg=msg))
+        else:
+            store_msg.save(noqueue=True, ctime=to_localtime(msg['ctime']))
+            with transdb.acquire():
+                transdb[msg['id']] = store_msg.idx
+            transkeys.append(msg['id'])
+            log.info('{net[name]} Processed (msg_id={msg[id]}) => {new_id}'
+                     .format(net=net, msg=msg, new_id=store_msg.idx))
+
+        if 'last' not in net.keys() or int(net['last']) < int(msg['id']):
+            net['last'] = msg['id']
+
+    if 'last' in net.keys():
+        with open(net['last_file'], 'w') as last_fp:
+            last_fp.write(str(net['last']))
+
+    return transdb
+
+
+def publish_network_messages(net, transdb, log=None):
+    " Push messages to network. "
+    from x84.bbs import DBProxy
+    from x84.bbs.msgbase import format_origin_line, MSGDB
+
+    log = log or logging.getLogger(__name__)
+    queuedb = DBProxy(net['queue_db_name'])
+    msgdb = DBProxy(MSGDB)
+
+    # publish each message
+    for msg_id in sorted(queuedb.keys(),
+                         cmp=lambda x, y: cmp(int(x), int(y))):
+        if msg_id not in msgdb:
+            log.warn('{net[name]} No such message (msg_id={msg_id})'
+                     .format(net=net, msg_id=msg_id))
+            del queuedb[msg_id]
+            continue
+
+        msg = msgdb[msg_id]
+
+        trans_parent = None
+        if msg.parent is not None:
+            matches = [key for key, data in transdb.iteritems()
+                       if data == msg.parent]
+
+            if len(matches) > 0:
+                trans_parent = matches[0]
+            else:
+                log.warn('{net[name]} Parent ID {msg.parent} '
+                         'not in translation-DB (msg_id={msg_id})'
+                         .format(net=net, msg=msg, msg_id=msg_id))
+
+        trans_id = push_rest(net=net, msg=msg, parent=trans_parent)
+        if trans_id is False:
+            log.error('{net[name]} Message not posted (msg_id={msg_id})'
+                      .format(net=net['name'], msg_id=msg_id))
+            continue
+
+        if trans_id in transdb.keys():
+            log.error('{net[name]} trans_id={trans_id} conflicts with '
+                      '(msg_id={msg_id})'
+                      .format(net=net, trans_id=trans_id, msg_id=msg_id))
+            with queuedb.acquire():
+                del queuedb[msg_id]
+            continue
+
+        # transform, and possibly duplicate(?) message ..
+        with transdb.acquire(), msgdb.acquire(), queuedb.acquire():
+            transdb[trans_id] = msg_id
+            msg.body = u''.join((msg.body, format_origin_line()))
+            msgdb[msg_id] = msg
+            del queuedb[msg_id]
+        log.info('{net[name]} Published (msg_id={msg_id}) => {trans_id}'
+                 .format(net=net, msg_id=msg_id, trans_id=trans_id))
+
 
 def main():
     """ message polling process """
-    import logging
     import x84.bbs.ini
-    from x84.bbs import Msg, msgbase, DBProxy
-    from x84.bbs.msgbase import format_origin_line, to_localtime, to_utctime
-    import os
-    import time
-    import ssl
 
-    # load config
-    cfg_bbs = x84.bbs.ini.CFG
-    logger = logging.getLogger()
-    logger.debug(u'Beginning poll/publish process')
-    # origin line
-    origin_line = format_origin_line()
-    # pull list of network-associated tags
-    network_list = []
+    log = logging.getLogger(__name__)
 
-    if cfg_bbs.has_option('msg', 'network_tags'):
-        network_list = [net.strip() for net in cfg_bbs.get('msg', 'network_tags').split(',')]
-
-    networks = list()
-
-    # build array of networks as dict items
-    for net in network_list:
-        netcfg = 'msgnet_%s' % net
-        nettype = cfg_bbs.get(netcfg, 'type')
-        network = {'name': net, 'type': nettype}
-
-        if not cfg_bbs.has_section(netcfg):
-            logger.error(u'[%s] No such configuration section: %s' % (net, netcfg))
-            continue
-
-        if nettype == 'rest':
-            # rest networks
-            for i in ['url_base', 'token', 'board_id', 'trans_db_name', 'queue_db_name', 'last_file']:
-                if not cfg_bbs.has_option(netcfg, i):
-                    logger.error(u'[%s] No such configuration option: %s' % (net, i))
-                    continue
-
-                network[i] = cfg_bbs.get(netcfg, i)
-        elif nettype == 'tcp':
-            # tcp networks
-            for i in ['addr', 'port', 'token', 'board_id', 'trans_db_name', 'queue_db_name', 'last_file']:
-                if not cfg_bbs.has_option(netcfg, i):
-                    logger.error(u'[%s] No such configuration option: %s' % (net, i))
-                    continue
-
-                network[i] = cfg_bbs.get(netcfg, i)
-
-        networks.append(network)
-
-    datapath = os.path.expanduser(cfg_bbs.get('system', 'datapath'))
-    server_tags = []
-
-    if cfg_bbs.has_option('msgserver', 'server_tags'):
-        server_tags = [tag.strip() for tag in cfg_bbs.get('msgserver', 'server_tags').split(',')]
-
-    # can manually specify path to ca-certs bundle if necessary
-    ca_path = True
-
-    if cfg_bbs.has_option(netcfg, 'ca_path'):
-        ca_path = os.path.expanduser(cfg_bbs.get(netcfg, 'ca_path'))
-
-    # handle supported networks
-    for i in [net for net in networks if net['type'] in ['rest']]:
-
-        """ pull messages """
-
-        last = -1
-        msgs = []
-
-        # load last parsed message id
-        try:
-            with open(os.path.join(datapath, net['last_file']), 'r') as f:
-                last = int(f.read())
-        except:
-            logger.warn(u'[%s] last_file empty, corrupt, unreadable, or does not exist; using default value' % net['name'])
-
-            try:
-                with open(os.path.join(datapath, net['last_file']), 'w') as f:
-                    f.write(str(last))
-
-                logger.info(u'[%s] last_file created' % net['name'])
-            except:
-                logger.error(u'[%s] Could not create last_file; skipping network' % net['name'])
-                continue
-
-        logger.debug(u'[%s] Begin polling' % net['name'])
-
-        if net['type'] == 'rest':
-            msgs = pull_rest(net, last, ca_path)
-        # <-- redis, etc. would go here
-
-        if msgs != False:
-            logger.info(u'[%s] Retrieved %d messages' % (net['name'], len(msgs)))
-        else:
-            logger.error(u'[%s] Retrieval error' % net['name'])
-            continue
-
-        transdb = DBProxy(net['trans_db_name'])
-        transkeys = transdb.keys()
-        msgs = sorted(msgs, cmp=lambda x, y: cmp(int(x['id']), int(y['id'])))
-
-        # "post" messages, saving their translated IDs to the transdb
-        for m in msgs:
-            newm = Msg()
-            newm.recipient = m['recipient']
-            newm.author = m['author']
-            newm.subject = m['subject']
-            newm.body = m['body']
-            newm.tags = set(m['tags'])
-            newm.tags.add(u''.join((net['name'])))
-
-            if m['recipient'] is None and u'public' not in m['tags']:
-                logger.warn(u"[%s] No recipient (msgid %s), adding 'public' tag" % (net['name'], m['id']))
-                newm.tags.add(u'public')
-
-            if m['parent'] != None and str(m['parent']) not in transkeys:
-                logger.warn(u'[%s] No such parent message (%s, msgid %s), stripping' % (net['name'], m['parent'], m['id']))
-            elif m['parent'] != None:
-                newm.parent = int(transdb[m['parent']])
-
-            if m['id'] in transkeys:
-                logger.warn(u'[%s] Duplicate message (msgid %s, %s), skipping' % (net['name'], m['id'], transdb[m['id']]))
-            else:
-                newm.save(noqueue=True, ctime=to_localtime(m['ctime']))
-                transdb.acquire()
-                transdb[m['id']] = newm.idx
-                transdb.release()
-                transkeys.append(m['id'])
-                logger.info(u'[%s] Processed message (msgid %s) => %d' % (net['name'], m['id'], newm.idx))
-
-            if 'last' not in net.keys() or int(net['last']) < int(m['id']):
-                net['last'] = m['id']
-
-        if 'last' in net.keys():
-            with open(os.path.join(datapath, net['last_file']), 'w') as f:
-                f.write(str(net['last']))
-
-        """ push messages """
-
-        queuedb = None
-        queuedb = DBProxy(net['queue_db_name'])
-        logger.debug(u'[%s] Begin publishing' % net['name'])
-        msgdb = DBProxy(msgbase.MSGDB)
-        msgs = msgdb.keys()
-
-        # publish each message
-        for m in sorted(queuedb.keys(), cmp=lambda x, y: cmp(int(x), int(y))):
-            if m not in msgs:
-                logger.warn(u'[%s] No such message (msgid %s), skipping' % (net['name'], m))
-                del queuedb[m]
-                continue
-
-            msg = msgdb[m]
-            trans_parent = None
-
-            if msg.parent != None:
-                has_key = [key for key, data in transdb.iteritems() if data == msg.parent]
-
-                if len(has_key) > 0:
-                    trans_parent = has_key[0]
-                else:
-                    logger.warn(u'[%s] Parent ID %s not in translation DB (msgid %s)' % (net['name'], msg.parent, m))
-
-            transid = None
-
-            if net['type'] == 'rest':
-                transid = push_rest(net, msg, trans_parent, origin_line, ca_path)
-            # <-- redis, etc. would go here
-
-            if transid is False:
-                logger.error(u'[%s] Message not posted (msgid %s)' % (net['name'], m))
-                continue
-
-            if transid in transdb.keys():
-                logger.error(u'[%s] Translated ID %s already in database (msgid %s)' % (net['name'], transid, m))
-                queuedb.acquire()
-                del queuedb[m]
-                queuedb.release()
-                continue
-
-            transdb.acquire()
-            msgdb.acquire()
-            queuedb.acquire()
-            transdb[transid] = m
-            msg.body = u''.join((msg.body, origin_line))
-            msgdb[m] = msg
-            del queuedb[m]
-            transdb.release()
-            msgdb.release()
-            queuedb.release()
-            logger.info(u'[%s] Published message (msgid %s) => %s' % (net['name'], m, transid))
-
-    logger.debug(u'Message poll/publish complete')
+    # get all networks
+    networks = get_networks(cfg=x84.bbs.ini.CFG)
+    log.debug(u'Begin poll/publish process for networks: {net_names}.'
+              .format(net_names=', '.join(net['name'] for net in networks)))
+    num = 0
+    # pull/push to all networks
+    for num, net in enumerate(networks):
+        transdb = poll_network_for_messages(net)
+        if transdb is not None:
+            publish_network_messages(net, transdb)
+    log.debug('Message poll/publish complete for {n} network{s}.'
+              .format(n=num, s='s' if num != 1 else ''))
