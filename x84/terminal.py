@@ -76,7 +76,7 @@ def init_term(out_queue, lock, env):
     log = logging.getLogger()
     ttype = env.get('TERM', 'unknown')
     if (ttype == 'ansi'
-            and CFG.getBool('system', 'termcap-ansi') != 'no'):
+            and CFG.getBoolean('system', 'termcap-ansi') != 'no'):
         # special workaround for systems with 'ansi-bbs' termcap,
         # translate 'ansi' -> 'ansi-bbs'
         # http://wiki.synchro.net/install:nix?s[]=termcap#terminal_capabilities
