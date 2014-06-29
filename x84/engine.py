@@ -434,7 +434,8 @@ def _loop(servers):
 
     if CFG.has_section('web'):
         try:
-            import web, OpenSSL
+            import web      # NOQA
+            import OpenSSL  # NOQA
             from x84 import webserve
             module_names = CFG.get('web', 'modules').split(',')
             web_modules = set(map(str.strip, module_names))
