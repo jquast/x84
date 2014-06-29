@@ -134,7 +134,10 @@ def accept_server(server, log):
     optional kwargs.
     """
     from x84.telnet import TelnetServer, TelnetClient, ConnectTelnet
-    from x84.ssh import SshServer, SshClient, ConnectSsh
+    try:
+        from x84.ssh import SshServer, SshClient, ConnectSsh
+    except ImportError:
+        pass
     if server.__class__ == TelnetServer:
         accept(log=log, server=server,
                client_factory=TelnetClient,

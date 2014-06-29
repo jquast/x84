@@ -138,14 +138,19 @@ def init_bbs_ini():
     cfg_bbs.set('telnet', 'addr', '127.0.0.1')
     cfg_bbs.set('telnet', 'port', '6023')
 
-    cfg_bbs.add_section('ssh')
-    cfg_bbs.set('ssh', 'addr', '127.0.0.1')
-    cfg_bbs.set('ssh', 'port', '6022')
-    cfg_bbs.set('ssh', 'hostkey',
-                os.path.join(os.path.expanduser('~/.x84'), 'ssh_host_rsa_key'))
-    # 4096 took quite a while on my machine, so, if you're paranoid enough
-    # for something longer, then you can buy your own patience !
-    cfg_bbs.set('ssh', 'hostkeybits', '2048')
+    try:
+        import ssh  # NOQA
+    except ImportError:
+        pass
+    else:
+        cfg_bbs.add_section('ssh')
+        cfg_bbs.set('ssh', 'addr', '127.0.0.1')
+        cfg_bbs.set('ssh', 'port', '6022')
+        cfg_bbs.set('ssh', 'hostkey', os.path.expanduser(
+            os.path.join('~', '.x84', 'ssh_host_rsa_key')))
+        # 4096 took quite a while on my machine, so, if you're paranoid enough
+        # for something longer, then you can buy your own patience !
+        cfg_bbs.set('ssh', 'hostkeybits', '2048')
 
     # default path if cmd argument is not absolute,
     cfg_bbs.add_section('door')
