@@ -18,7 +18,7 @@ class DBHandler(threading.Thread):
     #        Too many instance attributes (8/7)
     def __init__(self, queue, event, data):
         """ Arguments:
-              inp_queue: parent input end of multiprocessing.Queue()
+              queue: parent input end of multiprocessing.Queue()
               event: database schema in form of string 'db-schema' or
                   'db=schema'. When '-' is used, the result is returned as a
                   single transfer. When '=', an iterable is yielded and the
