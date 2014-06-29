@@ -20,6 +20,7 @@ __credits__ = [
 ]
 __license__ = 'ISC'
 
+
 def main():
     """
     x84 main entry point. The system begins and ends here.
@@ -52,16 +53,22 @@ def main():
                 kill_session(client, 'server shutdown')
                 del server.clients[key]
 
+
 def parse_args():
     import getopt
     import sys
     import os
 
-    lookup_bbs = ('/etc/x84/default.ini',
-                  os.path.expanduser('~/.x84/default.ini'))
+    if sys.platform.lower().startswith('win32'):
+        system_path = os.path.join('C:', 'x84', 'default.ini')
+    else:
+        system_path = os.path.join(os.path.sep, 'etc', 'x84')
 
-    lookup_log = ('/etc/x84/logging.ini',
-                  os.path.expanduser('~/.x84/logging.ini'))
+    lookup_bbs = (os.path.join(system_path, 'default.ini'),
+                  os.path.expanduser(os.path.join('~', '.x84', 'default.ini')))
+
+    lookup_log = (os.path.join(system_path, 'logging.ini'),
+                  os.path.expanduser(os.path.join('~', '.x84', 'logging.ini')))
 
     try:
         opts, tail = getopt.getopt(sys.argv[1:], u'', (
@@ -84,35 +91,41 @@ def parse_args():
         sys.exit(1)
     return (lookup_bbs, lookup_log)
 
+
 def get_servers(CFG):
     """
     Given a configuration file, instantiate and return a list of enabled
     servers.
     """
+    import logging
     from x84.terminal import on_naws
     from x84.telnet import TelnetServer
-    from x84.ssh import SshServer
+    log = logging.getLogger(__name__)
 
     servers = []
 
-    # start telnet server
     if CFG.has_section('telnet'):
+        # start telnet server instance
         telnetd = TelnetServer(config=CFG, on_naws=on_naws)
         servers.append(telnetd)
 
-    # start ssh server
     if CFG.has_section('ssh'):
-        sshd = SshServer(config=CFG)
-        servers.append(sshd)
+        try:
+        # start ssh server instance
+            from x84.ssh import SshServer
+            sshd = SshServer(config=CFG)
+            servers.append(sshd)
+        except ImportError as err:
+            log.error(err)
 
     return servers
 
+
 def find_server(servers, fd):
-    from x84.telnet import TelnetServer
-    from x84.ssh import SshServer
     for server in servers:
         if fd == server.server_socket.fileno():
             return server
+
 
 def accept_server(server, log):
     """
@@ -171,7 +184,8 @@ def accept(log, server, client_factory, connect_factory,
                                                 server.__class__.__name__))
 
     except socket.error as err:
-        log.error('accept error %d:%s', err[0], err[1],)
+        log.error('accept error {0}:{1}'.format(*err))
+
 
 def get_session_fds(servers):
     from x84.terminal import find_tty
@@ -385,21 +399,18 @@ def _loop(servers):
     # pylint: disable=R0912,R0914,R0915
     #         Too many local variables (24/15)
     import logging
-    import os
     import select
-    import socket
     from x84.terminal import get_terminals, kill_session
     from x84.bbs.ini import CFG
     from x84.bbs import session
     from multiprocessing import Queue
-    from threading import Lock, Condition
+    from threading import Lock
 
     log = logging.getLogger(__name__)
 
     if not len(servers):
         raise ValueError("No servers configured for event loop! (ssh, telnet)")
 
-    timeout_ipc = CFG.getint('system', 'timeout_ipc')
     tap_events = CFG.getboolean('session', 'tap_events')
     locks = dict()
 
@@ -415,10 +426,11 @@ def _loop(servers):
         try:
             import web, OpenSSL
             from x84 import webserve
-            web_modules = set([key.strip() for key in CFG.get('web', 'modules').split(',')])
+            module_names = CFG.get('web', 'modules').split(',')
+            web_modules = set(map(str.strip, module_names))
             webserve.start(web_modules)
-        except ImportError, e:
-            log.error('%r' % e)
+        except ImportError as err:
+            log.error(err)
 
     # setup message polling mechanism
     poll_interval = None
