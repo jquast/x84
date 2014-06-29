@@ -36,14 +36,19 @@ class FetchUpdates(threading.Thread):
         passwd = ini.CFG.get('bbs-scene', 'pass')
         logger.debug('fetching %r ..', self.url)
         stime = time.time()
-        req = requests.get(self.url, auth=(usernm, passwd))
-        if 200 != req.status_code:
-            logger.error(req.content)
-            logger.error('bbs-scene.org returned %s', req.status_code)
+        try:
+            req = requests.get(self.url, auth=(usernm, passwd))
+        except requests.ConnectionError as err:
+            logger.error(err)
             return
         else:
-            logger.info('bbs-scene.org returned %d in %2.2fs',
-                        req.status_code, time.time() - stime)
+            if 200 != req.status_code:
+                logger.error(req.content)
+                logger.error('bbs-scene.org returned %s', req.status_code)
+                return
+            else:
+                logger.info('bbs-scene.org returned %d in %2.2fs',
+                            req.status_code, time.time() - stime)
 
         # can throw exceptions when xml is invalid, as a thread, nobody needs
         # to catch it. theres some things that should be CDATA wrapped .. these

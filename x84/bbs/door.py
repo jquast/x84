@@ -1,15 +1,12 @@
 """
 Door package for x/84 BBS http://github.com/jquast/x84
 """
-import termios
 import logging
 import select
 import codecs
 import struct
 import shlex
-import fcntl
 import time
-import pty
 import sys
 import os
 import re
@@ -353,6 +350,14 @@ class Door(object):
         calls execvpe() while the parent process pipes telnet session
         IPC data to and from the slave pty until child process exits.
         """
+        try:
+            import termios
+            import fcntl
+            import pty
+        except ImportError, err:
+            raise OSError('door support not (yet) supported on {0} platform.'
+                          .format(sys.platform.lower()))
+
         logger = logging.getLogger()
         env = self.env.copy()
         env.update({'LANG': self.env_lang,
@@ -365,6 +370,8 @@ class Door(object):
         logger.debug('os.execvpe(cmd={self.cmd}, args={self.args}, '
                      'env={self.env}'.format(self=self))
         try:
+            # on Solaris we would need to use something like I've done
+            # in pexpect project, a custom pty fork implementation.
             pid, self.master_fd = pty.fork()
         except OSError, err:
             # too many open files, out of memory, no such file/directory
@@ -445,6 +452,8 @@ class Door(object):
             self.master_fd in select.select([self.master_fd, ], (), (), 0)[0])
 
     def resize(self):
+        import termios
+        import fcntl
         logger = logging.getLogger()
         logger.debug('send TIOCSWINSZ: %dx%d',
                      self._term.width, self._term.height)
