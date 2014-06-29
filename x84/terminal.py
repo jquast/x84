@@ -251,10 +251,18 @@ def start_process(inp_queue, out_queue, sid, env, lock, CFG, binary=False):
         term, inp_queue, out_queue, sid, env, lock, encoding)
     # copy session ptr to logger handler for 'handle' emit logging
     hdlr.session = session
-    # run session
-    session.run()
-    # signal engine to shutdown subprocess
-    out_queue.send(('exit', None))
+    try:
+        # run session
+        session.run()
+    finally:
+        # signal engine to shutdown subprocess
+        try:
+            out_queue.send(('exit', None))
+        except IOError, err:
+            # ignore [Errno 232] The pipe is being closed,
+            # only occurs on win32 platform after early exit
+            if err.errno != 232:
+                raise
 
 
 def on_naws(client):
