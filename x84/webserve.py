@@ -27,11 +27,11 @@ import web
 queues = None
 locks = None
 
+
 def start(web_modules):
     """ fire up a web server with the given modules as endpoints """
     from threading import Thread
     import logging
-    import imp
     import sys
     import os
     from x84.bbs.ini import CFG
@@ -49,13 +49,15 @@ def start(web_modules):
 
         # first check for it in the scripttpath's webmodules dir
         try:
-            module = __import__('webmodules.%s' % mod, fromlist=('webmodules',))
+            module = __import__('webmodules.%s' % mod,
+                                fromlist=('webmodules',))
         except ImportError:
             pass
 
         # fallback to the engine's webmodules dir
         if module is None:
-            module = __import__('x84.webmodules.%s' % mod, fromlist=('x84.webmodules',))
+            module = __import__('x84.webmodules.%s' % mod,
+                                fromlist=('x84.webmodules',))
 
         api = module.web_module()
         urls += api['urls']
@@ -68,16 +70,19 @@ def start(web_modules):
     t.start()
     logger.info(u'Web modules: %s' % u', '.join(web_modules))
 
+
 def server_thread(urls, funcs):
     """ thread for running the web server """
     from x84.bbs import ini
     from web.wsgiserver import CherryPyWSGIServer
 
-    CherryPyWSGIServer.ssl_certificate = ini.CFG.get('web', 'cert')
-    CherryPyWSGIServer.ssl_private_key = ini.CFG.get('web', 'key')
-
+    if ini.CFG.has_option('web', 'cert'):
+        CherryPyWSGIServer.ssl_certificate = ini.CFG.get('web', 'cert')
+    if ini.CFG.has_option('web', 'key'):
+        CherryPyWSGIServer.ssl_private_key = ini.CFG.get('web', 'key')
     if ini.CFG.has_option('web', 'chain'):
         CherryPyWSGIServer.ssl_certificate_chain = ini.CFG.get('web', 'chain')
 
     app = web.application(urls, funcs)
-    web.httpserver.runsimple(app.wsgifunc(), (ini.CFG.get('web', 'addr'), ini.CFG.getint('web', 'port')))
+    addr = (ini.CFG.get('web', 'addr'), ini.CFG.getint('web', 'port'))
+    web.httpserver.runsimple(app.wsgifunc(), addr)

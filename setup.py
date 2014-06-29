@@ -28,6 +28,8 @@ maybe_requires = [
     'paramiko >=1.14.0',
     'ecdsa >=0.11',
     'pycrypto >= 2.6.1',
+    'cryptography >=0.4',
+    'pyOpenSSL >=0.14',
 ]
 
 
@@ -92,8 +94,9 @@ def get_maybe_requires():
 
     This list extends ``install_requires`` of the call to setup().
     """
-    msg_nosupport = ('This installation will not support ssh server '
-                     'or fast encryption of passwords using bcrypt.')
+    msg_nosupport = ('This installation will not support ssh, ssl '
+                     'web server, or fast encryption of passwords '
+                     'using bcrypt.')
 
     has_python_h = bool(
         'Python.h' in os.listdir(get_python_inc()))
