@@ -26,7 +26,7 @@ If the server is using SSL, the block may look like this:
 import irc.client
 import irc.connection
 import time
-import select
+import random
 POLL_KEY = 0.15  # blocking ;; how often to poll keyboard
 POLL_OUT = 0.25  # seconds elapsed before screen update, prevents flood
 POLL_IRC = 0.05  # seconds to spend on processing IRC messages
@@ -414,7 +414,7 @@ def main(channel=None, caller=None):
 
         # process keystroke as input, or, failing that,
         # as a command key to the pager. refresh portions of
-        # input bar or act on cariage return, accordingly.
+        # input bar or act on carriage return, accordingly.
         elif inp is not None:
             otxt = readline.process_keystroke(inp)
             if readline.carriage_returned:
