@@ -265,8 +265,9 @@ class Session(object):
         if 0 != len(self._script_stack):
             # recover from exception
             fault = self._script_stack.pop()
-            oper = 'RESUME' if len(self._script_stack) else 'STOP'
-            stop = bool(0 == len(self._script_stack))
+            stop, oper = True, u'STOP'
+            if len(self._script_stack):
+                stop, oper = False, u'RESUME'
             msg = (u'%s %safter general exception in %s.' % (
                 oper, (
                     (self._script_stack[-1][0] + u' ')
@@ -275,7 +276,7 @@ class Session(object):
             logger.info(msg)
             self.write(u'\r\n\r\n')
             if stop:
-                self.write(self.terminal.red_reverse('stop'))
+                self.write(self.terminal.red_reverse(u'stop'))
             else:
                 self.write(self.terminal.bold_green(u'continue'))
                 self.write(u' ' + self.terminal.bold_cyan(
