@@ -31,24 +31,23 @@ class FetchUpdates(threading.Thread):
         import requests
         import xml.etree.ElementTree
         from x84.bbs import ini
-        logger = logging.getLogger()
+        log = logging.getLogger(__name__)
         usernm = ini.CFG.get('bbs-scene', 'user')
         passwd = ini.CFG.get('bbs-scene', 'pass')
-        logger.debug('fetching %r ..', self.url)
+        log.debug('fetching %r ..', self.url)
         stime = time.time()
         try:
             req = requests.get(self.url, auth=(usernm, passwd))
         except requests.ConnectionError as err:
-            logger.error(err)
+            log.error(err)
+            return
+        if 200 != req.status_code:
+            log.error(req.content)
+            log.error('bbs-scene.org returned %s', req.status_code)
             return
         else:
-            if 200 != req.status_code:
-                logger.error(req.content)
-                logger.error('bbs-scene.org returned %s', req.status_code)
-                return
-            else:
-                logger.info('bbs-scene.org returned %d in %2.2fs',
-                            req.status_code, time.time() - stime)
+            log.info('bbs-scene.org returned %d in %2.2fs',
+                     req.status_code, time.time() - stime)
 
         # can throw exceptions when xml is invalid, as a thread, nobody needs
         # to catch it. theres some things that should be CDATA wrapped .. these
@@ -96,7 +95,7 @@ def chk_thread(thread):
     """
     from x84.bbs import getsession, DBProxy
     import logging
-    logger = logging.getLogger()
+    log = logging.getLogger(__name__)
     session = getsession()
     if thread is not None and not thread.is_alive():
         udb = DBProxy('oneliner')
@@ -107,10 +106,10 @@ def chk_thread(thread):
                 udb[key] = value
                 nlc += 1
         if nlc:
-            logger.debug('%d new entries', nlc)
+            log.debug('%d new entries', nlc)
             session.buffer_event('oneliner_update', True)
         else:
-            logger.debug('no new bbs-scene.org entries')
+            log.debug('no new bbs-scene.org entries')
         return True
 
 
@@ -290,7 +289,7 @@ def post_bbs_scene(oneliner, dumb=True):
     import xml.etree.ElementTree
     import requests
     from x84.bbs import echo, getch, getterminal, getsession, ini
-    logger = logging.getLogger()
+    log = logging.getLogger(__name__)
     session, term = getsession(), getterminal()
     prompt_api = u'MAkE AN ASS Of YOURSElf ON bbS-SCENE.ORG?!'
     heard_api = u'YOUR MESSAGE hAS bEEN brOAdCAStEd.'
@@ -327,27 +326,31 @@ def post_bbs_scene(oneliner, dumb=True):
     usernm = ini.CFG.get('bbs-scene', 'user')
     passwd = ini.CFG.get('bbs-scene', 'pass')
     data = {
-            'bbsname': ini.CFG.get('system', 'bbsname'),
-            'alias': session.user.handle,
-            'oneliner': oneliner.strip(),
-            }
+        'bbsname': ini.CFG.get('system', 'bbsname'),
+        'alias': session.user.handle,
+        'oneliner': oneliner.strip(),
+    }
     # post to bbs-scene.rog
-    req = requests.post(url, auth=(usernm, passwd), data=data)
-    if (req.status_code != 200 or
-            (xml.etree.ElementTree.XML(req.content)
-                .find('success').text != 'true')):
-        echo(u'\r\n\r\n%srequest failed,\r\n' % (term.clear_eol,))
-        echo(u'%r' % (req.content,))
-        echo(u'\r\n\r\n%s(code: %s).\r\n' % (
-            term.clear_eol, req.status_code,))
-        echo(u'\r\n%sPress any key ..' % (term.clear_eol,))
-        logger.warn('bbs-scene.org api request failed')
-        getch()
-        return None
-    logger.info('bbs-scene.org api (%d): %r/%r', req.status_code,
-                session.user.handle, oneliner.strip())
-    thread = FetchUpdates()
-    thread.start()
+    try:
+        req = requests.post(url, auth=(usernm, passwd), data=data)
+    except requests.ConnectionError as err:
+        log.warn(err)
+    else:
+        if (req.status_code != 200 or
+                (xml.etree.ElementTree.XML(req.content)
+                    .find('success').text != 'true')):
+            echo(u'\r\n\r\n%srequest failed,\r\n' % (term.clear_eol,))
+            echo(u'%r' % (req.content,))
+            echo(u'\r\n\r\n%s(code: %s).\r\n' % (
+                term.clear_eol, req.status_code,))
+            echo(u'\r\n%sPress any key ..' % (term.clear_eol,))
+            log.warn('bbs-scene.org api request failed')
+            getch()
+            return None
+        log.info('bbs-scene.org api (%d): %r/%r', req.status_code,
+                 session.user.handle, oneliner.strip())
+        thread = FetchUpdates()
+        thread.start()
     if not dumb:
         # clear line w/input bar,
         echo(term.normal + term.move(yloc, 0) + term.clear_eol)
