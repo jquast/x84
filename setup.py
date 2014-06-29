@@ -101,8 +101,8 @@ def get_maybe_requires():
     bin_cc = UnixCCompiler.executables.get('compiler', ['cc'])[0]
     has_cc = False
     try:
-        has_cc = bool(
-            0 == subprocess.call(('which', bin_cc), stdout=open(os.devnull, 'w')))
+        has_cc = bool(0 == subprocess.call(('which', bin_cc),
+                                           stdout=open(os.devnull, 'w')))
     except WindowsError:
         pass
 

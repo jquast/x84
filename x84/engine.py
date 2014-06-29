@@ -330,12 +330,12 @@ def session_recv(locks, terminals, log, tap_events):
                 # sub-process unexpectedly closed
                 log.exception(err)
                 unregister_tty(tty)
-                continue
+                break
 
             # 'exit' event, unregisters client
             if event == 'exit':
                 kill_session(tty.client, 'client exit')
-                continue
+                break
 
             # 'logger' event, propagated upward
             elif event == 'logger':
@@ -502,10 +502,8 @@ def _loop(servers):
             try:
                 session_recv(locks, terms, log, tap_events)
             except IOError, err:
-                # allow `[Errno 6] The handle is invalid': the client
-                # process has left us during the while loop, no bother.
-                if err.errno != errno.ENXIO:
-                    raise
+                # if the ipc closes while we poll, warn and continue
+                log.warn(err)
 
         # send tcp data to clients
         client_send(terms, log)
