@@ -411,7 +411,7 @@ def _loop(servers):
     from multiprocessing import Queue
     from threading import Lock
     SELECT_POLL = 0.15
-    WIN32 = sys.platform.lower() != 'win32'
+    WIN32 = sys.platform.lower().startswith('win32')
     if WIN32:
         # poll much more often for windows until we come up with something
         # better regarding checking for session output
