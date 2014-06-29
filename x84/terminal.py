@@ -1,13 +1,9 @@
 """
 Terminal handler for x/84 bbs.  http://github.com/jquast/x84
 """
-import threading
 import logging
-import socket
 import codecs
-import time
-import re
-
+import sys
 from blessed import Terminal as BlessedTerminal
 
 TERMINALS = dict()
@@ -18,6 +14,8 @@ class Terminal(BlessedTerminal):
         self.rows = rows
         self.columns = columns
         BlessedTerminal.__init__(self, kind, stream)
+        if sys.platform.lower().startswith('win32'):
+            self._normal = '\x1b[m'
 
     def inkey(self, timeout=None, esc_delay=0.35):
         try:
