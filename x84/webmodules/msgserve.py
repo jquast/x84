@@ -42,8 +42,11 @@ INQUEUE = None
 OUTQUEUE = None
 LOCK = None
 QUEUE_TIMEOUT = 60
+EMPTY_ERR = {u'response': False, u'message': u'No response'}
+
 
 import web
+
 
 class messages():
     """
@@ -65,24 +68,23 @@ class messages():
         else:
             last = int(last)
 
-        if not 'HTTP_AUTH_X84NET' in web.ctx.env.keys():
+        if 'HTTP_AUTH_X84NET' not in web.ctx.env:
             raise web.HTTPError('401 Unauthorized', {}, 'Unauthorized')
 
         data = {
-            'auth': web.ctx.env['HTTP_AUTH_X84NET']
-            , 'network': network
-            , 'action': 'pull'
-            , 'last': last
+            'auth': web.ctx.env['HTTP_AUTH_X84NET'],
+            'network': network,
+            'action': 'pull',
+            'last': last,
         }
 
         locks[LOCK].acquire()
         queues[INQUEUE].put(data)
-
         try:
             response = queues[OUTQUEUE].get(True, QUEUE_TIMEOUT)
         except Queue.Empty:
             logger.error(u'Empty queue')
-            raise web.HTTPError('500 Server Error', {}, json.dumps({u'response': False, u'message': u'No response'}))
+            raise web.HTTPError('500 Server Error', {}, json.dumps(EMPTY_ERR))
         finally:
             locks[LOCK].release()
 
@@ -90,9 +92,9 @@ class messages():
             return json.dumps(response)
         except:
             logger.error(u'Unable to serialize: %r' % response)
-            raise web.HTTPError('500 Server Error', {}, json.dumps({u'response': False, u'message': u'Error'}))
+            raise web.HTTPError('500 Server Error', {}, json.dumps(EMPTY_ERR))
 
-    def PUT(self, network, null):
+    def PUT(self, network, *args):
         """ PUT method - post messages """
         import json
         import Queue
@@ -102,17 +104,17 @@ class messages():
         global INQUEUE, OUTQUEUE, LOCK, QUEUE_TIMEOUT
         logger = logging.getLogger()
 
-        if not 'HTTP_AUTH_X84NET' in web.ctx.env.keys():
+        if 'HTTP_AUTH_X84NET' not in web.ctx.env:
             logger.error(u'Unauthorized connection')
             raise web.HTTPError('401 Unauthorized', {}, 'Unauthorized')
 
         webdata = web.input()
 
         data = {
-            'auth': web.ctx.env['HTTP_AUTH_X84NET']
-            , 'network': network
-            , 'action': 'push'
-            , 'message': json.loads(webdata.message)
+            'auth': web.ctx.env['HTTP_AUTH_X84NET'],
+            'network': network,
+            'action': 'push',
+            'message': json.loads(webdata.message)
         }
 
         locks[LOCK].acquire()
@@ -122,42 +124,37 @@ class messages():
             response = queues[OUTQUEUE].get(True, QUEUE_TIMEOUT)
         except Queue.Empty:
             logger.error(u'Empty queue')
-            raise web.HTTPError('500 Server Error', {}, json.dumps({u'response': False, u'message': u'No response'}))
+            raise web.HTTPError('500 Server Error', {}, json.dumps(EMPTY_ERR))
         finally:
             locks[LOCK].release()
 
         try:
             return json.dumps(response)
         except:
-            logger.error(u'Unable to serialize: %r' % response)
-            raise web.HTTPError('500 Server Error', {}, json.dumps({u'response': False, u'message': u'Error'}))
+            logger.error(u'Unable to serialize: {0!r}'.format(response))
+            raise web.HTTPError('500 Server Error', {}, json.dumps(EMPTY_ERR))
 
-"""
-functions for processing the request within x84
-"""
 
-def server_error(logger, queue, logtext, message=None):
+# functions for processing the request within x84
+def server_error(log, queue, msg, http_msg=None):
     """ helper method for logging and returning errors """
-    if message is None:
-        message = logtext
-    logger.error(logtext)
-    queue.put({u'response': False, u'message': message})
+    http_msg = http_msg or msg
+    log.error(msg)
+    queue.put({u'response': False, u'message': http_msg})
+
 
 def main():
     """ server request handling process """
-    from x84.bbs import ini, msgbase, DBProxy, getsession, echo, getterminal
+    from x84.bbs import ini, msgbase, DBProxy
     from x84.bbs.msgbase import to_utctime, to_localtime, Msg
-    from x84.webserve import queues, locks
+    from x84.webserve import queues
     import hashlib
     import time
     import logging
-    import json
     import Queue
 
     global INQUEUE, OUTQUEUE, LOCK, QUEUE_TIMEOUT
-    session = getsession()
-    logger = logging.getLogger()
-    term = getterminal()
+    log = logging.getLogger()
 
     try:
         data = queues[INQUEUE].get(True, QUEUE_TIMEOUT)
@@ -166,22 +163,32 @@ def main():
 
     queue = queues[OUTQUEUE]
 
-    if 'network' not in data.keys():
-        server_error(logger, queue, u'Network not specified')
+    if 'network' not in data:
+        server_error(log=log, queue=queue,
+                     msg=u'Network not specified')
         return
 
-    if 'action' not in data.keys():
-        server_error(logger, queue, u'[%s] Action not specified' % data['network'], u'No action given')
+    if 'action' not in data:
+        server_error(log=log, queue=queue,
+                     msg=(u'[{data[network]}] Action not specified'
+                          .format(data=data)),
+                     http_msg=u'No action given')
         return
 
-    if 'auth' not in data.keys():
-        server_error(logger, queue, u'[%s] Auth token missing' % data['network'], u'No auth token given')
+    if 'auth' not in data:
+        server_error(log=log, queue=queue,
+                     msg=(u'[{data[network]}] Auth token missing'
+                          .format(data=data)),
+                     http_msg=u'No auth token given')
         return
 
     auth = data['auth'].split('|')
 
     if len(auth) != 3:
-        server_error(logger, queue, u'[%s] Improper token' % data['network'], u'Bad token given')
+        server_error(log=log, queue=queue,
+                     msg=(u'[{data[network]}] Improper token'
+                          .format(data=data)),
+                     http_msg=u'Bad token given')
         return
 
     board_id = int(auth[0])
@@ -189,34 +196,53 @@ def main():
     when = int(auth[2])
     now = int(time.time())
     netcfg = 'msgnet_%s' % data['network']
-    logger.debug(u"[%s] client %d connecting for %s" % (data['network'], board_id, data['action']))
+    log.debug(u"[{data[network]] client {board_id} request for {data[action]}"
+              .format(data=data, board_id=board_id))
 
     if not ini.CFG.has_option(netcfg, 'keys_db_name'):
-        server_error(logger, queue, u'[%s] No keys database config' % data['network'], u'Server error')
+        server_error(log=log, queue=queue,
+                     msg=(u'[{data[network]}] No keys database config'
+                          .format(data=data)),
+                     http_msg=u'Server error')
         return
 
     keysdb = DBProxy(ini.CFG.get(netcfg, 'keys_db_name'))
 
     if str(board_id) not in keysdb.keys():
-        server_error(logger, queue, u'[%s] No such key for this network' % data['network'], u'Invalid key')
+        server_error(log=log, queue=queue,
+                     msg=(u'[{data[network]}] No such key for this network'
+                          .format(data=data)),
+                     http_msg=u'Invalid key')
         return
 
     board_key = keysdb[str(board_id)]
 
     if when > now or now - when > 15:
-        server_error(logger, queue, u'[%s] Expired token' % data['network'], u'Expired token')
+        server_error(log=log, queue=queue,
+                     msg=(u'[{data[network]} Expired token'
+                          .format(data=data)),
+                     http_msg=u'Expired token')
         return
 
     if token != hashlib.sha256('%s%d' % (board_key, when)).hexdigest():
-        server_error(logger, queue, u'[%s] Invalid token' % data['network'], u'Bad token')
+        server_error(log=log, queue=queue,
+                     msg=(u'[{data[network]} Invalid token'
+                          .format(data=data)),
+                     http_msg=u'Bad token')
         return
 
     if not ini.CFG.has_option(netcfg, 'source_db_name'):
-        server_error(logger, queue, u'[%s] Source DB not configured' % data['network'], u'Server error')
+        server_error(log=log, queue=queue,
+                     msg=(u'[{data[network]} Source DB not configured'
+                          .format(data=data)),
+                     http_msg=u'Server error')
         return
 
     if not ini.CFG.has_option(netcfg, 'trans_db_name'):
-        server_error(logger, queue, u'[%s] Translation DB not configured' % data['network'], u'Server error')
+        server_error(log=log, queue=queue,
+                     msg=(u'[{data[network]} Translation DB not configured'
+                          .format(data=data)),
+                     http_msg=u'Server error')
         return
 
     tagdb = DBProxy(msgbase.TAGDB)
@@ -224,9 +250,9 @@ def main():
     sourcedb = DBProxy(ini.CFG.get(netcfg, 'source_db_name'))
     transdb = DBProxy(ini.CFG.get(netcfg, 'trans_db_name'))
 
+    # XXX to sub-func
     if data['action'] == 'pull':
-
-        """ client is requesting to pull messages """
+        # client is requesting to pull messages
 
         if data['network'] not in tagdb.keys():
             queue.put({u'response': True, u'messages': []})
@@ -242,7 +268,7 @@ def main():
 
         for m in tagdb[data['network']]:
             if count == 20:
-                logger.info(u'Too many messages, sending partial response')
+                log.info(u'Too many messages, sending partial response')
                 break
 
             if last != None and int(m) <= last:
@@ -256,36 +282,41 @@ def main():
                 continue
 
             pushmsg = {
-                u'id': msg.idx
-                , u'author': msg.author
-                , u'recipient': msg.recipient
-                , u'parent': msg.parent
-                , u'subject': msg.subject
-                , u'tags': [tag for tag in msg.tags if tag != data['network']]
-                , u'ctime': to_utctime(msg.ctime)
-                , u'body': msg.body
+                u'id': msg.idx,
+                u'author': msg.author,
+                u'recipient': msg.recipient,
+                u'parent': msg.parent,
+                u'subject': msg.subject,
+                u'tags': [tag for tag in msg.tags if tag != data['network']],
+                u'ctime': to_utctime(msg.ctime),
+                u'body': msg.body
             }
             msgs.append(pushmsg)
 
         howmany = len(msgs)
 
         if howmany > 0:
-            logger.info(u'[%s] Delivered %d messages to board %d' % (data['network'], howmany, int(board_id)))
+            log.info(u'[{data[network]} {num} msgs sent to board_id {board_id}'
+                     .format(data=data, num=howmany, board_id=board_id))
 
         queue.put({u'response': True, u'messages': msgs})
-    elif data['action'] == 'push':
 
-        """ client is requesting to push messages """
+    elif data['action'] == 'push':
+        # client is requesting to push messages
 
         if 'message' not in data.keys():
-            server_error(logger, queue, u'No message')
+            server_error(log, queue, u'No message')
             return
 
         pullmsg = data['message']
 
-        for k in [u'author', u'recipient', u'subject', u'parent', u'tags', u'ctime', u'body']:
-            if k not in pullmsg.keys():
-                server_error(logger, queue, u'Missing %s' % k)
+        # validate
+        for key in (u'author', u'recipient', u'subject', u'parent',
+                    u'tags', u'ctime', u'body', ):
+            if key not in pullmsg.keys():
+                server_error(log=log, queue=queue,
+                             msg=(u'Missing key in message: {key}'
+                                  .format(key=key)))
                 return
 
         msg = Msg()
@@ -295,7 +326,8 @@ def main():
         msg.parent = pullmsg['parent']
         msg.tags = set(pullmsg['tags'] + [data['network']])
         msg.body = pullmsg['body']
-        msg.save(noqueue=True, ctime=to_localtime(pullmsg['ctime'].partition('.')[0]))
+        msg.save(noqueue=True,
+                 ctime=to_localtime(pullmsg['ctime'].partition('.')[0]))
         sourcedb.acquire()
         transdb.acquire()
         sourcedb[msg.idx] = board_id
@@ -304,7 +336,12 @@ def main():
         transdb.release()
         queue.put({u'response': True, u'id': msg.idx})
     else:
-        server_error(logger, queue, u'Unknown action: %s' % data['action'])
+        server_error(log=log, queue=queue,
+                     msg=(u'[{data[network]}] Unknown action, {data[action]!r}'
+                          .format(data=data)),
+                     http_msg=(u'Unknown action, {data[action]!r}'
+                               .format(data=data)))
+
 
 def web_module():
     """ Setup the module and return a dict of its REST API """
@@ -320,6 +357,8 @@ def web_module():
     connect_bot(u'msgserve')
 
     return {
-        'urls': ('/messages/([^/]+)/([^/]*)/?', 'messages')
-        , 'funcs': { 'messages': messages }
+        'urls': ('/messages/([^/]+)/([^/]*)/?', 'messages'),
+        'funcs': {
+            'messages': messages
         }
+    }

@@ -404,19 +404,22 @@ def _loop(servers):
     #         Too many local variables (24/15)
     import logging
     import select
-    import errno
+    import time
     import sys
     from x84.terminal import get_terminals, kill_session
     from x84.bbs.ini import CFG
     from x84.bbs import session
     from multiprocessing import Queue
     from threading import Lock
-    SELECT_POLL = 0.15
+    SELECT_POLL = 0.05
     WIN32 = sys.platform.lower().startswith('win32')
     if WIN32:
         # poll much more often for windows until we come up with something
         # better regarding checking for session output
         SELECT_POLL = 0.05
+    # WIN32 has no session_fds, use empty set.
+    session_fds = set()
+
     log = logging.getLogger(__name__)
 
     if not len(servers):
@@ -425,13 +428,21 @@ def _loop(servers):
     tap_events = CFG.getboolean('session', 'tap_events')
     locks = dict()
 
-    # bot coordination
+    # "bots" ..
+    poll_interval = None
+    last_poll = None
     if CFG.has_section('bots'):
+        from x84.bbs.telnet import connect_bot
         session.BOTQUEUE = Queue()
         session.BOTLOCK = Lock()
-
-    # web server
-    web_modules = set()
+        DO_BOTS = True
+        if CFG.has_option('msg', 'poll_interval'):
+            poll_interval = CFG.getint('msg', 'poll_interval')
+            last_poll = int(time.time()) - poll_interval
+            log.debug('bots will poll at {0}s intervals.'
+                      .format(poll_interval))
+    else:
+        DO_BOTS = False
 
     if CFG.has_section('web'):
         try:
@@ -441,20 +452,10 @@ def _loop(servers):
             module_names = CFG.get('web', 'modules', '').split(',')
             if module_names:
                 web_modules = set(map(str.strip, module_names))
+                log.info('starting webmodules: {0!r}'.format(web_modules))
                 webserve.start(web_modules)
         except ImportError as err:
             log.error(err)
-
-    # setup message polling mechanism
-    poll_interval = None
-    last_poll = None
-
-    if CFG.has_option('msg', 'poll_interval'):
-        import time
-        poll_interval = CFG.getint('msg', 'poll_interval')
-        last_poll = int(time.time()) - poll_interval
-
-    session_fds = set()
 
     while True:
         # shutdown, close & delete inactive clients,
@@ -488,11 +489,9 @@ def _loop(servers):
 
         # fire up message polling process if enabled
         if poll_interval is not None:
-            import time
             now = int(time.time())
-
             if now - last_poll >= poll_interval:
-                from x84.bbs.telnet import connect_bot
+                log.debug("connect_bot(msgpoll)")
                 connect_bot(u'msgpoll')
                 last_poll = now
 
