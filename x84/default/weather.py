@@ -213,15 +213,18 @@ def get_centigrade():
     echo(term.bold_yellow_reverse(u'F'))
     echo(term.bold_yellow(u')'))
     echo(u'? ')
+    anonymous = bool(session.user.handle == 'anonymous')
     while True:
         inp = getch()
         if inp in (u'c', u'C'):
             session.user['centigrade'] = True
-            session.user.save()
+            if not anonymous:
+                session.user.save()
             break
         elif inp in (u'f', u'F'):
             session.user['centigrade'] = False
-            session.user.save()
+            if not anonymous:
+                session.user.save()
             break
         elif inp in (u'q', u'Q', term.KEY_EXIT):
             break
@@ -255,6 +258,10 @@ def chk_save_location(location):
     session, term = getsession(), getterminal()
     stored_location = session.user.get('location', dict()).items()
     if (sorted(location.items()) == sorted(stored_location)):
+        # location already saved
+        return
+    if session.user.handle == 'anonymous':
+        # anonymous cannot save preferences
         return
 
     # prompt to store (unsaved/changed) location
@@ -581,7 +588,7 @@ def main():
         while True:
             centigrade = session.user.get('centigrade', False)
             display_weather(todays, forecast, centigrade)
-            echo(term.move_x(panel_width + 5))
+            echo(term.move(term.height - 1, panel_width + 5))
             echo(term.yellow_reverse(u'--ENd Of tRANSMiSSiON--'))
             # allow re-displaying weather between C/F, even at EOT prompt
             if getch() == cf_key:
