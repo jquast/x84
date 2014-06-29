@@ -350,6 +350,7 @@ def prompt_network(msg, network_tags):
 
     return False
 
+
 def main(msg=None):
     """ Main procedure. """
     from x84.bbs import Msg, getsession, echo, getterminal
@@ -360,13 +361,17 @@ def main(msg=None):
     is_network_msg = False
 
     if CFG.has_option('msg', 'network_tags'):
-        network_tags = [tag.strip() for tag in CFG.get('msg', 'network_tags').split(',')]
+        network_tags = map(
+            str.strip, CFG.get('msg', 'network_tags').split(','))
 
     if new_message:
         msg = Msg()
         msg.tags = ('public',)
-    else:
-        is_network_msg = True if len([tag for tag in network_tags if tag in msg.tags]) > 0 else False
+
+    elif network_tags is not None:
+        net_tags = [tag for tag in network_tags if tag in msg.tags]
+        is_network_msg = True if len(net_tags) > 0 else False
+
     banner()
     while True:
         session.activity = 'Constructing a %s message' % (
@@ -385,28 +390,29 @@ def main(msg=None):
         if not prompt_tags(msg):
             break
         if is_network_msg:
+            # XX move to sub-func
             how_many = len([tag for tag in network_tags if tag in msg.tags])
             if how_many == 0:
-                echo(u''.join((
-                    u'\r\n'
-                    , term.bold_yellow_on_red(u' YOU tOld ME thiS WAS A NEtWORk MESSAGE. WhY did YOU liE?! ')
-                    , u'\r\n'
-                    )))
+                echo(u''.join((u'\r\n',
+                               term.bold_yellow_on_red(
+                                   u' YOU tOld ME thiS WAS A NEtWORk MESSAGE. '
+                                   u'WhY did YOU liE?! '),
+                               u'\r\n')))
                 term.inkey(timeout=7)
                 continue
             if how_many > 1:
                 echo(u''.join((
-                    u'\r\n'
-                    , term.bold_yellow_on_red(u' ONlY ONE NEtWORk CAN bE POStEd tO At A tiME, SORRY ')
-                    , u'\r\n'
-                    )))
+                    u'\r\n', term.bold_yellow_on_red(
+                        u' ONlY ONE NEtWORk CAN bE POStEd tO At A tiME, '
+                        u'SORRY '),
+                    u'\r\n')))
                 continue
             if u'public' not in msg.tags:
-                echo(u''.join((
-                    u'\r\n'
-                    , term.bold_yellow_on_red(u" YOU ShOUldN't SENd PRiVAtE MESSAGES OVER tHE NEtWORk... ")
-                    , u'\r\n'
-                    )))
+                echo(u''.join((u'\r\n',
+                               term.bold_yellow_on_red(
+                                   u" YOU ShOUldN't SENd PRiVAtE "
+                                   u"MESSAGES OVER tHE NEtWORk... "),
+                               u'\r\n')))
                 term.inkey(timeout=7)
                 continue
         display_msg(msg)
