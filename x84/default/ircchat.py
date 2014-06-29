@@ -93,6 +93,11 @@ def main(channel=None, caller=None):
         except:
             channel = '#1984'
 
+    nick = session.handle.replace(' ', '_')
+    if nick == 'anonymous':
+        # anonymous is heavily used, make up a new one
+        nick = 'anon{0:03d}'.format(random.randrange(999))
+
     if not channel[0] in '#!':
         channel = '#' + channel
     try:
@@ -348,7 +353,7 @@ def main(channel=None, caller=None):
     server.connect(
         host,
         port,
-        session.handle.replace(' ', '_'),
+        nick,
         ircname=swag,
         connect_factory=factory,
     )
