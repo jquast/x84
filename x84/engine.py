@@ -404,6 +404,7 @@ def _loop(servers):
     #         Too many local variables (24/15)
     import logging
     import select
+    import errno
     import sys
     from x84.terminal import get_terminals, kill_session
     from x84.bbs.ini import CFG
@@ -498,7 +499,13 @@ def _loop(servers):
 
         # receive new data from session terminals
         if WIN32 or set(session_fds) & set(ready_r):
-            session_recv(locks, terms, log, tap_events)
+            try:
+                session_recv(locks, terms, log, tap_events)
+            except IOError, err:
+                # allow `[Errno 6] The handle is invalid': the client
+                # process has left us during the while loop, no bother.
+                if err.errno != errno.ENXIO:
+                    raise
 
         # send tcp data to clients
         client_send(terms, log)
