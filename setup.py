@@ -99,8 +99,12 @@ def get_maybe_requires():
         'Python.h' in os.listdir(get_python_inc()))
 
     bin_cc = UnixCCompiler.executables.get('compiler', ['cc'])[0]
-    has_cc = bool(
-        0 == subprocess.call(('which', bin_cc), stdout=open(os.devnull, 'w')))
+    has_cc = False
+    try:
+        has_cc = bool(
+            0 == subprocess.call(('which', bin_cc), stdout=open(os.devnull, 'w')))
+    except WindowsError:
+        pass
 
     has_libffi = False
     try:
@@ -110,8 +114,9 @@ def get_maybe_requires():
     except OSError, err:
         if err.errno != errno.ENOENT:
             raise
-        warnings.warn("pkg-config was not found. {0}"
-                      .format(msg_nosupport))
+        warnings.warn("pkg-config was not found. {0}".format(msg_nosupport))
+    except WindowsError:
+        pass
 
     if not has_python_h:
         suggest_cmd = ''
@@ -119,6 +124,8 @@ def get_maybe_requires():
             dist = platform.linux_distribution()[0]
             if dist in ('debian', 'ubuntu',):
                 suggest_cmd = (" Try `apt-get install python2.7-dev'.")
+        elif sys.platform.lower() == 'win32':
+            suggest_cmd = " Try using linux or osx."
         warnings.warn("header files for Python not found (Python.h). "
                       "{0}{1}".format(msg_nosupport, suggest_cmd))
 
@@ -131,6 +138,8 @@ def get_maybe_requires():
             dist = platform.linux_distribution()[0]
             if dist in ('debian', 'ubuntu',):
                 suggest_cmd = (" Try `apt-get install libffi'.")
+        elif sys.platform.lower() == 'win32':
+            suggest_cmd = " Try using linux or osx."
         warnings.warn("Foreign Function Interface library not found (libffi). "
                       "{0}{1}".format(msg_nosupport, suggest_cmd))
 
@@ -143,6 +152,8 @@ def get_maybe_requires():
             dist = platform.linux_distribution()[0]
             if dist in ('debian', 'ubuntu',):
                 suggest_cmd = (" Try `apt-get install gcc'.")
+        elif sys.platform.lower() == 'win32':
+            suggest_cmd = " Try using linux or osx."
         warnings.warn("No C compiler found ({0}). {1}{2}"
                       .format(cc, msg_nosupport, suggest_cmd))
     else:
