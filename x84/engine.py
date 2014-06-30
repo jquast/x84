@@ -385,8 +385,7 @@ def session_recv(locks, terminals, log, tap_events):
 
             # 'db*': access DBProxy API for shared sqlitedict
             elif event.startswith('db'):
-                thread = DBHandler(tty.iqueue, event, data)
-                thread.start()
+                DBHandler(tty.iqueue, event, data).start()
 
             # 'lock': access fine-grained bbs-global locking
             elif event.startswith('lock'):

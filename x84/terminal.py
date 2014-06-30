@@ -67,7 +67,7 @@ def init_term(out_queue, lock, env):
     curses is initialized using the value of 'TERM' of dictionary env,
     as well as a starting window size of 'LINES' and 'COLUMNS'.
 
-    A blessings-abstracted curses terminal is returned.
+    A blessed-abstracted curses terminal is returned.
     """
     from x84.bbs.ini import CFG
     from x84.bbs.ipc import IPCStream
@@ -236,7 +236,7 @@ def start_process(inp_queue, out_queue, sid, env, lock, CFG, binary=False):
     # replace with ipc 'logger' events so that only the main
     # process is responsible for logging.
     hdlr = mkipc_rlog(out_queue)
-    # initialize blessings terminal based on env's TERM.
+    # initialize blessed terminal based on env's TERM.
     term = init_term(out_queue, lock, env)
     # negotiate encoding; terminals with BINARY mode are utf-8
     encoding = CFG.get('session', 'default_encoding')
