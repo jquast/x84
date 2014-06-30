@@ -24,9 +24,11 @@ class DBHandler(threading.Thread):
                   single transfer. When '=', an iterable is yielded and the
                   data is transfered via the IPC Queue as a stream.
         """
+        import logging
         import x84.bbs.ini
         self.queue = queue
         self.event = event
+        self.log = logging.getLogger(__name__)
         assert event[2] in ('-', '='), ('event name must match db[-=]event')
         self.iterable = event[2] == '='
         self.schema = event[3:]
@@ -45,33 +47,33 @@ class DBHandler(threading.Thread):
         """
         Execute database command and return results to session queue.
         """
-        import logging
         import sqlitedict
-        logger = logging.getLogger(__name__)
-        FILELOCK.acquire()
-        # if the bbs is run as root, file ownerships become read-only
-        # and db transactions will throw 'read-only database' errors,
-        # exit earlier if we know that file permissions are to blame
-        if not os.path.exists(os.path.dirname(self.filepath)):
-            os.makedirs(os.path.dirname(self.filepath))
-        assert os.access(os.path.dirname(self.filepath), os.F_OK|os.R_OK), (
-                'Must have read+write+execute access to "%s" for database' % (
-                    os.path.dirname(self.filepath),))
-        if os.path.exists(self.filepath):
-            assert os.access(self.filepath, os.F_OK|os.R_OK), (
-                    'Must have read+write access to %s" for database' % (
-                        self.filepath,))
-        dictdb = sqlitedict.SqliteDict(
-            filename=self.filepath, tablename=self.table, autocommit=True)
-        FILELOCK.release()
+        db_folder = os.path.dirname(self.filepath)
+        with FILELOCK.acquire():
+            # if the bbs is run as root, file ownerships become read-only
+            # and db transactions will throw 'read-only database' errors,
+            # exit earlier if we know that file permissions are to blame
+            if not os.path.exists(db_folder):
+                os.makedirs(db_folder)
+            assert os.access(db_folder, os.F_OK | os.R_OK), (
+                'Must have rw access to db_folder:', db_folder)
+            if os.path.exists(self.filepath):
+                assert os.access(self.filepath, os.F_OK | os.R_OK | os.W_OK), (
+                    'Must have r+w access to fb file:', self.filepath)
+            dictdb = sqlitedict.SqliteDict(filename=self.filepath,
+                                           tablename=self.table,
+                                           autocommit=True)
         assert hasattr(dictdb, self.cmd), (
             "'%(cmd)s' not a valid method of <type 'dict'>" % self)
         func = getattr(dictdb, self.cmd)
         assert callable(func), (
             "'%(cmd)s' not a valid method of <type 'dict'>" % self)
         if self._tap_db:
-            logger.debug('%s/%s%s', self.schema, self.cmd,
-                    '(*%d)' % (len(self.args)) if len(self.args) else '()')
+            args = '()'
+            if len(args):
+                args = '(*%d)' % (len(self.args))
+            self.log.debug('{self.schema}/{self.cmd}{args}'
+                           .format(self=self, args=args))
 
         # single value result,
         if not self.iterable:
@@ -86,7 +88,7 @@ class DBHandler(threading.Thread):
                 # Pokemon exception; package & raise from session process,
                 self.queue.send(('exception', err,))
                 dictdb.close()
-                logger.exception(err)
+                self.log.exception(err)
                 return
             self.queue.send((self.event, result))
             dictdb.close()
@@ -107,7 +109,7 @@ class DBHandler(threading.Thread):
             # Pokemon exception; package & raise from session process,
             self.queue.send(('exception', err,))
             dictdb.close()
-            logger.exception(err)
+            self.log.exception(err)
             return
 
         self.queue.send((self.event, (None, StopIteration,),))

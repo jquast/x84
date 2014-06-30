@@ -1,5 +1,5 @@
 """
-x84net message network polling mechanism for x/84, https://github.com/jquast/x84
+x84net message poll for x/84, https://github.com/jquast/x84
 
 To configure message polling, add a tag for the network to the 'server_tags'
 attribute in the [msg] section of your default.ini.
@@ -251,7 +251,9 @@ def poll_network_for_messages(net, log=None):
             log.warn('{net[name]} dupe (msg_id={msg[id]}) discarded.'
                      .format(net=net, msg=msg))
         else:
-            store_msg.save(noqueue=True, ctime=to_localtime(msg['ctime']))
+            # do not save this message to network, we already received
+            # it from the network, set send_net=False
+            store_msg.save(send_net=False, ctime=to_localtime(msg['ctime']))
             with transdb.acquire():
                 transdb[msg['id']] = store_msg.idx
             transkeys.append(msg['id'])
@@ -334,8 +336,9 @@ def main():
     networks = get_networks(cfg=x84.bbs.ini.CFG)
     log.debug(u'Begin poll/publish process for networks: {net_names}.'
               .format(net_names=', '.join(net['name'] for net in networks)))
-    num = 0
+
     # pull/push to all networks
+    num = 0
     for num, net in enumerate(networks):
         transdb = poll_network_for_messages(net)
         if transdb is not None:
