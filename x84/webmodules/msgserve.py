@@ -196,7 +196,7 @@ def main():
     when = int(auth[2])
     now = int(time.time())
     netcfg = 'msgnet_%s' % data['network']
-    log.debug(u"[{data[network]] client {board_id} request for {data[action]}"
+    log.debug(u"[{data[network]}] client {board_id} request for {data[action]}"
               .format(data=data, board_id=board_id))
 
     if not ini.CFG.has_option(netcfg, 'keys_db_name'):
@@ -219,28 +219,28 @@ def main():
 
     if when > now or now - when > 15:
         server_error(log=log, queue=queue,
-                     msg=(u'[{data[network]} Expired token'
+                     msg=(u'[{data[network]}] Expired token'
                           .format(data=data)),
                      http_msg=u'Expired token')
         return
 
     if token != hashlib.sha256('%s%d' % (board_key, when)).hexdigest():
         server_error(log=log, queue=queue,
-                     msg=(u'[{data[network]} Invalid token'
+                     msg=(u'[{data[network]}] Invalid token'
                           .format(data=data)),
                      http_msg=u'Bad token')
         return
 
     if not ini.CFG.has_option(netcfg, 'source_db_name'):
         server_error(log=log, queue=queue,
-                     msg=(u'[{data[network]} Source DB not configured'
+                     msg=(u'[{data[network]}] Source DB not configured'
                           .format(data=data)),
                      http_msg=u'Server error')
         return
 
     if not ini.CFG.has_option(netcfg, 'trans_db_name'):
         server_error(log=log, queue=queue,
-                     msg=(u'[{data[network]} Translation DB not configured'
+                     msg=(u'[{data[network]}] Translation DB not configured'
                           .format(data=data)),
                      http_msg=u'Server error')
         return
