@@ -23,8 +23,8 @@ __all__ = ['list_users', 'get_user', 'find_user', 'User', 'Group', 'list_msgs',
            'echo', 'timeago', 'Ansi', 'ansiwrap', 'AnsiWindow', 'Selector',
            'Lightbar', 'from_cp437', 'DBProxy', 'Pager', 'Door', 'DOSDoor',
            'goto', 'disconnect', 'getsession', 'getterminal', 'getch', 'gosub',
-           'ropen', 'showcp437', 'Dropfile', 'encode_pipe', 'decode_pipe',
-           'syncterm_setfont',
+           'ropen', 'showart', 'showcp437', 'Dropfile', 'encode_pipe',
+           'decode_pipe', 'syncterm_setfont',
            ]
 
 
@@ -96,12 +96,20 @@ def ropen(filename, mode='rb'):
     return open(random.choice(files), mode) if len(files) else None
 
 
-def showcp437(filepattern):
+def showart(filepattern, encoding='cp437_art'):
     """
     yield unicode sequences for any given ANSI Art (of cp437 encoding). Effort
     is made to strip SAUCE data, translate cp437 to unicode, and trim artwork
     too large to display. If keyboard input is pressed, 'msg_cancel' is
-    returned as the last line of art
+    returned as the last line of art.
+
+    Alternate codecs are available if you provide the ``encoding`` argument. Ie
+    if you want to show an Amiga style ASCII art file::
+
+        >>> from x84.bbs import echo, showart
+        >>> for line in showart('test.asc', 'topaz'):
+        ...     echo(line)
+
     """
     import sauce
     session, term = getsession(), getterminal()
@@ -120,8 +128,16 @@ def showcp437(filepattern):
         yield msg_notfound + u'\r\n'
         return
     # allow slow terminals to cancel by pressing a keystroke
-    for line in from_cp437(sauce.SAUCE(fobj).__str__()).splitlines():
+    for line in str(sauce.SAUCE(fobj)).decode(encoding).splitlines():
         if session.poll_event('input'):
             yield u'\r\n' + msg_cancel + u'\r\n'
             return
         yield line + u'\r\n'
+
+
+def showcp437(filepattern):
+    """
+    Alias for the :func:`showart` function, with the ``cp437_art`` codec as
+    default.
+    """
+    return showart(filepattern, 'cp437_art')
