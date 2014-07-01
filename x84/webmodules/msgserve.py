@@ -229,7 +229,7 @@ def serve_messages_for(board_id, request_data, return_queue, db_source):
             u'recipient': msg.recipient,
             u'parent': msg.parent,
             u'subject': msg.subject,
-            u'tags': list(msg.tags ^ set(request_data['network'])),
+            u'tags': list(msg.tags ^ set([request_data['network']])),
             u'ctime': to_utctime(msg.ctime),
             u'body': msg.body
         })
