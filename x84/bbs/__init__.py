@@ -96,7 +96,7 @@ def ropen(filename, mode='rb'):
     return open(random.choice(files), mode) if len(files) else None
 
 
-def showart(filepattern, encoding='cp437_art'):
+def showart(filepattern, encoding='cp437'):
     """
     yield unicode sequences for any given ANSI Art (of cp437 encoding). Effort
     is made to strip SAUCE data, translate cp437 to unicode, and trim artwork
@@ -137,7 +137,7 @@ def showart(filepattern, encoding='cp437_art'):
 
 def showcp437(filepattern):
     """
-    Alias for the :func:`showart` function, with the ``cp437_art`` codec as
+    Alias for the :func:`showart` function, with the ``cp437`` codec as
     default.
     """
-    return showart(filepattern, 'cp437_art')
+    return showart(filepattern, 'cp437')
