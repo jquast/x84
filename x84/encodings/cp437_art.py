@@ -38,15 +38,22 @@ class StreamReader(Codec, codecs.StreamReader):
 
 def getaliases():
     return (
-        'ibmpc',
-        'ibm_pc',
-        'msdos',
-        'pc',
+        'cp437_alt',
+        'cp437alt',
+        'cp437art',
+        'ibm_pc_art',
+        'ibmpc_art',
+        'ibmpcart',
+        'msdos_art',
+        'msdosart',
+        'pc_art',
+        'pcart',
     )
+
 
 def getregentry():
     return codecs.CodecInfo(
-        name='cp437',
+        name='cp437_art',
         encode=Codec().encode,
         decode=Codec().decode,
         incrementalencoder=IncrementalEncoder,
@@ -59,6 +66,30 @@ def getregentry():
 
 DECODING_MAP = codecs.make_identity_dict(range(256))
 DECODING_MAP.update({
+    0x0001: 0x263a,     #  WHITE SMILING FACE
+    0x0002: 0x263b,     #  BLACK SMILING FACE
+    0x0003: 0x2665,     #  BLACK HEART SUIT
+    0x0004: 0x2666,     #  BLACK DIAMOND SUIT
+    0x0005: 0x2663,     #  BLACK CLUB SUIT
+    0x0006: 0x2660,     #  BLACK SPADE SUIT
+    0x0007: 0x2022,     #  BULLET
+    0x000b: 0x2642,     #  MALE SIGN
+    0x000c: 0x2640,     #  FEMALE SIGN
+    0x000e: 0x266c,     #  BEAMED SIXTEENTH NOTES
+    0x000f: 0x263c,     #  WHITE SUN WITH RAYS
+    0x0010: 0x25ba,     #  BLACK RIGHT-POINTING POINTER
+    0x0011: 0x25c4,     #  BLACK LEFT-POINTING POINTER
+    0x0012: 0x2195,     #  UP DOWN ARROW
+    0x0013: 0x203c,     #  DOUBLE EXCLAMATION MARK
+    0x0014: 0x00b6,     #  PILCROW SIGN
+    0x0015: 0x00a7,     #  SECTION SIGN
+    0x0016: 0x25ac,     #  BLACK RECTANGLE
+    0x0017: 0x21a8,     #  UP DOWN ARROW WITH BASE
+    0x0018: 0x2191,     #  UPWARDS ARROW
+    0x0019: 0x2193,     #  DOWNWARDS ARROW
+    0x001a: 0x2192,     #  RIGHTWARDS ARROW
+    0x001c: 0x221f,     #  RIGHT ANGLE
+    0x001d: 0x2194,     #  LEFT RIGHT ARROW
     0x0080: 0x00c7,     #  LATIN CAPITAL LETTER C WITH CEDILLA
     0x0081: 0x00fc,     #  LATIN SMALL LETTER U WITH DIAERESIS
     0x0082: 0x00e9,     #  LATIN SMALL LETTER E WITH ACUTE
@@ -586,6 +617,7 @@ ENCODING_MAP = {
     0x00a2: 0x009b,     #  CENT SIGN
     0x00a3: 0x009c,     #  POUND SIGN
     0x00a5: 0x009d,     #  YEN SIGN
+    0x00a7: 0x0015,     #  SECTION SIGN
     0x00aa: 0x00a6,     #  FEMININE ORDINAL INDICATOR
     0x00ab: 0x00ae,     #  LEFT-POINTING DOUBLE ANGLE QUOTATION MARK
     0x00ac: 0x00aa,     #  NOT SIGN
@@ -593,6 +625,7 @@ ENCODING_MAP = {
     0x00b1: 0x00f1,     #  PLUS-MINUS SIGN
     0x00b2: 0x00fd,     #  SUPERSCRIPT TWO
     0x00b5: 0x00e6,     #  MICRO SIGN
+    0x00b6: 0x0014,     #  PILCROW SIGN
     0x00b7: 0x00fa,     #  MIDDLE DOT
     0x00ba: 0x00a7,     #  MASCULINE ORDINAL INDICATOR
     0x00bb: 0x00af,     #  RIGHT-POINTING DOUBLE ANGLE QUOTATION MARK
@@ -647,11 +680,20 @@ ENCODING_MAP = {
     0x03c3: 0x00e5,     #  GREEK SMALL LETTER SIGMA
     0x03c4: 0x00e7,     #  GREEK SMALL LETTER TAU
     0x03c6: 0x00ed,     #  GREEK SMALL LETTER PHI
+    0x2022: 0x0007,     #  BULLET
+    0x203c: 0x0013,     #  DOUBLE EXCLAMATION MARK
     0x207f: 0x00fc,     #  SUPERSCRIPT LATIN SMALL LETTER N
     0x20a7: 0x009e,     #  PESETA SIGN
+    0x2191: 0x0018,     #  UPWARDS ARROW
+    0x2192: 0x001a,     #  RIGHTWARDS ARROW
+    0x2193: 0x0019,     #  DOWNWARDS ARROW
+    0x2194: 0x001d,     #  LEFT RIGHT ARROW
+    0x2195: 0x0012,     #  UP DOWN ARROW
+    0x21a8: 0x0017,     #  UP DOWN ARROW WITH BASE
     0x2219: 0x00f9,     #  BULLET OPERATOR
     0x221a: 0x00fb,     #  SQUARE ROOT
     0x221e: 0x00ec,     #  INFINITY
+    0x221f: 0x001c,     #  RIGHT ANGLE
     0x2229: 0x00ef,     #  INTERSECTION
     0x2248: 0x00f7,     #  ALMOST EQUAL TO
     0x2261: 0x00f0,     #  IDENTICAL TO
@@ -709,4 +751,17 @@ ENCODING_MAP = {
     0x2592: 0x00b1,     #  MEDIUM SHADE
     0x2593: 0x00b2,     #  DARK SHADE
     0x25a0: 0x00fe,     #  BLACK SQUARE
+    0x25ac: 0x0016,     #  BLACK RECTANGLE
+    0x25ba: 0x0010,     #  BLACK RIGHT-POINTING POINTER
+    0x25c4: 0x0011,     #  BLACK LEFT-POINTING POINTER
+    0x263a: 0x0001,     #  WHITE SMILING FACE
+    0x263b: 0x0002,     #  BLACK SMILING FACE
+    0x263c: 0x000f,     #  WHITE SUN WITH RAYS
+    0x2640: 0x000c,     #  FEMALE SIGN
+    0x2642: 0x000b,     #  MALE SIGN
+    0x2660: 0x0006,     #  BLACK SPADE SUIT
+    0x2663: 0x0005,     #  BLACK CLUB SUIT
+    0x2665: 0x0003,     #  BLACK HEART SUIT
+    0x2666: 0x0004,     #  BLACK DIAMOND SUIT
+    0x266c: 0x000e,     #  BEAMED SIXTEENTH NOTES
 }

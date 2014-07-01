@@ -11,7 +11,9 @@ logger = logging.getLogger(__name__)
 
 
 def normalize_encoding(encoding):
-    return re.sub(r'[^\w]', '', encoding.lower())
+    return re.sub(
+        r'[^\w_-]', '', encoding.lower()
+    ).replace('-', '_')
 
 
 def search_function(encoding):

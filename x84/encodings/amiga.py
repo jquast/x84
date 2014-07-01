@@ -47,12 +47,9 @@ def getaliases():
         'mosoul',
         'p0tnoodle',
         'topaz',
-        'topaz+',
         'topaz1',
-        'topaz1+',
         'topaz1plus',
         'topaz2',
-        'topaz2+',
         'topaz2plus',
         'topazplus',
     )

@@ -37,6 +37,9 @@ class StreamReader(Codec, codecs.StreamReader):
 
 ### encodings module API
 
+def getaliases():
+    return ('atari',)
+
 def getregentry():
     return codecs.CodecInfo(
         name='atarist',
