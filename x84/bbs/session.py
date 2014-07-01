@@ -60,6 +60,7 @@ class Session(object):
             env: dict of environment variables, such as 'TERM', 'USER'.
         """
         from x84.bbs import ini
+        import Queue
         # pylint: disable=W0603
         #        Using the global statement
         global SESSION, BOTQUEUE, BOTLOCk
@@ -116,7 +117,7 @@ class Session(object):
                         self._script_stack.append((ini.CFG.get('bots', whoami),))
                     else:
                         self._script_stack.append(('bots',))
-            except Empty:
+            except Queue.Empty:
                 pass
 
     def to_dict(self):
