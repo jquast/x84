@@ -21,6 +21,10 @@ __credits__ = [
 __license__ = 'ISC'
 
 
+## Make alternate encodings globally available
+from x84 import encodings
+
+
 def main():
     """
     x84 main entry point. The system begins and ends here.
