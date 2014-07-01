@@ -96,11 +96,11 @@ class Session(object):
         self._ttyrec_len_text = 0
 
         # detect if this is a "robot" user and handle it accordingly
+        # TODO ... anything but this, especially in the class constructor!
         addr, port = sid.split(':', 1)
-
-        if ini.CFG.has_section('bots') and addr == '127.0.0.1':
-            from Queue import Empty
-
+        if ini.CFG.has_section('bots') and addr in
+                (ini.CFG.get('telnet', 'addr') if ini.CFG.has_section('telnet')
+                 else [] + ['127.0.0.1'])
             try:
                 whoami = BOTQUEUE.get(True, 0.1)
                 robots = [robot.strip() for robot in ini.CFG.get('bots', 'names').split(',')]
