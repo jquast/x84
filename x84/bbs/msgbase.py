@@ -196,12 +196,12 @@ class Msg(object):
         from x84.bbs.dbproxy import DBProxy
 
         network_names = CFG.get('msg', 'network_tags')
-        member_networks = map(str.strip(), network_names.split(','))
+        member_networks = map(str.strip, network_names.split(','))
 
         my_networks = []
         if CFG.has_option('msg', 'server_tags'):
             my_netnames = CFG.get('msg', 'server_tags')
-            my_networks = map(str.strip(), my_netnames.split(','))
+            my_networks = map(str.strip, my_netnames.split(','))
 
         # check all tags of message; if they match a message network,
         # either record for hosting servers, or schedule for delivery.
