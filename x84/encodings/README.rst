@@ -22,24 +22,24 @@ Available encodings
 The following encodings are available:
 
 
-    +-----------+-------------------------------------+-----------------------+
-    | Name      | Description                         | Aliases               |
-    +===========+=====================================+=======================+
-    | amiga     | Amiga Topaz family                  | microknight,          |
-    |           |                                     | mosoul,               |
-    |           |                                     | p0tnoodle,            |
-    |           |                                     | topaz, topaz1,        |
-    |           |                                     | topaz1plus, topaz2    |
-    |           |                                     | topaz2plus,           |
-    |           |                                     | topazplus             |
-    +-----------+-------------------------------------+-----------------------+
-    | atarist   | Atari ST familiy                    | atari                 |
-    +-----------+-------------------------------------+-----------------------+
-    | cp437     | IBM PC Code Page 437                | ibmpc, ibm_pc,        |
-    |           |                                     | msdos, pc             |
-    +-----------+-------------------------------------+-----------------------+
-    | cp437_art | IBM PC Code Page 437 with some of   | cp437art, ibmpcart,   |
-    |           | the control characters drawn as     | ibmpc_art, ibm_pc_art,|
-    |           | glyphs                              | msdos_art, msdosart,  |
-    |           |                                     | pc_art, pcart         |
-    +-----------+-------------------------------------+-----------------------+
++-----------+-------------------------------------+-----------------------+
+| Name      | Description                         | Aliases               |
++===========+=====================================+=======================+
+| amiga     | Amiga Topaz family                  | microknight,          |
+|           |                                     | mosoul,               |
+|           |                                     | p0tnoodle,            |
+|           |                                     | topaz, topaz1,        |
+|           |                                     | topaz1plus, topaz2    |
+|           |                                     | topaz2plus,           |
+|           |                                     | topazplus             |
++-----------+-------------------------------------+-----------------------+
+| atarist   | Atari ST familiy                    | atari                 |
++-----------+-------------------------------------+-----------------------+
+| cp437     | IBM PC Code Page 437                | ibmpc, ibm_pc,        |
+|           |                                     | msdos, pc             |
++-----------+-------------------------------------+-----------------------+
+| cp437_art | IBM PC Code Page 437 with some of   | cp437art, ibmpcart,   |
+|           | the control characters drawn as     | ibmpc_art, ibm_pc_art,|
+|           | glyphs                              | msdos_art, msdosart,  |
+|           |                                     | pc_art, pcart         |
++-----------+-------------------------------------+-----------------------+
