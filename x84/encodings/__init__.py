@@ -17,7 +17,6 @@ def normalize_encoding(encoding):
 
 
 def search_function(encoding):
-    print ('Looking up encoding {0}'.format(encoding))
     try:
         return _cache[encoding]
     except KeyError:
@@ -54,3 +53,8 @@ def search_function(encoding):
 
 
 codecs.register(search_function)
+
+
+# Now to initialize all locally available codecs:
+for encoding in ('amiga', 'atarist', 'cp437_art', 'cp437'):
+    ''.decode(encoding)
