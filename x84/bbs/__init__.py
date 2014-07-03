@@ -97,7 +97,7 @@ def ropen(filename, mode='rb'):
     return open(random.choice(files), mode) if len(files) else None
 
 
-def showart(filepattern, encoding='cp437'):
+def showart(filepattern, encoding='cp437', auto_mode=True):
     """
     yield unicode sequences for any given ANSI Art (of cp437 encoding). Effort
     is made to strip SAUCE data, translate cp437 to unicode, and trim artwork
@@ -110,6 +110,9 @@ def showart(filepattern, encoding='cp437'):
         >>> from x84.bbs import echo, showart
         >>> for line in showart('test.asc', 'topaz'):
         ...     echo(line)
+
+    The ``auto_mode`` flag will, if set, only respect the selected encoding if
+    the active session is UTF-8 capable.
 
     """
     import sauce
@@ -125,11 +128,24 @@ def showart(filepattern, encoding='cp437'):
     fobj = (ropen(filepattern)
             if '*' in filepattern or '?' in filepattern
             else open(filepattern, 'rb'))
+
     if fobj is None:
         yield msg_notfound + u'\r\n'
         return
-    # allow slow terminals to cancel by pressing a keystroke
-    for line in str(sauce.SAUCE(fobj)).decode(encoding).splitlines():
+
+    if auto_mode:
+        def _decode(what):
+            session = getsession()
+            if session.encoding == 'utf8':
+                return what.decode(encoding)
+            else:
+                return what
+
+    else:
+        _decode = lambda what: what.decode(encoding)
+
+    for line in _decode(str(sauce.SAUCE(fobj))).splitlines():
+        # allow slow terminals to cancel by pressing a keystroke
         if session.poll_event('input'):
             yield u'\r\n' + msg_cancel + u'\r\n'
             return
