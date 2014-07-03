@@ -97,10 +97,10 @@ def ropen(filename, mode='rb'):
     return open(random.choice(files), mode) if len(files) else None
 
 
-def showart(filepattern, encoding='cp437', auto_mode=True):
+def showart(filepattern, encoding=None, auto_mode=True):
     """
-    yield unicode sequences for any given ANSI Art (of cp437 encoding). Effort
-    is made to strip SAUCE data, translate cp437 to unicode, and trim artwork
+    yield unicode sequences for any given ANSI Art (of art_encoding). Effort
+    is made to strip SAUCE data, translate input to unicode, and trim artwork
     too large to display. If keyboard input is pressed, 'msg_cancel' is
     returned as the last line of art.
 
@@ -115,6 +115,13 @@ def showart(filepattern, encoding='cp437', auto_mode=True):
     the active session is UTF-8 capable.
 
     """
+    if encoding is None:
+        from x84.bbs.ini import CFG
+        try:
+            encoding = CFG.get('system', 'art_utf8_codec')
+        except:
+            encoding = 'cp437'  # Default fallthrough
+
     import sauce
     session, term = getsession(), getterminal()
     msg_cancel = u''.join((term.normal,
