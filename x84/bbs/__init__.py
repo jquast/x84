@@ -145,6 +145,8 @@ def showart(filepattern, encoding=None, auto_mode=True):
             session = getsession()
             if session.encoding == 'utf8':
                 return what.decode(encoding)
+            elif session.encoding == 'cp437':
+                return what.decode('cp437')
             else:
                 return what
 
