@@ -15,7 +15,7 @@ def get_datafile_path():
 def ask(msg):
     term = getterminal()
     echo(term.move(18, 0))
-    echo(term.magenta(msg))
+    echo(term.white(msg))
     echo(term.green(u'(') + term.cyan(u'yes/no') + term.green(u')'))
 
 
@@ -32,13 +32,13 @@ def banner():
             fo.write('behave yourselves.\n')
             fo.write('\n\n')
 
-    echo(term.move(9, 9) + term.white(u'Public message from:'))
+    echo(term.move(2, 10) + term.blue(u'Public message from:'))
 
     with codecs.open(get_datafile_path(), 'r', 'utf-8') as fo:
         handle = fo.readline().strip()
-        echo(term.move(9, 30) + term.blue_on_green(handle))
+        echo(term.move(2, 31) + term.bold_white(handle))
         for row in range(1, 4):
-            echo(term.move(10 + row, 9) + term.yellow(fo.readline().strip()))
+            echo(term.move(10 + row, 5) + term.white(fo.readline().strip()))
 
     ask(u'do you want to write a new public message? ')
 
@@ -56,20 +56,20 @@ def main():
 
         if inp.lower() == u'y':
             session.activity = 'Writing automsg'
-            echo(term.move(9, 30))
-            echo(term.blue_on_green(session.user.handle))
+            echo(term.move(2, 31))
+            echo(term.bold_white(session.user.handle))
             echo((u' ' * 7))
 
             echo(term.move(18, 0) + term.clear_eol)
             for row in range (1, 4):
-                echo(term.move(10 + row, 9))
+                echo(term.move(10 + row, 5))
                 echo(u' ' * 57)
 
             msg = []
             for row in range (1, 4):
-                echo(term.move(10 + row, 9))
-                le = LineEditor(56)
-                le.colors['highlight'] = term.yellow
+                echo(term.move(10 + row, 5))
+                le = LineEditor(70)
+                le.colors['highlight'] = term.white
                 msg.append(le.read())
 
             ask(u'submit your text as a public message? ')
