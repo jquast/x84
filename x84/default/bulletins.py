@@ -4,7 +4,7 @@
 # If you are running this on a -Windows- machine you will have to search
 # and replace the '/' with '\' for the directory browsing to work correctly.
 
-from x84.bbs import getsession, echo, getch, gosub, getterminal, showart, getch
+from x84.bbs import getsession, echo, getch, gosub, getterminal, showart, getch, showcp437
 import os
 from os import walk
 
