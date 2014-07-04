@@ -3,7 +3,7 @@ __version__ = 1.1
 __author__ = 'Hellbeard'
 
 from x84.bbs import getsession, getterminal, echo, getch
-from x84.bbs import list_users, get_user, timeago, showcp437
+from x84.bbs import list_users, get_user, timeago, showart
 import time
 import os
 
@@ -16,7 +16,7 @@ def banner():
     term = getterminal()
     echo(term.clear)
     artfile = os.path.join(os.path.dirname(__file__), 'userlist.ans')
-    for line_no, line in enumerate(showcp437(artfile)):
+    for line_no, line in enumerate(showart(artfile,'topaz')):
         echo(line)
     else:
         line_no = 0

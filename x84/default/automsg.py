@@ -1,5 +1,5 @@
 """ Automsg script for x/84 bbs, https://github.com/jquast/x84 """
-from x84.bbs import getsession, getterminal, echo, LineEditor, showcp437
+from x84.bbs import getsession, getterminal, echo, LineEditor, showart
 import os
 import codecs
 __author__ = 'Hellbeard'
@@ -23,7 +23,7 @@ def banner():
     session, term = getsession(), getterminal()
     art_file = os.path.join(os.path.dirname(__file__), 'art', 'automsg.ans')
     echo(term.clear)
-    for line in showcp437(art_file):
+    for line in showart(art_file,'topaz'):
         echo(line)
 
     if not os.path.exists(get_datafile_path()):

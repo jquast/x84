@@ -4,7 +4,7 @@
 # If you are running this on a -Windows- machine you will have to search
 # and replace the '/' with '\' for the directory browsing to work correctly.
 
-from x84.bbs import getsession, echo, getch, gosub, getterminal, showcp437, getch
+from x84.bbs import getsession, echo, getch, gosub, getterminal, showart, getch
 import os
 from os import walk
 
@@ -18,7 +18,7 @@ def banner():
     term = getterminal()
     banner = ''
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'bulletins.ans')
-    for line in showcp437(artfile):
+    for line in showart(artfile,'topaz'):
         banner = banner + line
     return banner
 
