@@ -439,19 +439,16 @@ def _loop(servers):
         from x84.bbs.telnet import connect_bot
         session.BOTQUEUE = Queue()
         session.BOTLOCK = Lock()
-        DO_BOTS = True
         if CFG.has_option('msg', 'poll_interval'):
             poll_interval = CFG.getint('msg', 'poll_interval')
             last_poll = int(time.time()) - poll_interval
             log.debug('bots will poll at {0}s intervals.'
                       .format(poll_interval))
-    else:
-        DO_BOTS = False
 
     if CFG.has_section('web'):
         try:
-            import web      # NOQA
-            import OpenSSL  # NOQA
+            __import__("web")
+            __import__("OpenSSL")
             import webserve
             module_names = CFG.get('web', 'modules', '').split(',')
             if module_names:
@@ -459,7 +456,7 @@ def _loop(servers):
                 log.info('starting webmodules: {0!r}'.format(web_modules))
                 webserve.start(web_modules)
         except ImportError as err:
-            log.error(err)
+            log.error("section [web] enabled but not enabled: {0}".format(err))
 
     while True:
         # shutdown, close & delete inactive clients,
