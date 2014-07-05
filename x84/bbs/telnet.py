@@ -1,6 +1,9 @@
 """
 telnet extras for x/x84 bbs, https://github.com/jquast/x84
 """
+import functools
+import threading
+
 
 def callback_cmdopt(socket, cmd, opt, env_term=None, width=None, height=None):
     """ Callback for telnetlib.Telnet.set_option_negotiation_callback. """
@@ -36,23 +39,22 @@ def callback_cmdopt(socket, cmd, opt, env_term=None, width=None, height=None):
                            + telnetlib.TTYPE + IS + env_term
                            + chr(0) + telnetlib.IAC + telnetlib.SE)
 
+
 def connect_bot(botname):
     """ Make a zombie telnet connection to the board as the given bot. """
     def read_forever(client):
         client.read_all()
 
     import telnetlib
-    from functools import partial
-    from threading import Thread
     from x84.bbs.ini import CFG
     from x84.bbs.session import BOTLOCK, BOTQUEUE
-    BOTLOCK.acquire()
-    client = telnetlib.Telnet()
-    client.set_option_negotiation_callback(partial(callback_cmdopt
-        , env_term='xterm-256color'))
-    client.open(CFG.get('telnet', 'addr'), CFG.getint('telnet', 'port'))
-    BOTQUEUE.put(botname)
-    t = Thread(target=read_forever, args=(client,))
-    t.daemon = True
-    t.start()
-    BOTLOCK.release()
+    telnet_addr = CFG.get('telnet', 'addr')
+    telnet_port = CFG.getint('telnet', 'port')
+    with BOTLOCK.acquire():
+        client = telnetlib.Telnet()
+        client.set_option_negotiation_callback(callback_cmdopt)
+        client.open(telnet_addr, telnet_port)
+        BOTQUEUE.put(botname)
+        t = threading.Thread(target=read_forever, args=(client,))
+        t.daemon = True
+        t.start()
