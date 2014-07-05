@@ -25,9 +25,8 @@ def main():
                            term.blue(u' SAYS WhAt'), term.bold(': '),))
     boards = (('1984.ws', 'x/84 dEfAUlt bOARd', 'dingo',),
               ('htc.zapto.org', 'Haunting the Chapel', 'Mercyful',),
-              ('pharcyde.ath.cx', 'Pharcyde BBS', 'Access Denied',),
+              ('bbs.pharcyde.org', 'Pharcyde BBS', 'Access Denied',),
               ('bloodisland.ph4.se', 'Blood Island', 'xzip',),
-              ('ssl.archaicbinary.net', 'Archaic Binary', 'Wayne Smith',),
               ('bbs.godta.com', 'godta', 'sk-5',),
               ('oddnetwork.org', '79 columns', 'haliphax'),
               ('bbs.beardy.se', 'The Swamp', 'beardy'),
