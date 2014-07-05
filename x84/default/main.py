@@ -7,7 +7,7 @@ def refresh():
     """ Refresh main menu. """
     # pylint: disable=R0914
     #         Too many local variables
-    from x84.bbs import getsession, getterminal, echo, showcp437, ini
+    from x84.bbs import getsession, getterminal, echo, showart, ini
     import os
     import logging
     logger = logging.getLogger()
@@ -20,8 +20,9 @@ def refresh():
         term.bold('x'), term.bold_blue('/'), term.bold('84'), u' ',
         'MAiN MENU',
         u'\r\n')))
-    for line in showcp437(artfile):
-        echo(line)
+    # displays a centered main menu header in topaz encoding for utf8
+    for line in showart(artfile,'topaz'):
+        echo(term.cyan+term.move_x((term.width/2)-40)+line)
     echo(u'\r\n\r\n')
     entries = [
         ('$', 'rEAD bUllETiNS'),

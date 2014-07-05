@@ -149,7 +149,7 @@ def main():
     #         Too many local variables
     import logging
     from x84.bbs import getsession, getterminal, ini, echo, get_user, goto
-    from x84.bbs import find_user, showcp437
+    from x84.bbs import find_user, showart
     from x84.engine import __url__ as url
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
@@ -190,11 +190,11 @@ def main():
     max_tries = 10
     session.flush_event('refresh')
     #uname()
-    # display banner
+    # display banner with amiga topaz encoding
     echo(u''.join((
         term.normal, u'\r\n',
         u'Connected to %s, see %s for source\r\n' % (bbsname, url),)))
-    for line in showcp437(artfile):
+    for line in showart(artfile,'topaz'):
         echo(line)
     echo(term.normal)
     echo (u''.join((
