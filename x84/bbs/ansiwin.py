@@ -1,7 +1,6 @@
 """
 Ansi Windowing package for x/84, http://github.com/jquast/x84
 """
-from x84.bbs.cp437 import CP437TABLE
 from x84.bbs.session import getterminal, getsession
 from x84.bbs.output import Ansi
 
@@ -16,14 +15,14 @@ GLYPHSETS = {
         'top-horiz': u'-',
         'bot-horiz': u'-', },
     'thin': {
-        'top-left': CP437TABLE[unichr(218)],
-        'bot-left': CP437TABLE[unichr(192)],
-        'top-right': CP437TABLE[unichr(191)],
-        'bot-right': CP437TABLE[unichr(217)],
-        'left-vert': CP437TABLE[unichr(179)],
-        'right-vert': CP437TABLE[unichr(179)],
-        'top-horiz': CP437TABLE[unichr(196)],
-        'bot-horiz': CP437TABLE[unichr(196)],
+        'top-left': chr(219).decode('cp437'),
+        'bot-left': chr(192).decode('cp437'),
+        'top-right': chr(191).decode('cp437'),
+        'bot-right': chr(217).decode('cp437'),
+        'left-vert': chr(179).decode('cp437'),
+        'right-vert': chr(179).decode('cp437'),
+        'top-horiz': chr(196).decode('cp437'),
+        'bot-horiz': chr(196).decode('cp437'),
     },
 }
 

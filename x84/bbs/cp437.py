@@ -23,11 +23,11 @@ __email__ = 'maze@pyth0n.org'
 # CP437 is a tuple of length 256, mapping equivalent unicode
 # characters for each CP437 chr(n), where n is index of CP437.
 CP437 = (
-    u'\u0000', u'\u0001', u'\u0002', u'\u0003', u'\u0004', u'\u0005',
-    u'\u0006', u'\u0007', u'\u0008', u'\u0009', u'\u000A', u'\u000B',
-    u'\u000C', u'\u000D', u'\u000E', u'\u000F', u'\u0010', u'\u0011',
-    u'\u0012', u'\u0013', u'\u0014', u'\u0015', u'\u0016', u'\u0017',
-    u'\u0018', u'\u0019', u'\u001A', u'\u001B', u'\u001C', u'\u001D',
+    u'\u0000', u'\u263A', u'\u263B', u'\u2665', u'\u2666', u'\u2663',
+    u'\u2660', u'\u2022', u'\u0008', u'\u0009', u'\u000A', u'\u2642',
+    u'\u2640', u'\u000D', u'\u266C', u'\u263C', u'\u25BA', u'\u25C4',
+    u'\u2195', u'\u203C', u'\u00B6', u'\u00A7', u'\u25AC', u'\u21A8',
+    u'\u2191', u'\u2193', u'\u2192', u'\u001B', u'\u221F', u'\u2194',
     u'\u001E', u'\u001F', u'\u0020', u'\u0021', u'\u0022', u'\u0023',
     u'\u0024', u'\u0025', u'\u0026', u'\u0027', u'\u0028', u'\u0029',
     u'\u002A', u'\u002B', u'\u002C', u'\u002D', u'\u002E', u'\u002F',

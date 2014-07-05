@@ -1,6 +1,7 @@
 """
 x/84 bbs module, https://github.com/jquast/x84
 """
+from x84 import encodings
 from x84.bbs.userbase import list_users, get_user, find_user, User, Group
 from x84.bbs.msgbase import list_msgs, get_msg, list_tags, Msg
 from x84.bbs.exception import Disconnected, Goto
@@ -23,8 +24,8 @@ __all__ = ['list_users', 'get_user', 'find_user', 'User', 'Group', 'list_msgs',
            'echo', 'timeago', 'Ansi', 'ansiwrap', 'AnsiWindow', 'Selector',
            'Lightbar', 'from_cp437', 'DBProxy', 'Pager', 'Door', 'DOSDoor',
            'goto', 'disconnect', 'getsession', 'getterminal', 'getch', 'gosub',
-           'ropen', 'showcp437', 'Dropfile', 'encode_pipe', 'decode_pipe',
-           'syncterm_setfont',
+           'ropen', 'showart', 'showcp437', 'Dropfile', 'encode_pipe',
+           'decode_pipe', 'syncterm_setfont',
            ]
 
 
@@ -96,13 +97,31 @@ def ropen(filename, mode='rb'):
     return open(random.choice(files), mode) if len(files) else None
 
 
-def showcp437(filepattern):
+def showart(filepattern, encoding=None, auto_mode=True):
     """
-    yield unicode sequences for any given ANSI Art (of cp437 encoding). Effort
-    is made to strip SAUCE data, translate cp437 to unicode, and trim artwork
+    yield unicode sequences for any given ANSI Art (of art_encoding). Effort
+    is made to strip SAUCE data, translate input to unicode, and trim artwork
     too large to display. If keyboard input is pressed, 'msg_cancel' is
-    returned as the last line of art
+    returned as the last line of art.
+
+    Alternate codecs are available if you provide the ``encoding`` argument. Ie
+    if you want to show an Amiga style ASCII art file::
+
+        >>> from x84.bbs import echo, showart
+        >>> for line in showart('test.asc', 'topaz'):
+        ...     echo(line)
+
+    The ``auto_mode`` flag will, if set, only respect the selected encoding if
+    the active session is UTF-8 capable.
+
     """
+    if encoding is None:
+        from x84.bbs.ini import CFG
+        try:
+            encoding = CFG.get('system', 'art_utf8_codec')
+        except:
+            encoding = 'cp437'  # Default fallthrough
+
     import sauce
     session, term = getsession(), getterminal()
     msg_cancel = u''.join((term.normal,
@@ -116,12 +135,35 @@ def showcp437(filepattern):
     fobj = (ropen(filepattern)
             if '*' in filepattern or '?' in filepattern
             else open(filepattern, 'rb'))
+
     if fobj is None:
         yield msg_notfound + u'\r\n'
         return
-    # allow slow terminals to cancel by pressing a keystroke
-    for line in from_cp437(sauce.SAUCE(fobj).__str__()).splitlines():
+
+    if auto_mode:
+        def _decode(what):
+            session = getsession()
+            if session.encoding == 'utf8':
+                return what.decode(encoding)
+            elif session.encoding == 'cp437':
+                return what.decode('cp437')
+            else:
+                return what
+
+    else:
+        _decode = lambda what: what.decode(encoding)
+
+    for line in _decode(str(sauce.SAUCE(fobj))).splitlines():
+        # allow slow terminals to cancel by pressing a keystroke
         if session.poll_event('input'):
             yield u'\r\n' + msg_cancel + u'\r\n'
             return
         yield line + u'\r\n'
+
+
+def showcp437(filepattern):
+    """
+    Alias for the :func:`showart` function, with the ``cp437`` codec as
+    default.
+    """
+    return showart(filepattern, 'cp437')
