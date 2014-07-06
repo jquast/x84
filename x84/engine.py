@@ -2,21 +2,19 @@
 """
 Command-line launcher and main event loop for x/84
 """
-# Please place _ALL_ Metadata in setup.py, and any that don't belong there,
-# here.  Except for a few bits which don't belong there right here. (perhaps
-# user-contributed art or scripts) -- Do not include metadata in any other
-# part of x/84, its a damn pain in the ass to maintain so much meta.
-
+# Place ALL metadata in setup.py, except where not suitable, place here.
+# For any contributions, feel free to tag __author__ etc. at top of such file.
 __author__ = "Johannes Lundberg, Jeffrey Quast"
 __url__ = u'https://github.com/jquast/x84/'
 __copyright__ = "Copyright 2014"
 __credits__ = [
-    "Wijnand Modderman-Lenstra",
     "zipe",
     "spidy",
-    "Mercyful Fate",
+    "beardy",
     "haliphax",
     "hellbeard",
+    "Mercyful Fate",
+    "Wijnand Modderman-Lenstra",
 ]
 __license__ = 'ISC'
 
@@ -445,7 +443,7 @@ def _loop(servers):
             log.debug('bots will poll at {0}s intervals.'
                       .format(poll_interval))
 
-    if CFG.has_section('web'):
+    if CFG.has_section('web') and CFG.has_option('web', 'modules'):
         try:
             __import__("web")
             __import__("OpenSSL")
