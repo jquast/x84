@@ -18,9 +18,11 @@ __credits__ = [
 ]
 __license__ = 'ISC'
 
+# std
+import logging
 
-## Make alternate encodings globally available
-from x84 import encodings
+# local
+__import__('encodings')  # provides alternate encodings
 
 
 def main():
@@ -95,26 +97,23 @@ def get_servers(CFG):
     Given a configuration file, instantiate and return a list of enabled
     servers.
     """
-    import logging
     from x84.terminal import on_naws
-    from x84.telnet import TelnetServer
-    log = logging.getLogger(__name__)
+    log = logging.getLogger('x84.engine')
 
     servers = []
 
     if CFG.has_section('telnet'):
         # start telnet server instance
-        telnetd = TelnetServer(config=CFG, on_naws=on_naws)
-        servers.append(telnetd)
+        from x84.telnet import TelnetServer
+        servers.append(TelnetServer(config=CFG, on_naws=on_naws))
 
     if CFG.has_section('ssh'):
-        try:
         # start ssh server instance
+        try:
             from x84.ssh import SshServer
-            sshd = SshServer(config=CFG)
-            servers.append(sshd)
+            servers.append(SshServer(config=CFG, on_naws=on_naws))
         except ImportError as err:
-            log.error(err)
+            log.error(err)  # missing paramiko, Crypto ..
 
     return servers
 
@@ -141,13 +140,18 @@ def accept_server(server, log):
                client_factory=TelnetClient,
                connect_factory=ConnectTelnet,
                client_factory_kwargs={
-                   'on_naws': server.on_naws})
+                   'on_naws': server.on_naws,
+               })
     elif server.__class__ == SshServer:
         accept(log=log, server=server,
                client_factory=SshClient,
                connect_factory=ConnectSsh,
                connect_factory_kwargs={
-                   'server_host_key': server.host_key})
+                   'server_host_key': server.host_key,
+               },
+               client_factory_kwargs={
+                   'on_naws': server.on_naws,
+               })
     else:
         raise NotImplementedError(
             "No accept for server class {server.__class__.__name__}"
@@ -422,7 +426,7 @@ def _loop(servers):
     # WIN32 has no session_fds, use empty set.
     session_fds = set()
 
-    log = logging.getLogger(__name__)
+    log = logging.getLogger('x84.engine')
 
     if not len(servers):
         raise ValueError("No servers configured for event loop! (ssh, telnet)")

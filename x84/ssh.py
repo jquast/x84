@@ -29,7 +29,7 @@ class SshServer(object):
     ## Dictionary of environment variables received by negotiation
     env = {}
 
-    def __init__(self, config):
+    def __init__(self, config, on_naws=None):
         """
         Create a new Ssh Server.
         """
@@ -37,6 +37,7 @@ class SshServer(object):
         self.config = config
         self.address = config.get('ssh', 'addr')
         self.port = config.getint('ssh', 'port')
+        self.on_naws = on_naws
 
         # generate/load host key
         filename = config.get('ssh', 'HostKey')
@@ -44,8 +45,7 @@ class SshServer(object):
             self.host_key = self.generate_host_key()
         else:
             self.host_key = paramiko.RSAKey(filename=filename)
-            self.log.debug('Loaded host key {filename}'
-                           .format(filename=filename))
+            self.log.debug('Loaded host key {0}'.format(filename))
 
         # bind
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -58,7 +58,7 @@ class SshServer(object):
             self.log.error('Unable to bind {self.address}:self.port, {err}'
                            .format(self=self, err=err))
             exit(1)
-        self.log.info('ssh listening on {self.address}:{self.port}/tcp'
+        self.log.info('listening on {self.address}:{self.port}/tcp'
                       .format(self=self))
 
     def generate_host_key(self):
@@ -72,16 +72,16 @@ class SshServer(object):
         # generate private key and save,
         self.log.info('Generating {bits}-bit RSA public/private keypair.'
                       .format(bits=bits))
-        prv = RSAKey.generate(bits=bits)
-        prv.write_private_key_file(filename, password=None)
-        self.log.info('{filename} saved.'.format(filename=filename))
+        priv_key = RSAKey.generate(bits=bits)
+        priv_key.write_private_key_file(filename, password=None)
+        self.log.debug('{filename} saved.'.format(filename=filename))
 
         # save public key,
         pub = RSAKey(filename=filename, password=None)
         with open('{0}.pub'.format(filename,), 'w') as fp:
             fp.write("{0} {1}".format(pub.get_name(), pub.get_base64()))
-        self.log.info('{filename}.pub saved.'.format(filename=filename))
-        return prv
+        self.log.debug('{filename}.pub saved.'.format(filename=filename))
+        return priv_key
 
     def client_count(self):
         """
@@ -119,12 +119,12 @@ class SshClient(object):
         Arguments:
             sock: socket
             address_pair: tuple (ip address, port number)
-            on_naws: callback for window resizing by client
         """
         self.log = logging.getLogger(__name__)
         self.sock = sock
         self.address_pair = address_pair
-        self.on_naws = on_naws # TODO
+        self.on_naws = on_naws
+
         self.active = True
         self.env = dict([('TERM', 'unknown'),
                          ('LINES', 24),
@@ -304,16 +304,16 @@ class SshClient(object):
 
 
 class ConnectSsh (threading.Thread):
-    def __init__(self, client, server_host_key):
+    def __init__(self, client, server_host_key, on_naws=None):
         """
         client is a ssh.SshClient instance.
         server_host_key is paramiko.RSAKey instance.
         """
+        self.log = logging.getLogger(__name__)
         self.client = client
         self.server_host_key = server_host_key
+        self.on_naws = on_naws
         threading.Thread.__init__(self)
-        self.log = logging.getLogger(self.__class__.__name__)
-        self.log.info('ConnectSsh ...')
 
     def _spawn_session(self):
         """
@@ -455,6 +455,8 @@ class SshSessionServer(paramiko.ServerInterface):
     def check_channel_window_change_request(self, channel, width, height, *_):
         self.client.env['LINES'] = str(height)
         self.client.env['COLUMNS'] = str(width)
+        if self.client.on_naws is not None:
+            self.client.on_naws(self.client)
         return True
 
     @staticmethod
