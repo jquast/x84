@@ -269,9 +269,14 @@ def on_naws(client):
     to the 'userland', but should indicate also that a new window size is
     read in interfaces where they may be changed accordingly.
     """
+    log = logging.getLogger(__name__)
     for _sid, tty in get_terminals():
         if client == tty.client:
             columns = int(client.env['COLUMNS'])
             rows = int(client.env['LINES'])
             tty.iqueue.send(('refresh', ('resize', (columns, rows),)))
-            return True
+            break
+    else:
+        log.warn('on_naws: client not found: {!r}'.format(client))
+        return False
+    return True
