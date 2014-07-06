@@ -224,8 +224,8 @@ class Session(object):
     def user(self, value):
         # pylint: disable=C0111
         #         Missing docstring
+        self.log.info("user {!r} -> {!r}".format(self._user, value.handle))
         self._user = value
-        self.log.info("set user '%s'.", value.handle)
 
     @property
     def encoding(self):
@@ -239,7 +239,7 @@ class Session(object):
         # pylint: disable=C0111
         #         Missing docstring
         if value != self._encoding:
-            self.log.info('encoding is %s.', value)
+            self.log.debug('encoding is %s.', value)
             assert value in ('utf8', 'cp437')
             self._encoding = value
             getterminal().set_keyboard_decoder(self._encoding)
@@ -620,9 +620,7 @@ class Session(object):
         if not callable(script.main):
             raise ScriptError("%s: main not callable." % (script_name,))
         value = script.main(*args)
-        toss = self._script_stack.pop()
-        self.log.info("script '%s' returned%s.", toss[0],
-                      ' %r' % (value,) if value is not None else u'')
+        self._script_stack.pop()
         return value
 
     def close(self):
