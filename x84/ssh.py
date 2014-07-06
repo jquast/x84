@@ -10,6 +10,7 @@ import threading
 
 # local
 from terminal import start_process, TerminalProcess, register_tty
+from x84.bbs.exception import Disconnected
 
 # 3rd-party
 import paramiko
@@ -54,10 +55,10 @@ class SshServer(object):
             self.server_socket.bind((self.address, self.port))
             self.server_socket.listen(self.LISTEN_BACKLOG)
         except socket.error as err:
-            self.log.error('Unable to bind {0}: {1}'
-                         .format((self.address, self.port), err))
+            self.log.error('Unable to bind {self.address}:self.port, {err}'
+                           .format(self=self, err=err))
             exit(1)
-        self.log.info('listening on {self.address}:{self.port}/tcp'
+        self.log.info('ssh listening on {self.address}:{self.port}/tcp'
                       .format(self=self))
 
     def generate_host_key(self):
@@ -175,6 +176,7 @@ class SshClient(object):
         try:
             self.sock.shutdown(socket.SHUT_RDWR)
         except socket.error as err:
+            self.log.debug("sock.shutdown: {err}".format(err=err))
             pass
         self.sock.close()
         self.deactivate()
@@ -232,33 +234,37 @@ class SshClient(object):
             return False
         return self.send_buffer.__len__() and self.channel.send_ready()
 
+    def _send(self, send_bytes):
+        """
+        Sends bytes ``send_bytes`` to ssh channel, returns number of bytes
+        sent. Caller must re-buffer bytes not sent.
+
+        throws Disconnected on error
+        """
+        try:
+            return self.channel.send(send_bytes)
+        except socket.error as err:
+            if err[0] == errno.EDEADLK:
+                self.log.debug('{self.addrport}: {err} (bandwidth exceed)'
+                               .format(self=self, err=err))
+                return 0
+            raise Disconnected('{self.addrport}: {err}'
+                               .format(self=self, err=err))
+
     def send(self):
         """
-        Called by TelnetServer.poll() when send data is ready.  Send any
-        data buffered, trim self.send_buffer to bytes sent, and return number
-        of bytes sent.  Throws Disconnected
+        Send any data buffered, returns number of bytes sent.
+
+        Throws Disconnected on EOF.
         """
         if not self.send_ready():
-            warnings.warn('send() called on empty buffer', RuntimeWarning, 2)
+            self.log.warn('send() called on empty buffer')
             return 0
 
         ready_bytes = bytes(''.join(self.send_buffer))
         self.send_buffer = array.array('c')
 
-        def _send(send_bytes):
-            """
-            throws x84.bbs.exception.Disconnected on sock.send err
-            """
-            try:
-                return self.channel.send(send_bytes)
-            except socket.error as err:
-                if err[0] == errno.EDEADLK:
-                    warnings.warn('%s: %s (bandwidth exceed)' % (
-                                self.addrport(), err[1],), RuntimeWarning, 2)
-                    return 0
-                raise Disconnected('send %d: %s' % (err[0], err[1],))
-
-        sent = _send(ready_bytes)
+        sent = self._send(ready_bytes)
         if sent < len(ready_bytes):
             # re-buffer data that could not be pushed to socket;
             self.send_buffer.fromstring(ready_bytes[sent:])
@@ -275,11 +281,11 @@ class SshClient(object):
 
     def socket_recv(self):
         """
-        Called by TelnetServer.poll() when recv data is ready.  Read any
-        data on socket, buffering all bytestrings to self.recv_buffer.
+        Receive any data ready on socket.
 
-        If data is not received, or the connection is closed,
-        x84.bbs.exception.Disconnected is raised.
+        All bytes buffered to :py:attr`SshClient.recv_buffer`.
+
+        Throws Disconnected on EOF.
         """
         recv = 0
         try:
@@ -288,7 +294,7 @@ class SshClient(object):
             if 0 == recv:
                 raise Disconnected('Closed by client (EOF)')
         except socket.error as err:
-            raise Disconnected('socket errno %d: %s' % (err[0], err[1],))
+            raise Disconnected('socket error: {err}'.format(err))
         self.bytes_received += recv
         self.last_input_time = time.time()
         self.recv_buffer.fromstring(data)
@@ -341,7 +347,7 @@ class ConnectSsh (threading.Thread):
 
     def run(self):
         """
-        XXX
+        Accept new Ssh connect in thread.
         """
         try:
             self.client.transport = paramiko.Transport(self.client.sock)
@@ -384,24 +390,54 @@ class SshSessionServer(paramiko.ServerInterface):
 
     def __init__(self, client):
         self.shell_requested = threading.Event()
-        self.log = logging.getLogger('SshSessionServer')
+        self.log = logging.getLogger(__name__)
         self.client = client
+
+        # to be checked by caller
+        self.new_user = False
+        self.anonymous = False
+        self.username = None
 
     def check_channel_request(self, kind, chanid):
         if kind == 'session':
             return paramiko.OPEN_SUCCEEDED
-        self.log.debug('channel request denied: %s', kind)
+        self.log.debug('channel request denied, kind={0}'.format(kind))
         return paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
 
     def check_auth_password(self, username, password):
-        self.log.debug('check_auth_password %r %r', username, password)
-        # TODO, connect to userbase
-        return paramiko.AUTH_SUCCESSFUL
+        """ Return success/fail for username and password. """
+        self.username = username.strip()
 
-    def check_auth_publickey(self, username, key):
-        # TODO, connect to userbase
-        self.log.debug('check_auth_publickey %r %r', username, key)
-        return paramiko.AUTH_SUCCESSFUL
+        if self._check_new_user(username):
+            self.new_user = True
+            self.log.debug('new user account, {0}'.format(username))
+            return paramiko.AUTH_SUCCESSFUL
+
+        elif self._check_bye_user(username):
+            # not allowed to login using bye@, logoff@, etc.
+            self.log.debug('denied byecmds name, {0}'.format(username))
+            return paramiko.AUTH_FAILED
+
+        elif self._check_anonymous_user(username):
+            self.log.debug('{0} user accepted by server configuration.'
+                           .format(username))
+            self.anonymous = True
+            return paramiko.AUTH_SUCCESSFUL
+
+        elif self._check_user_password(username, password):
+            self.log.debug('password accepted for user {0}.'.format(username))
+            return paramiko.AUTH_SUCCESSFUL
+
+        self.log.debug('password rejected for user {0}.'.format(username))
+        return paramiko.AUTH_FAILED
+
+    def check_auth_publickey(self, username, public_key):
+        self.username = username.strip()
+        if self._check_user_pubkey(username, public_key):
+            self.log.debug('pubkey accepted for user {0}.'.format(username))
+            return paramiko.AUTH_SUCCESSFUL
+        self.log.debug('pubkey denied for user {0}.'.format(username))
+        return paramiko.AUTH_FAILED
 
     def get_allowed_auths(self, username):
         return 'password,publickey'
@@ -420,3 +456,50 @@ class SshSessionServer(paramiko.ServerInterface):
         self.client.env['LINES'] = str(height)
         self.client.env['COLUMNS'] = str(width)
         return True
+
+    @staticmethod
+    def _get_matches(matrix_ini_key):
+        from x84.bbs import ini
+        return ini.CFG.get('matrix', matrix_ini_key).split()
+
+    @classmethod
+    def _check_new_user(cls, username):
+        """ Boolean return when username matches `newcmds' ini cfg. """
+        matching = cls._get_matches('newcmds')
+        return matching and username in matching
+
+    @classmethod
+    def _check_bye_user(cls, username):
+        """ Boolean return when username matches `byecmds' in ini cfg. """
+        matching = cls._get_matches('byecmds')
+        return matching and username in matching
+
+    @staticmethod
+    def _check_anonymous_user(username):
+        """ Boolean return when user is anonymous and is allowed. """
+        from x84.bbs import ini
+        enabled = ini.CFG.getboolean('matrix', 'enable_anonymous')
+        return enabled and username == 'anonymous'
+
+    @staticmethod
+    def _check_user_password(username, password):
+        """ Boolean return when username and password match user record. """
+        from x84.bbs import find_user, get_user
+        handle = find_user(username)
+        if handle is None:
+            return False
+        user = get_user(handle)
+        if user is None:
+            return False
+        return user.auth(password)
+
+    @staticmethod
+    def _check_user_pubkey(username, public_key):
+        """ Boolean return when public_key matches user record. """
+        from x84.bbs import find_user, get_user
+        handle = find_user(username)
+        if handle is None:
+            return False
+        user = get_user(handle)
+        user_pubkey = user.get('pubkey', False)
+        return user_pubkey and user_pubkey == public_key
