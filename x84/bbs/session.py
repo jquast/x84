@@ -17,6 +17,7 @@ SESSION = None
 BOTQUEUE = None
 BOTLOCK = None
 
+
 def getsession():
     """
     Return session, after a .run() method has been called on any 1 instance.
@@ -30,11 +31,13 @@ def getterminal():
     """
     return getsession().terminal
 
+
 def getnode():
     """
     Returns unique session identifier for this session as integer.
     """
     return getsession().node
+
 
 class Session(object):
     """
@@ -44,7 +47,7 @@ class Session(object):
     #        Too many instance attributes
     #        Too many public methods
     #        Too many arguments
-    TRIM_CP437 = bytes(chr(14) + chr(15)) # HACK
+    TRIM_CP437 = bytes(chr(14) + chr(15))  # HACK
     _encoding = None
     _decoder = None
 
@@ -63,9 +66,10 @@ class Session(object):
         import Queue
         # pylint: disable=W0603
         #        Using the global statement
-        global SESSION, BOTQUEUE, BOTLOCk
+        global SESSION
         assert SESSION is None, 'Session may be instantiated only once'
         SESSION = self
+        self.log = logging.getLogger(__name__)
         self.iqueue = inp_queue
         self.oqueue = out_queue
         self.terminal = terminal
@@ -73,6 +77,8 @@ class Session(object):
         self.env = env
         self.encoding = encoding
         self.lock = lock
+
+        # private attributes
         self._user = None
         self._script_stack = [(ini.CFG.get('matrix', 'script'),)]
         self._tap_input = ini.CFG.getboolean('session', 'tap_input')
@@ -89,8 +95,10 @@ class Session(object):
         self._connect_time = time.time()
         self._last_input_time = time.time()
         self._activity = u'<uninitialized>'
+
         # event buffer
         self._buffer = dict()
+
         # save state for ttyrec compression
         self._ttyrec_sec = -1
         self._ttyrec_usec = -1
@@ -98,27 +106,31 @@ class Session(object):
 
         # detect if this is a "robot" user and handle it accordingly
         # TODO ... anything but this, especially in the class constructor!
-        addr, port = sid.split(':', 1)
+        addr, _ = sid.split(':', 1)
         trusted_hosts = set(['127.0.0.1'])
         if ini.CFG.has_section('telnet'):
             trusted_hosts.add(ini.CFG.get('telnet', 'addr'))
-        # oh this makes me so mad !
-        if addr in trusted_hosts:
-            try:
-                whoami = BOTQUEUE.get(True, 0.1)
-                robots = [robot.strip() for robot in ini.CFG.get('bots', 'names').split(',')]
 
-                if whoami in robots:
-                    from x84.bbs import User
-                    self._user = User(whoami)
-                    self._script_stack.pop()
+        if BOTQUEUE is not None:
+            # oh this makes me so mad !
+            if addr in trusted_hosts:
+                try:
+                    whoami = BOTQUEUE.get(True, 0.1)
+                    robots = map(str.strip,
+                                 ini.CFG.get('bots', 'names').split(','))
 
-                    if ini.CFG.has_option('bots', addr):
-                        self._script_stack.append((ini.CFG.get('bots', whoami),))
-                    else:
-                        self._script_stack.append(('bots',))
-            except Queue.Empty:
-                pass
+                    if whoami in robots:
+                        from x84.bbs import User
+                        self._user = User(whoami)
+                        self._script_stack.pop()
+
+                        if ini.CFG.has_option('bots', addr):
+                            botscript = ini.CFG.get('bots', whoami)
+                            self._script_stack.append((botscript,))
+                        else:
+                            self._script_stack.append(('bots',))
+                except Queue.Empty:
+                    pass
 
     def to_dict(self):
         """
@@ -181,8 +193,7 @@ class Session(object):
         # pylint: disable=C0111
         #         Missing docstring
         if self._activity != value:
-            logger = logging.getLogger()
-            logger.debug('activity=%s', value)
+            self.log.debug('activity=%s', value)
             kind = self.env.get('TERM', 'unknown')
             set_title = self.user.get('set-title', (
                 'xterm' in kind or 'rxvt' in kind
@@ -214,8 +225,7 @@ class Session(object):
         # pylint: disable=C0111
         #         Missing docstring
         self._user = value
-        logger = logging.getLogger()
-        logger.info("set user '%s'.", value.handle)
+        self.log.info("set user '%s'.", value.handle)
 
     @property
     def encoding(self):
@@ -229,8 +239,7 @@ class Session(object):
         # pylint: disable=C0111
         #         Missing docstring
         if value != self._encoding:
-            logger = logging.getLogger()
-            logger.info('encoding is %s.', value)
+            self.log.info('encoding is %s.', value)
             assert value in ('utf8', 'cp437')
             self._encoding = value
             getterminal().set_keyboard_decoder(self._encoding)
@@ -264,7 +273,6 @@ class Session(object):
         jojo's invention; recover from a general exception by using
         a script stack, and resuming last good script.
         """
-        logger = logging.getLogger()
         if 0 != len(self._script_stack):
             # recover from exception
             fault = self._script_stack.pop()
@@ -276,7 +284,7 @@ class Session(object):
                     (self._script_stack[-1][0] + u' ')
                     if len(self._script_stack) else u' '),
                 fault[0],))
-            logger.info(msg)
+            self.log.warn(msg)
             self.write(u'\r\n\r\n')
             if stop:
                 self.write(self.terminal.red_reverse(u'stop'))
@@ -298,18 +306,17 @@ class Session(object):
         Scripts manipulate control flow of scripts using goto and gosub.
         """
         from x84.bbs.exception import Goto, Disconnected
-        logger = logging.getLogger()
         while len(self._script_stack):
-            logger.debug('script_stack: %r', self._script_stack)
+            self.log.debug('script_stack: %r', self._script_stack)
             try:
                 self.runscript(*self._script_stack.pop())
                 continue
             except Goto, err:
-                logger.debug('Goto: %s', err)
+                self.log.debug('Goto: %s', err)
                 self._script_stack = [err[0] + tuple(err[1:])]
                 continue
             except Disconnected, err:
-                logger.info('Disconnected: %s', err)
+                self.log.info('Disconnected: %s', err)
                 self.close()
                 return None
             except Exception, err:
@@ -323,11 +330,11 @@ class Session(object):
                         terrs.append(subln)
                 terrs.extend(traceback.format_exception_only(e_type, e_value))
                 for etxt in terrs:
-                    logger.error(etxt.rstrip())
+                    self.log.error(etxt.rstrip())
                     if self._show_traceback:
                         self.write(etxt.rstrip() + u'\r\n')
             self.__error_recovery()
-        logger.info('End of script stack.')
+        self.log.debug('End of script stack.')
         self.close()
         return None
 
@@ -339,7 +346,6 @@ class Session(object):
         Has side effect of updating ttyrec file when recording.
         """
         from x84.bbs.cp437 import CP437
-        logger = logging.getLogger()
         if 0 == len(ucs):
             return
         assert isinstance(ucs, unicode)
@@ -353,11 +359,11 @@ class Session(object):
             # additionally, the 'shift-in' and 'shift-out' characters
             # display as '*' on SyncTerm, I think they stem from curses:
             # http://lkml.indiana.edu/hypermail/linux/kernel/0602.2/0868.html
-            # regardless, remove them using str.translate()
+            # regardless, remove them (self.TRIM_CP437)
             text = ucs.encode(encoding, 'replace')
             ucs = u''.join([(unichr(CP437.index(glyph))
                              if glyph in CP437
-                             and not glyph in self.TRIM_CP437
+                             and glyph not in self.TRIM_CP437
                              else unicode(
                                  text[idx].translate(None, self.TRIM_CP437),
                                  encoding, 'replace'))
@@ -366,8 +372,8 @@ class Session(object):
             encoding = self.encoding
         self.terminal.stream.write(ucs, encoding)
 
-        if self._tap_output and logger.isEnabledFor(logging.DEBUG):
-            logger.debug('--> %r.', ucs)
+        if self._tap_output and self.log.isEnabledFor(logging.DEBUG):
+            self.log.debug('--> %r.', ucs)
 
         if self._record_tty:
             if not self.is_recording:
@@ -378,13 +384,12 @@ class Session(object):
         """
         Flush all return all data buffered for 'event'.
         """
-        logger = logging.getLogger()
         flushed = list()
         while True:
             data = self.read_event(event, -1)
             if data is None:
                 if 0 != len(flushed):
-                    logger.debug('flushed from %s: %r', event, flushed)
+                    self.log.debug('flushed from %s: %r', event, flushed)
                 return flushed
             flushed.append(data)
         return flushed
@@ -416,7 +421,6 @@ class Session(object):
             'exception', 'global' AYT (are you there),
             'page', 'info-req', 'refresh', and 'input'.
         """
-        logger = logging.getLogger()
         # exceptions aren't buffered; they are thrown!
         if event == 'exception':
             # pylint: disable=E0702
@@ -436,9 +440,9 @@ class Session(object):
         if event == 'page' and self._script_stack[-1:][0][0] != 'chat':
             channel, sender = data
             if self.user.get('mesg', True) or sender == -1:
-                logger.info('page from %s.' % (sender,))
+                self.log.info('page from {0}.'.format(sender))
                 if not self.runscript('chat', channel, sender):
-                    logger.info('rejected page from %s.' % (sender,))
+                    self.log.info('rejected page from {0}.'.format(sender))
                 # buffer refresh event for any asyncronous event UI's
                 self.buffer_event('refresh', 'page-return')
                 return True
@@ -450,7 +454,7 @@ class Session(object):
             return True
 
         # init new unmanaged & unlimited-sized buffer ;p
-        if not event in self._buffer:
+        if event not in self._buffer:
             self._buffer[event] = list()
 
         # buffer input
@@ -482,9 +486,8 @@ class Session(object):
         """
         self._last_input_time = time.time()
 
-        logger = logging.getLogger()
-        if self._tap_input and logger.isEnabledFor(logging.DEBUG):
-            logger.debug('<-- (%d): %r.', len(data), data)
+        if self._tap_input and self.log.isEnabledFor(logging.DEBUG):
+            self.log.debug('<-- (%d): %r.', len(data), data)
 
         for keystroke in data:
             self._buffer['input'].insert(0, keystroke)
@@ -504,7 +507,7 @@ class Session(object):
                'db=<schema>': Request sqlite dict method result as iterable.
                'lock-<name>': Fine-grained global bbs locking.
         """
-        with self.lock.acquire():
+        with self.lock:
             self.oqueue.send((event, data))
 
     def poll_event(self, event):
@@ -534,7 +537,6 @@ class Session(object):
            Return the first matched IPC data for any event specified in tuple
            events, in the form of (event, data).
         """
-        logger = logging.getLogger()
         (event, data) = (None, None)
         # return immediately any events that are already buffered
         for (event, data) in ((e, self._event_pop(e))
@@ -551,14 +553,15 @@ class Session(object):
             poll = None if waitfor == float('inf') else waitfor
             if self.iqueue.poll(poll):
                 event, data = self.iqueue.recv()
+                self.buffer_event(event, data)
                 retval = self.buffer_event(event, data)
-                if (self._tap_events and logger.isEnabledFor(logging.DEBUG)):
+                if self._tap_events and self.log.isEnabledFor(logging.DEBUG):
                     stack = inspect.stack()
                     caller_mod, caller_func = stack[2][1], stack[2][3]
-                    logger.debug('event %s %s by %s in %s.', event,
-                                 'caught' if event in events else
-                                 'handled' if retval is not None else
-                                 'buffered', caller_func, caller_mod,)
+                    self.log.debug('event %s %s by %s in %s.', event,
+                                   'caught' if event in events else
+                                   'handled' if retval is not None else
+                                   'buffered', caller_func, caller_mod,)
                 if event in events:
                     return (event, self._event_pop(event))
             elif timeout == -1:
@@ -581,10 +584,9 @@ class Session(object):
         *script_name*, with optional args.
         """
         from x84.bbs.exception import ScriptError
-        logger = logging.getLogger()
         self._script_stack.append((script_name,) + args)
-        logger.info("run script '%s'%s.", script_name,
-                    ', args %r' % (args,) if 0 != len(args) else '')
+        self.log.info("run script '%s'%s.", script_name,
+                      ', args %r' % (args,) if 0 != len(args) else '')
 
         def _load_script_module():
             """
@@ -598,9 +600,9 @@ class Session(object):
                     '[system] section value "scriptpath", %r, does not exist!'
                     .format(self._script_path))
                 # and put it in sys.path for relative imports
-                if not self._script_path in sys.path:
+                if self._script_path not in sys.path:
                     sys.path.insert(0, self._script_path)
-                    logger.debug("Added to sys.path: %s", self._script_path)
+                    self.log.debug("Added to sys.path: %s", self._script_path)
                 # finally, import the script
                 lookup = imp.find_module(script_name, [self._script_path])
                 # pylint: disable=W0142
@@ -620,8 +622,8 @@ class Session(object):
             raise ScriptError("%s: main not callable." % (script_name,))
         value = script.main(*args)
         toss = self._script_stack.pop()
-        logger.info("script '%s' returned%s.", toss[0],
-                    ' %r' % (value,) if value is not None else u'')
+        self.log.info("script '%s' returned%s.", toss[0],
+                      ' %r' % (value,) if value is not None else u'')
         return value
 
     def close(self):
@@ -632,8 +634,8 @@ class Session(object):
             self.stop_recording()
         if self._node is not None:
             self.send_event(
-                    event='lock-node/%d' % (self._node),
-                    data=('release', None))
+                event='lock-node/%d' % (self._node),
+                data=('release', None))
 
     @property
     def is_recording(self):
@@ -647,11 +649,12 @@ class Session(object):
         Cease recording to ttyrec file (close).
         """
         assert self.is_recording
-        self._ttyrec_write(u''.join((
-            self.terminal.normal, u'\r\n\r\n',
-            u'\r\n'.join([u'%s: %s' % (key, val)
-            for (key, val) in sorted(self.info().items())]),
-            u'\r\n')))
+        self._ttyrec_write(self.terminal.normal)
+        self._ttyrec_write(u'\r\n\r\n')
+        self._ttyrec_write(u'\r\n'.join(
+            [u'%s: %s' % (key, val)
+             for (key, val) in sorted(self.info().items())]),)
+        self._ttyrec_write(u'\r\n')
         self._fp_ttyrec.close()
         self._fp_ttyrec = None
 
@@ -659,7 +662,6 @@ class Session(object):
         """
         Begin recording to ttyrec file.
         """
-        logger = logging.getLogger()
         assert self._fp_ttyrec is None, ('already recording')
         digit = 0
         while True:
@@ -672,12 +674,12 @@ class Session(object):
         assert os.path.sep not in self._ttyrec_fname
         filename = os.path.join(self._ttyrec_folder, self._ttyrec_fname)
         if not os.path.exists(self._ttyrec_folder):
-            logger.info('creating ttyrec folder, %s.', self._ttyrec_folder)
+            self.log.info('creating ttyrec folder, %s.', self._ttyrec_folder)
             os.makedirs(self._ttyrec_folder)
         self._fp_ttyrec = io.open(filename, 'wb+')
         self._ttyrec_sec = -1
         self._ttyrec_write_header()
-        logger.info('recording %s.' % (filename,))
+        self.log.info('tty recording to {0}'.format(filename))
 
     def _ttyrec_write_header(self):
         """
