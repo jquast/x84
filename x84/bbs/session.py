@@ -553,7 +553,6 @@ class Session(object):
             poll = None if waitfor == float('inf') else waitfor
             if self.iqueue.poll(poll):
                 event, data = self.iqueue.recv()
-                self.buffer_event(event, data)
                 retval = self.buffer_event(event, data)
                 if self._tap_events and self.log.isEnabledFor(logging.DEBUG):
                     stack = inspect.stack()
