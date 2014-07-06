@@ -30,11 +30,7 @@ class IPCLogHandler(logging.Handler):
                 dummy  # pflakes ;/
             record.handle = (self.session.handle
                              if self.session is not None else None)
-            if self.session is not None:
-                self.session.lock.acquire()
             self.oqueue.send(('logger', record))
-            if self.session is not None:
-                self.session.lock.release()
         except (KeyboardInterrupt, SystemExit):
             raise
         except:
