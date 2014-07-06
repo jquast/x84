@@ -24,6 +24,7 @@ def init(lookup_bbs, lookup_log):
     """
     import ConfigParser
     root = logging.getLogger()
+    log = logging.getLogger(__name__)
 
     def write_cfg(cfg, filepath):
         """
@@ -56,12 +57,12 @@ def init(lookup_bbs, lookup_log):
             try:
                 os.makedirs(dir_name)
             except OSError as err:
-                root.warn(err)
+                log.warn(err)
         try:
             write_cfg(cfg_log, cfg_logfile)
-            root.info('Saved {0}'.format(cfg_logfile))
+            log.info('Saved {0}'.format(cfg_logfile))
         except IOError as err:
-            root.error(err)
+            log.error(err)
         logging.config.fileConfig(cfg_logfile)
 
     loaded = False
@@ -72,7 +73,7 @@ def init(lookup_bbs, lookup_log):
         # load defaults,
         if os.path.exists(cfg_bbsfile):
             cfg_bbs.read(cfg_bbsfile)
-            root.info('loaded %s', cfg_bbsfile)
+            log.info('loaded %s', cfg_bbsfile)
             loaded = True
             break
     if not loaded:
@@ -82,12 +83,12 @@ def init(lookup_bbs, lookup_log):
             try:
                 os.makedirs(dir_name)
             except OSError as err:
-                root.warn(err)
+                log.warn(err)
         try:
             write_cfg(cfg_bbs, cfg_bbsfile)
-            root.info('Saved {0}'.format(cfg_bbsfile))
+            log.info('Saved {0}'.format(cfg_bbsfile))
         except IOError as err:
-            root.error(err)
+            log.error(err)
 
     global CFG
     CFG = cfg_bbs
@@ -278,19 +279,27 @@ def init_log_ini():
                 '("' + daily_log + '", "midnight", 1, 60)')
 
     cfg_log.add_section('loggers')
-    cfg_log.set('loggers', 'keys', 'root, sqlitedict')
+    cfg_log.set('loggers', 'keys', 'root, sqlitedict, paramiko')
 
     cfg_log.add_section('logger_root')
     cfg_log.set('logger_root', 'level', 'INFO')
     cfg_log.set('logger_root', 'formatter', 'default')
     cfg_log.set('logger_root', 'handlers', 'console, rotate_daily')
 
-    # squelche sqlitedict's info on open, its rather long
+    # squelch sqlitedict's info, its rather long
     cfg_log.add_section('logger_sqlitedict')
     cfg_log.set('logger_sqlitedict', 'level', 'WARN')
     cfg_log.set('logger_sqlitedict', 'formatter', 'default')
     cfg_log.set('logger_sqlitedict', 'handlers', 'console, rotate_daily')
     cfg_log.set('logger_sqlitedict', 'qualname', 'sqlitedict')
     cfg_log.set('logger_sqlitedict', 'propagate', '0')
+
+    # squelch paramiko.transport info, also too verbose
+    cfg_log.add_section('logger_paramiko')
+    cfg_log.set('logger_paramiko', 'level', 'WARN')
+    cfg_log.set('logger_paramiko', 'formatter', 'default')
+    cfg_log.set('logger_paramiko', 'handlers', 'console, rotate_daily')
+    cfg_log.set('logger_paramiko', 'qualname', 'paramiko.transport')
+    cfg_log.set('logger_paramiko', 'propagate', '0')
 
     return cfg_log
