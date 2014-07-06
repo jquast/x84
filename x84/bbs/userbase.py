@@ -198,7 +198,7 @@ class User(object):
                 attrs = adb[self.handle]
                 attrs.__setitem__(key, value)
                 adb[self.handle] = attrs
-        log.info("set attr {!r} for user {!r}.".format(key, self.handle))
+        log.debug("set attr {!r} for user {!r}.".format(key, self.handle))
     __setitem__.__doc__ = dict.__setitem__.__doc__
 
     def get(self, key, default=None):
