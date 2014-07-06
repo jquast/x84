@@ -15,7 +15,7 @@ GLYPHSETS = {
         'top-horiz': u'-',
         'bot-horiz': u'-', },
     'thin': {
-        'top-left': chr(219).decode('cp437'),
+        'top-left': chr(218).decode('cp437'),
         'bot-left': chr(192).decode('cp437'),
         'top-right': chr(191).decode('cp437'),
         'bot-right': chr(217).decode('cp437'),
