@@ -676,7 +676,7 @@ class Session(object):
         self._fp_ttyrec = io.open(filename, 'wb+')
         self._ttyrec_sec = -1
         self._ttyrec_write_header()
-        self.log.info('tty recording to {0}'.format(filename))
+        self.log.debug('tty recording to {0}'.format(filename))
 
     def _ttyrec_write_header(self):
         """
