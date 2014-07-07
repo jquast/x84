@@ -50,7 +50,7 @@ def connect_bot(botname):
     from x84.bbs.session import BOTLOCK, BOTQUEUE
     telnet_addr = CFG.get('telnet', 'addr')
     telnet_port = CFG.getint('telnet', 'port')
-    with BOTLOCK.acquire():
+    with BOTLOCK:
         client = telnetlib.Telnet()
         client.set_option_negotiation_callback(callback_cmdopt)
         client.open(telnet_addr, telnet_port)
