@@ -97,7 +97,6 @@ def get_servers(CFG):
     Given a configuration file, instantiate and return a list of enabled
     servers.
     """
-    from x84.terminal import on_naws
     log = logging.getLogger('x84.engine')
 
     servers = []
@@ -105,13 +104,13 @@ def get_servers(CFG):
     if CFG.has_section('telnet'):
         # start telnet server instance
         from x84.telnet import TelnetServer
-        servers.append(TelnetServer(config=CFG, on_naws=on_naws))
+        servers.append(TelnetServer(config=CFG))
 
     if CFG.has_section('ssh'):
         # start ssh server instance
         try:
             from x84.ssh import SshServer
-            servers.append(SshServer(config=CFG, on_naws=on_naws))
+            servers.append(SshServer(config=CFG))
         except ImportError as err:
             log.error(err)  # missing paramiko, Crypto ..
 
@@ -131,6 +130,7 @@ def accept_server(server, log):
     optional kwargs.
     """
     from x84.telnet import TelnetServer, TelnetClient, ConnectTelnet
+    from x84.terminal import on_naws
     try:
         from x84.ssh import SshServer, SshClient, ConnectSsh
     except ImportError:
@@ -140,7 +140,7 @@ def accept_server(server, log):
                client_factory=TelnetClient,
                connect_factory=ConnectTelnet,
                client_factory_kwargs={
-                   'on_naws': server.on_naws,
+                   'on_naws': on_naws,
                })
     elif server.__class__ == SshServer:
         accept(log=log, server=server,
@@ -150,7 +150,7 @@ def accept_server(server, log):
                    'server_host_key': server.host_key,
                },
                client_factory_kwargs={
-                   'on_naws': server.on_naws,
+                   'on_naws': on_naws,
                })
     else:
         raise NotImplementedError(

@@ -29,7 +29,7 @@ class SshServer(object):
     ## Dictionary of environment variables received by negotiation
     env = {}
 
-    def __init__(self, config, on_naws=None):
+    def __init__(self, config):
         """
         Create a new Ssh Server.
         """
@@ -37,7 +37,6 @@ class SshServer(object):
         self.config = config
         self.address = config.get('ssh', 'addr')
         self.port = config.getint('ssh', 'port')
-        self.on_naws = on_naws
 
         # generate/load host key
         filename = config.get('ssh', 'HostKey')
@@ -180,7 +179,7 @@ class SshClient(object):
             pass
         self.sock.close()
         self.deactivate()
-        self.log.info('shutdown client: %s', self.addrport())
+        self.log.debug('shutdown client: %s', self.addrport())
 
     def addrport(self):
         """

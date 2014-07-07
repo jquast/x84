@@ -64,20 +64,16 @@ class TelnetServer(object):
     ## Dictionary of environment variables received by negotiation
     env = {}
 
-    def __init__(self, config, on_naws=None):
+    def __init__(self, config):
         """
         Create a new Telnet Server.
 
         :param config: configuration section 'telnet', w/options 'addr', 'port'
         :type config: RawConfigParser
-        :param on_naws: callable receives a TelnetClient when a client
-                        negotiates about window size (resize event).
-        :type on_naws: callable
         """
         self.log = logging.getLogger(__name__)
         self.address = config.get('telnet', 'addr')
         self.port = config.getint('telnet', 'port')
-        self.on_naws = on_naws
 
         # bind
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -300,7 +296,7 @@ class TelnetClient(object):
             pass
         self.sock.close()
         self.deactivate()
-        self.log.info('shutdown client: %s', self.addrport())
+        self.log.debug('shutdown client: %s', self.addrport())
 
     def addrport(self):
         """
