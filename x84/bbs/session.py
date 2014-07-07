@@ -515,7 +515,7 @@ class Session(object):
                'db=<schema>': Request sqlite dict method result as iterable.
                'lock-<name>': Fine-grained global bbs locking.
         """
-        self.oqueue.send((event, data))
+        self.writer.send((event, data))
 
     def poll_event(self, event):
         """
