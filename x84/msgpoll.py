@@ -256,7 +256,7 @@ def poll_network_for_messages(net, log=None):
             # do not save this message to network, we already received
             # it from the network, set send_net=False
             store_msg.save(send_net=False, ctime=to_localtime(msg['ctime']))
-            with transdb.acquire():
+            with transdb:
                 transdb[msg['id']] = store_msg.idx
             transkeys.append(msg['id'])
             log.info('{net[name]} Processed (msg_id={msg[id]}) => {new_id}'
@@ -314,12 +314,12 @@ def publish_network_messages(net, transdb, log=None):
             log.error('{net[name]} trans_id={trans_id} conflicts with '
                       '(msg_id={msg_id})'
                       .format(net=net, trans_id=trans_id, msg_id=msg_id))
-            with queuedb.acquire():
+            with queuedb:
                 del queuedb[msg_id]
             continue
 
         # transform, and possibly duplicate(?) message ..
-        with transdb.acquire(), msgdb.acquire(), queuedb.acquire():
+        with transdb, msgdb, queuedb:
             transdb[trans_id] = msg_id
             msg.body = u''.join((msg.body, format_origin_line()))
             msgdb[msg_id] = msg
