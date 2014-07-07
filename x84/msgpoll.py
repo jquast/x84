@@ -171,7 +171,9 @@ def get_networks(cfg, log=None):
             net[option] = cfg.get(section, option)
 
         # make last_file absolute path, relative to datapath
-        net['last_file'] = os.path.expanduser(cfg.get('system', 'datapath'))
+        net['last_file'] = os.path.join(
+            os.path.expanduser(cfg.get('system', 'datapath')),
+            net['last_file'])
 
         if not cfg.has_option(section, 'ca_path'):
             ca_path = True
