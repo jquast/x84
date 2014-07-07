@@ -160,6 +160,10 @@ def init_bbs_ini():
         # for something longer, then you can buy your own patience !
         cfg_bbs.set('ssh', 'hostkeybits', '2048')
 
+    cfg_bbs.add_section('rlogin')
+    cfg_bbs.set('rlogin', 'addr', '127.0.0.1')
+    cfg_bbs.set('rlogin', 'port', '6513')
+
     # default path if cmd argument is not absolute,
     cfg_bbs.add_section('door')
     cfg_bbs.set('door', 'path', '/usr/local/bin:/usr/games')

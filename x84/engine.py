@@ -114,6 +114,11 @@ def get_servers(CFG):
         except ImportError as err:
             log.error(err)  # missing paramiko, Crypto ..
 
+    if CFG.has_section('rlogin'):
+        # start rlogin server instance
+        from x84.rlogin import RLoginServer
+        servers.append(RLoginServer(config=CFG))
+
     return servers
 
 
@@ -123,52 +128,27 @@ def find_server(servers, fd):
             return server
 
 
-def accept_server(server, log):
-    """
-    Given a server awaiting a new connection, call the accept() function with
-    the appropriate arguments for client_factory, connect_factory, and any
-    optional kwargs.
-    """
-    from x84.telnet import TelnetServer, TelnetClient, ConnectTelnet
-    from x84.terminal import on_naws
-    try:
-        from x84.ssh import SshServer, SshClient, ConnectSsh
-    except ImportError:
-        pass
-    if server.__class__ == TelnetServer:
-        accept(log=log, server=server,
-               client_factory=TelnetClient,
-               connect_factory=ConnectTelnet,
-               client_factory_kwargs={
-                   'on_naws': on_naws,
-               })
-    elif server.__class__ == SshServer:
-        accept(log=log, server=server,
-               client_factory=SshClient,
-               connect_factory=ConnectSsh,
-               connect_factory_kwargs={
-                   'server_host_key': server.host_key,
-               },
-               client_factory_kwargs={
-                   'on_naws': on_naws,
-               })
-    else:
-        raise NotImplementedError(
-            "No accept for server class {server.__class__.__name__}"
-            .format(server=server))
-
-
-def accept(log, server, client_factory, connect_factory,
-           client_factory_kwargs=None, connect_factory_kwargs=None):
+def accept(log, server):
     """
     accept new connection from server.server_socket,
     instantiate a new instance of client_factory,
     registering it with dictionary server.clients,
     spawning an unmanaged thread using connect_factory.
     """
+    if None in (server.client_factory, server.connect_factory):
+        raise NotImplementedError(
+            "No accept for server class {server.__class__.__name__}"
+            .format(server=server))
+
     import socket
-    client_factory_kwargs = client_factory_kwargs or {}
-    connect_factory_kwargs = connect_factory_kwargs or {}
+    if callable(server.client_factory_kwargs):
+        client_factory_kwargs = server.client_factory_kwargs(server)
+    else:
+        client_factory_kwargs = server.client_factory_kwargs
+    if callable(server.connect_factory_kwargs):
+        connect_factory_kwargs = server.connect_factory_kwargs(server)
+    else:
+        connect_factory_kwargs = server.connect_factory_kwargs
     try:
         sock, address_pair = server.server_socket.accept()
         # busy signal
@@ -180,11 +160,16 @@ def accept(log, server, client_factory, connect_factory,
             sock.close()
             log.error('refused new connect; maximum reached.')
             return
-        client = client_factory(sock, address_pair, **client_factory_kwargs)
+        client = server.client_factory(
+            sock,
+            address_pair,
+            **client_factory_kwargs
+        )
         server.clients[client.sock.fileno()] = client
 
         # spawn negotiation and process registration thread
-        connect_factory(client, **connect_factory_kwargs).start()
+        print connect_factory_kwargs
+        server.connect_factory(client, **connect_factory_kwargs).start()
         log.info('{client.kind} connection from {client.addrport}.'
                  .format(client=client))
 
@@ -355,7 +340,7 @@ def session_recv(locks, terminals, log, tap_events):
                 reason = 'remote-disconnect by %s' % (sid,)
                 for _sid, _tty in terminals:
                     if send_to == _sid:
-                        kill_session(client, reason)
+                        kill_session(tty.client, reason)
                         break
 
             # 'route': message passing directly from one session to another
@@ -478,7 +463,7 @@ def _loop(servers):
             # see if any new tcp connections were made
             server = find_server(servers, fd)
             if server is not None:
-                accept_server(server, log)
+                accept(log, server)
 
         # receive new data from tcp clients.
         client_recv(servers, log)

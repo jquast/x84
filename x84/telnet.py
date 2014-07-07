@@ -30,6 +30,8 @@ which is meant for MUD's. This server would not be safe for MUD clients.
 #   under the License.
 #------------------------------------------------------------------------------
 
+from __future__ import absolute_import
+
 # std
 import warnings
 import socket
@@ -46,65 +48,13 @@ from telnetlib import IP, AO, AYT, EC, EL, GA, SB
 
 # local
 from x84.bbs.exception import Disconnected
-from terminal import spawn_client_session
+from .terminal import spawn_client_session, on_naws
+from .client import BaseClient, BaseConnect
+from .server import BaseServer
 
 IS = chr(0)  # Sub-process negotiation IS command
 SEND = chr(1)  # Sub-process negotiation SEND command
 UNSUPPORTED_WILL = (LINEMODE, LFLOW, TSPEED, ENCRYPT, AUTHENTICATION)
-
-
-class TelnetServer(object):
-    """
-    Poll sockets for new connections and sending/receiving data from clients.
-    """
-    MAX_CONNECTIONS = 1000
-    LISTEN_BACKLOG = 5
-
-    # Dictionary of active clients, (file descriptor, TelnetClient,)
-    clients = {}
-
-    def __init__(self, config):
-        """
-        Create a new Telnet Server.
-
-        :param config: configuration section 'telnet', w/options 'addr', 'port'
-        :type config: RawConfigParser
-        """
-        self.log = logging.getLogger(__name__)
-        self.address = config.get('telnet', 'addr')
-        self.port = config.getint('telnet', 'port')
-
-        # bind
-        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket.setsockopt(
-            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        try:
-            self.server_socket.bind((self.address, self.port))
-            self.server_socket.listen(self.LISTEN_BACKLOG)
-        except socket.error as err:
-            self.log.error('Unable to bind {0}:{1}: {2}'
-                           .format(self.address, self.port, err))
-            exit(1)
-        self.log.info('listening on {self.address}:{self.port}/tcp'
-                      .format(self=self))
-
-    def client_count(self):
-        """
-        Returns the number of active connections.
-        """
-        return len(self.clients)
-
-    def client_list(self):
-        """
-        Returns a list of connected clients.
-        """
-        return self.clients.values()
-
-    def client_fds(self):
-        """
-        Returns a list of client file descriptors to poll for read/write.
-        """
-        return [_client.fileno() for _client in self.clients.values()]
 
 #---[ Telnet Notes ]-----------------------------------------------------------
 # (See RFC 854 for more information)
@@ -202,40 +152,19 @@ def debug_option(func):
 
 #------------------------------------------------------------------------Telnet
 
-class TelnetClient(object):
+class TelnetClient(BaseClient):
     """
     Represents a remote Telnet Client, instantiated from TelnetServer.
     """
     # pylint: disable=R0902,R0904
     #         Too many instance attributes
     #         Too many public methods
-    BLOCKSIZE_RECV = 64
-    SB_MAXLEN = 65534  # maximum length of subnegotiation string, allow
-                       # a fairly large one for NEW_ENVIRON negotiation
+
     kind = 'telnet'
 
     def __init__(self, sock, address_pair, on_naws=None):
-        """
-        Arguments:
-            sock: socket
-            address_pair: tuple (ip address, port number)
-            on_naws: callback for window resizing by client
-        """
-        self.log = logging.getLogger(__name__)
-        self.sock = sock
-        self.address_pair = address_pair
-        self.on_naws = on_naws
-        self.active = True
-        self.env = dict([('TERM', 'unknown'),
-                         ('LINES', 24),
-                         ('COLUMNS', 80),
-                         ])
-        self.send_buffer = array.array('c')
-        self.recv_buffer = array.array('c')
+        super(TelnetClient, self).__init__(sock, address_pair, on_naws)
         self.telnet_sb_buffer = array.array('c')
-        self.bytes_received = 0
-        self.connect_time = time.time()
-        self.last_input_time = time.time()
 
         # State variables for interpreting incoming telnet commands
         self.telnet_got_iac = False
@@ -245,77 +174,6 @@ class TelnetClient(object):
 
         self.ENV_REQUESTED = False
         self.ENV_REPLIED = False
-
-    def get_input(self):
-        """
-        Get any input bytes received from the DE. The input_ready method
-        returns True when bytes are available.
-        """
-        data = self.recv_buffer.tostring()
-        self.recv_buffer = array.array('c')
-        return data
-
-    def send_str(self, bstr):
-        """
-        Buffer bytestring for client.
-        """
-        self.send_buffer.fromstring(bstr)
-
-    def send_unicode(self, ucs, encoding='utf8'):
-        """
-        Buffer unicode string, encoded for client as 'encoding'.
-        """
-        # Must be escaped 255 (IAC + IAC) to avoid IAC intepretation
-        self.send_str(ucs.encode(encoding, 'replace')
-                      .replace(chr(255), 2 * chr(255)))
-
-    def is_active(self):
-        """
-        Returns True if this connection is still active.
-        """
-        return self.active
-
-    def deactivate(self):
-        """
-        Flag client for disconnection.
-        """
-        if self.active:
-            self.active = False
-            self.log.debug('{self.addrport}: deactivated'
-                           .format(self=self))
-
-    def shutdown(self):
-        """
-        Shutdown and close socket.
-
-        Called by event loop after client is marked by deactivate().
-        """
-        try:
-            self.sock.shutdown(socket.SHUT_RDWR)
-        except socket.error:
-            pass
-        self.sock.close()
-        self.deactivate()
-        self.log.debug('{self.addrport}: socket shutdown'.format(self=self))
-
-    @property
-    def addrport(self):
-        """
-        Returns IP address and port as string.
-        """
-        return '{0}:{1}'.format(*self.address_pair)
-
-    def idle(self):
-        """
-        Returns time elapsed since DE last sent input.
-        """
-        return time.time() - self.last_input_time
-
-    def duration(self):
-        """
-        Returns time elapsed since DE connected.
-        """
-        return time.time() - self.connect_time
 
     def request_will_sga(self):
         """
@@ -396,18 +254,6 @@ class TelnetClient(object):
         self.send_str(bytes(''.join((
             IAC, SB, TTYPE, SEND, IAC, SE))))
 
-    def send_ready(self):
-        """
-        Return True if any data is buffered for sending (screen output).
-        """
-        return bool(self.send_buffer.__len__())
-
-    def input_ready(self):
-        """
-        Return True if any data is buffered for reading (keyboard input).
-        """
-        return bool(self.recv_buffer.__len__())
-
     def send(self):
         """
         Called by TelnetServer.poll() when send data is ready.  Send any
@@ -450,9 +296,6 @@ class TelnetClient(object):
                     and not self._check_reply_pending(SGA)):
                 sent += _send(bytes(''.join((IAC, GA))))
         return sent
-
-    def fileno(self):
-        return self.sock.fileno()
 
     def recv_ready(self):
         """
@@ -1013,7 +856,7 @@ class TelnetClient(object):
         self.send_str(bytes(''.join((IAC, WONT, option))))
 
 
-class ConnectTelnet (threading.Thread):
+class ConnectTelnet(BaseConnect):
     """
     Accept new Telnet Connection and negotiate options.
     """
@@ -1082,17 +925,6 @@ class ConnectTelnet (threading.Thread):
         self._check_env(start_time=st_time)
         self._check_naws(start_time=st_time)
 
-    def set_encoding(self):
-        # set encoding to utf8 for clients negotiating BINARY mode,
-        # otherwise as 'cp437'; this assumes a very simple dualistic
-        # model: xterm or SyncTerm. A very few telnet clients send
-        # LANG and other helpful things.
-        if (self.client.check_local_option(BINARY)
-                and self.client.check_remote_option(BINARY)):
-            self.client.env['encoding'] = 'utf8'
-        else:
-            self.client.env['encoding'] = 'cp437'
-
     def run(self):
         """
         Negotiate and inquire about terminal type, telnet options, window size,
@@ -1105,12 +937,20 @@ class ConnectTelnet (threading.Thread):
             self.set_encoding()
             if self.client.is_active():
                 spawn_client_session(client=self.client)
-        except socket.error as err:
+        except (Disconnected, socket.error) as err:
             self.log.debug('Connection closed: %s', err)
             self.client.deactivate()
-        except Disconnected as err:
-            self.log.debug('Connection closed: %s', err)
-            self.client.deactivate()
+
+    def set_encoding(self):
+        # set encoding to utf8 for clients negotiating BINARY mode,
+        # otherwise as 'cp437'; this assumes a very simple dualistic
+        # model: xterm or SyncTerm. A very few telnet clients send
+        # LANG and other helpful things.
+        if (self.client.check_local_option(BINARY)
+                and self.client.check_remote_option(BINARY)):
+            self.client.env['encoding'] = 'utf8'
+        else:
+            self.client.env['encoding'] = 'cp437'
 
     def _timeleft(self, st_time):
         """
@@ -1118,14 +958,6 @@ class ConnectTelnet (threading.Thread):
         TIME_WAIT_STAGE.
         """
         return bool(time.time() - st_time < self.TIME_WAIT_STAGE)
-
-    def _set_socket_opts(self):
-        """
-        Set socket non-blocking and enable TCP KeepAlive.
-        """
-        self.client.sock.setblocking(0)
-        self.client.sock.setsockopt(
-            socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
 
     def _check_env(self, start_time):
         """
@@ -1193,3 +1025,47 @@ class ConnectTelnet (threading.Thread):
         self.log.debug('{client.addrport}: request-terminal-type failed.'
                        .format(client=self.client))
         return False
+
+
+class TelnetServer(BaseServer):
+    """
+    Poll sockets for new connections and sending/receiving data from clients.
+    """
+
+    client_factory = TelnetClient
+    connect_factory = ConnectTelnet
+    client_factory_kwargs = dict(on_naws=on_naws)
+
+    # Dictionary of active clients, (file descriptor, TelnetClient,)
+    clients = {}
+
+    def __init__(self, config):
+        """
+        Create a new Telnet Server.
+
+        :param config: configuration section 'telnet', w/options 'addr', 'port'
+        :type config: RawConfigParser
+        """
+        self.log = logging.getLogger(__name__)
+        self.address = config.get('telnet', 'addr')
+        self.port = config.getint('telnet', 'port')
+
+        # bind
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.setsockopt(
+            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        try:
+            self.server_socket.bind((self.address, self.port))
+            self.server_socket.listen(self.LISTEN_BACKLOG)
+        except socket.error as err:
+            self.log.error('Unable to bind {0}:{1}: {2}'
+                           .format(self.address, self.port, err))
+            exit(1)
+        self.log.info('listening on {self.address}:{self.port}/tcp'
+                      .format(self=self))
+
+    def client_fds(self):
+        """
+        Returns a list of client file descriptors to poll for read/write.
+        """
+        return [_client.fileno() for _client in self.clients.values()]
