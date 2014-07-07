@@ -188,7 +188,7 @@ class Msg(object):
             u"saved {new}{public}msg {post}, addressed to '{self.recipient}'."
             .format(new='new ' if new else '',
                     public='public ' if 'public' in self.tags else '',
-                    message='post' if self.parent is None else 'reply',
+                    post='post' if self.parent is None else 'reply',
                     self=self))
 
     def queue_for_network(self):
