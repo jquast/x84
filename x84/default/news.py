@@ -50,7 +50,7 @@ def get_pager(news_txt, position=None):
 
 def redraw(pager):
     """ Returns string suitable for refreshing screen. """
-    from x84.bbs import getsession, getterminal, from_cp437
+    from x84.bbs import getsession, getterminal, from_cp437, showart
     import os
     # pylint: disable=W0603
     #         Using the global statement
@@ -59,13 +59,7 @@ def redraw(pager):
     output = ''
     output += term.home + term.normal + term.clear
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'news.ans')
-    art = [line.rstrip()
-        for line in from_cp437(open(artfile).read()).splitlines()]
-    max_ans = max([term.length(line) for line in art])
-    for line in art:
-        output += term.center(term.ljust(line.rstrip(), max_ans)).rstrip() + '\r\n'
-
-
+    output += u'\r\n'.join( [term.move_x((term.width/2)-40)+line.strip('\n\r') for line in showart(artfile,'topaz')] )
     title = u''.join((u']- ', term.bold_blue('PARtY NEWS'), ' [-',))
     footer = u''.join((u'-[ ',
                        term.blue_underline(u'Escape'), '/',
