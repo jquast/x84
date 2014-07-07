@@ -113,7 +113,6 @@ class Msg(object):
 
     def __init__(self, recipient=None, subject=u'', body=u''):
         from x84.bbs.session import getsession
-        self.log = logging.getLogger(__name__)
         self.author = None
         session = getsession()
         if session:
@@ -135,6 +134,7 @@ class Msg(object):
         """
         from x84.bbs.dbproxy import DBProxy
 
+        log = logging.getLogger(__name__)
         new = self.idx is None or self._stime is None
         # persist message record to MSGDB
         db_msg = DBProxy(MSGDB)
@@ -155,12 +155,12 @@ class Msg(object):
                 if tag in self.tags and self.idx not in msgs:
                     msgs.add(self.idx)
                     db_tag[tag] = msgs
-                    self.log.debug("msg {self.idx} tagged '{tag}'"
+                    log.debug("msg {self.idx} tagged '{tag}'"
                                    .format(self=self, tag=tag))
                 elif tag not in self.tags and self.idx in msgs:
                     msgs.remove(self.idx)
                     db_tag[tag] = msgs
-                    self.log.info("msg {self.idx} removed tag '{tag}'"
+                    log.info("msg {self.idx} removed tag '{tag}'"
                                   .format(self=self, tag=tag))
             for tag in [_tag for _tag in self.tags if _tag not in db_tag]:
                 db_tag[tag] = set([self.idx])
@@ -175,7 +175,7 @@ class Msg(object):
                 parent_msg.children.add(self.idx)
                 parent_msg.save()
             else:
-                self.log.error('Parent idx same as message idx; stripping')
+                log.error('Parent idx same as message idx; stripping')
                 self.parent = None
                 with db_msg:
                     db_msg['%d' % (self.idx)] = self
@@ -183,7 +183,7 @@ class Msg(object):
         if send_net and new and CFG.has_option('msg', 'network_tags'):
             self.queue_for_network()
 
-        self.log.info(
+        log.info(
             u"saved {new}{public}msg {post}, addressed to '{self.recipient}'."
             .format(new='new ' if new else '',
                     public='public ' if 'public' in self.tags else '',
@@ -195,6 +195,7 @@ class Msg(object):
         from x84.bbs.ini import CFG
         from x84.bbs.dbproxy import DBProxy
 
+        log = logging.getLogger(__name__)
         network_names = CFG.get('msg', 'network_tags')
         member_networks = map(str.strip, network_names.split(','))
 
@@ -217,7 +218,7 @@ class Msg(object):
                     self.body = u''.join((self.body, format_origin_line()))
                     self.save()
                     transdb[self.idx] = self.idx
-                self.log.info('[{tag}] Stored for network (msgid {self.idx}).'
+                log.info('[{tag}] Stored for network (msgid {self.idx}).'
                               .format(tag=tag, self=self))
 
             # message is for a another network, queue for delivery
@@ -226,5 +227,5 @@ class Msg(object):
                 queuedb = DBProxy(queuedb_name)
                 with queuedb:
                     queuedb[self.idx] = tag
-                self.log.info('[{tag}] Message (msgid {self.idx}) queued '
+                log.info('[{tag}] Message (msgid {self.idx}) queued '
                               'for delivery'.format(tag=tag, self=self))
