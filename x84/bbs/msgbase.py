@@ -138,7 +138,7 @@ class Msg(object):
         new = self.idx is None or self._stime is None
         # persist message record to MSGDB
         db_msg = DBProxy(MSGDB)
-        with db_msg.acquire():
+        with db_msg:
             if new:
                 self.idx = max([int(key) for key in db_msg.keys()] or [-1]) + 1
                 if ctime is not None:
@@ -150,7 +150,7 @@ class Msg(object):
 
         # persist message idx to TAGDB
         db_tag = DBProxy(TAGDB)
-        with db_tag.acquire():
+        with db_tag:
             for tag, msgs in db_tag.iteritems():
                 if tag in self.tags and self.idx not in msgs:
                     msgs.add(self.idx)
@@ -177,7 +177,7 @@ class Msg(object):
             else:
                 self.log.error('Parent idx same as message idx; stripping')
                 self.parent = None
-                with db_msg.acquire():
+                with db_msg:
                     db_msg['%d' % (self.idx)] = self
 
         if send_net and new and CFG.has_option('msg', 'network_tags'):
@@ -213,7 +213,7 @@ class Msg(object):
                 section = 'msgnet_{tag}'.format(tag=tag)
                 transdb_name = CFG.get(section, 'trans_db_name')
                 transdb = DBProxy(transdb_name)
-                with transdb.acquire():
+                with transdb:
                     self.body = u''.join((self.body, format_origin_line()))
                     self.save()
                     transdb[self.idx] = self.idx
@@ -224,7 +224,7 @@ class Msg(object):
             elif tag in member_networks:
                 queuedb_name = CFG.get(section, 'queue_db_name')
                 queuedb = DBProxy(queuedb_name)
-                with queuedb.acquire():
+                with queuedb:
                     queuedb[self.idx] = tag
                 self.log.info('[{tag}] Message (msgid {self.idx}) queued '
                               'for delivery'.format(tag=tag, self=self))
