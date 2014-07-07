@@ -140,22 +140,9 @@ def get_lightbar(lcallers, lcalls):
     return pager
 
 
-def get_art(fname):
-    """ Return ansi art center-aligned. """
-    from x84.bbs import getterminal
-    term = getterminal()
-    buf = list()
-    width = 0
-    for line in open(fname):
-        art_line = line.rstrip()[:term.width - 1]
-        width = max(len(art_line), width)
-        buf.append(art_line)
-    return [line.center(width) for line in buf]
-
-
 def redraw(pager=None):
     """ Returns unicode sequence suitable for redrawing screen. """
-    from x84.bbs import getterminal
+    from x84.bbs import getterminal, showart
     import os
     term = getterminal()
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'lc.asc')
@@ -168,7 +155,7 @@ def redraw(pager=None):
         term.bold_red('t '), u'C', term.red('A'),
         term.bold_red('ll'), term.red('ERS'),
         u'\r\n',
-        u'\r\n'.join(get_art(artfile)),
+        u'\r\n'.join( [term.move_x((term.width/2)-40)+line.strip('\n\r') for line in showart(artfile,'topaz')] ),
         u'\r\n',
         u'\r\n' * (pager.height if pager is not None else 0),
         pager.border() if pager is not None else u'',
