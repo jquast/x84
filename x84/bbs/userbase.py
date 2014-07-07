@@ -446,11 +446,11 @@ def get_digestpw():
     """
     Returns singleton to password digest routine.
     """
+    global FN_PASSWORD_DIGEST
     if FN_PASSWORD_DIGEST is not None:
         return FN_PASSWORD_DIGEST
 
     from x84.bbs.ini import CFG
-    global FN_PASSWORD_DIGEST
     FN_PASSWORD_DIGEST = {
         'bcrypt': _digestpw_bcrypt,
         'internal': _digestpw_internal,
