@@ -30,7 +30,7 @@ which is meant for MUD's. This server would not be safe for MUD clients.
 #   under the License.
 #------------------------------------------------------------------------------
 
-# standard
+# std
 import warnings
 import socket
 import array
@@ -46,7 +46,7 @@ from telnetlib import IP, AO, AYT, EC, EL, GA, SB
 
 # local
 from x84.bbs.exception import Disconnected
-from terminal import start_process, TerminalProcess, register_tty
+from terminal import spawn_client_session
 
 IS = chr(0)  # Sub-process negotiation IS command
 SEND = chr(1)  # Sub-process negotiation SEND command
@@ -59,10 +59,9 @@ class TelnetServer(object):
     """
     MAX_CONNECTIONS = 1000
     LISTEN_BACKLOG = 5
-    ## Dictionary of active clients, (file descriptor, TelnetClient,)
+
+    # Dictionary of active clients, (file descriptor, TelnetClient,)
     clients = {}
-    ## Dictionary of environment variables received by negotiation
-    env = {}
 
     def __init__(self, config):
         """
@@ -213,6 +212,7 @@ class TelnetClient(object):
     BLOCKSIZE_RECV = 64
     SB_MAXLEN = 65534  # maximum length of subnegotiation string, allow
                        # a fairly large one for NEW_ENVIRON negotiation
+    kind = 'telnet'
 
     def __init__(self, sock, address_pair, on_naws=None):
         """
@@ -228,7 +228,8 @@ class TelnetClient(object):
         self.active = True
         self.env = dict([('TERM', 'unknown'),
                          ('LINES', 24),
-                         ('COLUMNS', 80)])
+                         ('COLUMNS', 80),
+                         ])
         self.send_buffer = array.array('c')
         self.recv_buffer = array.array('c')
         self.telnet_sb_buffer = array.array('c')
@@ -236,7 +237,7 @@ class TelnetClient(object):
         self.connect_time = time.time()
         self.last_input_time = time.time()
 
-        ## State variables for interpreting incoming telnet commands
+        # State variables for interpreting incoming telnet commands
         self.telnet_got_iac = False
         self.telnet_got_cmd = None
         self.telnet_got_sb = False
@@ -264,7 +265,7 @@ class TelnetClient(object):
         """
         Buffer unicode string, encoded for client as 'encoding'.
         """
-        ## Must be escaped 255 (IAC + IAC) to avoid IAC intepretation
+        # Must be escaped 255 (IAC + IAC) to avoid IAC intepretation
         self.send_str(ucs.encode(encoding, 'replace')
                       .replace(chr(255), 2 * chr(255)))
 
@@ -278,11 +279,10 @@ class TelnetClient(object):
         """
         Flag client for disconnection.
         """
-        if not self.active:
-            self.log.debug('%s: already deactivated', self.addrport())
-            return
-        self.log.debug('%s: deactivated', self.addrport())
-        self.active = False
+        if self.active:
+            self.active = False
+            self.log.debug('{self.addrport}: deactivated'
+                           .format(self=self))
 
     def shutdown(self):
         """
@@ -292,17 +292,18 @@ class TelnetClient(object):
         """
         try:
             self.sock.shutdown(socket.SHUT_RDWR)
-        except socket.error as err:
+        except socket.error:
             pass
         self.sock.close()
         self.deactivate()
-        self.log.debug('shutdown client: %s', self.addrport())
+        self.log.debug('{self.addrport}: socket shutdown'.format(self=self))
 
+    @property
     def addrport(self):
         """
-        Returns IP address and port of DE as string.
+        Returns IP address and port as string.
         """
-        return '%s:%d' % (self.address_pair[0], self.address_pair[1])
+        return '{0}:{1}'.format(*self.address_pair)
 
     def idle(self):
         """
@@ -428,8 +429,9 @@ class TelnetClient(object):
                 return self.sock.send(send_bytes)
             except socket.error as err:
                 if err[0] == errno.EDEADLK:
-                    warnings.warn('%s: %s (bandwidth exceed)' % (
-                                  self.addrport(), err[1],), RuntimeWarning, 2)
+                    warnings.warn('{self.addrport}: {err} (bandwidth exceed)'
+                                  .format(self=self, err=err[1]),
+                                  RuntimeWarning, 2)
                     return 0
                 raise Disconnected('send %d: %s' % (err[0], err[1],))
 
@@ -456,7 +458,8 @@ class TelnetClient(object):
         """
         Returns True if data is awaiting on the telnet socket.
         """
-        return bool(select.select([self.sock.fileno()], [], [], 0)[0])
+        return (self.is_active() and bool(
+            select.select([self.sock.fileno()], [], [], 0)[0]))
 
     def socket_recv(self):
         """
@@ -477,8 +480,8 @@ class TelnetClient(object):
         self.bytes_received += recv
         self.last_input_time = time.time()
 
-        ## Test for telnet commands, non-telnet bytes
-        ## are pushed to self.recv_buffer (side-effect),
+        # Test for telnet commands, non-telnet bytes
+        # are pushed to self.recv_buffer (side-effect),
         for byte in data:
             self._iac_sniffer(byte)
         return recv
@@ -543,7 +546,8 @@ class TelnetClient(object):
             self._sb_decoder()
         elif cmd == IP:
             self.deactivate()
-            self.log.debug('%s Interrupt; closing.', self.addrport())
+            self.log.info('{self.addrport} received (IAC, IP): closing.'
+                          .format(self=self))
         elif cmd == AO:
             flushed = len(self.recv_buffer)
             self.recv_buffer = array.array('c')
@@ -586,8 +590,8 @@ class TelnetClient(object):
         elif cmd == WONT:
             self._handle_wont(option)
         else:
-            self.log.warn('%s: unhandled _three_byte_cmd: %s.',
-                          self.addrport(), name_option(option))
+            self.log.warn('{self.addrport}: unhandled _three_byte_cmd: {opt}.'
+                          .format(self=self, opt=name_option(option)))
         self.telnet_got_iac = False
         self.telnet_got_cmd = None
 
@@ -640,8 +644,8 @@ class TelnetClient(object):
         else:
             if self.check_local_option(option) is UNKNOWN:
                 self._note_local_option(option, False)
-                self.log.warn('%s: unhandled do: %s.',
-                              self.addrport(), name_option(option))
+                self.log.warn('{self.addrport}: unhandled do: {opt}.'
+                              .format(self=self, opt=name_option(option)))
                 self._iac_wont(option)
 
     def _send_status(self):
@@ -698,8 +702,8 @@ class TelnetClient(object):
                 self._note_remote_option(LINEMODE, False)
                 self._iac_wont(LINEMODE)
         else:
-            self.log.warn('%s: unhandled dont: %s.',
-                          self.addrport(), name_option(option))
+            self.log.warn('{self.addrport}: unhandled dont: {opt}.'
+                          .format(self=self, opt=name_option(option)))
 
     def _handle_will(self, option):
         """
@@ -761,8 +765,8 @@ class TelnetClient(object):
                 self._note_remote_option(TTYPE, True)
                 self.request_ttype()
         else:
-            self.log.warn('%s: unhandled will: %r (ignored).',
-                          self.addrport(), name_option(option))
+            self.log.warn('{self.addrport}: unhandled will: {opt} (ignored).'
+                          .format(self=self, opt=name_option(option)))
 
     def _handle_wont(self, option):
         """
@@ -801,8 +805,8 @@ class TelnetClient(object):
             elif self.check_remote_option(option) in (True, UNKNOWN):
                 self._note_remote_option(option, False)
         else:
-            self.log.debug('%s: unhandled wont: %s.',
-                           self.addrport(), name_option(option))
+            self.log.debug('{self.addrport}: unhandled wont: {opt}.'
+                           .format(self=self, opt=name_option(option)))
             self._note_remote_option(option, False)
 
     def _sb_decoder(self):
@@ -862,11 +866,11 @@ class TelnetClient(object):
             term_str = term_str[:-1]  # netrunner did this ..
         prev_term = self.env.get('TERM', None)
         if prev_term is None:
-            self.log.info("env['TERM'] = %r.", term_str)
+            self.log.debug("env['TERM'] = %r.", term_str)
         elif prev_term != term_str:
-            self.log.info("env['TERM'] = %r by TTYPE%s.", term_str,
-                          ', was: %s' % (prev_term,)
-                          if prev_term != 'unknown' else '')
+            self.log.debug("env['TERM'] = %r by TTYPE%s.", term_str,
+                           ', was: %s' % (prev_term,)
+                           if prev_term != 'unknown' else '')
         else:
             self.log.debug('TTYPE ignored (TERM already set).')
         self.env['TERM'] = term_str
@@ -890,7 +894,7 @@ class TelnetClient(object):
                 overwrite = (pair[0] == 'TERM'
                              and self.env['TERM'] == 'unknown')
                 if (not pair[0] in self.env or overwrite):
-                    self.log.info('env[%r] = %r', pair[0], pair[1])
+                    self.log.debug('env[%r] = %r', pair[0], pair[1])
                     self.env[pair[0]] = pair[1]
                 elif pair[1] == self.env[pair[0]]:
                     self.log.debug('env[%r] repeated', pair[0])
@@ -906,8 +910,8 @@ class TelnetClient(object):
         Processes incoming subnegotiation NAWS
         """
         if 5 != len(charbuf):
-            self.log.error('%s: bad length in NAWS buf (%d)',
-                           self.addrport(), len(charbuf),)
+            self.log.error('{self.addrport}: bad length in NAWS buf ({buflen})'
+                           .format(self=self, buflen=len(charbuf)))
             return
 
         columns = (256 * ord(charbuf[1])) + ord(charbuf[2])
@@ -915,7 +919,7 @@ class TelnetClient(object):
         old_rows = self.env.get('LINES', None)
         old_columns = self.env.get('COLUMNS', None)
         if (old_rows == str(rows) and old_columns == str(columns)):
-            self.log.debug('%s: NAWS repeated', self.addrport())
+            self.log.debug('{self.addrport}: NAWS repeated'.format(self=self))
             return
         if rows <= 0:
             self.log.debug('LINES %s ignored', rows)
@@ -925,8 +929,8 @@ class TelnetClient(object):
             columns = old_columns
         self.env['LINES'] = str(rows)
         self.env['COLUMNS'] = str(columns)
-        self.log.debug('%s: NAWS is %sx%s',
-                       self.addrport(), columns, rows)
+        self.log.debug('{self.addrport}: NAWS is {cols}x{rows}'
+                       .format(self=self, cols=columns, rows=rows))
         if self.on_naws is not None:
             self.on_naws(self)
 
@@ -943,7 +947,7 @@ class TelnetClient(object):
         """
         Record the status of local negotiated Telnet options.
         """
-        if not option in self.telnet_opt_dict:
+        if option not in self.telnet_opt_dict:
             self.telnet_opt_dict[option] = TelnetOption()
         self.telnet_opt_dict[option].local_option = state
 
@@ -951,7 +955,7 @@ class TelnetClient(object):
         """
         Test the status of remote negotiated Telnet options.
         """
-        if not option in self.telnet_opt_dict:
+        if option not in self.telnet_opt_dict:
             self.telnet_opt_dict[option] = TelnetOption()
         return self.telnet_opt_dict[option].remote_option
 
@@ -959,7 +963,7 @@ class TelnetClient(object):
         """
         Record the status of local negotiated Telnet options.
         """
-        if not option in self.telnet_opt_dict:
+        if option not in self.telnet_opt_dict:
             self.telnet_opt_dict[option] = TelnetOption()
         self.telnet_opt_dict[option].remote_option = state
 
@@ -967,7 +971,7 @@ class TelnetClient(object):
         """
         Test the status of requested Telnet options.
         """
-        if not option in self.telnet_opt_dict:
+        if option not in self.telnet_opt_dict:
             self.telnet_opt_dict[option] = TelnetOption()
         return self.telnet_opt_dict[option].reply_pending
 
@@ -975,7 +979,7 @@ class TelnetClient(object):
         """
         Record the status of requested Telnet options.
         """
-        if not option in self.telnet_opt_dict:
+        if option not in self.telnet_opt_dict:
             self.telnet_opt_dict[option] = TelnetOption()
         self.telnet_opt_dict[option].reply_pending = state
 
@@ -1031,37 +1035,6 @@ class ConnectTelnet (threading.Thread):
         threading.Thread.__init__(self)
         self.log = logging.getLogger(__name__)
 
-    def _spawn_session(self):
-        """
-        Spawn a subprocess, avoiding GIL and forcing all shared data over a
-        Queue. Previous versions of x/84 and prsv were single process,
-        thread-based, and shared variables.  This is not possible now that
-        we use ``blessed``, as a ``curses.setupterm`` may only be called
-        once for each process.
-
-        All IPC communication occurs through the bi-directional queues.  The
-        server end (engine.py) polls the out_queue, and places results
-        and input events into the inp_queue, while the client end (session.py),
-        polls the inp_queue, and places output into out_queue.
-        """
-        if not self.client.active:
-            self.log.debug('session aborted; socket was closed.')
-            return
-        from x84.bbs.ini import CFG
-        from multiprocessing import Process, Pipe, Lock
-        from x84.telnet import BINARY
-        inp_recv, inp_send = Pipe(duplex=False)
-        out_recv, out_send = Pipe(duplex=False)
-        lock = Lock()
-        is_binary = (self.client.check_local_option(BINARY)
-                     and self.client.check_remote_option(BINARY))
-        child_args = (inp_recv, out_send, self.client.addrport(),
-                      self.client.env, lock, CFG, is_binary)
-        self.log.debug(self.__class__.__name__ + ' spawns process')
-        proc = Process(target=start_process, args=child_args)
-        proc.start()
-        register_tty(TerminalProcess(self.client, inp_send, out_recv, lock))
-
     def banner(self):
         """
         This method is called after the connection is initiated.
@@ -1082,14 +1055,11 @@ class ConnectTelnet (threading.Thread):
         # add DO & WILL BINARY, for utf8 input/output.
         self.client.request_do_binary()
         self.client.request_will_binary()
+        # and terminal type, naws, and env,
         self.client.request_do_ttype()
-
-        # and do naws, please.
         self.client.request_do_naws()
+        self.client.request_do_env()
         self.client.send()  # push
-
-        if not self.client.active:
-            return
 
         # wait at least 1.25s for the client to speak. If it doesn't,
         # we try only TTYPE. If it fails to report that, we forget
@@ -1098,12 +1068,30 @@ class ConnectTelnet (threading.Thread):
         st_time = time.time()
         while ((0 == self.client.bytes_received
                 or mrk_bytes == self.client.bytes_received)
-               and time.time() - st_time < self.TIME_NEGOTIATE
-               and self.client.active):
+               and time.time() - st_time < self.TIME_NEGOTIATE):
+            if not self.client.is_active():
+                return
+            if self.client.send_ready():
+                self.client.send()
             time.sleep(self.TIME_POLL)
-        self._try_ttype()
-        self._try_env()
-        self._check_naws()
+
+        if not self._check_ttype(start_time=st_time):
+            # if client is unable to negotiate terminal type,
+            # do not bother with NAWS or ENV negotiation.
+            return
+        self._check_env(start_time=st_time)
+        self._check_naws(start_time=st_time)
+
+    def set_encoding(self):
+        # set encoding to utf8 for clients negotiating BINARY mode,
+        # otherwise as 'cp437'; this assumes a very simple dualistic
+        # model: xterm or SyncTerm. A very few telnet clients send
+        # LANG and other helpful things.
+        if (self.client.check_local_option(BINARY)
+                and self.client.check_remote_option(BINARY)):
+            self.client.env['encoding'] = 'utf8'
+        else:
+            self.client.env['encoding'] = 'cp437'
 
     def run(self):
         """
@@ -1114,7 +1102,9 @@ class ConnectTelnet (threading.Thread):
         try:
             self._set_socket_opts()
             self.banner()
-            self._spawn_session()
+            self.set_encoding()
+            if self.client.is_active():
+                spawn_client_session(client=self.client)
         except socket.error as err:
             self.log.debug('Connection closed: %s', err)
             self.client.deactivate()
@@ -1137,84 +1127,69 @@ class ConnectTelnet (threading.Thread):
         self.client.sock.setsockopt(
             socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
 
-    def _try_env(self):
+    def _check_env(self, start_time):
         """
-        Try to snarf out some environment variables from unix machines.
+        Check for NEW_ENVIRON negotiation.
         """
-        if not self.client.active:
-            return
-        from x84.telnet import NEW_ENVIRON, UNKNOWN
-        # hard to tell if we already sent this once .. we mimmijammed
-        # our own test ..
-        if(self.client.ENV_REQUESTED and self.client.ENV_REPLIED):
-            self.log.debug('environment enabled (unsolicted)')
-            return
-        self.log.debug('request-do-env')
-        self.client.request_do_env()
-        self.client.send()  # push
-        st_time = time.time()
-        while (self.client.check_remote_option(NEW_ENVIRON) is UNKNOWN
-                and not self.client.ENV_REPLIED
-                and self._timeleft(st_time)
-                and self.client.active):
-            time.sleep(self.TIME_POLL)
-        if not self.client.active:
-            return
-        if self.client.check_remote_option(NEW_ENVIRON) is UNKNOWN:
-            self.log.debug('failed: NEW_ENVIRON')
+        def detected():
+            return (self.client.check_remote_option(NEW_ENVIRON) is not UNKNOWN
+                    and self.client.ENV_REPLIED)
 
-    def _check_naws(self):
-        """
-        Negotiate about window size (NAWS) telnet option (on).
-        """
-        if not self.client.active:
-            return
-        if (self.client.env.get('LINES', None) is not None
-                and self.client.env.get('COLUMNS', None) is not None):
-            self.log.debug('window size: %sx%s (unsolicited)',
-                           self.client.env.get('COLUMNS'),
-                           self.client.env.get('LINES'),)
-            return
-        st_time = time.time()
-        while (self.client.env.get('LINES', None) is None
-                and self.client.env.get('COLUMNS', None) is None
-                and self._timeleft(st_time)
-                and self.client.active):
+        while not detected() and self._timeleft(start_time):
+            if not self.client.is_active():
+                return
+            if self.client.send_ready():
+                self.client.send()
             time.sleep(self.TIME_POLL)
-        if (self.client.env.get('LINES', None) is not None
-                and self.client.env.get('COLUMNS', None) is not None):
-            self.log.info('window size: %sx%s (negotiated)',
-                          self.client.env.get('COLUMNS'),
-                          self.client.env.get('LINES'))
-            return
-        if not self.client.active:
-            return
-        self.log.debug('failed: negotiate about window size')
 
-    def _try_ttype(self):
-        """
-        Negotiate terminal type (TTYPE) telnet option (on).
-        """
-        if not self.client.active:
-            return
-        detected = lambda: self.client.env['TERM'] != 'unknown'
         if detected():
-            self.log.debug('terminal type: %s (unsolicited)' %
-                           (self.client.env['TERM'],))
-            return
-        self.log.debug('request-terminal-type')
-        st_time = time.time()
-        if not detected():
-            self.client.request_ttype()
-            self.client.send()  # push
-        while (not detected() and self._timeleft(st_time)
-               and self.client.active):
+            self.log.debug('{client.addrport}: ENV={client.env!r}.'
+                           .format(client=self.client))
+        else:
+            self.log.debug('{client.addrport}: request-do-new_environ failed.'
+                           .format(client=self.client))
+
+    def _check_naws(self, start_time):
+        """
+        Check for NAWS negotiation.
+        """
+        def detected():
+            return (self.client.env.get('LINES', None) is not None
+                    and self.client.env.get('COLUMNS', None) is not None)
+
+        while not detected() and self._timeleft(start_time):
+            if not self.client.is_active():
+                return
+            if self.client.send_ready():
+                self.client.send()
             time.sleep(self.TIME_POLL)
+
         if detected():
-            self.log.debug('terminal type: %s (negotiated by ttype)' %
-                           (self.client.env['TERM'],))
-            return
-        if not self.client.active:
-            return
-        self.log.warn('%r TERM not determined by TTYPE.',
-                      self.client.addrport())
+            self.log.debug('{client.addrport}: COLUMNS={client.env[COLUMNS]}, '
+                           'LINES={client.env[LINES]}.'
+                           .format(client=self.client))
+        else:
+            self.log.debug('{client.addrport}: request-do-naws failed.'
+                           .format(client=self.client))
+
+    def _check_ttype(self, start_time):
+        """
+        Check for TTYPE negotiation.
+        """
+        def detected():
+            return self.client.env['TERM'] != 'unknown'
+
+        while not detected() and self._timeleft(start_time):
+            if not self.client.is_active():
+                return False
+            if self.client.send_ready():
+                self.client.send()
+            time.sleep(self.TIME_POLL)
+
+        if detected():
+            self.log.debug('{client.addrport}: TERM={client.env[TERM]}.'
+                           .format(client=self.client))
+            return True
+        self.log.debug('{client.addrport}: request-terminal-type failed.'
+                       .format(client=self.client))
+        return False

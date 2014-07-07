@@ -50,36 +50,56 @@ class Session(object):
     TRIM_CP437 = bytes(chr(14) + chr(15))  # HACK
     _encoding = None
     _decoder = None
+    _activity = None
+    _user = None
 
-    def __init__(self, terminal, inp_queue, out_queue,
-                 sid, env, lock, encoding='utf8'):
-        """
-        Instantiate a Session instanance, only one session
-        may be instantiated per process. Arguments:
-            terminal: blessed.Terminal,
-            inp_queue: multiprocessing.Queue Parent writes, Child reads
-            out_queue: multiprocessing.Queue Parent reads, Child writes
-            sid: session id by engine: origin of telnet connection (ip:port),
-            env: dict of environment variables, such as 'TERM', 'USER'.
+    # save state for ttyrec compression
+    _ttyrec_sec = -1
+    _ttyrec_usec = -1
+    _ttyrec_len_text = 0
+
+    _script_module = None
+    _fp_ttyrec = None
+    _ttyrec_fname = None
+    _node = None
+
+    def __init__(self, terminal, sid, env, child_pipes, kind, addrport):
+        """ Instantiate a Session.
+
+        Only one session may be instantiated per process.
+
+        :param terminal: interactive terminal associated with this session.
+        :type terminal: blessed.Terminal.
+        :param sid: session identification string
+        :type sid: str
+        :param env: transport-negotiated environment variables
+        :type env: dict
+        :param child_pipes: tuple of (writer, reader)
+        :type child_pipes: tuple
+        :param kind: transport description string (ssh, telnet)
+        :type kind: str
+        :param addrport: transport ip address and port as string
+        :type addrport: str
         """
         from x84.bbs import ini
-        import Queue
+        self.log = logging.getLogger(__name__)
+
         # pylint: disable=W0603
         #        Using the global statement
         global SESSION
-        assert SESSION is None, 'Session may be instantiated only once'
+        assert SESSION is None, ('Session may be instantiated only once '
+                                 'per sub-process')
         SESSION = self
-        self.log = logging.getLogger(__name__)
-        self.iqueue = inp_queue
-        self.oqueue = out_queue
+
+        # public attributes
         self.terminal = terminal
         self.sid = sid
         self.env = env
-        self.encoding = encoding
-        self.lock = lock
+        self.writer, self.reader = child_pipes
+        self.kind = kind
+        self.addrport = addrport
 
         # private attributes
-        self._user = None
         self._script_stack = [(ini.CFG.get('matrix', 'script'),)]
         self._tap_input = ini.CFG.getboolean('session', 'tap_input')
         self._tap_output = ini.CFG.getboolean('session', 'tap_output')
@@ -88,32 +108,23 @@ class Session(object):
         self._record_tty = ini.CFG.getboolean('session', 'record_tty')
         self._show_traceback = ini.CFG.getboolean('system', 'show_traceback')
         self._script_path = ini.CFG.get('system', 'scriptpath')
-        self._script_module = None
-        self._fp_ttyrec = None
-        self._ttyrec_fname = None
-        self._node = None
         self._connect_time = time.time()
         self._last_input_time = time.time()
-        self._activity = u'<uninitialized>'
 
-        # event buffer
+        # create event buffer
         self._buffer = dict()
 
-        # save state for ttyrec compression
-        self._ttyrec_sec = -1
-        self._ttyrec_usec = -1
-        self._ttyrec_len_text = 0
+        # initialize keyboard encoding
+        terminal.set_keyboard_decoder(env.get('encoding', 'utf8'))
 
-        # detect if this is a "robot" user and handle it accordingly
-        # TODO ... anything but this, especially in the class constructor!
-        addr, _ = sid.split(':', 1)
-        trusted_hosts = set(['127.0.0.1'])
-        if ini.CFG.has_section('telnet'):
-            trusted_hosts.add(ini.CFG.get('telnet', 'addr'))
-
+        # oh this makes me sad !
         if BOTQUEUE is not None:
-            # oh this makes me so mad !
+            trusted_hosts = set(['127.0.0.1'])
+            addr, _ = addrport.split(':', 1)
+            if ini.CFG.has_section('telnet'):
+                trusted_hosts.add(ini.CFG.get('telnet', 'addr'))
             if addr in trusted_hosts:
+                import Queue
                 try:
                     whoami = BOTQUEUE.get(True, 0.1)
                     robots = map(str.strip,
@@ -186,7 +197,7 @@ class Session(object):
         and is globally broadcasted as a "current activity" in the Who's
         online script.
         """
-        return self._activity
+        return self._activity or u'<uninitialized>'
 
     @activity.setter
     def activity(self, value):
@@ -216,9 +227,7 @@ class Session(object):
         User record of session.
         """
         from x84.bbs.userbase import User
-        if self._user is not None:
-            return self._user
-        return User()
+        return self._user or User()
 
     @user.setter
     def user(self, value):
@@ -230,27 +239,26 @@ class Session(object):
     @property
     def encoding(self):
         """
-        Session terminal encoding; only 'utf8' and 'cp437' are supported.
+        Session encoding.
         """
-        return self._encoding
+        return self.env.get('encoding', 'utf8')
 
     @encoding.setter
     def encoding(self, value):
-        # pylint: disable=C0111
-        #         Missing docstring
-        if value != self._encoding:
-            self.log.debug('encoding is %s.', value)
-            assert value in ('utf8', 'cp437')
-            self._encoding = value
-            getterminal().set_keyboard_decoder(self._encoding)
+        """
+        Setter for Session encoding.
+        """
+        if value != self.encoding:
+            self.log.debug('session encoding {0} -> {1}'
+                           .format(self.encoding, value))
+            self.env['encoding'] = value
+            getterminal().set_keyboard_decoder(value)
 
     @property
     def pid(self):
         """
         Returns Process ID.
         """
-        # pylint: disable=R0201
-        #        Method could be a function
         return os.getpid()
 
     @property
@@ -507,8 +515,7 @@ class Session(object):
                'db=<schema>': Request sqlite dict method result as iterable.
                'lock-<name>': Fine-grained global bbs locking.
         """
-        with self.lock:
-            self.oqueue.send((event, data))
+        self.oqueue.send((event, data))
 
     def poll_event(self, event):
         """
@@ -551,8 +558,8 @@ class Session(object):
         waitfor = timeleft(stime)
         while waitfor > 0:
             poll = None if waitfor == float('inf') else waitfor
-            if self.iqueue.poll(poll):
-                event, data = self.iqueue.recv()
+            if self.reader.poll(poll):
+                event, data = self.reader.recv()
                 retval = self.buffer_event(event, data)
                 if self._tap_events and self.log.isEnabledFor(logging.DEBUG):
                     stack = inspect.stack()
@@ -584,8 +591,7 @@ class Session(object):
         """
         from x84.bbs.exception import ScriptError
         self._script_stack.append((script_name,) + args)
-        self.log.info("run script '%s'%s.", script_name,
-                      ', args %r' % (args,) if 0 != len(args) else '')
+        self.log.info("run script {0!r} args={1!r}.".format(script_name, args))
 
         def _load_script_module():
             """

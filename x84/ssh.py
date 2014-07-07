@@ -1,5 +1,4 @@
 # standard
-from __future__ import print_function
 import os
 import logging
 import socket
@@ -9,7 +8,7 @@ import errno
 import threading
 
 # local
-from terminal import start_process, TerminalProcess, register_tty
+from terminal import spawn_client_session
 from x84.bbs.exception import Disconnected
 
 # 3rd-party
@@ -23,11 +22,8 @@ class SshServer(object):
     MAX_CONNECTIONS = 100
     LISTEN_BACKLOG = 5
 
-    ## Dictionary of active clients, (file descriptor, SshClient,)
+    # Dictionary of active clients, (file descriptor, SshClient,)
     clients = {}
-
-    ## Dictionary of environment variables received by negotiation
-    env = {}
 
     def __init__(self, config):
         """
@@ -112,6 +108,7 @@ class SshClient(object):
     BLOCKSIZE_RECV = 64
     SB_MAXLEN = 65534  # maximum length of subnegotiation string, allow
                        # a fairly large one for NEW_ENVIRON negotiation
+    kind = 'ssh'
 
     def __init__(self, sock, address_pair, on_naws=None):
         """
@@ -127,7 +124,9 @@ class SshClient(object):
         self.active = True
         self.env = dict([('TERM', 'unknown'),
                          ('LINES', 24),
-                         ('COLUMNS', 80)])
+                         ('COLUMNS', 80),
+                         ('connection-type', self.kind),
+                         ])
         self.send_buffer = array.array('c')
         self.recv_buffer = array.array('c')
         self.bytes_received = 0
@@ -158,11 +157,10 @@ class SshClient(object):
         """
         Flag client for disconnection.
         """
-        if not self.active:
-            self.log.debug('%s: already deactivated', self.addrport())
-            return
-        self.log.debug('%s: deactivated', self.addrport())
-        self.active = False
+        if self.active:
+            self.active = False
+            self.log.debug('{self.addrport}: deactivated'
+                           .format(self=self))
 
     def shutdown(self):
         """
@@ -174,18 +172,18 @@ class SshClient(object):
             self.channel.shutdown(how=2)
         try:
             self.sock.shutdown(socket.SHUT_RDWR)
-        except socket.error as err:
-            self.log.debug("sock.shutdown: {err}".format(err=err))
+        except socket.error:
             pass
         self.sock.close()
         self.deactivate()
-        self.log.debug('shutdown client: %s', self.addrport())
+        self.log.debug('{self.addrport}: socket shutdown'.format(self=self))
 
+    @property
     def addrport(self):
         """
-        Returns IP address and port of DE as string.
+        Returns IP address and port as string.
         """
-        return '%s:%d' % (self.address_pair[0], self.address_pair[1])
+        return '{0}:{1}'.format(*self.address_pair)
 
     def idle(self):
         """
@@ -303,6 +301,9 @@ class SshClient(object):
 
 
 class ConnectSsh (threading.Thread):
+    TIME_POLL = 0.05
+    TIME_WAIT_STAGE = 60
+
     def __init__(self, client, server_host_key, on_naws=None):
         """
         client is a ssh.SshClient instance.
@@ -314,36 +315,6 @@ class ConnectSsh (threading.Thread):
         self.on_naws = on_naws
         threading.Thread.__init__(self)
 
-    def _spawn_session(self):
-        """
-        Spawn a subprocess, avoiding GIL and forcing all shared data over a
-        Queue. Previous versions of x/84 and prsv were single process,
-        thread-based, and shared variables.  This is not possible now that
-        we use ``blessed``, as a ``curses.setupterm`` may only be called
-        once for each process.
-
-        All IPC communication occurs through the bi-directional queues.  The
-        server end (engine.py) polls the out_queue, and places results
-        and input events into the inp_queue, while the client end (session.py),
-        polls the inp_queue, and places output into out_queue.
-        """
-        if not self.client.active:
-            self.log.debug('session aborted; socket was closed.')
-            return
-        from x84.bbs.ini import CFG
-        from multiprocessing import Process, Pipe, Lock
-        inp_recv, inp_send = Pipe(duplex=False)
-        out_recv, out_send = Pipe(duplex=False)
-        lock = Lock()
-        is_binary = True
-        child_args = (inp_recv, out_send, self.client.addrport(),
-                      self.client.env, lock, CFG, is_binary)
-        self.log.debug(self.__class__.__name__ + ' spawns process')
-        proc = Process(target=start_process, args=child_args)
-        proc.start()
-        tty = TerminalProcess(self.client, inp_send, out_recv, lock)
-        register_tty(tty)
-
     def run(self):
         """
         Accept new Ssh connect in thread.
@@ -351,38 +322,50 @@ class ConnectSsh (threading.Thread):
         try:
             self.client.transport = paramiko.Transport(self.client.sock)
             self.client.transport.load_server_moduli()
-            try:
-                self.client.transport.load_server_moduli()
-            except Exception, err:
-                self.log.warn('load_server_moduli failed: %s' % (err,))
-
             self.client.transport.add_server_key(self.server_host_key)
-            ssh_session = SshSessionServer(self.client)
+            ssh_session = SshSessionServer(client=self.client)
+
+            def detected():
+                return ssh_session.shell_requested.isSet()
+
             self.client.transport.start_server(server=ssh_session)
-            self.client.channel = self.client.transport.accept(60)
+            self.client.channel = (self.client.transport
+                                   .accept(self.TIME_WAIT_STAGE))
             if self.client.channel is None:
-                self.log.info('Connection closed: no channel.')
+                self.log.debug('{client.addrport}: no channel requested'
+                               .format(client=self.client))
                 self.client.deactivate()
                 return
-            self.log.debug('Waiting for client to request shell')
-            stime = time.time()
-            while time.time() - stime < 60:
-                if ssh_session.shell_requested.isSet():
-                    break
+
+            self.log.debug('{client.addrport}: waiting for shell request'
+                           .format(client=self.client))
+
+            st_time = time.time()
+            while not detected() and self._timeleft(st_time):
                 if not self.client.is_active():
-                    self.client.deactivate()
                     return
-            self._spawn_session()
+                time.sleep(self.TIME_POLL)
+
+            if detected():
+                return spawn_client_session(client=self.client)
+
         except paramiko.SSHException as err:
-            self.log.debug('Connection closed: %s', err)
-            self.client.deactivate()
+            self.log.debug('{client.addrport}: connection closed: {err}'
+                           .format(client=self.client, err=err))
         except EOFError:
-            self.log.debug('Connection closed: EOF from client')
-            self.client.deactivate()
+            self.log.debug('{client.addrport}: EOF from client'
+                           .format(client=self.client))
         except Exception as err:
-            self.log.debug('Connection closed: %s', err)
-            self.log.exception(err)
-            self.client.deactivate()
+            self.log.exception('{client.addrport}: {err}'
+                               .format(client=self.client, err=err))
+        self.client.deactivate()
+
+    def _timeleft(self, st_time):
+        """
+        Returns True when difference of current time and st_time is below
+        TIME_WAIT_STAGE.
+        """
+        return bool(time.time() - st_time < self.TIME_WAIT_STAGE)
 
 
 class SshSessionServer(paramiko.ServerInterface):
@@ -456,6 +439,10 @@ class SshSessionServer(paramiko.ServerInterface):
         self.client.env['COLUMNS'] = str(width)
         if self.client.on_naws is not None:
             self.client.on_naws(self.client)
+        return True
+
+    def check_channel_env_request(self, channel, name, value):
+        self.client.env[name] = value
         return True
 
     @staticmethod

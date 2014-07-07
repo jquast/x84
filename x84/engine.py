@@ -185,8 +185,8 @@ def accept(log, server, client_factory, connect_factory,
 
         # spawn negotiation and process registration thread
         connect_factory(client, **connect_factory_kwargs).start()
-        log.info('{0} Connected by {1}.'.format(client.addrport(),
-                                                server.__class__.__name__))
+        log.info('{client.kind} connection from {client.addrport}.'
+                 .format(client=client))
 
     except socket.error as err:
         log.error('accept error {0}:{1}'.format(*err))
@@ -199,7 +199,7 @@ def get_session_output_fds(servers):
         for client in server.clients.values():
             tty = find_tty(client)
             if tty is not None:
-                session_fds.append(tty.oqueue.fileno())
+                session_fds.append(tty.master_read.fileno())
     return session_fds
 
 
@@ -217,8 +217,9 @@ def client_recv(servers, log):
                 try:
                     client.socket_recv()
                 except Disconnected as err:
-                    log.info('%s Disconnected: %s.', client.addrport(), err)
-                    kill_session(client, 'disconnected on recv')
+                    log.debug('{client.addrport}: disconnect on recv: {err}'
+                              .format(client=client, err=err))
+                    kill_session(client, 'disconnected: {err}'.format(err=err))
 
 
 def client_send(terminals, log):
@@ -230,20 +231,21 @@ def client_send(terminals, log):
     from x84.bbs.exception import Disconnected
     from x84.terminal import kill_session
     # nothing to send until tty is registered.
-    for sid, tty in terminals[:]:
+    for sid, tty in terminals:
         if tty.client.send_ready():
             try:
                 tty.client.send()
             except Disconnected as err:
-                log.info('%s Disconnected: %s.', sid, err)
-                kill_session(tty.client, 'disconnected on send')
+                log.debug('{client.addrport}: disconnect on send: {err}'
+                          .format(client=tty.client, err=err))
+                kill_session(tty.client, 'disconnected: {err}'.format(err=err))
 
 
 def session_send(terminals):
     """
     Test all tty clients for input_ready(), meaning tcp data has been
     buffered to be received by the tty session, and sent it to the tty
-    input queue (tty.iqueue).
+    input queue (tty.master_write).
 
     Also, test all sessions for idle timeout, signaling exit to
     subprocess when reached
@@ -251,7 +253,7 @@ def session_send(terminals):
     from x84.terminal import kill_session
     for sid, tty in terminals:
         if tty.client.input_ready():
-            tty.iqueue.send(('input', tty.client.get_input()))
+            tty.master_write.send(('input', tty.client.get_input()))
 
         # poll about and kick off idle users
         elif tty.timeout and tty.client.idle() > tty.timeout:
@@ -269,20 +271,18 @@ def handle_lock(locks, tty, event, data, tap_events, log):
         if event in locks:
             # lock already held; check for and display owner, or
             # acquire a lock from a now-deceased session.
-            held = False
             for _sid, _tty in get_terminals():
                 if _sid == locks[event][1] and _sid != tty.sid:
                     log.debug('[%s] %r not acquired, held by %s.',
                               tty.sid, (event, data), _sid)
-                    held = _sid
                     break
-            if held is not False:
+            else:
                 log.debug('[%s] %r discovered stale lock, previously '
-                          'held by %s.', tty.sid, (event, data), held)
+                          'held by %s.', tty.sid, (event, data), locks[event][1])
                 del locks[event]
         if event not in locks:
             locks[event] = (time.time(), tty.sid)
-            tty.iqueue.send((event, True,))
+            tty.master_write.send((event, True,))
             if tap_events:
                 log.debug('[%s] %r granted.', tty.sid, (event, data))
         else:
@@ -290,14 +290,14 @@ def handle_lock(locks, tty, event, data, tap_events, log):
             # existing lock older than 'stale' should be released.
             if (stale is not None
                     and time.time() - locks[event][0] > stale):
-                tty.iqueue.send((event, True,))
+                tty.master_write.send((event, True,))
                 locks[event] = (time.time(), tty.sid)
                 log.warn('[%s] %r stale %fs.',
                          tty.sid, (event, data),
                          time.time() - locks[event][0])
             # signal busy with matching event, data=False
             else:
-                tty.iqueue.send((event, False,))
+                tty.master_write.send((event, False,))
                 log.debug('[%s] %r not acquired.', tty.sid, (event, data))
 
     elif method == 'release':
@@ -320,22 +320,18 @@ def session_recv(locks, terminals, log, tap_events):
     """
     # No actual Lock instances are held or released, just a simple dictionary
     # state/time tracking system.
-    from x84.terminal import unregister_tty, kill_session
+    from x84.terminal import kill_session
     from x84.db import DBHandler
 
-    disp_handle = lambda handle: ((handle + u' ')
-                                  if handle is not None
-                                  and 0 != len(handle) else u'')
-    disp_origin = lambda client: client.addrport().split(':', 1)[0]
-
     for sid, tty in terminals:
-        while tty.oqueue.poll():
+        while tty.master_read.poll():
             try:
-                event, data = tty.oqueue.recv()
+                event, data = tty.master_read.recv()
             except (EOFError, IOError) as err:
                 # sub-process unexpectedly closed
-                log.exception(err)
-                unregister_tty(tty)
+                msg_err = 'master_read pipe: {err}'.format(err=err)
+                log.exception(msg_err)
+                kill_session(tty.client, msg_err)
                 break
 
             # 'exit' event, unregisters client
@@ -343,13 +339,10 @@ def session_recv(locks, terminals, log, tap_events):
                 kill_session(tty.client, 'client exit')
                 break
 
-            # 'logger' event, propagated upward
+            # 'logger' event, prefix log message with handle and IP address
             elif event == 'logger':
-                # prefix message with 'ip:port/nick '
-                data.msg = '%s[%s] %s' % (
-                    disp_handle(data.handle),
-                    disp_origin(tty.client),
-                    data.msg)
+                data.msg = ('{data.handle}[{client.addrport}] {data.msg}'
+                            .format(data=data, client=tty.client))
                 log.handle(data)
 
             # 'output' event, buffer for tcp socket
@@ -372,7 +365,7 @@ def session_recv(locks, terminals, log, tap_events):
                 tgt_sid, send_event, send_val = data[0], data[1], data[2:]
                 for _sid, _tty in terminals:
                     if tgt_sid == _sid:
-                        _tty.iqueue.send((send_event, send_val))
+                        _tty.master_write.send((send_event, send_val))
                         break
 
             # 'global': message broadcasting to all sessions
@@ -381,7 +374,7 @@ def session_recv(locks, terminals, log, tap_events):
                     log.debug('broadcast %r', (event, data))
                 for _sid, _tty in terminals:
                     if sid != _sid:
-                        _tty.iqueue.send((event, data,))
+                        _tty.master_write.send((event, data,))
 
             # 'set-timeout': set user-preferred timeout
             elif event == 'set-timeout':
@@ -391,7 +384,7 @@ def session_recv(locks, terminals, log, tap_events):
 
             # 'db*': access DBProxy API for shared sqlitedict
             elif event.startswith('db'):
-                thread = DBHandler(tty.iqueue, event, data)
+                thread = DBHandler(tty.master_write, event, data)
                 thread.start()
 
             # 'lock': access fine-grained bbs-global locking

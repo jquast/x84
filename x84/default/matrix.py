@@ -1,12 +1,18 @@
 """
  Matrix login screen for X/84 (Formerly, 'The Progressive') BBS,
 
- This script is the session entry point.  Or simply put, the login program.
+ This script is the default session entry point for all connections.
+
+ Or simply put, the login program. It is configured in default.ini file,
+ under section 'matrix'. Alternative matrices may be considered by their
+ connection type, using script_{telnet,ssh}
 
  In legacy era, a matrix script might be something to fool folk not in the
  know, meant to divert agents from underground boards, require a passcode,
  or even swapping the modem into a strange stop/bit/parity configuration,
- callback mechanisms, etc.. read all about it in old e-zines.
+ callback mechanisms, etc..
+
+ Read all about it in old e-zines.
 """
 
 import os
@@ -37,9 +43,6 @@ def get_username(handle=u''):
     apply_msg = u'\r\n\r\n  --> Create new account? [ynq]   <--' + '\b' * 5
     allow_apply = ini.CFG.getboolean('nua', 'allow_apply')
     enable_anonymous = ini.CFG.getboolean('matrix', 'enable_anonymous')
-    # pylint: disable=E1103
-    #         Instance of '_Chainmap' has no 'split' member
-    #         (but some types could not be inferred)
     newcmds = ini.CFG.get('matrix', 'newcmds').split()
     byecmds = ini.CFG.get('matrix', 'byecmds').split()
     denied_msg = u'\r\n\r\nfiRSt, YOU MUSt AbANdON YOUR libERtIES.'
@@ -175,9 +178,6 @@ def main():
     handle = (session.env.get('USER', '').decode('iso8859-1', 'replace'))
     anon_allowed_msg = u"'%s' login enabled.\r\n" % (
         term.bold_cyan('anonymous',))
-    # pylint: disable=E1103
-    #         Instance of '_Chainmap' has no 'split' member
-    #         (but some types could not be inferred)
     newcmds = ini.CFG.get('matrix', 'newcmds').split()
     apply_msg = u"'%s' to create new account.\r\n" % (
         term.bold_cyan(newcmds[0]),)
