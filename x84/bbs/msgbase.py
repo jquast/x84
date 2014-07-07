@@ -133,6 +133,7 @@ class Msg(object):
         Save message in 'Msgs' sqlite db, and record index in 'tags' db.
         """
         from x84.bbs.dbproxy import DBProxy
+        from x84.bbs.ini import CFG
 
         log = logging.getLogger(__name__)
         new = self.idx is None or self._stime is None
