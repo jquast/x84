@@ -97,7 +97,7 @@ def ropen(filename, mode='rb'):
     return open(random.choice(files), mode) if len(files) else None
 
 
-def showart(filepattern, encoding=None, auto_mode=True):
+def showart(filepattern, encoding=None, auto_mode=True, center=False):
     """
     yield unicode sequences for any given ANSI Art (of art_encoding). Effort
     is made to strip SAUCE data, translate input to unicode, and trim artwork
@@ -113,6 +113,9 @@ def showart(filepattern, encoding=None, auto_mode=True):
 
     The ``auto_mode`` flag will, if set, only respect the selected encoding if
     the active session is UTF-8 capable.
+
+    If ``center`` is set to `True`, the piece will be centered respecing the
+    current terminal's width.
 
     """
     if encoding is None:
@@ -153,12 +156,16 @@ def showart(filepattern, encoding=None, auto_mode=True):
     else:
         _decode = lambda what: what.decode(encoding)
 
+    padding = u''
+    if center and term.width > 81:
+        padding = term.move_x((term.width / 2) - 40)
+
     for line in _decode(str(sauce.SAUCE(fobj))).splitlines():
         # allow slow terminals to cancel by pressing a keystroke
         if session.poll_event('input'):
-            yield u'\r\n' + msg_cancel + u'\r\n'
+            yield u'\r\n' + padding + msg_cancel + u'\r\n'
             return
-        yield line + u'\r\n'
+        yield padding + line + u'\r\n'
 
 
 def showcp437(filepattern):
