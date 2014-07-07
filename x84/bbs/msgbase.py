@@ -156,12 +156,12 @@ class Msg(object):
                     msgs.add(self.idx)
                     db_tag[tag] = msgs
                     log.debug("msg {self.idx} tagged '{tag}'"
-                                   .format(self=self, tag=tag))
+                              .format(self=self, tag=tag))
                 elif tag not in self.tags and self.idx in msgs:
                     msgs.remove(self.idx)
                     db_tag[tag] = msgs
                     log.info("msg {self.idx} removed tag '{tag}'"
-                                  .format(self=self, tag=tag))
+                             .format(self=self, tag=tag))
             for tag in [_tag for _tag in self.tags if _tag not in db_tag]:
                 db_tag[tag] = set([self.idx])
 

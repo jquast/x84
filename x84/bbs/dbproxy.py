@@ -5,7 +5,6 @@ Database proxy helper for X/84.
 import logging
 
 # for session-based ipc
-from x84.bbs.session import getsession
 
 # for drect-db access
 from x84.db import (
@@ -26,11 +25,12 @@ class DBProxy(object):
     results via IPC pipe transfer.
     """
 
-    def __init__(self, schema, table='unnamed', use_session=False):
+    def __init__(self, schema, table='unnamed', use_session=True):
         """
         Arguments:
             schema: database key, to become basename of .sqlite3 files.
         """
+        from x84.bbs.session import getsession
         self.log = logging.getLogger(__name__)
         self.schema = schema
         self.table = table
