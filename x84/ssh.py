@@ -159,8 +159,7 @@ class SshClient(object):
         """
         if self.active:
             self.active = False
-            self.log.debug('{self.addrport}: deactivated'
-                           .format(self=self))
+            self.log.debug('{self.addrport}: deactivated'.format(self=self))
 
     def shutdown(self):
         """
@@ -174,7 +173,8 @@ class SshClient(object):
             self.sock.shutdown(socket.SHUT_RDWR)
         except socket.error:
             pass
-        self.sock.close()
+        if self.transport.is_active():
+            self.transport.close()
         self.deactivate()
         self.log.debug('{self.addrport}: socket shutdown'.format(self=self))
 
@@ -344,6 +344,7 @@ class ConnectSsh (threading.Thread):
             st_time = time.time()
             while not detected() and self._timeleft(st_time):
                 if not self.client.is_active():
+                    self.client.deactivate()
                     return
                 time.sleep(self.TIME_POLL)
 
@@ -351,6 +352,9 @@ class ConnectSsh (threading.Thread):
                 return spawn_client_session(client=self.client)
 
         except paramiko.SSHException as err:
+            self.log.debug('{client.addrport}: connection closed: {err}'
+                           .format(client=self.client, err=err))
+        except socket.error as err:
             self.log.debug('{client.addrport}: connection closed: {err}'
                            .format(client=self.client, err=err))
         except EOFError:
@@ -396,33 +400,36 @@ class SshSessionServer(paramiko.ServerInterface):
 
         if self._check_new_user(username):
             self.new_user = True
-            self.log.debug('new user account, {0}'.format(username))
+            self.log.debug('new user account, {0!r}'.format(username))
             return paramiko.AUTH_SUCCESSFUL
 
         elif self._check_bye_user(username):
             # not allowed to login using bye@, logoff@, etc.
-            self.log.debug('denied byecmds name, {0}'.format(username))
+            self.log.debug('denied byecmds name, {0!r}'.format(username))
             return paramiko.AUTH_FAILED
 
         elif self._check_anonymous_user(username):
-            self.log.debug('{0} user accepted by server configuration.'
+            self.log.debug('{0!r} user accepted by server configuration.'
                            .format(username))
             self.anonymous = True
             return paramiko.AUTH_SUCCESSFUL
 
         elif self._check_user_password(username, password):
-            self.log.debug('password accepted for user {0}.'.format(username))
+            self.log.debug('password accepted for user {0!r}.'
+                           .format(username))
             return paramiko.AUTH_SUCCESSFUL
 
-        self.log.debug('password rejected for user {0}.'.format(username))
+        self.log.debug('password rejected for user {0!r}.'.format(username))
         return paramiko.AUTH_FAILED
 
     def check_auth_publickey(self, username, public_key):
         self.username = username.strip()
         if self._check_user_pubkey(username, public_key):
-            self.log.debug('pubkey accepted for user {0}.'.format(username))
+            self.log.debug('pubkey accepted for user {0!r}.'
+                           .format(username))
             return paramiko.AUTH_SUCCESSFUL
-        self.log.debug('pubkey denied for user {0}.'.format(username))
+        self.log.debug('pubkey denied for user {0!r}.'
+                       .format(username))
         return paramiko.AUTH_FAILED
 
     def get_allowed_auths(self, username):
