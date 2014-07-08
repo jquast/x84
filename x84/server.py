@@ -41,3 +41,9 @@ class BaseServer(object):
         Returns a list of connected clients.
         """
         return self.clients.values()
+
+    def client_fds(self):
+        """
+        Returns a list of client file descriptors.
+        """
+        return [client.fileno() for client in self.clients.values()]

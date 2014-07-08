@@ -1063,9 +1063,3 @@ class TelnetServer(BaseServer):
             exit(1)
         self.log.info('listening on {self.address}:{self.port}/tcp'
                       .format(self=self))
-
-    def client_fds(self):
-        """
-        Returns a list of client file descriptors to poll for read/write.
-        """
-        return [_client.fileno() for _client in self.clients.values()]
