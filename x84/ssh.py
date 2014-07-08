@@ -167,16 +167,12 @@ class SshClient(object):
 
         Called by event loop after client is marked by deactivate().
         """
+        self.active = False
         if self.channel is not None:
             self.channel.shutdown(how=2)
-        try:
-            self.sock.shutdown(socket.SHUT_RDWR)
-        except socket.error:
-            pass
         if self.transport.is_active():
             self.transport.close()
-        self.deactivate()
-        self.log.debug('{self.addrport}: socket shutdown'.format(self=self))
+            self.log.debug('{self.addrport}: socket shutdown'.format(self=self))
 
     @property
     def addrport(self):
