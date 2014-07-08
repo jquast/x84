@@ -331,6 +331,7 @@ class ConnectSsh (threading.Thread):
             self.client.transport.start_server(server=ssh_session)
             self.client.channel = (self.client.transport
                                    .accept(self.TIME_WAIT_STAGE))
+
             if self.client.channel is None:
                 self.log.debug('{client.addrport}: no channel requested'
                                .format(client=self.client))
@@ -356,8 +357,11 @@ class ConnectSsh (threading.Thread):
             self.log.debug('{client.addrport}: EOF from client'
                            .format(client=self.client))
         except Exception as err:
-            self.log.exception('{client.addrport}: {err}'
-                               .format(client=self.client, err=err))
+            self.log.debug('{client.addrport}: connection closed: {err}'
+                           .format(client=self.client, err=err))
+        else:
+            self.log.debug('{client.addrport}: shell not requested'
+                           .format(client=self.client))
         self.client.deactivate()
 
     def _timeleft(self, st_time):
