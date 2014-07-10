@@ -115,18 +115,12 @@ def try_pass(user):
     badpass_msg = (u'\r\n\r\n' + term.red_reverse +
                    u"'%s' login failed." + term.normal)
     max_pass = int(ini.CFG.get('nua', 'max_pass'))
-    # prompt for password, disable input tap during, mask input with 'x',
-    # and authenticate against user record, performing a script change to
-    # topscript if sucessful.
-    # pylint: disable=W0212
-    #         Access to a protected member _tap_input of a client class
+    # prompt for password, mask input with 'x', and authenticate against
+    # user record, performing a script change to topscript if successful.
     echo(prompt_pass)
-    chk = session._tap_input  # <-- save
-    session._tap_input = False
     lne = LineEditor(max_pass)
     lne.hidden = u'x'
     password = lne.read()
-    session._tap_input = chk  # restore -->
     if password is not None and 0 != len(password):
         echo(status_auth)
         if user.auth(password):
