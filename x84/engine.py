@@ -184,9 +184,10 @@ def accept(log, server, client_factory, connect_factory,
         server.clients[client.sock.fileno()] = client
 
         # spawn negotiation and process registration thread
-        connect_factory(client, **connect_factory_kwargs).start()
-        log.info('{client.kind} connection from {client.addrport}.'
-                 .format(client=client))
+        thread = connect_factory(client, **connect_factory_kwargs)
+        log.info('{client.kind} connection from {client.addrport} '
+                 '*{thread.name}).'.format(client=client, thread=thread))
+        thread.start()
 
     except socket.error as err:
         log.error('accept error {0}:{1}'.format(*err))
