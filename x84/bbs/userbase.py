@@ -204,22 +204,26 @@ class User(object):
     def get(self, key, default=None):
         # pylint: disable=C0111,
         #        Missing docstring
+        from x84.bbs import ini
         log = logging.getLogger(__name__)
         adb = DBProxy(USERDB, 'attrs')
 
         if self.handle not in adb:
-            log.debug('User({!r}).get(key={!r}) returns default={!r}'
-                      .format(self.handle, key, default))
+            if ini.CFG.getboolean('session', 'tap_db'):
+                log.debug('User({!r}).get(key={!r}) returns default={!r}'
+                          .format(self.handle, key, default))
             return default
 
         attrs = adb[self.handle]
         if key not in attrs:
-            log.debug('User({!r}.get(key={!r}) returns default={!r}'
-                      .format(self.handle, key, default))
+            if ini.CFG.getboolean('session', 'tap_db'):
+                log.debug('User({!r}.get(key={!r}) returns default={!r}'
+                          .format(self.handle, key, default))
             return default
 
-        log.debug('User({!r}.get(key={!r}) returns value.'
-                  .format(self.handle, key))
+        if ini.CFG.getboolean('session', 'tap_db'):
+            log.debug('User({!r}.get(key={!r}) returns value.'
+                      .format(self.handle, key))
         return attrs[key]
     get.__doc__ = dict.get.__doc__
 
