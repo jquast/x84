@@ -168,7 +168,7 @@ def accept(log, server):
         server.clients[client.sock.fileno()] = client
 
         # spawn negotiation and process registration thread
-        thread = connect_factory(client, **connect_factory_kwargs)
+        thread = server.connect_factory(client, **connect_factory_kwargs)
         log.info('{client.kind} connection from {client.addrport} '
                  '*{thread.name}).'.format(client=client, thread=thread))
         thread.start()
