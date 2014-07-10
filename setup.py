@@ -185,7 +185,7 @@ setup(name='x84',
       },
       install_requires=[
           'requests >=1.1.0',
-          'sauce >=0.1.1',
+          'sauce >=1.0',
           'sqlitedict >=1.0.8',
           'blessed >=1.9.1',
           'wcwidth >=0.1.1',

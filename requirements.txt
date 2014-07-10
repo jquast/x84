@@ -1,5 +1,5 @@
 sqlitedict
-sauce
+sauce>=1.0
 requests
 blessed
 paramiko

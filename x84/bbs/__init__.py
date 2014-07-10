@@ -1,7 +1,9 @@
 """
 x/84 bbs module, https://github.com/jquast/x84
 """
-from x84 import encodings
+
+import encodings.aliases
+import x84.encodings
 from x84.bbs.userbase import list_users, get_user, find_user, User, Group
 from x84.bbs.msgbase import list_msgs, get_msg, list_tags, Msg
 from x84.bbs.exception import Disconnected, Goto
@@ -27,6 +29,42 @@ __all__ = ['list_users', 'get_user', 'find_user', 'User', 'Group', 'list_msgs',
            'ropen', 'showart', 'showcp437', 'Dropfile', 'encode_pipe',
            'decode_pipe', 'syncterm_setfont',
            ]
+
+
+## Translation map for embedded font hints in SAUCE records as documented at
+## http://www.acid.org/info/sauce/sauce.htm section FontName
+
+SAUCE_FONT_MAP = {
+    'Amiga MicroKnight':  'amiga',
+    'Amiga MicroKnight+': 'amiga',
+    'Amiga mOsOul':       'amiga',
+    'Amiga P0T-NOoDLE':   'amiga',
+    'Amiga Topaz 1':      'amiga',
+    'Amiga Topaz 1+':     'amiga',
+    'Amiga Topaz 2':      'amiga',
+    'Amiga Topaz 2+':     'amiga',
+    'Atari ATASCII':      'atari',
+    'IBM EGA43':          'cp437',
+    'IBM EGA':            'cp437',
+    'IBM VGA25G':         'cp437',
+    'IBM VGA50':          'cp437',
+    'IBM VGA':            'cp437',
+}
+
+## All IBM PC code pages that are supported
+
+for page in (
+        '437', '720', '737', '775', '819', '850', '852', '855', '857', '858',
+        '860', '861', '862', '863', '864', '865', '866', '869', '872',
+    ):
+    codec = 'cp%s' % (page,)
+    SAUCE_FONT_MAP.update({
+        'IBM EGA43 %s'  % (page,): codec,
+        'IBM EGA %s'    % (page,): codec,
+        'IBM VGA25g %s' % (page,): codec,
+        'IBM VGA50 %s'  % (page,): codec,
+        'IBM VGA %s'    % (page,): codec,
+    })
 
 
 def goto(*args):
@@ -97,12 +135,16 @@ def ropen(filename, mode='rb'):
     return open(random.choice(files), mode) if len(files) else None
 
 
-def showart(filepattern, encoding=None, auto_mode=True):
+def showart(filepattern, encoding=None, auto_mode=True, center=False):
     """
-    yield unicode sequences for any given ANSI Art (of art_encoding). Effort
-    is made to strip SAUCE data, translate input to unicode, and trim artwork
+    Yield unicode sequences for any given ANSI Art (of art_encoding). Effort
+    is made to parse SAUCE data, translate input to unicode, and trim artwork
     too large to display. If keyboard input is pressed, 'msg_cancel' is
     returned as the last line of art.
+
+    If you provide no ``encoding``, the piece encoding will be based on either
+    the encoding in the SAUCE record, the configured default or the default
+    fallback ``CP437`` encoding.
 
     Alternate codecs are available if you provide the ``encoding`` argument. Ie
     if you want to show an Amiga style ASCII art file::
@@ -114,32 +156,53 @@ def showart(filepattern, encoding=None, auto_mode=True):
     The ``auto_mode`` flag will, if set, only respect the selected encoding if
     the active session is UTF-8 capable.
 
+    If ``center`` is set to `True`, the piece will be centered respecing the
+    current terminal's width.
+
     """
-    if encoding is None:
-        from x84.bbs.ini import CFG
-        try:
-            encoding = CFG.get('system', 'art_utf8_codec')
-        except:
-            encoding = 'cp437'  # Default fallthrough
+    import glob
+    import random
+    from sauce import SAUCE
+    from x84.bbs.ini import CFG
 
-    import sauce
     session, term = getsession(), getterminal()
-    msg_cancel = u''.join((term.normal,
-                           term.bold_blue(u'--'),
-                           u'CANCEllEd bY iNPUt ',
-                           term.bold_blue(u'--'),))
-    msg_notfound = u''.join((
-        term.bold_red(u'--'),
-        u'no files matching %s' % (filepattern,),
-        term.bold_red(u'--'),))
-    fobj = (ropen(filepattern)
-            if '*' in filepattern or '?' in filepattern
-            else open(filepattern, 'rb'))
 
-    if fobj is None:
-        yield msg_notfound + u'\r\n'
+    # Open the piece
+    try:
+        filename = random.choice(glob.glob(filepattern))
+    except IndexError:
+        filename = None
+
+    if filename is None:
+        yield u''.join((
+            term.bold_red(u'--'),
+            u'no files matching %s' % (filepattern,),
+            term.bold_red(u'--'),
+        ))
         return
 
+    # Parse the piece
+    parsed = SAUCE(filename)
+
+    # If no explicit encoding is given, we go through a couple of steps to
+    # resolve the possible file encoding:
+    if encoding is None:
+        # 1. See if the SAUCE record has a font we know about, it's in the
+        #    filler
+        if parsed.record and parsed.filler_str in SAUCE_FONT_MAP:
+            encoding = SAUCE_FONT_MAP[parsed.filler_str]
+
+        # 2. Get the system default art encoding
+        elif CFG.has_option('system', 'art_utf8_codec'):
+            encoding = CFG.get('system', 'art_utf8_codec')
+
+        # 3. Fall back to CP437
+        else:
+            encoding = 'cp437'
+
+    # If auto_mode is enabled, we'll only use the input encoding on UTF-8
+    # capable terminals, because our codecs do not know how to "transcode"
+    # between the various encodings.
     if auto_mode:
         def _decode(what):
             session = getsession()
@@ -150,15 +213,29 @@ def showart(filepattern, encoding=None, auto_mode=True):
             else:
                 return what
 
+    # If auto_mode is disabled, we'll just respect whatever input encoding was
+    # selected before
     else:
         _decode = lambda what: what.decode(encoding)
 
-    for line in _decode(str(sauce.SAUCE(fobj))).splitlines():
-        # allow slow terminals to cancel by pressing a keystroke
+    # For wide terminals, center the piece on the screen using cursor movement,
+    # if requested
+    padding = u''
+    if center and term.width > 81:
+        padding = term.move_x((term.width / 2) - 40)
+
+    msg_cancel = u''.join((
+        term.normal,
+        term.bold_blue(u'--'),
+        u'CANCEllEd bY iNPUt ',
+        term.bold_blue(u'--'),
+    ))
+    for line in _decode(parsed.data).splitlines():
+        # Allow slow terminals to cancel by pressing a keystroke
         if session.poll_event('input'):
-            yield u'\r\n' + msg_cancel + u'\r\n'
+            yield u'\r\n' + padding + msg_cancel + u'\r\n'
             return
-        yield line + u'\r\n'
+        yield padding + line + u'\r\n'
 
 
 def showcp437(filepattern):
