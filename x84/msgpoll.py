@@ -90,7 +90,7 @@ def pull_rest(net, last_msg_id, log=None):
         return False
 
     if req.status_code != 200:
-        log.error('[{net[name]] HTTP error, code={req.status_code}'
+        log.error('[{net[name]}] HTTP error, code={req.status_code}'
                   .format(net=net, req=req))
         return False
 
