@@ -433,8 +433,8 @@ class TelnetClient(BaseClient):
         elif cmd == WONT:
             self._handle_wont(option)
         else:
-            self.log.warn('{self.addrport}: unhandled _three_byte_cmd: {opt}.'
-                          .format(self=self, opt=name_option(option)))
+            self.log.debug('{self.addrport}: unhandled _three_byte_cmd: {opt}.'
+                           .format(self=self, opt=name_option(option)))
         self.telnet_got_iac = False
         self.telnet_got_cmd = None
 
@@ -487,8 +487,8 @@ class TelnetClient(BaseClient):
         else:
             if self.check_local_option(option) is UNKNOWN:
                 self._note_local_option(option, False)
-                self.log.warn('{self.addrport}: unhandled do: {opt}.'
-                              .format(self=self, opt=name_option(option)))
+                self.log.debug('{self.addrport}: unhandled do: {opt}.'
+                               .format(self=self, opt=name_option(option)))
                 self._iac_wont(option)
 
     def _send_status(self):
@@ -545,8 +545,8 @@ class TelnetClient(BaseClient):
                 self._note_remote_option(LINEMODE, False)
                 self._iac_wont(LINEMODE)
         else:
-            self.log.warn('{self.addrport}: unhandled dont: {opt}.'
-                          .format(self=self, opt=name_option(option)))
+            self.log.debug('{self.addrport}: unhandled dont: {opt}.'
+                           .format(self=self, opt=name_option(option)))
 
     def _handle_will(self, option):
         """
@@ -608,8 +608,8 @@ class TelnetClient(BaseClient):
                 self._note_remote_option(TTYPE, True)
                 self.request_ttype()
         else:
-            self.log.warn('{self.addrport}: unhandled will: {opt} (ignored).'
-                          .format(self=self, opt=name_option(option)))
+            self.log.debug('{self.addrport}: unhandled will: {opt} (ignored).'
+                           .format(self=self, opt=name_option(option)))
 
     def _handle_wont(self, option):
         """
