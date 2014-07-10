@@ -60,7 +60,8 @@ class Session(object):
 
     _script_module = None
     _fp_ttyrec = None
-    _ttyrec_fname = None
+
+    #: node number
     _node = None
 
     def __init__(self, terminal, sid, env, child_pipes, kind, addrport):
@@ -100,19 +101,8 @@ class Session(object):
         self.addrport = addrport
 
         # private attributes
-        self._script_stack = [(ini.CFG.get('matrix', 'script'),)]
-        self._tap_input = ini.CFG.getboolean('session', 'tap_input')
-        self._tap_output = ini.CFG.getboolean('session', 'tap_output')
-        self._tap_events = ini.CFG.getboolean('session', 'tap_events')
-        self._ttyrec_folder = ini.CFG.get('system', 'ttyrecpath')
-        self._record_tty = ini.CFG.getboolean('session', 'record_tty')
-        self._show_traceback = ini.CFG.getboolean('system', 'show_traceback')
-        self._script_path = ini.CFG.get('system', 'scriptpath')
-        self._connect_time = time.time()
-        self._last_input_time = time.time()
-
-        # create event buffer
-        self._buffer = dict()
+        self.init_script_stack()
+        self.init_attributes()
 
         # initialize keyboard encoding
         terminal.set_keyboard_decoder(env.get('encoding', 'utf8'))
@@ -132,7 +122,7 @@ class Session(object):
 
                     if whoami in robots:
                         from x84.bbs import User
-                        self._user = User(whoami)
+                        self.user = User(whoami)
                         self._script_stack.pop()
 
                         if ini.CFG.has_option('bots', addr):
@@ -142,6 +132,23 @@ class Session(object):
                             self._script_stack.append(('bots',))
                 except Queue.Empty:
                     pass
+
+    def init_script_stack(self):
+        from x84.bbs import ini
+        script_kind = 'script_{self.kind}'.format(self=self)
+        if ini.CFG.has_option('matrix', script_kind):
+            matrix_script = ini.CFG.get('matrix', script_kind)
+        else:
+            matrix_script = ini.CFG.get('matrix', 'script')
+        self._script_stack = [(matrix_script,)]
+
+    def init_attributes(self):
+        from x84.bbs import ini
+        self._connect_time = time.time()
+        self._last_input_time = time.time()
+
+        # create event buffer
+        self._buffer = dict()
 
     def to_dict(self):
         """
@@ -165,30 +172,30 @@ class Session(object):
     @property
     def duration(self):
         """
-        Return length of time since connection began (float).
+        Seconds elapsed since connection began as float.
         """
-        return time.time() - self._connect_time
+        return time.time() - self.connect_time
 
     @property
     def connect_time(self):
         """
-        Return time when connection began (float).
+        Time of session start as float.
         """
         return self._connect_time
 
     @property
     def last_input_time(self):
         """
-        Return last time of keypress (epoch float).
+        Time of last keypress as epoch.
         """
         return self._last_input_time
 
     @property
     def idle(self):
         """
-        Return length of time since last keypress occured (float).
+        Seconds elapsed since last keypress as float.
         """
-        return time.time() - self._last_input_time
+        return time.time() - self.last_input_time
 
     @property
     def activity(self):
@@ -276,11 +283,78 @@ class Session(object):
                     break
         return self._node
 
+    @property
+    def is_recording(self):
+        """ Session is being recorded """
+        return self._fp_ttyrec is not None
+
+    @property
+    def ttyrec_folder(self):
+        """ Folder for tty recordings. """
+        from x84.bbs import ini
+        return ini.CFG.get('system', 'ttyrecpath')
+
+    @property
+    def tap_input(self):
+        """ Keyboard input should be logged for debugging. """
+        from x84.bbs import ini
+        return ini.CFG.getboolean('session', 'tap_input')
+
+    @property
+    def tap_output(self):
+        """ Screen output should be logged for debugging. """
+        from x84.bbs import ini
+        return ini.CFG.getboolean('session', 'tap_output')
+
+    @property
+    def tap_events(self):
+        """ IPC Events should be logged for debugging. """
+        from x84.bbs import ini
+        return ini.CFG.getboolean('session', 'tap_events')
+
+    @property
+    def record_tty(self):
+        """ Whether tty recordings should be saved. """
+        from x84.bbs import ini
+        return ini.CFG.getboolean('session', 'record_tty')
+
+    @property
+    def show_traceback(self):
+        """ Whether traceback errors should be displayed to user. """
+        from x84.bbs import ini
+        return ini.CFG.getboolean('system', 'show_traceback')
+
+    @property
+    def script_path(self):
+        """ Base filepath folder for all scripts. """
+        from x84.bbs import ini
+        val = ini.CFG.get('system', 'scriptpath')
+        # ensure folder exists
+        assert os.path.isdir(val), (
+            'configuration section [system], value scriptpath: '
+            'not a folder: {!r}'.format(val))
+        return val
+
+    @property
+    def script_module(self):
+        """ base module location of self.script_path """
+        if self._script_module is None:
+            # load default/__init__.py as 'default',
+            folder_name = os.path.basename(self.script_path)
+
+            # put it in sys.path for relative imports
+            if self.script_path not in sys.path:
+                sys.path.insert(0, self.script_path)
+                self.log.debug("sys.path[0] <- {!r}".format(self.script_path))
+
+            # discover import path to __init__.py, store result
+            lookup = imp.find_module('__init__', [self.script_path])
+            self._script_module = imp.load_module(folder_name, *lookup)
+            self._script_module.__path__ = self.script_path
+        return self._script_module
+
     def __error_recovery(self):
-        """
-        jojo's invention; recover from a general exception by using
-        a script stack, and resuming last good script.
-        """
+        """ Recover from general exception in script. """
         if 0 != len(self._script_stack):
             # recover from exception
             fault = self._script_stack.pop()
@@ -319,29 +393,37 @@ class Session(object):
             try:
                 self.runscript(*self._script_stack.pop())
                 continue
+
             except Goto, err:
                 self.log.debug('Goto: %s', err)
                 self._script_stack = [err[0] + tuple(err[1:])]
                 continue
+
             except Disconnected, err:
                 self.log.info('Disconnected: %s', err)
                 self.close()
                 return None
+
             except Exception, err:
                 # Pokemon exception, log and Cc: telnet client, then resume.
                 e_type, e_value, e_tb = sys.exc_info()
-                if self._show_traceback:
+                if self.show_traceback:
                     self.write(self.terminal.normal + u'\r\n')
+
                 terrs = list()
                 for line in traceback.format_tb(e_tb):
                     for subln in line.split('\n'):
                         terrs.append(subln)
+
                 terrs.extend(traceback.format_exception_only(e_type, e_value))
-                for etxt in terrs:
-                    self.log.error(etxt.rstrip())
-                    if self._show_traceback:
-                        self.write(etxt.rstrip() + u'\r\n')
+                for etxt in map(str.rstrip, terrs):
+                    self.log.error(etxt)
+                    if self.show_traceback:
+                        self.write(etxt + u'\r\n')
+
+            # recover from general exception
             self.__error_recovery()
+
         self.log.debug('End of script stack.')
         self.close()
         return None
@@ -380,10 +462,10 @@ class Session(object):
             encoding = self.encoding
         self.terminal.stream.write(ucs, encoding)
 
-        if self._tap_output and self.log.isEnabledFor(logging.DEBUG):
-            self.log.debug('--> %r.', ucs)
+        if self.log.isEnabledFor(logging.DEBUG) and self.tap_output:
+            self.log.debug('--> {!r}'.format(ucs))
 
-        if self._record_tty:
+        if self.record_tty:
             if not self.is_recording:
                 self.start_recording()
             self._ttyrec_write(ucs)
@@ -494,8 +576,8 @@ class Session(object):
         """
         self._last_input_time = time.time()
 
-        if self._tap_input and self.log.isEnabledFor(logging.DEBUG):
-            self.log.debug('<-- (%d): %r.', len(data), data)
+        if self.log.isEnabledFor(logging.DEBUG) and self.tap_input:
+            self.log.debug('<-- {!r}'.format(data))
 
         for keystroke in data:
             self._buffer['input'].insert(0, keystroke)
@@ -561,7 +643,7 @@ class Session(object):
             if self.reader.poll(poll):
                 event, data = self.reader.recv()
                 retval = self.buffer_event(event, data)
-                if self._tap_events and self.log.isEnabledFor(logging.DEBUG):
+                if self.log.isEnabledFor(logging.DEBUG) and self.tap_events:
                     stack = inspect.stack()
                     caller_mod, caller_func = stack[2][1], stack[2][3]
                     self.log.debug('event %s %s by %s in %s.', event,
@@ -593,38 +675,16 @@ class Session(object):
         self._script_stack.append((script_name,) + args)
         self.log.info("run script {0!r} args={1!r}.".format(script_name, args))
 
-        def _load_script_module():
-            """
-            Load and return ini folder, `scriptpath` as a module (cached).
-            """
-            if self._script_module is None:
-                # load default/__init__.py as 'default',
-                base_script = os.path.basename(self._script_path)
-                # ensure _script_path exists
-                assert os.path.exists(self._script_path), (
-                    '[system] section value "scriptpath", %r, does not exist!'
-                    .format(self._script_path))
-                # and put it in sys.path for relative imports
-                if self._script_path not in sys.path:
-                    sys.path.insert(0, self._script_path)
-                    self.log.debug("Added to sys.path: %s", self._script_path)
-                # finally, import the script
-                lookup = imp.find_module(script_name, [self._script_path])
-                # pylint: disable=W0142
-                #        Used * or ** magic
-                self._script_module = imp.load_module(base_script, *lookup)
-                self._script_module.__path__ = self._script_path
-            return self._script_module
-
         # pylint: disable=W0142
         #        Used * or ** magic
-        script_module = _load_script_module()
-        lookup = imp.find_module(script_name, [script_module.__path__])
+        lookup = imp.find_module(script_name, [self.script_module.__path__])
         script = imp.load_module(script_name, *lookup)
         if not hasattr(script, 'main'):
-            raise ScriptError("%s: main() not found." % (script_name,))
+            raise ScriptError("script {!r}: main() not found."
+                              .format(script_name))
         if not callable(script.main):
-            raise ScriptError("%s: main not callable." % (script_name,))
+            raise ScriptError("script {!r}: main not callable."
+                              .format(script_name))
         value = script.main(*args)
         self._script_stack.pop()
         return value
@@ -639,13 +699,6 @@ class Session(object):
             self.send_event(
                 event='lock-node/%d' % (self._node),
                 data=('release', None))
-
-    @property
-    def is_recording(self):
-        """
-        True when session is being recorded to ttyrec file
-        """
-        return self._fp_ttyrec is not None
 
     def stop_recording(self):
         """
@@ -668,17 +721,19 @@ class Session(object):
         assert self._fp_ttyrec is None, ('already recording')
         digit = 0
         while True:
-            self._ttyrec_fname = '%s%d-%s.ttyrec' % (
-                time.strftime('%Y%m%d.%H%M%S'), digit,
-                self.sid.split(':', 1)[0],)
-            if not os.path.exists(self._ttyrec_fname):
+            fname = '{ts_stamp}{digit}-{sid}.ttyrec'.format(
+                ts_stamp=time.strftime('%Y%m%d.%H%M'),
+                digit=digit,
+                sid=self.sid.split(':', 1)[0],)
+            if not os.path.exists(fname):
                 break
             digit += 1
-        assert os.path.sep not in self._ttyrec_fname
-        filename = os.path.join(self._ttyrec_folder, self._ttyrec_fname)
-        if not os.path.exists(self._ttyrec_folder):
-            self.log.info('creating ttyrec folder, %s.', self._ttyrec_folder)
-            os.makedirs(self._ttyrec_folder)
+        assert os.path.sep not in fname
+        filename = os.path.join(self.ttyrec_folder, fname)
+        if not os.path.exists(self.ttyrec_folder):
+            self.log.info('Creating folder for ttyrecordings, {0}.'
+                          .format(self.ttyrec_folder))
+            os.makedirs(self.ttyrec_folder)
         self._fp_ttyrec = io.open(filename, 'wb+')
         self._ttyrec_sec = -1
         self._ttyrec_write_header()
