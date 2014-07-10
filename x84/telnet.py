@@ -292,11 +292,12 @@ class TelnetClient(object):
         """
         try:
             self.sock.shutdown(socket.SHUT_RDWR)
+            self.log.debug('{self.addrport}: socket shutdown'
+                           .format(self=self))
         except socket.error:
             pass
+        self.active = False
         self.sock.close()
-        self.deactivate()
-        self.log.debug('{self.addrport}: socket shutdown'.format(self=self))
 
     @property
     def addrport(self):
