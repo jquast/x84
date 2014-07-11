@@ -108,7 +108,7 @@ def push_rest(net, msg, parent, log=None):
     log = log or logging.getLogger(__name__)
 
     msg_data = prepare_message(msg, net, parent)
-    url = '{net[url_base]}messages/{net[name]/'.format(net=net)
+    url = '{net[url_base]}messages/{net[name]}/'.format(net=net)
     data = {'message': json.dumps(msg_data)}
 
     try:
