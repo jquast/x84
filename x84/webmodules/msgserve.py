@@ -73,6 +73,7 @@ def parse_auth(request_data):
     Otherwise, throw ValueError.
     """
     board_id, token, when = request_data.get('auth', '').split('|')
+    when = int(when)
     if time.time() > when:
         raise ValueError('Token is from the future')
     elif time.time() - when > AUTH_EXPIREY:
@@ -130,17 +131,18 @@ class MessageApi(object):
         receive_queue, return_queue = queues[INQUEUE], queues[OUTQUEUE]
 
         # acquire lock,
-        with locks[LOCK].acquire():
-            receive_queue.put(data)
-            try:
-                # blocking request for server to process message
-                response_data = return_queue.get(True, QUEUE_TIMEOUT)
-            except Queue.Empty:
-                # we should tell the client we gave up, or earmark with an ID,
-                # otherwise high server load or denial-of-service would cause
-                # us to serve the last client's request to the next.
-                log.error('Server did not process request, is it dead?')
-                raise web.HTTPError('500 Server Error', {}, RESP_FAIL)
+        locks[LOCK].acquire()
+        receive_queue.put(data)
+        try:
+            # blocking request for server to process message
+            response_data = return_queue.get(True, QUEUE_TIMEOUT)
+        except Queue.Empty:
+            # we should tell the client we gave up, or earmark with an ID,
+            # otherwise high server load or denial-of-service would cause
+            # us to serve the last client's request to the next.
+            log.error('Server did not process request, is it dead?')
+            raise web.HTTPError('500 Server Error', {}, RESP_FAIL)
+        locks[LOCK].release()
 
         # return request for message as json
         try:
