@@ -74,7 +74,7 @@ def parse_auth(request_data):
     """
     board_id, token, when = request_data.get('auth', '').split('|')
     when = int(when)
-    if time.time() > when:
+    if time.time() > when + 60:
         raise ValueError('Token is from the future')
     elif time.time() - when > AUTH_EXPIREY:
         raise ValueError('Token too far in the past')
@@ -131,18 +131,17 @@ class MessageApi(object):
         receive_queue, return_queue = queues[INQUEUE], queues[OUTQUEUE]
 
         # acquire lock,
-        locks[LOCK].acquire()
-        receive_queue.put(data)
-        try:
-            # blocking request for server to process message
-            response_data = return_queue.get(True, QUEUE_TIMEOUT)
-        except Queue.Empty:
-            # we should tell the client we gave up, or earmark with an ID,
-            # otherwise high server load or denial-of-service would cause
-            # us to serve the last client's request to the next.
-            log.error('Server did not process request, is it dead?')
-            raise web.HTTPError('500 Server Error', {}, RESP_FAIL)
-        locks[LOCK].release()
+        with locks[LOCK]:
+            receive_queue.put(data)
+            try:
+                # blocking request for server to process message
+                response_data = return_queue.get(True, QUEUE_TIMEOUT)
+            except Queue.Empty:
+                # we should tell the client we gave up, or earmark with an ID,
+                # otherwise high server load or denial-of-service would cause
+                # us to serve the last client's request to the next.
+                log.error('Server did not process request, is it dead?')
+                raise web.HTTPError('500 Server Error', {}, RESP_FAIL)
 
         # return request for message as json
         try:
@@ -216,7 +215,7 @@ def serve_messages_for(board_id, request_data, return_queue, db_source):
         for msg_id in db_tags.get(request_data['network'], []):
             if idx is None:
                 yield db_messages[idx]
-            elif (int(msg_id) <= int(idx) and
+            elif (int(msg_id) > int(idx) and
                   not message_owned_by(msg_id, board_id)):
                 yield db_messages[idx]
 
@@ -224,7 +223,7 @@ def serve_messages_for(board_id, request_data, return_queue, db_source):
     pending_messages = msgs_after(last_seen)
     return_messages = list()
     num_sent = 0
-    for num_sent, msg in enumerate(pending_messages)[:BATCH_MSGS]:
+    for num_sent, msg in enumerate(pending_messages):
         return_messages.append({
             u'id': msg.idx,
             u'author': msg.author,
@@ -235,6 +234,11 @@ def serve_messages_for(board_id, request_data, return_queue, db_source):
             u'ctime': to_utctime(msg.ctime),
             u'body': msg.body
         })
+        if num_sent >= BATCH_MSGS:
+            log.warn('[{request_data[network]}] Batch limit reached for '
+                     'board {board_id}; halting'
+                     .format(request_data=request_data, board_id=board_id))
+            break
 
     if num_sent > 0:
         log.info('[{request_data[network]}] {num_sent} messages '
@@ -300,7 +304,7 @@ def main():
                 if _key not in request_data):
         return server_error(log_func=log.warn,
                             return_queue=return_queue,
-                            log_msg='Missing field, {key!r}'.format(key=key))
+                            log_msg='%r' % request_data) #Missing field, {key!r}'.format(key=key))
 
     # validate message network & configuration.
     section = 'msgnet_{data[network]}'.format(data=request_data)
@@ -325,7 +329,7 @@ def main():
                                      .format(data=request_data, err=err)),
                             http_msg=u'Invalid token')
     else:
-        log.debug('[{data[network]] client {board_id} request '
+        log.debug('[{data[network]}] client {board_id} request '
                   '{data[action]}'.format(data=request_data,
                                           board_id=board_id))
 
