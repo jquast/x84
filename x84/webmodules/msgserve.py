@@ -73,7 +73,8 @@ def parse_auth(request_data):
     Otherwise, throw ValueError.
     """
     board_id, token, when = request_data.get('auth', '').split('|')
-    if time.time() > when:
+    when = int(when)
+    if time.time() > when + AUTH_EXPIREY:
         raise ValueError('Token is from the future')
     elif time.time() - when > AUTH_EXPIREY:
         raise ValueError('Token too far in the past')
@@ -130,7 +131,7 @@ class MessageApi(object):
         receive_queue, return_queue = queues[INQUEUE], queues[OUTQUEUE]
 
         # acquire lock,
-        with locks[LOCK].acquire():
+        with locks[LOCK]:
             receive_queue.put(data)
             try:
                 # blocking request for server to process message
@@ -214,15 +215,15 @@ def serve_messages_for(board_id, request_data, return_queue, db_source):
         for msg_id in db_tags.get(request_data['network'], []):
             if idx is None:
                 yield db_messages[idx]
-            elif (int(msg_id) <= int(idx) and
+            elif (int(msg_id) > int(idx) and
                   not message_owned_by(msg_id, board_id)):
-                yield db_messages[idx]
+                yield db_messages[msg_id]
 
     last_seen = request_data.get('last', None)
     pending_messages = msgs_after(last_seen)
     return_messages = list()
     num_sent = 0
-    for num_sent, msg in enumerate(pending_messages)[:BATCH_MSGS]:
+    for num_sent, msg in enumerate(pending_messages):
         return_messages.append({
             u'id': msg.idx,
             u'author': msg.author,
@@ -233,6 +234,11 @@ def serve_messages_for(board_id, request_data, return_queue, db_source):
             u'ctime': to_utctime(msg.ctime),
             u'body': msg.body
         })
+        if num_sent >= BATCH_MSGS:
+            log.warn('[{request_data[network]}] Batch limit reached for '
+                     'board {board_id}; halting'
+                     .format(request_data=request_data, board_id=board_id))
+            break
 
     if num_sent > 0:
         log.info('[{request_data[network]}] {num_sent} messages '
@@ -270,7 +276,7 @@ def receive_message_from(board_id, request_data, return_queue,
     # ?? is this removing millesconds, or ?
     _ctime = to_localtime(pullmsg['ctime'].split('.', 1)[0])
     msg.save(send_net=False, ctime=_ctime)
-    with db_source.acquire(), db_transactions.acquire():
+    with db_source, db_transactions:
         db_source[msg.idx] = board_id
         db_transactions[msg.idx] = msg.idx
     return_queue.put({u'response': True, u'id': msg.idx})
@@ -323,7 +329,7 @@ def main():
                                      .format(data=request_data, err=err)),
                             http_msg=u'Invalid token')
     else:
-        log.debug('[{data[network]] client {board_id} request '
+        log.debug('[{data[network]}] client {board_id} request '
                   '{data[action]}'.format(data=request_data,
                                           board_id=board_id))
 
