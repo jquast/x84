@@ -74,7 +74,7 @@ def parse_auth(request_data):
     """
     board_id, token, when = request_data.get('auth', '').split('|')
     when = int(when)
-    if time.time() > when + 60:
+    if time.time() > when + AUTH_EXPIREY:
         raise ValueError('Token is from the future')
     elif time.time() - when > AUTH_EXPIREY:
         raise ValueError('Token too far in the past')
