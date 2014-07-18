@@ -217,7 +217,7 @@ def serve_messages_for(board_id, request_data, return_queue, db_source):
                 yield db_messages[idx]
             elif (int(msg_id) > int(idx) and
                   not message_owned_by(msg_id, board_id)):
-                yield db_messages[idx]
+                yield db_messages[msg_id]
 
     last_seen = request_data.get('last', None)
     pending_messages = msgs_after(last_seen)
