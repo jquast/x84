@@ -276,7 +276,7 @@ def receive_message_from(board_id, request_data, return_queue,
     # ?? is this removing millesconds, or ?
     _ctime = to_localtime(pullmsg['ctime'].split('.', 1)[0])
     msg.save(send_net=False, ctime=_ctime)
-    with db_source.acquire(), db_transactions.acquire():
+    with db_source, db_transactions:
         db_source[msg.idx] = board_id
         db_transactions[msg.idx] = msg.idx
     return_queue.put({u'response': True, u'id': msg.idx})
