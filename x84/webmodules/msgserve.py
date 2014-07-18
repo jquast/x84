@@ -304,7 +304,7 @@ def main():
                 if _key not in request_data):
         return server_error(log_func=log.warn,
                             return_queue=return_queue,
-                            'Missing field, {key!r}'.format(key=key))
+                            log_msg='Missing field, {key!r}'.format(key=key))
 
     # validate message network & configuration.
     section = 'msgnet_{data[network]}'.format(data=request_data)
