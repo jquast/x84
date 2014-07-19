@@ -17,7 +17,7 @@ def lb_init(position=None,menu_index=None):
 
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
-    session.activity = u'Lightbar Main menu'
+    session.activity = u'Lightbar main menu'
 
     # set up lightbar pager, determine terminal dimensions
     term = getterminal()
