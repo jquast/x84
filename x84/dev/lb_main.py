@@ -1,8 +1,8 @@
 """
- Example code for a simple, lightbar based main menu for x/84, 
+ Example code of a simple, lightbar based main menu for x/84, 
  http://github.com/jquast/x84
 
- simply copy lb_main.py over to main.py (remember to make a backup
+ simply copy over/rename lb_main.py to main.py (remember to make a backup
  of the original main.py first !!)
 """
 
@@ -178,6 +178,7 @@ def main():
                 elif lb.selection[0] == u'b':
                     gosub('bbslist')
                 elif lb.selection[0] == u'l':
+                    echo(term.clear)
                     gosub('lc')
                 elif lb.selection[0] == u'o':
                     gosub('ol')
