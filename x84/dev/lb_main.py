@@ -1,6 +1,9 @@
 """
  Example code for a simple, lightbar based main menu for x/84, 
  http://github.com/jquast/x84
+
+ simply copy lb_main.py over to main.py (remember to make a backup
+ of the original main.py first !!)
 """
 
 __author__ = 'megagumbo'
@@ -16,12 +19,14 @@ def lb_init(position=None,menu_index=None):
     session, term = getsession(), getterminal()
     session.activity = u'Lightbar Main menu'
 
+    # set up lightbar pager, determine terminal dimensions
     term = getterminal()
     height = term.height - 11
     lb_width = int(term.width * .4)
     lb_xloc = int(term.width * .3)
     lightbar = Lightbar(height, lb_width, (term.height - height - 1), lb_xloc)
 
+    # Lightbar main menu entries
     entries = [
         #('',  '-----[COmMs]-----'),
         ('$', 'rEAD bUllETiNS'),
@@ -84,6 +89,7 @@ def lb_init(position=None,menu_index=None):
     if menu_index is not None:
         lightbar.goto(menu_index)    
 
+    # set up some nice colors
     lightbar.colors['highlight'] = term.bold_cyan_reverse
     lightbar.colors['border'] = term.bold_blue
     lightbar.xpadding, lightbar.ypadding = 2, 1
@@ -100,10 +106,8 @@ def lb_init(position=None,menu_index=None):
 
 def lb_refresh(lb_pager=None):
     """ Refresh lightbar main menu. """
-    from x84.bbs import echo, getsession, getterminal
+    from x84.bbs import echo
 
-    session, term = getsession(), getterminal()
-  
     if lb_pager is None:
        lb_pager = lb_init()
   
@@ -114,6 +118,7 @@ def lb_refresh(lb_pager=None):
 
 
 def show_banner():
+    """ Display main menu banner """
     from x84.bbs import showart, echo, getterminal, getsession
     import os
 
@@ -121,8 +126,8 @@ def show_banner():
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'main.ans')
 
     # displays a centered main menu header in topaz encoding for utf8
-    for line in showart(artfile,'topaz'):
-        echo(term.cyan+term.move_x((term.width/2)-40)+line)
+    for line in showart(artfile,'topaz',center=True):
+        echo(line)
 
 
 def main():
@@ -148,13 +153,12 @@ def main():
     dirty = True
     while True:
         if dirty or session.poll_event('refresh'):
-            # lb = lb_init(menu_index=lb.index)
             lb_refresh(lb)
 
         inp = getch(1)
         dirty = True
 
-        # dimensions may change, so we adapt to that
+        # terminal dimensions may change, so we adapt to that
         if (term_width != term.width or term_height != term.height):
             echo(term.clear)
             show_banner()
