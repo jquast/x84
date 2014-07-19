@@ -11,10 +11,10 @@ def lb_init(position=None,menu_index=None):
 
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
-    session.activity = u'Main menu'
+    session.activity = u'Lightbar Main menu'
 
     term = getterminal()
-    height = term.height - 8
+    height = term.height - 11
     # lb_width = int(term.width * .8)
     lb_width = int(term.width * .4)
     lb_xloc = int(term.width * .3)
@@ -104,7 +104,7 @@ def lb_refresh(lb_pager=None):
     session, term = getsession(), getterminal()
     echo(term.clear)
     show_banner()
-
+  
     if lb_pager is None:
        lb_pager = lb_init()
   
@@ -124,6 +124,8 @@ def show_banner():
     # displays a centered main menu header in topaz encoding for utf8
     for line in showart(artfile,'topaz'):
         echo(term.cyan+term.move_x((term.width/2)-40)+line)
+
+
 
 
 def main():
@@ -181,6 +183,7 @@ def main():
                 elif lb.selection[0] == u'u':
                     gosub('userlist')
                 elif lb.selection[0] == u'e':
+                    echo(term.clear)
                     gosub('profile')
                 elif lb.selection[0] == u'#':
                     gosub('lord')
