@@ -21,21 +21,23 @@ def lb_init(position=None,menu_index=None):
     lightbar = Lightbar(height, lb_width, (term.height - height - 1), lb_xloc)
 
     entries = [
-        # ('',  '---[MeSsAGiNg]---'),
+        #('',  '-----[COmMs]-----'),
         ('$', 'rEAD bUllETiNS'),
         ('n', 'latest nEWS'),
         ('p', 'pOSt A MSG'),
         ('r', 'rEAd All MSGS'),
         ('c', 'chAt'),
         ('i', 'iRC chAt'),
-        # ('',  '----[SeRVIcE]----'),
+        #('',  '                  '),
+        #('',  '----[SeRVIcES]----'),
         ('l', 'lASt CAllS'),
         ('o', 'oNE liNERS'),
         ('b', 'bbS NEXUS'),
         ('f', 'WeAThER fORECASt'),
         ('t', 'tEtRiS'),
         ('w', "whO'S ONliNE"),
-        # ('',  '-----[SySTeM]-----'),
+        #('',  '                  '),
+        #('',  '-----[SySTeM]-----'),
         ('!', 'ENCOdiNG'),
         ('s', 'sYS. iNfO'),
         ('u', 'uSER LiST'),
@@ -73,7 +75,7 @@ def lb_init(position=None,menu_index=None):
     if 'sysop' in session.user.groups:
         entries += (('v', 'idEO CASSEttE'),)
 
-    entries += (('x', 'EXit'),)
+    # entries += (('x', 'EXit'),)
     entries += (('g', 'gOOdbYE /lOGOff'),)
 
     lightbar.update( entries )
@@ -102,15 +104,15 @@ def lb_refresh(lb_pager=None):
     from x84.bbs import echo, getsession, getterminal
 
     session, term = getsession(), getterminal()
-    echo(term.clear)
-    show_banner()
+    # echo(term.clear)
+    # show_banner()
   
     if lb_pager is None:
        lb_pager = lb_init()
   
     lb_pager.goto(lb_pager.index) 
-    echo(lb_pager.border())
     echo(lb_pager.refresh())
+    echo(lb_pager.border())
     return (lb_pager)
 
 
@@ -124,8 +126,6 @@ def show_banner():
     # displays a centered main menu header in topaz encoding for utf8
     for line in showart(artfile,'topaz'):
         echo(term.cyan+term.move_x((term.width/2)-40)+line)
-
-
 
 
 def main():
@@ -147,15 +147,27 @@ def main():
     show_banner()
     lb = lb_init()
 
+    term_width = term.width
+    term_height = term.height
+
     inp = -1
     dirty = True
     while True:
         if dirty or session.poll_event('refresh'):
-            lb = lb_init(menu_index=lb.index)
+            # lb = lb_init(menu_index=lb.index)
             lb_refresh(lb)
 
         inp = getch(1)
         dirty = True
+
+        # dimensions may change, so we adapt to that
+        if (term_width != term.width or term_height != term.height):
+            echo(term.clear)
+            show_banner()
+            lb = lb_init()
+            lb_refresh(lb)
+            term_width = term.width
+            term_height = term.height
 
         if inp is not None:
             echo(lb.process_keystroke(inp))
