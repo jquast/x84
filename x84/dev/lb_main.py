@@ -1,7 +1,10 @@
 """
- Main menu script for x/84, http://github.com/jquast/x84
+ Example code for a simple, lightbar based main menu for x/84, 
+ http://github.com/jquast/x84
 """
 
+__author__ = 'megagumbo'
+__version__ = 1.0
 
 def lb_init(position=None,menu_index=None):
     """ Initialize Lightbar Main Menu """
@@ -15,7 +18,6 @@ def lb_init(position=None,menu_index=None):
 
     term = getterminal()
     height = term.height - 11
-    # lb_width = int(term.width * .8)
     lb_width = int(term.width * .4)
     lb_xloc = int(term.width * .3)
     lightbar = Lightbar(height, lb_width, (term.height - height - 1), lb_xloc)
@@ -75,7 +77,6 @@ def lb_init(position=None,menu_index=None):
     if 'sysop' in session.user.groups:
         entries += (('v', 'idEO CASSEttE'),)
 
-    # entries += (('x', 'EXit'),)
     entries += (('g', 'gOOdbYE /lOGOff'),)
 
     lightbar.update( entries )
@@ -87,11 +88,9 @@ def lb_init(position=None,menu_index=None):
     lightbar.colors['border'] = term.bold_blue
     lightbar.xpadding, lightbar.ypadding = 2, 1
     lightbar.alignment = 'center'
-
-    # lightbar.init_theme()
-
-    ## pressing Return is same as pressing 't'
-    # lightbar.keyset['enter'].extend((u't', u'T'))
+ 
+    # set lightbar theme
+    #lightbar.init_theme()
 
     ## re-select previous selection
     if position is not None:
@@ -104,8 +103,6 @@ def lb_refresh(lb_pager=None):
     from x84.bbs import echo, getsession, getterminal
 
     session, term = getsession(), getterminal()
-    # echo(term.clear)
-    # show_banner()
   
     if lb_pager is None:
        lb_pager = lb_init()
@@ -130,9 +127,6 @@ def show_banner():
 
 def main():
     """ Main procedure. """
-    # pylint: disable=R0912
-    #         Too many branches
-
     from x84.bbs import getterminal, getsession, getch, goto, gosub
     from x84.bbs import ini, echo
     from ConfigParser import Error as ConfigError
@@ -141,7 +135,7 @@ def main():
 
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
-    session.activity = u'Main menu'
+    session.activity = u'Lightbar Main menu'
 
     echo(term.clear)
     show_banner()
