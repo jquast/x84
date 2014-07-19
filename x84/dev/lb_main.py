@@ -80,7 +80,7 @@ def lb_init(position=None,menu_index=None):
                 entries.insert(0, (key, 'PlAY {}'.format(door)))
 
     if 'sysop' in session.user.groups:
-        entries += (('v', 'idEO CASSEttE'),)
+        entries += (('v', 'VidEO CASSEttE'),)
 
     entries += (('g', 'gOOdbYE /lOGOff'),)
 
