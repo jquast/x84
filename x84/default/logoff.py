@@ -26,7 +26,7 @@ def main():
     boards = (('1984.ws', 'x/84 dEfAUlt bOARd', 'Dingo',),
               ('htc.zapto.org', 'Haunting the Chapel', 'Mercyful fate',),
               ('bbs.pharcyde.org', 'Pharcyde BBS', 'Access Denied',),
-              ('bloodisland.ph4.se', 'Blood Island', 'Xzippo',),
+              ('bloodisland.ph4.se', 'Blood Island/X', 'Xzippo',),
               ('blackflag.acid.org:2526', 'Piranha: Black Flag', 'Caphood',),
               ('oddnetwork.org', '79 columns', 'Haliphax'),
               ('bbs.beardy.se', 'The Swamp', 'Beardy'),
