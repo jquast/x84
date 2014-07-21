@@ -177,25 +177,25 @@ def accept(log, server):
 
         try:
             max_attempted_logins = CFG.getint(
-                'fail2ban', 'max_attempted_logins') or 3
+                'fail2ban', 'max_attempted_logins')
         except ConfigParser.NoOptionError:
             pass
 
         try:
             max_attempted_logins_window = CFG.getint(
-                'fail2ban', 'max_attempted_logins_window') or 30
+                'fail2ban', 'max_attempted_logins_window')
         except ConfigParser.NoOptionError:
             pass
 
         try:
             initial_ban_length = CFG.getint(
-                'fail2ban', 'initial_ban_length') or 360
+                'fail2ban', 'initial_ban_length')
         except ConfigParser.NoOptionError:
             pass
 
         try:
             ban_increment_length = CFG.getint(
-                'fail2ban', 'ban_increment_length') or 360
+                'fail2ban', 'ban_increment_length')
         except ConfigParser.NoOptionError:
             pass
 
