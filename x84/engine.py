@@ -412,18 +412,14 @@ def _loop(servers):
     tap_events = CFG.getboolean('session', 'tap_events')
     locks = dict()
 
-    # "bots" ..
+    # message polling setup
     poll_interval = None
     last_poll = None
-    if CFG.has_section('bots'):
-        from x84.bbs.telnet import connect_bot
-        session.BOTQUEUE = Queue()
-        session.BOTLOCK = Lock()
-        if CFG.has_option('msg', 'poll_interval'):
-            poll_interval = CFG.getint('msg', 'poll_interval')
-            last_poll = int(time.time()) - poll_interval
-            log.debug('bots will poll at {0}s intervals.'
-                      .format(poll_interval))
+    if CFG.has_option('msg', 'poll_interval'):
+        poll_interval = CFG.getint('msg', 'poll_interval')
+        last_poll = int(time.time()) - poll_interval
+        log.debug('msgpoll will poll at {0}s intervals.'
+                  .format(poll_interval))
 
     if CFG.has_section('web') and CFG.has_option('web', 'modules'):
         try:
@@ -472,8 +468,8 @@ def _loop(servers):
         if poll_interval is not None:
             now = int(time.time())
             if now - last_poll >= poll_interval:
-                log.debug("connect_bot(msgpoll)")
-                connect_bot(u'msgpoll')
+                from x84 import msgpoll
+                msgpoll.main()
                 last_poll = now
 
         terms = get_terminals()

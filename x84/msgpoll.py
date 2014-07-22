@@ -222,7 +222,7 @@ def poll_network_for_messages(net, log=None):
         log.debug('{net[name]} no messages.'.format(net=net))
         return None
 
-    transdb = DBProxy(net['trans_db_name'])
+    transdb = DBProxy(net['trans_db_name'], use_session=False)
     transkeys = transdb.keys()
     msgs = sorted(msgs, cmp=lambda x, y: cmp(int(x['id']), int(y['id'])))
 
@@ -278,8 +278,8 @@ def publish_network_messages(net, transdb, log=None):
     from x84.bbs.msgbase import format_origin_line, MSGDB
 
     log = log or logging.getLogger(__name__)
-    queuedb = DBProxy(net['queue_db_name'])
-    msgdb = DBProxy(MSGDB)
+    queuedb = DBProxy(net['queue_db_name'], use_session=False)
+    msgdb = DBProxy(MSGDB, use_session=False)
 
     # publish each message
     for msg_id in sorted(queuedb.keys(),
