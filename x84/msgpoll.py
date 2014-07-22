@@ -201,7 +201,7 @@ def poll_network_for_messages(net, log=None):
     try:
         with open(net['last_file'], 'r') as last_fp:
             last_msg_id = int(last_fp.read().strip())
-    except OSError as err:
+    except IOError as err:
         try:
             with open(net['last_file'], 'w') as last_fp:
                 last_fp.write(str(last_msg_id))
@@ -243,8 +243,8 @@ def poll_network_for_messages(net, log=None):
 
         if (msg['parent'] is not None and
                 str(msg['parent']) not in transkeys):
-            log.warn('{net[name]} No such parent message ({msg[parent], '
-                     'msg_id=msg[id]), removing reference.'
+            log.warn('{net[name]} No such parent message ({msg[parent]}, '
+                     'msg_id={msg[id]}), removing reference.'
                      .format(net=net, msg=msg))
         elif msg['parent'] is not None:
             store_msg.parent = int(transdb[msg['parent']])
