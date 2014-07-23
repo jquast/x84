@@ -14,8 +14,6 @@ import os
 import io
 
 SESSION = None
-BOTQUEUE = None
-BOTLOCK = None
 
 
 def getsession():
@@ -106,32 +104,6 @@ class Session(object):
 
         # initialize keyboard encoding
         terminal.set_keyboard_decoder(env.get('encoding', 'utf8'))
-
-        # oh this makes me sad !
-        if BOTQUEUE is not None:
-            trusted_hosts = set(['127.0.0.1'])
-            addr, _ = addrport.split(':', 1)
-            if ini.CFG.has_section('telnet'):
-                trusted_hosts.add(ini.CFG.get('telnet', 'addr'))
-            if addr in trusted_hosts:
-                import Queue
-                try:
-                    whoami = BOTQUEUE.get(True, 0.1)
-                    robots = map(str.strip,
-                                 ini.CFG.get('bots', 'names').split(','))
-
-                    if whoami in robots:
-                        from x84.bbs import User
-                        self.user = User(whoami)
-                        self._script_stack.pop()
-
-                        if ini.CFG.has_option('bots', addr):
-                            botscript = ini.CFG.get('bots', whoami)
-                            self._script_stack.append((botscript,))
-                        else:
-                            self._script_stack.append(('bots',))
-                except Queue.Empty:
-                    pass
 
     def init_script_stack(self):
         from x84.bbs import ini
