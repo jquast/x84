@@ -413,13 +413,9 @@ def _loop(servers):
     locks = dict()
 
     # message polling setup
-    poll_interval = None
-    last_poll = None
     if CFG.has_option('msg', 'poll_interval'):
-        poll_interval = CFG.getint('msg', 'poll_interval')
-        last_poll = int(time.time()) - poll_interval
-        log.debug('msgpoll will poll at {0}s intervals.'
-                  .format(poll_interval))
+        from x84 import msgpoll
+        msgpoll.start_polling()
 
     if CFG.has_section('web') and CFG.has_option('web', 'modules'):
         try:
@@ -463,15 +459,6 @@ def _loop(servers):
 
         # receive new data from tcp clients.
         client_recv(servers, log)
-
-        # fire up message polling process if enabled
-        if poll_interval is not None:
-            now = int(time.time())
-            if now - last_poll >= poll_interval:
-                from x84 import msgpoll
-                msgpoll.main()
-                last_poll = now
-
         terms = get_terminals()
 
         # receive new data from session terminals

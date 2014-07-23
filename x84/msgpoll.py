@@ -327,8 +327,35 @@ def publish_network_messages(net, transdb, log=None):
         log.info('{net[name]} Published (msg_id={msg_id}) => {trans_id}'
                  .format(net=net, msg_id=msg_id, trans_id=trans_id))
 
+def start_polling():
+    """ launch method for polling process """
 
-def main():
+    def polling_thread(poll_interval):
+        import time
+
+        last_poll = 0
+
+        while True:
+            if poll_interval is not None:
+                now = time.time()
+                if now - last_poll >= poll_interval:
+                    poll()
+                    last_poll = now
+            time.sleep(1)
+
+    from threading import Thread
+    from x84.bbs.ini import CFG
+    import logging
+
+    log = logging.getLogger('x84.engine')
+    poll_interval = CFG.getint('msg', 'poll_interval')
+    t = Thread(target=polling_thread, args=(poll_interval,))
+    t.daemon = True
+    t.start()
+    log.info('msgpoll will poll at {0}s intervals.'
+              .format(poll_interval))
+
+def poll():
     """ message polling process """
     import x84.bbs.ini
 
