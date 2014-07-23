@@ -336,11 +336,10 @@ def start_polling():
         last_poll = 0
 
         while True:
-            if poll_interval is not None:
-                now = time.time()
-                if now - last_poll >= poll_interval:
-                    poll()
-                    last_poll = now
+            now = time.time()
+            if now - last_poll >= poll_interval:
+                poll()
+                last_poll = now
             time.sleep(1)
 
     from threading import Thread
