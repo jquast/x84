@@ -420,5 +420,6 @@ def main(msg=None):
             break
 
         msg.save()
+        session.user['msgs_sent'] = session.user.get('msgs_sent', 0) + 1
         return True
     return False

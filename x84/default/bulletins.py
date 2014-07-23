@@ -1,258 +1,96 @@
-""" Bulletins / Gallery script for x/84 bbs, https://github.com/jquast/x84 """
+""" Bulletins script for x/84 bbs, https://github.com/jquast/x84 """
 
-# Variables for start position of lightbar etc can be found in def main()
-# If you are running this on a -Windows- machine you will have to search
-# and replace the '/' with '\' for the directory browsing to work correctly.
+# More to be added as soon as we get a filebase going.
 
-from x84.bbs import getsession, echo, getch, gosub, getterminal, showart, getch, showcp437
+from x84.bbs import getsession, getterminal, echo, list_users, get_user
+from x84.bbs import  LineEditor, gosub, showart, getch
 import os
-from os import walk
 
 __author__ = 'Hellbeard'
-__version__ = 1.1
+__version__ = 1.0
 
+# --------------------------------------------------------------------------
+
+def waitprompt():
+    term = getterminal()
+    echo (term.normal+'\n\r'+term.magenta+'('+term.green+'..'+term.white+' press any key to continue '+term.green+'..'+term.magenta+')')
+    getch()
+    echo(term.normal_cursor)
 
 # ---------------------------------------------------
 
-def banner():
-    term = getterminal()
-    banner = ''
-    artfile = os.path.join(os.path.dirname(__file__), 'art', 'bulletins.ans')
-    for line in showart(artfile,'topaz'):
-        banner = banner + line
-    return banner
-
+def showansi(filename):
+    for line in showart(os.path.dirname(__file__)+ '/art/'+filename, 'topaz'):
+        echo(line)
 
 # ---------------------------------------------------
 
-def helpscreen():
-    term = getterminal()
-    text = {}
-    echo(term.clear()+banner()+term.move(8,0))
-    text[1] = 'x/84 bulletins v 1.1'
-    text[2] = ''
-    text[3] = term.bold_white+term.underline+'Key bindings for the navigator:'+term.normal
-    text[4] = '(Q/Escape) to quit.'
-    text[5] = '(Up/Dn/Right/Left/Pgup/Pgdn/Enter) to navigate.'
-    text[6] = ''
-    text[7] = term.bold_white+term.underline+'Key bindings for the file viewer:'+term.normal
-    text[8] = '(Q/Escape/Enter) to return.'
-    text[9] = '(Up/Dn/Right/Left/Pgup/Pgdn) to navigate.'
-    text[10] = ''
-    text[11] = term.bold_white+term.underline+'General key bindings:'+term.normal
-    text[12] = '(Alt+f) change to a more appropiate font in Syncterm.'
+def toplist(parameter):
+    session, term = getsession(), getterminal()
+    handle = session.user.handle
 
-    for i in range (1, 13):
-        echo(term.move_x(8)+text[i]+'\r\n')
-
-# ---------------------------------------------------
-
-def displayfile(filename):
-    term = getterminal()
-    echo(term.clear+term.move(0,0)+term.normal)
-
-    text = {}
     counter = 0
-    offset = 0
-    keypressed = ''
+    user_handles = list_users()
+    username = {}
+    feature = {}
+    location = {}
+    database = {}
 
-    for line in showcp437(filename):	# the string array named text will be zerobased
-        text[counter] = line
-        counter = counter + 1
+    for handle in user_handles:
 
-    while 1:
-        echo(term.move(0,0)+term.normal)
-        for i in range (0, term.height-1): # -2 om man vill spara en rad i botten
-            if len(text) > i+offset:
-                echo(term.clear_eol+'\r'+text[i+offset])
+       user_record = get_user(handle)
+       if parameter == 'calls':
+           database[str(user_record.handle)] = user_record.calls
+       if parameter == 'msgs':
+           database[str(user_record.handle)] = user_record.get('msgs_sent',0)
 
-        keypressed = getch()
-        echo(term.hide_cursor)
-        if keypressed == 'q' or keypressed == 'Q' or keypressed == term.KEY_ESCAPE or keypressed == term.KEY_ENTER:
-            break
+    for name in sorted(database, key=database.get, reverse=True):
+       if name != 'sysopname': # write your handle here if you dont want to be included
+           username[counter] = name
+ 
+           user_record = get_user(name)
+           location[counter] = user_record.location
 
-        if keypressed == term.KEY_HOME:
-            offset = 0
+           feature[counter] = str(database[name])
+           counter = counter + 1
 
-        if keypressed == term.KEY_END:
-            if len(text) < term.height: # if the textline has fewer lines than the screen..
-                offset = 0
-            else:
-                offset = len(text) - term.height+1
+    if counter > 10:
+        counter = 10    # we only want to display top ten users
 
-        if keypressed == term.KEY_DOWN:
-            if len(text) > offset+term.height-1: #offset < len(text) + term.height:
-                offset = offset + 1
+    echo(term.clear())
+    showansi('topten.ans')
 
-        if keypressed == term.KEY_UP:
-            if offset > 0:
-                offset = offset -1
+    if parameter == 'calls':
+        echo(term.yellow+term.move(7,1)+'[ % ]                                                 - tOP tEN cALLERS  [ % ]')
+    if parameter == 'msgs':
+        echo(term.yellow+term.move(7,1)+'[ % ]                                                 - tOP tEN wRITERS  [ % ]')
 
-        if keypressed == term.KEY_LEFT or keypressed == term.KEY_PGUP:
-            if offset > term.height:
-                offset = offset - term.height+2
-            else:
-                offset = 0
+    echo(term.cyan+term.move(9,3)+'username'+term.move_x(27)+'group/location'+term.move_x(67)+parameter+'\n\n')
 
-        if keypressed == term.KEY_RIGHT or keypressed == term.KEY_PGDOWN:
-            if (offset+term.height*2)-1 < len(text):
-                offset = offset + term.height-2
-            else:
-                if len(text) < term.height: # if the textline has fewer lines than the screen..
-                     offset = 0
-                else:
-                     offset = len(text) - term.height+1
-         
-# ---------------------------------------------------
+    for i in range (0, counter):
+        echo(term.white+term.move_x(3)+username[i]+term.move_x(27)+location[i]+term.move_x(67)+feature[i]+'\r\n')
 
-def redrawlightbar(filer, lighty,lightx,lightbar,start,antalrader): # if the variable lightbar is negative the lightbar will be invisible
-    term = getterminal()
-    echo(term.move(lighty,lightx))
+    waitprompt()
 
-    for i in range (0, 10):
-        echo(term.move(lighty+i-1,lightx)+'                                             ') # erases 45 char. dont want to use clreol. So filenames/directories can be 45 char.
-
-    i2 = 0
-    for i in range (start,start+antalrader):
-        if i2 == lightbar:
-            echo(term.move(lighty+i-start-1,lightx)+term.blue_reverse+filer[i]+term.normal)
-        else:
-            echo(term.move(lighty+i-start-1,lightx)+term.white+filer[i])
-        i2 = i2 + 1
-
-# ---------------------------------------------------
-
-def getfilelist(katalog):
-    filer = []
-    kataloger = []
-    for (dirpath, dirnames, filenames) in walk(katalog):
-        filer.extend(sorted(filenames, key=str.lower))
-        kataloger.extend(dirnames)
-        break
-    for i in range (0, len(kataloger)):
-        filer.insert(0,kataloger[i]+'/')
-    return filer
-
-# ---------------------------------------------------
+# --------------------------------------------------------------------------
 
 def main():
-    """ Main procedure. """
-    session = getsession()
-    term = getterminal()
-    session.activity = 'reading bulletins'
-    echo(term.clear+banner())
+    session, term = getsession(), getterminal()
+    dirty = True
 
-#********** default variables for you to change ! ************* 
+    while True:
+        if dirty or session.poll_event('refresh'):
+            echo(term.clear())
+            showansi('bulletinsmenu.ans')
+        echo ('\r\n'+term.normal+term.white+'  ['+term.blue+'Select bulletin'+term.white+']: ')
+        inp = getch()
 
-    startfolder = os.path.join(os.path.dirname(__file__), 'art', 'bulletins/') # the folder where you store your textfiles..
-    lightx = 8                                      # xpos for the lightbar
-    lighty = 10                                     # ypos for the lightbar
-    max_amount_rows = 10
-
-    currentfolder = startfolder                     # dont change these three lines..
-    filer = []
-    filer = getfilelist(currentfolder)
-
-    if len(filer) > max_amount_rows:
-        antalrader = max_amount_rows
-    else:
-        antalrader = len(filer)
-# antalrader = amount of rows to be displayed. By default it will display up to 14 lines. More wont fit because of the artwork.
-# as for colours and stuff.. just search and replace.
-#****************************************************************
-
-    offset = 0
-    lightbarpos = 0
-    keypressed = ''
-
-    redrawlightbar(filer, lighty,lightx,lightbarpos,offset,offset+antalrader)
-    echo(term.hide_cursor)
-
-    while 1:
-
-        keypressed = getch()
-
-        if keypressed == 'q' or keypressed == 'Q' or keypressed == term.KEY_ESCAPE:
-            echo(term.normal_cursor)
+        dirty = True
+        if inp == u'1':
+            toplist('calls')
+        elif inp == u'2':
+            toplist('msgs')
+        elif inp == u'3':
+            gosub('textbrowse')
+        else:                      # any other key will return to main menu
             return
-
-        if keypressed == term.KEY_LEFT or keypressed == term.KEY_PGUP:
-            offset = offset - antalrader
-            if offset < 0:
-                offset = 0
-                lightbarpos = 0
-            redrawlightbar(filer, lighty,lightx,lightbarpos,offset,antalrader)
-
-        if keypressed == term.KEY_RIGHT or keypressed == term.KEY_PGDOWN:
-            offset = offset + antalrader
-            if offset+antalrader > len(filer)-1:
-                offset = len(filer) - antalrader
-                lightbarpos = antalrader-1
-            redrawlightbar(filer, lighty,lightx,lightbarpos,offset,antalrader)
-
-        if keypressed == term.KEY_UP and lightbarpos+offset > -1:
-            echo(term.white+term.move(lighty+lightbarpos-1,lightx)+filer[lightbarpos+offset]) # restore colour on the old coordinate
-            lightbarpos = lightbarpos - 1 
-            if lightbarpos < 0:
-               if offset > 0:
-                   offset = offset - 1
-               lightbarpos = lightbarpos + 1
-               redrawlightbar(filer, lighty,lightx,-1,offset,antalrader)
-
-            echo(term.blue_reverse+term.move(lighty+lightbarpos-1,lightx)+filer[lightbarpos+offset]+term.normal)
-
-        if keypressed == term.KEY_DOWN and lightbarpos+offset < len(filer)-1:
-            echo(term.white+term.move(lighty+lightbarpos-1,lightx)+filer[lightbarpos+offset]) # restore colour on the old coordnate 
-            lightbarpos = lightbarpos + 1
-            if lightbarpos > antalrader-1:
-               offset = offset + 1
-               lightbarpos = lightbarpos- 1
-               redrawlightbar(filer, lighty,lightx,-1,offset,antalrader)
-
-            echo(term.blue_reverse+term.move(lighty+lightbarpos-1,lightx)+filer[lightbarpos+offset]+term.normal)
-
-        if keypressed == 'h':
-            helpscreen()            
-            getch()
-            echo(term.clear+banner()+term.normal)
-            redrawlightbar(filer, lighty,lightx,lightbarpos,offset,antalrader)
-
-
-        if keypressed == term.KEY_ENTER:
-
-            if filer[lightbarpos+offset][-1:] == '/':
-                currentfolder = currentfolder + filer[lightbarpos+offset]
-                filer = getfilelist(currentfolder)
-#                oldlightbarpos = lightbarpos # saves the location of the lightbar in previous directory
-                filer.insert(0,'(..) GO BACK')
-                offset = 0  
-                lightbarpos = 0
-
-
-                if len(filer) > max_amount_rows:
-                    antalrader = max_amount_rows
-                else:
-                    antalrader = len(filer)    # stops the script from printing none-existing rows
-
-                redrawlightbar(filer, lighty,lightx,lightbarpos,offset,antalrader)
-
-            elif filer[lightbarpos+offset] == '(..) GO BACK':
-                for i in range (2,50): # support folders up to 50 characters..
-                    if currentfolder[len(currentfolder)-i] == '/':
-                        currentfolder = currentfolder[:-i+1]
-                        offset = 0
-                        lightbarpos = 0
-#                        lightbarpos = oldlightbarpos # restores the lightbarpos previously used in the old directory
-                        filer = getfilelist(currentfolder)
-                        if currentfolder != startfolder:
-                            filer.insert(0,'(..) GO BACK')
-                        if len(filer) > max_amount_rows:
-                            antalrader = max_amount_rows
-                        else:
-                            antalrader = len(filer)
-                        redrawlightbar(filer, lighty,lightx,lightbarpos,offset,antalrader)
-                        break
-            else:
-                displayfile(currentfolder+filer[lightbarpos+offset])
-                echo(term.clear+banner()+term.normal)
-                redrawlightbar(filer, lighty,lightx,lightbarpos,offset,antalrader)
