@@ -94,12 +94,7 @@ class MessageApi(object):
         })
 
         # return response data as json
-        try:
-            return json.dumps(response_data)
-        except ValueError as err:
-            log.error('{err}: response_data={response_data!r}'.format(
-                err=err, response_data=response_data))
-            raise web.HTTPError('500 Server Error', {}, RESP_FAIL)
+        return self._jsonify(response_data, log)
 
     def PUT(self, network, *args):
         " PUT method - post messages "
@@ -118,6 +113,10 @@ class MessageApi(object):
         })
 
         # return response data as json
+        return self._jsonify(response_data, log)
+
+    @staticmethod
+    def _jsonify(response_data, log):
         try:
             return json.dumps(response_data)
         except ValueError as err:
