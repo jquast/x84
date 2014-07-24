@@ -31,18 +31,8 @@
     cert = /home/bbs/ssl.cer
     key = /home/bbs/ssl.key
     chain = /home/bbs/chain.cer
-  - "bot" connections for interacting with userspace (default/bots.py).
-    These are setup with the [bots] default.ini section. The assumed
-    usernames of each bot are listed in the 'names' attribute. If you
-    want a bot to be shipped off to a script other than bots.py when
-    its telnet process connects to the board, you may assign it
-    using the bot's username. ('mybot' would launch 'some_script.py'
-    in the example below.)
-    [bots]
-    names = msgserve, msgpoll, mybot
-    mybot = some_script
-  - message network server web API endpoint (msgserve.py).
-  - message network client for pull/push (msgpoll.py).
+  - message network server web API endpoint (webmodules/msgserve.py).
+  - message network REST client for pull/push (msgpoll.py).
 
 1.1.0
   - resolve issue #53: using upstream 'blessed' fork.
