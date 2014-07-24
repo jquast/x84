@@ -33,7 +33,6 @@ import multiprocessing
 import threading
 import logging
 import hashlib
-import Queue
 import json
 import time
 import web
@@ -87,12 +86,15 @@ class MessageApi(object):
 
         # prepare request for message, last is the highest
         # index previously received by client
-        return self._get_response(data={
+        response_data = get_response(request_data={
             'auth': web.ctx.env['HTTP_AUTH_X84NET'],
             'network': network,
             'action': 'pull',
             'last': max(0, int(last)),
         })
+
+        # return response data as json
+        return self._jsonify(response_data, log)
 
     def PUT(self, network, *args):
         " PUT method - post messages "
@@ -103,25 +105,18 @@ class MessageApi(object):
 
         # parse incoming message
         webdata = web.input()
-        return self._get_response(data={
+        response_data = get_response(request_data={
             'auth': web.ctx.env['HTTP_AUTH_X84NET'],
             'network': network,
             'action': 'push',
             'message': json.loads(webdata.message)
         })
 
+        # return response data as json
+        return self._jsonify(response_data, log)
+
     @staticmethod
-    def _get_response(data):
-        """ Acquire web server lock and queue request ``data``
-            to internal "bots" service via queues[INQUEUE], blocking
-            until a response is received in queues[OUTQUEUE].
-
-            Serialize as json and return.
-        """
-        log = logging.getLogger(__name__)
-        response_data = main(data)
-
-        # return request for message as json
+    def _jsonify(response_data, log):
         try:
             return json.dumps(response_data)
         except ValueError as err:
@@ -240,7 +235,7 @@ def receive_message_from(board_id, request_data,
     return {u'response': True, u'id': msg.idx}
 
 
-def main(request_data):
+def get_response(request_data):
     """
     Serve one API server request and return.
     """
@@ -287,7 +282,6 @@ def main(request_data):
         client_key = keysdb[board_id]
     except KeyError:
         return server_error(log_func=log.warn,
-                            return_queue=return_queue,
                             log_msg=('[{data[network]}] board_id={board_id} '
                                      ': No such key for this network'
                                      .format(data=request_data,
