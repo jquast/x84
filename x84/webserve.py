@@ -35,8 +35,9 @@ def start(web_modules):
 
     logger = logging.getLogger()
     sys.path.insert(0, os.path.expanduser(CFG.get('system', 'scriptpath')))
-    urls = list()
+    urls = ('/favicon.ico', 'favicon')
     funcs = globals()
+    funcs['favicon'] = Favicon
 
     for mod in web_modules:
         module = None
@@ -63,6 +64,13 @@ def start(web_modules):
     t.daemon = True
     t.start()
     logger.info(u'Web modules: %s' % u', '.join(web_modules))
+
+
+class Favicon:
+    """ Dummy class for preventing /favicon.ico 404 errors """
+
+    def GET(self):
+        pass
 
 
 def server_thread(urls, funcs):
