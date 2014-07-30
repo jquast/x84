@@ -294,8 +294,8 @@ def publish_network_messages(net, transdb, log=None):
 
         trans_parent = None
         if msg.parent is not None:
-            matches = [key for key, data in transdb.iteritems()
-                       if data == msg.parent]
+            matches = [key for key, data in transdb.items()
+                       if int(data) == msg.parent]
 
             if len(matches) > 0:
                 trans_parent = matches[0]
