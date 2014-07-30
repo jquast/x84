@@ -26,23 +26,23 @@ def banner():
 
 def helpscreen():
     term = getterminal()
-    text = {}
-    echo(term.clear()+banner()+term.move(8,0))
-    text[1] = u'x/84 bulletins v 1.1'
-    text[2] = u''
-    text[3] = term.bold_white+term.underline+u'Key bindings for the navigator:'+term.normal
-    text[4] = u'(Q/Escape) to quit.'
-    text[5] = u'(Up/Dn/Right/Left/Pgup/Pgdn/Enter) to navigate.'
-    text[6] = ''
-    text[7] = term.bold_white+term.underline+u'Key bindings for the file viewer:'+term.normal
-    text[8] = u'(Q/Escape/Enter) to return.'
-    text[9] = u'(Up/Dn/Right/Left/Pgup/Pgdn) to navigate.'
-    text[10] = ''
-    text[11] = term.bold_white+term.underline+'General key bindings:'+term.normal
-    text[12] = u'(Alt+f) change to a more appropiate font in Syncterm.'
+    text = []
+    text.append (u'x/84 bulletins v 1.1')
+    text.append (u'')
+    text.append (term.bold_white+term.underline+u'Key bindings for the navigator:'+term.normal)
+    text.append (u'(Q/Escape) to quit.')
+    text.append (u'(Up/Dn/Right/Left/Pgup/Pgdn/Enter) to navigate.')
+    text.append ('')
+    text.append (term.bold_white+term.underline+u'Key bindings for the file viewer:'+term.normal)
+    text.append (u'(Q/Escape/Enter) to return.')
+    text.append (u'(Up/Dn/Right/Left/Pgup/Pgdn) to navigate.')
+    text.append ('')
+    text.append (term.bold_white+term.underline+'General key bindings:'+term.normal)
+    text.append (u'(Alt+f) change to a more appropiate font in Syncterm.')
 
-    for i in range (1, 13):
-        echo(term.move_x(8)+text[i]+u'\r\n')
+    echo(term.clear()+banner()+term.move_y(8))
+    for line in text:
+        echo(term.move_x(8)+line+u'\r\n')
 
 # ---------------------------------------------------
 
