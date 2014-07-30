@@ -27,7 +27,7 @@ section of your default.ini.
 Example default.ini configuration:
 
 [msg]
-server_tags = x84net
+network_tags = x84net
 origin_line = Sent from The Best BBS In The World, baby!
 
 [msgnet_x84net]
