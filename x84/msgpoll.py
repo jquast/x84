@@ -211,7 +211,7 @@ def poll_network_for_messages(net, log=None):
         except OSError as err:
             log.error('[{net[name]}] skipping network: {err}'
                       .format(net=net, err=err))
-            return None
+            return
 
     msgs = pull_rest(net=net, last_msg_id=last_msg_id)
 
@@ -220,7 +220,7 @@ def poll_network_for_messages(net, log=None):
                  .format(net=net, num=len(msgs)))
     else:
         log.debug('{net[name]} no messages.'.format(net=net))
-        return None
+        return
 
     transdb = DBProxy(net['trans_db_name'], use_session=False)
     transkeys = transdb.keys()
@@ -269,16 +269,17 @@ def poll_network_for_messages(net, log=None):
         with open(net['last_file'], 'w') as last_fp:
             last_fp.write(str(net['last']))
 
-    return transdb
+    return
 
 
-def publish_network_messages(net, transdb, log=None):
+def publish_network_messages(net, log=None):
     " Push messages to network. "
     from x84.bbs import DBProxy
     from x84.bbs.msgbase import format_origin_line, MSGDB
 
     log = log or logging.getLogger(__name__)
     queuedb = DBProxy(net['queue_db_name'], use_session=False)
+    transdb = DBProxy(net['trans_db_name'], use_session=False)
     msgdb = DBProxy(MSGDB, use_session=False)
 
     # publish each message
@@ -366,10 +367,9 @@ def poll():
               .format(net_names=', '.join(net['name'] for net in networks)))
 
     # pull/push to all networks
-    num = 0
-    for num, net in enumerate(networks):
-        transdb = poll_network_for_messages(net)
-        if transdb is not None:
-            publish_network_messages(net, transdb)
+    for net in networks:
+        poll_network_for_messages(net)
+        publish_network_messages(net)
+    num = len(networks)
     log.debug('Message poll/publish complete for {n} network{s}.'
               .format(n=num, s='s' if num != 1 else ''))
