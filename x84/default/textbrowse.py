@@ -28,21 +28,21 @@ def helpscreen():
     term = getterminal()
     text = {}
     echo(term.clear()+banner()+term.move(8,0))
-    text[1] = 'x/84 bulletins v 1.1'
-    text[2] = ''
-    text[3] = term.bold_white+term.underline+'Key bindings for the navigator:'+term.normal
-    text[4] = '(Q/Escape) to quit.'
-    text[5] = '(Up/Dn/Right/Left/Pgup/Pgdn/Enter) to navigate.'
+    text[1] = u'x/84 bulletins v 1.1'
+    text[2] = u''
+    text[3] = term.bold_white+term.underline+u'Key bindings for the navigator:'+term.normal
+    text[4] = u'(Q/Escape) to quit.'
+    text[5] = u'(Up/Dn/Right/Left/Pgup/Pgdn/Enter) to navigate.'
     text[6] = ''
-    text[7] = term.bold_white+term.underline+'Key bindings for the file viewer:'+term.normal
-    text[8] = '(Q/Escape/Enter) to return.'
-    text[9] = '(Up/Dn/Right/Left/Pgup/Pgdn) to navigate.'
+    text[7] = term.bold_white+term.underline+u'Key bindings for the file viewer:'+term.normal
+    text[8] = u'(Q/Escape/Enter) to return.'
+    text[9] = u'(Up/Dn/Right/Left/Pgup/Pgdn) to navigate.'
     text[10] = ''
     text[11] = term.bold_white+term.underline+'General key bindings:'+term.normal
-    text[12] = '(Alt+f) change to a more appropiate font in Syncterm.'
+    text[12] = u'(Alt+f) change to a more appropiate font in Syncterm.'
 
     for i in range (1, 13):
-        echo(term.move_x(8)+text[i]+'\r\n')
+        echo(term.move_x(8)+text[i]+u'\r\n')
 
 # ---------------------------------------------------
 
@@ -63,7 +63,7 @@ def displayfile(filename):
         echo(term.move(0,0)+term.normal)
         for i in range (0, term.height-1): # -2 om man vill spara en rad i botten
             if len(text) > i+offset:
-                echo(term.clear_eol+'\r'+text[i+offset])
+                echo(term.clear_eol+u'\r'+text[i+offset])
 
         keypressed = getch()
         echo(term.hide_cursor)
@@ -138,7 +138,7 @@ def main():
     """ Main procedure. """
     session = getsession()
     term = getterminal()
-    session.activity = 'reading bulletins'
+    session.activity = u'browsing textfiles'
     echo(term.clear+banner())
 
 #********** default variables for you to change ! ************* 
