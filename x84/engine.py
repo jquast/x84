@@ -148,6 +148,7 @@ def accept(log, server):
         the following options are available, but not required:
 
         ip_blacklist - space-separated list of IPs on permanent blacklist
+        ip_whitelist - space-separated list of IPs to always allow
         max_attempted_logins - the maximum number of logins allowed for the
             given time window
         max_attempted_logins_window - the length (in seconds) of the window for
@@ -163,6 +164,7 @@ def accept(log, server):
         when = int(time.time())
         # default options
         ip_blacklist = set([])
+        ip_whitelist = set([])
         max_attempted_logins = 3
         max_attempted_logins_window = 30
         initial_ban_length = 360
@@ -172,6 +174,12 @@ def accept(log, server):
         try:
             ip_blacklist = set(map(str.strip,
                CFG.get('fail2ban', 'ip_blacklist', '').split(' ')))
+        except ConfigParser.NoOptionError:
+            pass
+        
+        try:
+            ip_whitelist = set(map(str.strip,
+                CFG.get('fail2ban', 'ip_whitelist', '').split(' ')))
         except ConfigParser.NoOptionError:
             pass
 
@@ -246,7 +254,7 @@ def accept(log, server):
                 ATTEMPTED_LOGINS[ip] = record
                 log.debug('Window extended')
         # log attempted login
-        elif ip != '127.0.0.1':
+        elif ip not in ip_whitelist:
             log.debug('First attempted login for this window')
             ATTEMPTED_LOGINS[ip] = {
                 'attempts': 1,
