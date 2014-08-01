@@ -10,6 +10,7 @@ def main():
     #return migrate_105lc()
     #return nothing()
     return gosub('test_keyboard_keys')
+    #return dump_x84net_debug()
 
     # but this is a great way to make data manipulations,
     # exampled here is importing of a .csv import of
@@ -17,6 +18,18 @@ def main():
     #return merge_mystic()
 
     #return tygerofdantye_fix()
+
+def x84net_requeue():
+    # a message failed to queue for delivery, but hellbeard
+    # really wanted to see em, so re-queue.
+    from x84.bbs import DBProxy, echo
+    from pprint import pformat
+    queuedb = DBProxy('x84netqueues')
+    with queuedb:
+        queuedb['264'] = 1
+    echo('-')
+    echo(pformat(queuedb.items()))
+    echo('-')
 
 
 def migrate_105lc():
