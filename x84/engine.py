@@ -377,7 +377,14 @@ def session_send(terminals):
     from x84.terminal import kill_session
     for sid, tty in terminals:
         if tty.client.input_ready():
-            tty.master_write.send(('input', tty.client.get_input()))
+            try:
+                tty.master_write.send(('input', tty.client.get_input()))
+            except IOError:
+                # this may happen if a sub-process crashes, or more often,
+                # because the subprocess has logged off, but the user kept
+                # banging the keyboard before we have had the opportunity
+                # to close their telnet socket.
+                kill_session(tty.client, 'no tty for socket data')
 
         # poll about and kick off idle users
         elif tty.timeout and tty.client.idle() > tty.timeout:
