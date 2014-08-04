@@ -464,6 +464,10 @@ def session_recv(locks, terminals, log, tap_events):
                 log.exception(msg_err)
                 kill_session(tty.client, msg_err)
                 break
+            except TypeError:
+                msg_err = 'unpickling error'
+                log.exception(msg_err)
+                break
 
             # 'exit' event, unregisters client
             if event == 'exit':
