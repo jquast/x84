@@ -213,6 +213,7 @@ def main():
                 elif lb.selection[0] == u'p':
                     gosub('writemsg')
                 elif lb.selection[0] == u'r':
+                    echo(term.clear)
                     gosub('readmsgs')
                 elif lb.selection[0] == u'g':
                     gosub('logoff')
