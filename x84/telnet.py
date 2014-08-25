@@ -942,15 +942,26 @@ class ConnectTelnet(BaseConnect):
             self.client.deactivate()
 
     def set_encoding(self):
-        # set encoding to utf8 for clients negotiating BINARY mode,
-        # otherwise as 'cp437'; this assumes a very simple dualistic
-        # model: xterm or SyncTerm. A very few telnet clients send
-        # LANG and other helpful things.
-        if (self.client.check_local_option(BINARY)
-                and self.client.check_remote_option(BINARY)):
+        # set encoding to utf8 for clients negotiating BINARY mode and
+        # not beginning with TERM 'ansi'.
+        #
+        # This assumes a very simple dualistic model: modern unix terminal
+        # (probably using bsd telnet client), or SyncTerm.
+        #
+        # Clients *could* negotiate CHARSET for encoding, or simply forward a
+        # LANG variable -- SyncTerm does neither. So we just assume any
+        # terminal that says its "ansi" is just any number of old-world DOS
+        # terminal emulating clients that are incapable of comprehending
+        # "encoding" (Especially multi-byte!), they only decide upon a "font"
+        # or "code page" to map char 0-255 to.
+        #
+        self.client.env['encoding'] = 'cp437'
+        local = self.client.check_local_option
+        remote = self.client.check_remote_option
+        term = self.client.env.get('TERM', 'ansi')
+
+        if (local(BINARY) and remote(BINARY) and not term.startswith('ansi')):
             self.client.env['encoding'] = 'utf8'
-        else:
-            self.client.env['encoding'] = 'cp437'
 
     def _timeleft(self, st_time):
         """

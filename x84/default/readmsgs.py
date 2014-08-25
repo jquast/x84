@@ -540,6 +540,9 @@ def read_messages(msgs, new):
         """
         Returns unicode string suitable for refreshing the screen.
         """
+        from x84.bbs import getsession
+        session = getsession()
+
         if READING:
             reader.colors['border'] = term.bold_yellow
             selector.colors['border'] = term.bold_black
@@ -618,6 +621,7 @@ def read_messages(msgs, new):
             msg = get_msg(idx)
             if x84.default.writemsg.prompt_tags(msg):
                 msg.save()
+                session.user['msgs_sent'] = session.user.get('msgs_sent', 0) + 1
             dirty = 2
 
         # spacebar marks as read, goes to next message

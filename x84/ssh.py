@@ -289,6 +289,7 @@ class SshSessionServer(paramiko.ServerInterface):
         return True
 
     def check_channel_env_request(self, channel, name, value):
+        self.log.debug('env request: [{0}] = {1}'.format(name, value))
         self.client.env[name] = value
         return True
 

@@ -24,6 +24,8 @@ import logging
 # local
 __import__('encodings')  # provides alternate encodings
 
+BANNED_IP_LIST = dict()
+ATTEMPTED_LOGINS = dict()
 
 def main():
     """
@@ -135,12 +137,137 @@ def accept(log, server):
     registering it with dictionary server.clients,
     spawning an unmanaged thread using connect_factory.
     """
+    from x84.bbs.ini import CFG
+    import socket
+
+    def fail2ban_check(ip):
+        """
+        fail2ban-like blacklists for blocking brute force attempts.
+        just add [fail2ban] to your default.ini.
+
+        the following options are available, but not required:
+
+        ip_blacklist - space-separated list of IPs on permanent blacklist
+        ip_whitelist - space-separated list of IPs to always allow
+        max_attempted_logins - the maximum number of logins allowed for the
+            given time window
+        max_attempted_logins_window - the length (in seconds) of the window for
+            which logins will be tracked (sliding scale)
+        initial_ban_length - ban length (in seconds) when an IP is blacklisted
+        ban_increment_length - amount of time (in seconds) to add to a ban on
+            subsequent login attempts
+        """
+        import time
+        import ConfigParser
+
+        ip = address_pair[0]
+        when = int(time.time())
+        # default options
+        ip_blacklist = set([])
+        ip_whitelist = set([])
+        max_attempted_logins = 3
+        max_attempted_logins_window = 30
+        initial_ban_length = 360
+        ban_increment_length = 360
+
+        # pull config
+        try:
+            ip_blacklist = set(map(str.strip,
+               CFG.get('fail2ban', 'ip_blacklist', '').split(' ')))
+        except ConfigParser.NoOptionError:
+            pass
+        
+        try:
+            ip_whitelist = set(map(str.strip,
+                CFG.get('fail2ban', 'ip_whitelist', '').split(' ')))
+        except ConfigParser.NoOptionError:
+            pass
+
+        try:
+            max_attempted_logins = CFG.getint(
+                'fail2ban', 'max_attempted_logins')
+        except ConfigParser.NoOptionError:
+            pass
+
+        try:
+            max_attempted_logins_window = CFG.getint(
+                'fail2ban', 'max_attempted_logins_window')
+        except ConfigParser.NoOptionError:
+            pass
+
+        try:
+            initial_ban_length = CFG.getint(
+                'fail2ban', 'initial_ban_length')
+        except ConfigParser.NoOptionError:
+            pass
+
+        try:
+            ban_increment_length = CFG.getint(
+                'fail2ban', 'ban_increment_length')
+        except ConfigParser.NoOptionError:
+            pass
+
+        # check to see if IP is blacklisted
+        if ip in ip_blacklist:
+            log.debug('Blacklisted IP rejected: {ip}'
+                .format(ip=ip))
+            return False
+        # check to see if IP is banned
+        elif ip in BANNED_IP_LIST:
+            # expired?
+            if when > BANNED_IP_LIST[ip]:
+                # expired ban; remove it
+                del BANNED_IP_LIST[ip]
+                ATTEMPTED_LOGINS[ip] = {
+                    'attempts': 1,
+                    'expiry': when + max_attempted_logins_window
+                    }
+                log.debug('Banned IP expired: {ip}'
+                        .format(ip=address_pair[0]))
+            else:
+                # increase the expiry and kick them out
+                BANNED_IP_LIST[ip] += ban_increment_length
+                log.debug('Banned IP rejected: {ip}'
+                        .format(ip=ip))
+                return False
+        # check num of attempts, ban if exceeded max
+        elif ip in ATTEMPTED_LOGINS:
+            if when > ATTEMPTED_LOGINS[ip]['expiry']:
+                # window closed; start over
+                record = ATTEMPTED_LOGINS[ip]
+                record['attempts'] = 1
+                record['expiry'] = when + max_attempted_logins_window
+                ATTEMPTED_LOGINS[ip] = record
+                log.debug('Attempt outside of expiry window')
+            elif ATTEMPTED_LOGINS[ip]['attempts'] > max_attempted_logins:
+                # max # of attempts reached
+                del ATTEMPTED_LOGINS[ip]
+                BANNED_IP_LIST[ip] = when + initial_ban_length
+                log.warn('Exceeded maximum attempts; banning {ip}'
+                        .format(ip=ip))
+                return False
+            else:
+                # extend window
+                record = ATTEMPTED_LOGINS[ip]
+                record['attempts'] += 1
+                record['expiry'] += max_attempted_logins_window
+                ATTEMPTED_LOGINS[ip] = record
+                log.debug('Window extended')
+        # log attempted login
+        elif ip not in ip_whitelist:
+            log.debug('First attempted login for this window')
+            ATTEMPTED_LOGINS[ip] = {
+                'attempts': 1,
+                'expiry': when + max_attempted_logins_window,
+                }
+
+        return True
+
     if None in (server.client_factory, server.connect_factory):
         raise NotImplementedError(
             "No accept for server class {server.__class__.__name__}"
             .format(server=server))
 
-    import socket
     if callable(server.client_factory_kwargs):
         client_factory_kwargs = server.client_factory_kwargs(server)
     else:
@@ -151,6 +278,7 @@ def accept(log, server):
         connect_factory_kwargs = server.connect_factory_kwargs
     try:
         sock, address_pair = server.server_socket.accept()
+
         # busy signal
         if server.client_count() > server.MAX_CONNECTIONS:
             try:
@@ -160,6 +288,17 @@ def accept(log, server):
             sock.close()
             log.error('refused new connect; maximum reached.')
             return
+
+        # fail2ban check
+        if CFG.has_section('fail2ban') and not fail2ban_check(address_pair[0]):
+            try:
+                sock.shutdown(socket.SHUT_RDWR)
+            except socket.error:
+                pass
+
+            sock.close()
+            return
+
         client = server.client_factory(
             sock,
             address_pair,
@@ -238,7 +377,14 @@ def session_send(terminals):
     from x84.terminal import kill_session
     for sid, tty in terminals:
         if tty.client.input_ready():
-            tty.master_write.send(('input', tty.client.get_input()))
+            try:
+                tty.master_write.send(('input', tty.client.get_input()))
+            except IOError:
+                # this may happen if a sub-process crashes, or more often,
+                # because the subprocess has logged off, but the user kept
+                # banging the keyboard before we have had the opportunity
+                # to close their telnet socket.
+                kill_session(tty.client, 'no tty for socket data')
 
         # poll about and kick off idle users
         elif tty.timeout and tty.client.idle() > tty.timeout:
@@ -317,6 +463,10 @@ def session_recv(locks, terminals, log, tap_events):
                 msg_err = 'master_read pipe: {err}'.format(err=err)
                 log.exception(msg_err)
                 kill_session(tty.client, msg_err)
+                break
+            except TypeError:
+                msg_err = 'unpickling error'
+                log.exception(msg_err)
                 break
 
             # 'exit' event, unregisters client
@@ -412,18 +562,10 @@ def _loop(servers):
     tap_events = CFG.getboolean('session', 'tap_events')
     locks = dict()
 
-    # "bots" ..
-    poll_interval = None
-    last_poll = None
-    if CFG.has_section('bots'):
-        from x84.bbs.telnet import connect_bot
-        session.BOTQUEUE = Queue()
-        session.BOTLOCK = Lock()
-        if CFG.has_option('msg', 'poll_interval'):
-            poll_interval = CFG.getint('msg', 'poll_interval')
-            last_poll = int(time.time()) - poll_interval
-            log.debug('bots will poll at {0}s intervals.'
-                      .format(poll_interval))
+    # message polling setup
+    if CFG.has_option('msg', 'poll_interval'):
+        from x84 import msgpoll
+        msgpoll.start_polling()
 
     if CFG.has_section('web') and CFG.has_option('web', 'modules'):
         try:
@@ -467,15 +609,6 @@ def _loop(servers):
 
         # receive new data from tcp clients.
         client_recv(servers, log)
-
-        # fire up message polling process if enabled
-        if poll_interval is not None:
-            now = int(time.time())
-            if now - last_poll >= poll_interval:
-                log.debug("connect_bot(msgpoll)")
-                connect_bot(u'msgpoll')
-                last_poll = now
-
         terms = get_terminals()
 
         # receive new data from session terminals

@@ -24,9 +24,6 @@ chain = /home/bbs/ca.cer
 
 import web
 
-queues = None
-locks = None
-
 
 def start(web_modules):
     """ fire up a web server with the given modules as endpoints """
@@ -36,13 +33,11 @@ def start(web_modules):
     import os
     from x84.bbs.ini import CFG
 
-    global queues, locks
     logger = logging.getLogger()
     sys.path.insert(0, os.path.expanduser(CFG.get('system', 'scriptpath')))
-    queues = dict()
-    locks = dict()
-    urls = list()
+    urls = ('/favicon.ico', 'favicon')
     funcs = globals()
+    funcs['favicon'] = Favicon
 
     for mod in web_modules:
         module = None
@@ -69,6 +64,13 @@ def start(web_modules):
     t.daemon = True
     t.start()
     logger.info(u'Web modules: %s' % u', '.join(web_modules))
+
+
+class Favicon:
+    """ Dummy class for preventing /favicon.ico 404 errors """
+
+    def GET(self):
+        pass
 
 
 def server_thread(urls, funcs):

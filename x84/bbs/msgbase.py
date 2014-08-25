@@ -134,11 +134,14 @@ class Msg(object):
         """
         from x84.bbs.dbproxy import DBProxy
         from x84.bbs.ini import CFG
+        from x84.bbs import getsession
 
+        session = getsession()
+        use_session = True if session is not None else False
         log = logging.getLogger(__name__)
         new = self.idx is None or self._stime is None
         # persist message record to MSGDB
-        db_msg = DBProxy(MSGDB)
+        db_msg = DBProxy(MSGDB, use_session=use_session)
         with db_msg:
             if new:
                 self.idx = max([int(key) for key in db_msg.keys()] or [-1]) + 1
@@ -150,9 +153,10 @@ class Msg(object):
             db_msg['%d' % (self.idx,)] = self
 
         # persist message idx to TAGDB
-        db_tag = DBProxy(TAGDB)
+        db_tag = DBProxy(TAGDB, use_session=use_session)
         with db_tag:
-            for tag, msgs in db_tag.iteritems():
+            for tag in db_tag.keys():
+                msgs = db_tag[tag]
                 if tag in self.tags and self.idx not in msgs:
                     msgs.add(self.idx)
                     db_tag[tag] = msgs
