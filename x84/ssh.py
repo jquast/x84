@@ -166,10 +166,17 @@ class ConnectSsh(BaseConnect):
                 return ssh_session.shell_requested.isSet()
 
             self.client.transport.start_server(server=ssh_session)
-            self.client.channel = (self.client.transport
-                                   .accept(self.TIME_WAIT_STAGE))
 
-            if self.client.channel is None:
+            st_time = time.time()
+            while self._timeleft(st_time):
+                self.client.channel = self.client.transport.accept(1)
+                if self.client.channel is not None:
+                    break
+                if not self.client.transport.is_active():
+                    self.log.debug('{client.addrport}: transport closed.')
+                    self.client.deactivate()
+                    return
+            else:
                 self.log.debug('{client.addrport}: no channel requested'
                                .format(client=self.client))
                 self.client.deactivate()
@@ -178,7 +185,6 @@ class ConnectSsh(BaseConnect):
             self.log.debug('{client.addrport}: waiting for shell request'
                            .format(client=self.client))
 
-            st_time = time.time()
             while not detected() and self._timeleft(st_time):
                 if not self.client.is_active():
                     self.client.deactivate()
@@ -203,14 +209,18 @@ class ConnectSsh(BaseConnect):
         else:
             self.log.debug('{client.addrport}: shell not requested'
                            .format(client=self.client))
+        finally:
+            self.stopped = True
         self.client.deactivate()
 
     def _timeleft(self, st_time):
         """
         Returns True when difference of current time and st_time is below
-        TIME_WAIT_STAGE.
+        TIME_WAIT_STAGE, and the ``stopped`` class attribute has not yet
+        been set (such as during server shutdown).
         """
-        return bool(time.time() - st_time < self.TIME_WAIT_STAGE)
+        return bool(not self.stopped and
+                    time.time() - st_time < self.TIME_WAIT_STAGE)
 
 
 class SshSessionServer(paramiko.ServerInterface):

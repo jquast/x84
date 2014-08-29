@@ -21,6 +21,8 @@ class BaseServer(object):
 
     ## The classmethods below can be replaced by a dictionary attribute if
     ## that's more convenient
+    #: List of on-connect negotiating threads.
+    threads = []
 
     @classmethod
     def client_factory_kwargs(cls, instance):

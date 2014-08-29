@@ -42,7 +42,6 @@ class BaseClient(object):
         self.bytes_received = 0
         self.connect_time = time.time()
         self.last_input_time = time.time()
-
         self.log.info('new %s: %s', self.__class__.__name__, self.addrport)
 
     ## low level I/O
@@ -220,7 +219,12 @@ class BaseConnect(threading.Thread):
     Base class for client connect factories.
     '''
 
+    #: for x/y/z-modem transfers? -- unused.
     is_binary = True
+
+    # whether this thread is completed. Set to ``True`` to cause an on-connect
+    # thread to forcefully exit early, such as when the server is shutdown.
+    stopped = False
 
     def __init__(self, client):
         """
@@ -250,6 +254,7 @@ class BaseConnect(threading.Thread):
         except (Disconnected, socket.error) as err:
             self.log.debug('Connection closed: %s', err)
             self.client.deactivate()
+            self.stopped = True
 
     def _set_socket_opts(self):
         """

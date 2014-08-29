@@ -51,6 +51,10 @@ def main():
         # exit on ^C, killing any client sessions.
         from x84.terminal import kill_session
         for server in servers:
+            for idx, thread in enumerate(server.threads[:]):
+                if not thread.stopped:
+                    thread.stopped = True
+                del server.threads[idx]
             for key, client in server.clients.items()[:]:
                 kill_session(client, 'server shutdown')
                 del server.clients[key]
@@ -308,12 +312,12 @@ def accept(log, server):
             address_pair,
             **client_factory_kwargs
         )
-        server.clients[client.sock.fileno()] = client
-
         # spawn negotiation and process registration thread
+        server.clients[client.sock.fileno()] = client
         thread = server.connect_factory(client, **connect_factory_kwargs)
         log.info('{client.kind} connection from {client.addrport} '
                  '*{thread.name}).'.format(client=client, thread=thread))
+        server.threads.append(thread)
         thread.start()
 
     except socket.error as err:
@@ -588,10 +592,17 @@ def _loop(servers):
     while True:
         # shutdown, close & delete inactive clients,
         for server in servers:
+            # bbs sessions that are no longer active on the socket
+            # level -- send them a 'kill signal'
             for key, client in server.clients.items()[:]:
                 if not client.is_active():
                     kill_session(client, 'socket shutdown')
                     del server.clients[key]
+            # on-connect negotiations that have completed or failed.
+            # delete their thread instance from further evaluation
+            for thread in [_thread for _thread in server.threads
+                           if _thread.stopped][:]:
+                server.threads.remove(thread)
 
         server_fds = [server.server_socket.fileno() for server in servers]
         client_fds = [fd for fd in server.client_fds() for server in servers]
