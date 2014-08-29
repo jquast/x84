@@ -365,7 +365,7 @@ class SshSessionServer(paramiko.ServerInterface):
         user = get_user(handle)
         if user is None:
             return False
-        return user.auth(password)
+        return password and user.auth(password)
 
     @staticmethod
     def _check_user_pubkey(username, public_key):
