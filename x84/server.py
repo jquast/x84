@@ -3,33 +3,48 @@ class BaseServer(object):
     Base class for server implementations.
     '''
 
-    ## Maximum number of clients
+    #: Maximum number of clients
     MAX_CONNECTIONS = 100
 
-    ## Number of clients that can wait to be accepted
+    #: Number of clients that can wait to be accepted
     LISTEN_BACKLOG = 5
 
-    ## Dictionary of active clients, (file descriptor, Client, ...)
-    clients = {}
-
-    ## Dictionary of environment variables received by negotiation
+    #: Dictionary of environment variables received by negotiation
     env = {}
 
-    ## Factories to be used by the engine
+    #: Client factory should be a class defining what should be instantiated
+    #: for the client instance.
     client_factory = None
+
+    #: Dictionary of active clients, (file descriptor, Client, ...)
+    clients = {}
+
+    #: Connect factory should be a class, derived from threading.Thread, that
+    #: should be instantiated on-connect to perform negotiation and launch the
+    #: bbs session upon success.
     connect_factory = None
 
-    ## The classmethods below can be replaced by a dictionary attribute if
-    ## that's more convenient
     #: List of on-connect negotiating threads.
     threads = []
 
     @classmethod
     def client_factory_kwargs(cls, instance):
+        """
+        Keyword arguments for the client_factory.
+
+        A dictionary may be substituted.
+        The default return value is an empty dictionary.
+        """
         return dict()
 
     @classmethod
     def connect_factory_kwargs(cls, instance):
+        """
+        Keyword arguments for the connect_factory.
+
+        A dictionary may be substituted.
+        The default return value is an empty dictionary.
+        """
         return dict()
 
     def client_count(self):
