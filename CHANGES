@@ -1,3 +1,7 @@
+1.3.0
+  - *new* option, 'anoncmds' in section 'matrix', where previously only
+    the 'anonymous' user was a legitimate synonym, you may now provide
+    many different ones -- humorously, you could provide 'root'.
 1.2.0
   - *removed*: x84.bbs.log.ColoredConsoleHandler.
     If you see exception: ``ImportError: No module named log``

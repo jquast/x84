@@ -234,23 +234,11 @@ class SshSessionServer(paramiko.ServerInterface):
         """ Return success/fail for username and password. """
         self.username = username.strip()
 
-        if self._check_new_user(username):
-            self.new_user = True
-            self.log.debug('new user account, {0!r}'.format(username))
+        if self.check_account_noverify(username):
+            self.log.debug('any password accepted for system-enabled '
+                           'account, {0!r}'.format(username))
             return paramiko.AUTH_SUCCESSFUL
-
-        elif self._check_bye_user(username):
-            # not allowed to login using bye@, logoff@, etc.
-            self.log.debug('denied byecmds name, {0!r}'.format(username))
-            return paramiko.AUTH_FAILED
-
-        elif self._check_anonymous_user(username):
-            self.log.debug('{0!r} user accepted by server configuration.'
-                           .format(username))
-            self.anonymous = True
-            return paramiko.AUTH_SUCCESSFUL
-
-        elif self._check_user_password(username, password):
+        if self._check_user_password(username, password):
             self.log.debug('password accepted for user {0!r}.'
                            .format(username))
             return paramiko.AUTH_SUCCESSFUL
@@ -260,13 +248,50 @@ class SshSessionServer(paramiko.ServerInterface):
 
     def check_auth_publickey(self, username, public_key):
         self.username = username.strip()
-        if self._check_user_pubkey(username, public_key):
+        if self.check_account_noverify(username):
+            self.log.debug('pubkey accepted for system-enabled account, {0!r}'
+                           .format(username))
+            return paramiko.AUTH_SUCCESSFUL
+        elif self._check_user_pubkey(username, public_key):
             self.log.debug('pubkey accepted for user {0!r}.'
                            .format(username))
             return paramiko.AUTH_SUCCESSFUL
         self.log.debug('pubkey denied for user {0!r}.'
                        .format(username))
         return paramiko.AUTH_FAILED
+
+    def check_account_noverify(self, username):
+        """ Return success/fail for system-enabled accounts.
+
+        For some usernames, such as 'new' or 'anonymous', a correct
+        password or public key is not required -- any will do. We return
+        True if ``username`` is one of these configurable account names
+        and if it is enabled.
+
+        This method has two side effects, it may set the instance
+        attribute ``new_user`` or ``anonymous`` to True if it is enabled
+        by configuration and the username is of their matching handles.
+        """
+        if self._check_new_user(username):
+            self.new_user = True
+            self.log.debug('accepted without authentication, {0!r}: '
+                           'it is an alias for new user application.'
+                           .format(username))
+            return True
+
+        elif self._check_bye_user(username):
+            # not allowed to login using bye@, logoff@, etc.
+            self.log.debug('denied user, {0!r}: it is an alias for logoff'
+                           .format(username))
+            return False
+
+        elif self._check_anonymous_user(username):
+            self.log.debug('anonymous user, {0!r} accepted by configuration.'
+                           .format(username))
+            self.anonymous = True
+            return True
+
+        return False
 
     def get_allowed_auths(self, username):
         return 'password,publickey'
@@ -294,28 +319,31 @@ class SshSessionServer(paramiko.ServerInterface):
         return True
 
     @staticmethod
-    def _get_matches(matrix_ini_key):
+    def _get_matrix_ini(key):
         from x84.bbs import ini
-        return ini.CFG.get('matrix', matrix_ini_key).split()
+        if ini.CFG.has_option('matrix', key):
+            return ini.CFG.get('matrix', key).split()
+        return []
 
     @classmethod
     def _check_new_user(cls, username):
         """ Boolean return when username matches `newcmds' ini cfg. """
-        matching = cls._get_matches('newcmds')
+        matching = cls._get_matrix_ini('newcmds')
         return matching and username in matching
 
     @classmethod
     def _check_bye_user(cls, username):
         """ Boolean return when username matches `byecmds' in ini cfg. """
-        matching = cls._get_matches('byecmds')
+        matching = cls._get_matrix_ini('byecmds')
         return matching and username in matching
 
-    @staticmethod
-    def _check_anonymous_user(username):
+    @classmethod
+    def _check_anonymous_user(cls, username):
         """ Boolean return when user is anonymous and is allowed. """
         from x84.bbs import ini
         enabled = ini.CFG.getboolean('matrix', 'enable_anonymous')
-        return enabled and username == 'anonymous'
+        matching = cls._get_matrix_ini('anoncmds')
+        return enabled and username in matching
 
     @staticmethod
     def _check_user_password(username, password):

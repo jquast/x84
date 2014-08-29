@@ -45,6 +45,9 @@ def get_username(handle=u''):
     enable_anonymous = ini.CFG.getboolean('matrix', 'enable_anonymous')
     newcmds = ini.CFG.get('matrix', 'newcmds').split()
     byecmds = ini.CFG.get('matrix', 'byecmds').split()
+    anoncmds = ['anonymous', ]
+    if ini.CFG.has_option('matrix', 'anoncmds'):
+        anoncmds = ini.CFG.get('matrix', 'anoncmds').split()
     denied_msg = u'\r\n\r\nfiRSt, YOU MUSt AbANdON YOUR libERtIES.'
     badanon_msg = u"\r\n  " + term.bright_red + u"'%s' login denied."
     max_user = ini.CFG.getint('nua', 'max_user')
@@ -64,7 +67,7 @@ def get_username(handle=u''):
         return u''
     elif handle.lower() in byecmds:
         goto('logoff')
-    elif handle.lower() == u'anonymous':
+    elif handle.lower() in anoncmds:
         if enable_anonymous:
             goto(topscript, 'anonymous')
         denied(badanon_msg % (handle,))

@@ -75,6 +75,7 @@ def main(handle=None):
     #         Too many statements
     from x84.bbs import getsession, getterminal, echo, getch
     from x84.bbs import goto, gosub, User, get_user, DBProxy
+    from x84.bbs import ini
     import logging
     import time
     session, term = getsession(), getterminal()
@@ -85,7 +86,11 @@ def main(handle=None):
     gosub('productive')
 
     # 1. determine & assign user record,
-    if handle in (None, u'', 'anonymous',):
+    anoncmds = (None, u'',)
+    if ini.CFG.has_option('matrix', 'anoncmds'):
+        anoncmds += tuple(ini.CFG.get('matrix', 'anoncmds').split())
+
+    if handle in anoncmds:
         logger.info('anonymous login by %s.', session.sid)
         session.user = User(u'anonymous')
     else:
