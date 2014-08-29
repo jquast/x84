@@ -546,13 +546,9 @@ def _loop(servers):
     #         Too many local variables (24/15)
     import logging
     import select
-    import time
     import sys
     from x84.terminal import get_terminals, kill_session
     from x84.bbs.ini import CFG
-    from x84.bbs import session
-    from multiprocessing import Queue
-    from threading import Lock
     SELECT_POLL = 0.05
     WIN32 = sys.platform.lower().startswith('win32')
     if WIN32:
