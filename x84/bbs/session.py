@@ -51,13 +51,7 @@ class Session(object):
     _activity = None
     _user = None
 
-    # save state for ttyrec compression
-    _ttyrec_sec = -1
-    _ttyrec_usec = -1
-    _ttyrec_len_text = 0
-
     _script_module = None
-    _fp_ttyrec = None
 
     #: node number
     _node = None
@@ -256,17 +250,6 @@ class Session(object):
         return self._node
 
     @property
-    def is_recording(self):
-        """ Session is being recorded """
-        return self._fp_ttyrec is not None
-
-    @property
-    def ttyrec_folder(self):
-        """ Folder for tty recordings. """
-        from x84.bbs import ini
-        return ini.CFG.get('system', 'ttyrecpath')
-
-    @property
     def tap_input(self):
         """ Keyboard input should be logged for debugging. """
         from x84.bbs import ini
@@ -283,12 +266,6 @@ class Session(object):
         """ IPC Events should be logged for debugging. """
         from x84.bbs import ini
         return ini.CFG.getboolean('session', 'tap_events')
-
-    @property
-    def record_tty(self):
-        """ Whether tty recordings should be saved. """
-        from x84.bbs import ini
-        return ini.CFG.getboolean('session', 'record_tty')
 
     @property
     def show_traceback(self):
@@ -404,8 +381,6 @@ class Session(object):
         """
         Write unicode data to telnet client. Take special care to encode
         as 'iso8859-1' actually intended for 'cp437'-encoded terminals.
-
-        Has side effect of updating ttyrec file when recording.
         """
         from x84.bbs.cp437 import CP437
         if 0 == len(ucs):
@@ -437,11 +412,6 @@ class Session(object):
         if self.log.isEnabledFor(logging.DEBUG) and self.tap_output:
             self.log.debug('--> {!r}'.format(ucs))
 
-        if self.record_tty:
-            if not self.is_recording:
-                self.start_recording()
-            self._ttyrec_write(ucs)
-
     def flush_event(self, event):
         """
         Flush all return all data buffered for 'event'.
@@ -468,8 +438,6 @@ class Session(object):
             ('handle', self.user.handle,),
             ('script', (self._script_stack[-1][0]
                         if len(self._script_stack) else None)),
-            ('ttyrec',
-             self._fp_ttyrec.name if self._fp_ttyrec is not None else u'',),
             ('connect_time', self.connect_time),
             ('idle', self.idle),
             ('activity', self.activity),
@@ -665,99 +633,7 @@ class Session(object):
         """
         Close session.
         """
-        if self.is_recording:
-            self.stop_recording()
         if self._node is not None:
             self.send_event(
                 event='lock-node/%d' % (self._node),
                 data=('release', None))
-
-    def stop_recording(self):
-        """
-        Cease recording to ttyrec file (close).
-        """
-        assert self.is_recording
-        self._ttyrec_write(self.terminal.normal)
-        self._ttyrec_write(u'\r\n\r\n')
-        self._ttyrec_write(u'\r\n'.join(
-            [u'%s: %s' % (key, val)
-             for (key, val) in sorted(self.info().items())]),)
-        self._ttyrec_write(u'\r\n')
-        self._fp_ttyrec.close()
-        self._fp_ttyrec = None
-
-    def start_recording(self):
-        """
-        Begin recording to ttyrec file.
-        """
-        assert self._fp_ttyrec is None, ('already recording')
-        digit = 0
-        while True:
-            fname = '{ts_stamp}{digit}-{sid}.ttyrec'.format(
-                ts_stamp=time.strftime('%Y%m%d.%H%M'),
-                digit=digit,
-                sid=self.sid.split(':', 1)[0],)
-            if not os.path.exists(fname):
-                break
-            digit += 1
-        assert os.path.sep not in fname
-        filename = os.path.join(self.ttyrec_folder, fname)
-        if not os.path.exists(self.ttyrec_folder):
-            self.log.info('Creating folder for ttyrecordings, {0}.'
-                          .format(self.ttyrec_folder))
-            os.makedirs(self.ttyrec_folder)
-        self._fp_ttyrec = io.open(filename, 'wb+')
-        self._ttyrec_sec = -1
-        self._ttyrec_write_header()
-        self.log.debug('tty recording to {0}'.format(filename))
-
-    def _ttyrec_write_header(self):
-        """
-        Write ttyrec header that identifies termianl height & width, and escape
-        sequence to indicate UTF-8 mode.
-        """
-        (height, width) = self.terminal.height, self.terminal.width
-        self._ttyrec_write(unichr(27) + u'[8;%d;%dt' % (height, width,))
-        # ESC %G activates UTF-8 with an unspecified implementation level from
-        # ISO 2022 in a way that allows to go back to ISO 2022 again.
-        self._ttyrec_write(unichr(27) + u'%G')
-
-    def _ttyrec_write(self, ucs):
-        """
-        Update ttyrec stream with unicode bytes 'ucs'.
-        """
-        # write bytestring to ttyrec file packed as timed byte.
-        # If the current timed byte is within TTYREC_UCOMPRESS
-        # (default: 15,000 μsec), rewind stream and re-write the
-        # 'length' portion, and append data to end of stream.
-        # .. unfortuantely, this is not compatible with ttyplay -p,
-        # so for the time being, it is disabled ..
-        assert self._fp_ttyrec is not None, 'call start_recording() first'
-        timekey = self.duration
-
-        # Round down timekey to nearest whole number,
-        # use the remainder for microseconds. Upconvert,
-        # constructing a (seconds, microseconds) pair.
-        sec = math.floor(timekey)
-        usec = (timekey - sec) * 1e+6
-        sec, usec = int(sec), int(usec)
-
-        def write_chunk(tm_sec, tm_usec, textlen, u_text):
-            """
-            Write new timechunk record,
-              bytes (sec, usec, len(text), text.. )
-            """
-            # build & write,
-            bp1 = struct.pack('<I', tm_sec) + struct.pack('<I', tm_usec)
-            bp2 = struct.pack('<I', textlen)
-            self._fp_ttyrec.write(bp1 + bp2 + u_text)
-            # save (time,len) state for compression
-            self._ttyrec_sec = tm_sec
-            self._ttyrec_usec = tm_usec
-            self._ttyrec_len_text = textlen
-            self._fp_ttyrec.flush()
-        text = ucs.encode('utf8', 'replace')
-        len_text = len(text)
-        # TODO: padd every 1 or 10 seconds, so 'VCR' type apps
-        # can FF/RW easier
-        return write_chunk(sec, usec, len_text, text)

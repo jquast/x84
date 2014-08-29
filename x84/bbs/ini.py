@@ -112,8 +112,6 @@ def init_bbs_ini():
         os.path.join(os.path.dirname(__file__), os.path.pardir, 'default')))
     cfg_bbs.set('system', 'datapath', os.path.expanduser(os.path.join(
         os.path.join('~', '.x84', 'data'))))
-    cfg_bbs.set('system', 'ttyrecpath', os.path.expanduser(os.path.join(
-        os.path.join('~', '.x84', 'ttyrecordings'))))
     cfg_bbs.set('system', 'timeout', '1984')
     # for very slow systems, you may need to increase IPC timeout for acquiring
     # locks and sending input to sub-processes -- this can happen when the
@@ -179,7 +177,6 @@ def init_bbs_ini():
     cfg_bbs.set('matrix', 'enable_pwreset', 'yes')
 
     cfg_bbs.add_section('session')
-    cfg_bbs.set('session', 'record_tty', 'yes')
     cfg_bbs.set('session', 'tap_input', 'no')
     cfg_bbs.set('session', 'tap_output', 'no')
     cfg_bbs.set('session', 'tap_events', 'no')
@@ -243,8 +240,6 @@ def init_bbs_ini():
     cfg_bbs.set('sesame', 'MyMan', '/usr/bin/myman')
     cfg_bbs.set('sesame', 'MyMan_key', '&')
 
-    cfg_bbs.add_section('ttyplay')
-    cfg_bbs.set('ttyplay', 'exe', '/usr/bin/ttyplay')
     return cfg_bbs
 
 def init_log_ini():
