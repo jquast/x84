@@ -67,11 +67,11 @@ for page in (
     })
 
 
-def goto(*args):
+def goto(script, *args, **kwargs):
     """
     Change bbs script. Does not return.
     """
-    raise Goto(args)
+    raise Goto(script, *args, **kwargs)
 
 
 def disconnect(reason=u''):
@@ -116,13 +116,15 @@ def getch(timeout=None):
     return keystroke
 
 
-def gosub(*arg):
+def gosub(script, *args, **kwargs):
     """
     Call bbs script with optional arguments, Returns value.
     """
+    from x84.bbs.session import Script
     # pylint: disable=W0142
     #        Used * or ** magic
-    return getsession().runscript(*(arg[0],) + arg[1:])
+    script = Script(name=script, args=args, kwargs=kwargs)
+    return getsession().runscript(script)
 
 
 def ropen(filename, mode='rb'):

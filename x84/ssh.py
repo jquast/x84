@@ -192,7 +192,10 @@ class ConnectSsh(BaseConnect):
                 time.sleep(self.TIME_POLL)
 
             if detected():
-                return spawn_client_session(client=self.client)
+                matrix_kwargs = {attr: getattr(ssh_session, attr)
+                                 for attr in ('anonymous', 'new', 'username')}
+                return spawn_client_session(client=self.client,
+                                            matrix_kwargs=matrix_kwargs)
 
         except paramiko.SSHException as err:
             self.log.debug('{client.addrport}: connection closed: {err}'
@@ -230,7 +233,7 @@ class SshSessionServer(paramiko.ServerInterface):
         self.client = client
 
         # to be checked by caller
-        self.new_user = False
+        self.new = False
         self.anonymous = False
         self.username = None
 
@@ -283,7 +286,8 @@ class SshSessionServer(paramiko.ServerInterface):
         by configuration and the username is of their matching handles.
         """
         if self._check_new_user(username):
-            self.new_user = True
+            # if allowed, allow new@, etc. to apply for an account.
+            self.new = True
             self.log.debug('accepted without authentication, {0!r}: '
                            'it is an alias for new user application.'
                            .format(username))
@@ -296,6 +300,7 @@ class SshSessionServer(paramiko.ServerInterface):
             return False
 
         elif self._check_anonymous_user(username):
+            # if enabled, allow ssh anonymous@, root@, etc.
             self.log.debug('anonymous user, {0!r} accepted by configuration.'
                            .format(username))
             self.anonymous = True
@@ -329,31 +334,49 @@ class SshSessionServer(paramiko.ServerInterface):
         return True
 
     @staticmethod
-    def _get_matrix_ini(key):
+    def _get_ini(section='matrix', key=None, getter='get', split=False):
+        """
+        Get an ini configuration of ``section`` and ``key``
+
+        The ``getter`` is the method used to retrieve, you might
+        chose a different getter, such as ``getter='get_boolean'``.
+
+        When ``split`` is True, cause the resulting value to have
+        method ``.split()`` called before return -- most commonly
+        used for a list of strings, such as the 'byecmds' or some
+        such.
+        """
+        assert key is not None, key
         from x84.bbs import ini
-        if ini.CFG.has_option('matrix', key):
-            return ini.CFG.get('matrix', key).split()
+        if ini.CFG.has_option(section, key):
+            getter = getattr(ini.CFG, getter)
+            value = getter(section, key)
+            if split and hasattr(value, 'split'):
+                return value.split()
+            return value
         return []
 
     @classmethod
     def _check_new_user(cls, username):
         """ Boolean return when username matches `newcmds' ini cfg. """
-        matching = cls._get_matrix_ini('newcmds')
-        return matching and username in matching
-
-    @classmethod
-    def _check_bye_user(cls, username):
-        """ Boolean return when username matches `byecmds' in ini cfg. """
-        matching = cls._get_matrix_ini('byecmds')
-        return matching and username in matching
+        matching = cls._get_ini(section='matrix', key='newcmds', split=True)
+        allowed = cls._get_ini(section='nua', key='allow_apply',
+                               getter='getboolean')
+        return allowed and username in matching
 
     @classmethod
     def _check_anonymous_user(cls, username):
         """ Boolean return when user is anonymous and is allowed. """
-        from x84.bbs import ini
-        enabled = ini.CFG.getboolean('matrix', 'enable_anonymous')
-        matching = cls._get_matrix_ini('anoncmds')
-        return enabled and username in matching
+        matching = cls._get_ini(section='matrix', key='anoncmds', split=True)
+        allowed = cls._get_ini(section='matrix', key='enable_anonymous',
+                               getter='getboolean', split=False)
+        return allowed and username in matching
+
+    @classmethod
+    def _check_bye_user(cls, username):
+        """ Boolean return when username matches `byecmds' in ini cfg. """
+        matching = cls._get_ini(section='matrix', key='byecmds', split=True)
+        return matching and username in matching
 
     @staticmethod
     def _check_user_password(username, password):
