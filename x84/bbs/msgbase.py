@@ -137,9 +137,10 @@ class Msg(object):
         from x84.bbs import getsession
 
         session = getsession()
-        use_session = True if session is not None else False
+        use_session = bool(session is not None)
         log = logging.getLogger(__name__)
         new = self.idx is None or self._stime is None
+
         # persist message record to MSGDB
         db_msg = DBProxy(MSGDB, use_session=use_session)
         with db_msg:
