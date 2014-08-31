@@ -126,7 +126,7 @@ class Lightbar (AnsiWindow):
 
     def refresh_quick(self):
         """
-        Redraw only the 'dirty' portions after a 'move' has occured;
+        Redraw only the 'dirty' portions after a 'move' has occurred;
         otherwise redraw entire contents (page has shifted).
         """
         if self.moved:
