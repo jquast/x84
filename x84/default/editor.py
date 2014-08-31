@@ -117,9 +117,10 @@ def set_lbcontent(lightbar, ucs):
     Sets content of Lightbar instance, ``lightbar`` for given
     Unicode string, ``ucs``.
     """
-    from x84.bbs import Ansi
     # a custom 'soft newline' versus 'hard newline' is implemented,
     # '\n' == 'soft', '\r\n' == 'hard'
+    from x84.bbs import getterminal
+    term = getterminal()
     content = dict()
     lno = 0
     lines = ucs.split(HARDWRAP)
@@ -152,10 +153,10 @@ def yes_no(lightbar, msg, prompt_msg='are you sure? ', attr=None):
     }
     echo(u''.join((
         lightbar.border(),
-        lightbar.pos(lightbar.height, lightbar.xpadding),
+        lightbar.pos(lightbar.yloc + lightbar.height - 1, lightbar.xpadding),
         msg, u' ', prompt_msg,)))
     sel = Selector(yloc=lightbar.yloc + lightbar.height - 1,
-                   xloc=term.width - 21, width=18,
+                   xloc=term.width - 25, width=18,
                    left='Yes', right=' No ')
     sel.colors['selected'] = term.reverse_red if attr is None else attr
     sel.keyset['left'].extend(keyset['yes'])
@@ -307,20 +308,20 @@ def main(save_key=None, continue_draft=False):
                     term.yellow('%d/%d ' % (
                         lightbar.index + 1,
                         len(lightbar.content),)),
-                    '%d%% ' % (
+                    '%3d%% ' % (
                         int((float(lightbar.index + 1)
-                            / max(1, len(lightbar.content))) * 100)),
+                             / max(1, len(lightbar.content))) * 100)),
                     term.yellow(u' )-'),)),
             lightbar.title(u''.join((
-            term.red('-] '),
-            term.bold(u'Escape'),
-            u':', term.bold_red(u'command mode'),
-            term.red(' [-'),)
+                term.red('-] '),
+                term.bold(u'Escape'),
+                u':', term.bold_red(u'command mode'),
+                term.red(' [-'),)
             ) if edit else u''.join((
-                                    term.yellow('-( '),
-                                    term.bold(u'Enter'),
-                                    u':', term.bold_yellow(u'edit mode'),
-                                    term.yellow(' )-'),))),))
+                term.yellow('-( '),
+                term.bold(u'Enter'),
+                u':', term.bold_yellow(u'edit mode'),
+                term.yellow(' )-'),))),))
 
     def redraw_lneditor(lightbar, lneditor):
         """
@@ -576,13 +577,12 @@ def main(save_key=None, continue_draft=False):
                 dirty = True
             ucs = lightbar.process_keystroke(inp)
             if lightbar.moved:
+                # XXX optimize redraws
                 echo(term.normal + lneditor.erase_border())
                 echo(ucs)
                 lneditor = get_lneditor(lightbar)
                 save_draft(save_key, get_lbcontent(lightbar))
-                echo(lneditor.refresh())
-            else:
-                dirty = True
+                echo(lneditor.border() + lneditor.refresh())
 
         # edit mode -- append character / backspace
         elif edit and inp is not None:
