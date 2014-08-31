@@ -3,7 +3,6 @@ editor package for x/84, https://github.com/jquast/x84
 """
 
 from x84.bbs.ansiwin import AnsiWindow
-from x84.bbs.output import Ansi
 
 PC_KEYSET = {'refresh': [unichr(12), ],
              'backspace': [unichr(8), unichr(127), ],
@@ -335,10 +334,10 @@ class ScrollingEditor(AnsiWindow):
     def max_length(self):
         """
         Maximum line length. This also limits infinite scrolling when
-        enable_scrolling is True. When unset, the maximum length is the
-        visible width of the window.
+        enable_scrolling is True. When unset, the maximum length is
+        infinite.
         """
-        return self._max_length or self.visible_width
+        return self._max_length or float('inf')
 
     @max_length.setter
     def max_length(self, value):
