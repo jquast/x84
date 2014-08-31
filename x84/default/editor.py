@@ -127,11 +127,10 @@ def set_lbcontent(lightbar, ucs):
         if idx == len(lines) - 1 and 0 == len(ucs_line):
             continue
         ucs_joined = WHITESPACE.join(ucs_line.split(SOFTWRAP))
-        ucs_wrapped = Ansi(ucs_joined).wrap(
-            lightbar.visible_width).splitlines()
+        ucs_wrapped = term.wrap(text=ucs_joined, width=lightbar.visible_width)
         for inner_lno, inner_line in enumerate(ucs_wrapped):
-            content[lno] = u''.join((inner_line,
-                SOFTWRAP if inner_lno != len(ucs_wrapped) - 1 else u''))
+            softwrap = SOFTWRAP if inner_lno != len(ucs_wrapped) - 1 else u''
+            content[lno] = u''.join((inner_line, softwrap))
             lno += 1
         if 0 == len(ucs_wrapped):
             content[lno] = HARDWRAP
@@ -288,13 +287,16 @@ def main(save_key=None, continue_draft=False):
                 u' ',
                 term.yellow_underline(u'?'), u':', term.bold(u'help'),
                 term.yellow(u' )-'),))
-            keyset_cmd = lightbar.pos(lightbar.height - 1,
-                    max(0, lightbar.width - (len(Ansi(keyset_cmd)) + 3))
-                    ) + keyset_cmd
+            keyset_xpos = max(0, lightbar.width -
+                              (term.length(keyset_cmd) + 3))
+            keyset_cmd = lightbar.pos(lightbar.yloc + lightbar.height - 1,
+                                      keyset_xpos
+                                      ) + keyset_cmd
         return u''.join((
             lightbar.border(),
             keyset_cmd,
-            lightbar.pos(lightbar.height, lightbar.xpadding),
+            lightbar.pos(lightbar.yloc + lightbar.height - 1,
+                         lightbar.xpadding),
             u''.join((
                 term.red(u'-[ '),
                 u'EditiNG liNE ',

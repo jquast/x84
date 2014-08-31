@@ -32,7 +32,7 @@ def main():
     """ Main procedure. """
     # pylint: disable=R0912
     #        Too many branches
-    from x84.bbs import getsession, getterminal, echo, getch, Ansi, from_cp437
+    from x84.bbs import getsession, getterminal, echo, getch, from_cp437
     session, term = getsession(), getterminal()
     session.activity = u'Selecting chracter set'
     artfile = os.path.join(
@@ -85,7 +85,8 @@ def main():
             u'\r\n\r\n',
             u'\r\n'.join(buf),
             u'\r\n\r\n',
-            Ansi(enc_prompt).wrap(int(term.width * .95)),
+            u'\r\n'.join(term.wrap(text=enc_prompt,
+                                   width=int(term.width * .95)))
             u'\r\n\r\n',
             sel.refresh(),))
 
