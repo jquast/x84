@@ -1,13 +1,14 @@
 from __future__ import absolute_import
 
 # standard
-import os
+import threading
 import logging
 import socket
 import array
-import time
 import errno
-import threading
+import time
+import sys
+import os
 
 # local
 from x84.bbs.exception import Disconnected
@@ -17,6 +18,7 @@ from .server import BaseServer
 
 # 3rd-party
 import paramiko
+import paramiko.py3compat
 
 
 class SshClient(BaseClient):
@@ -173,7 +175,8 @@ class ConnectSsh(BaseConnect):
                 if self.client.channel is not None:
                     break
                 if not self.client.transport.is_active():
-                    self.log.debug('{client.addrport}: transport closed.')
+                    self.log.debug('{client.addrport}: transport closed.'
+                                   .format(client=self.client))
                     self.client.deactivate()
                     return
             else:
@@ -390,16 +393,54 @@ class SshSessionServer(paramiko.ServerInterface):
             return False
         return password and user.auth(password)
 
-    @staticmethod
-    def _check_user_pubkey(username, public_key):
+    def _check_user_pubkey(self, username, public_key):
         """ Boolean return when public_key matches user record. """
         from x84.bbs import find_user, get_user
         handle = find_user(username)
         if handle is None:
             return False
-        user = get_user(handle)
-        user_pubkey = user.get('pubkey', False)
-        return user_pubkey and user_pubkey == public_key
+        user_pubkey = get_user(handle).get('pubkey', False)
+        if not user_pubkey:
+            self.log.debug('{0} attempted pubkey authentication, '
+                           'but no public key on record for the user.'
+                           .format(username))
+            return False
+        try:
+            stored_pubkey = parse_public_key(user_pubkey)
+        except (ValueError, Exception):
+            (exc_type, exc_value, exc_traceback) = sys.exc_info()
+            self.log.debug('{0} for stored public key of user {1!r}: '
+                           '{2}'.format(exc_type, username, exc_value))
+        else:
+            return stored_pubkey == public_key
+
+
+def parse_public_key(user_pubkey):
+    """ Return paramiko key class instance of a user's public key text. """
+    if len(user_pubkey.split()) == 3:
+        key_msg, key_data, _ = user_pubkey.split()
+    elif len(user_pubkey.split()) == 2:
+        key_msg, key_data = user_pubkey.split()
+    elif len(user_pubkey.split()) == 1:
+        # when no key-type is specified, assume rsa
+        key_msg, key_data = 'ssh-rsa', user_pubkey
+    else:
+        raise ValueError('Malformed public key format: {0!r}'
+                         .format(user_pubkey))
+    try:
+        key_bytes = key_data.decode('ascii')
+    except UnicodeDecodeError:
+        raise ValueError('Malformed public key encoding: {0!r}'
+                         .format(key_data))
+    decoded_keybytes = paramiko.py3compat.decodebytes(key_bytes)
+    try:
+        return {'ssh-rsa': paramiko.RSAKey,
+                'ssh-dss': paramiko.DSSKey,
+                'ecdsa-sha2-nistp256': paramiko.ECDSAKey,
+                }.get(key_msg)(data=decoded_keybytes)
+    except KeyError:
+        raise ValueError('Malformed public key_msg: {0!r}'
+                         .format(key_msg))
 
 
 class SshServer(BaseServer):

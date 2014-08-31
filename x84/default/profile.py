@@ -28,7 +28,7 @@ def process_keystroke(inp, user):
     # ^ lol, this is one of those things that should be
     #   refactored into smaller subroutines =)
     from x84.bbs import getsession, getterminal, echo, getch, gosub
-    from x84.bbs import LineEditor
+    from x84.bbs import LineEditor, ScrollingEditor
     from x84.default.nua import set_email, set_location
     from x84.bbs.ini import CFG
     def_timeout = CFG.getint('system', 'timeout')
@@ -132,6 +132,40 @@ def process_keystroke(inp, user):
                 break
             elif inp2 in (u'n', u'N'):
                 break
+    elif inp in (u'k', 'K',):
+        change = True
+        if user.get('pubkey', False):
+            echo(u"\r\n\r\nSSh PUbliC kEY AlREAdY SEt, ChANGE ? [yn]")
+            while True:
+                inp2 = getch()
+                if inp2 in (u'y', u'Y'):
+                    break
+                elif inp2 in (u'n', u'N'):
+                    change = False
+                    break
+        if change:
+            echo(u"\r\n\r\njUSt PAStE iN YOUR PUbliC kEY, MAkE SURE itS "
+                 u"All iN ONE lINE!\r\n\r\n\r\n")
+            editor = ScrollingEditor(width=term.width - 6,
+                                     yloc=term.height - 3,
+                                     xloc=3)
+            echo(term.reverse_yellow)
+            pubkey = editor.read()
+            echo(term.normal)
+            if pubkey is not None:
+                if not pubkey.strip():
+                    if user.get('pubkey', None):
+                        del user['pubkey']
+                    echo(u'\r\n\r\nYOUR SECREtS ARE NEVER SAfE!\r\n')
+                else:
+                    echo(u'\r\n\r\nWElCOME tO thE bROthERhOOd!\r\n')
+                    user['pubkey'] = pubkey
+                user.save()
+                getch(timeout=1.5)
+            else:
+                echo(u'\r\n\r\nCANCElEd!!\r\n')
+                getch(timeout=0.5)
+
     elif inp in (u'.',):
         echo(term.move(0, 0) + term.normal + term.clear)
         echo(term.move(int(term.height * .8), 0))
@@ -247,19 +281,22 @@ def dummy_pager(user):
                                term.bold(user.location),),
             '(p)%-20s - %s' % (u'ASSWORd',
                                term.bold_black(u'******'),),
+            '(k)%-20s - %s' % (u'SSh kEY',
+                               term.bold_black(
+                                   str(bool(user.get('pubkey', False)))),),
             '(e)%-20s - %s' % (u'-MAil AddRESS',
                                term.bold(user.email),),
             (term.bold('t') +
-                '(i)%-19s - %s' % (u'MEOUt', term.bold(
-                    str(user.get('timeout', def_timeout))),)),
+             '(i)%-19s - %s' % (u'MEOUt', term.bold(
+                 str(user.get('timeout', def_timeout))),)),
             '(s)%-20s - %s' % (u'YSOP ACCESS',
                                term.bold(u'ENAblEd'
                                          if 'sysop' in user.groups
                                          else 'diSAblEd')),
             '(m)%-20s - %s' % (u'ESG',
-                               term.bold(u'[%s]' % ('y'
-                                   if user.get(
-                                       'mesg', True) else 'n',),)),
+                               term.bold(u'[%s]' % (
+                                   'y' if user.get('mesg', True)
+                                   else 'n',),)),
             '(.)%-20s - %s' % (u'PlAN filE', '%d bytes' % (
                 len(plan),) if plan else '(NO PlAN.)'),
             '(x)%-20s - %s' % (u'PERt MOdE',
@@ -275,7 +312,7 @@ def dummy_pager(user):
             echo(term.reverse(u'\r\n-- More --'))
             getch()
         echo(u'\r\n' + ' ' * xpos + line)
-    echo(u'\r\n\r\n Enter option [ctle.xq]: ')
+    echo(u'\r\n\r\n Enter option [ctlpkeim.xq]: ')
     return process_keystroke(getch(), user)
 
 
