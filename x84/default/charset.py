@@ -86,7 +86,7 @@ def main():
             u'\r\n'.join(buf),
             u'\r\n\r\n',
             u'\r\n'.join(term.wrap(text=enc_prompt,
-                                   width=int(term.width * .95)))
+                                   width=int(term.width * .95))),
             u'\r\n\r\n',
             sel.refresh(),))
 
