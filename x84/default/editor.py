@@ -6,6 +6,10 @@ editor script for X/84, https://github.com/jquast/x84
 # There isn't any actual multi-line editor, just this script
 # that drives a LineEditor and a Lightbar.
 
+# TODO: use a timer to save the draft -- every 60 seconds or
+# so, instead of on every line change.  This should
+# significantly improve performance, especially on Raspberry Pi.
+
 WHITESPACE = u' '
 SOFTWRAP = u'\n'
 HARDWRAP = u'\r\n'
@@ -26,13 +30,20 @@ def save_draft(key, ucs):
         del UNDO[0]
 
 
-def save(key, ucs):
+def get_contents(lightbar):
+    """
+    Return well-formatted document given the lightbar
+    """
+    return HARDWRAP.join([softwrap_join(_ucs)
+                          for _ucs in get_lbcontent(lightbar).split(HARDWRAP)])
+
+
+def save(key, content):
     """
     Persist message to user attrs database
     """
     from x84.bbs import getsession
-    getsession().user[key] = HARDWRAP.join(
-        [softwrap_join(_ucs) for _ucs in ucs.split(HARDWRAP)])
+    getsession().user[key] = content
 
 
 def get_help():
@@ -205,13 +216,22 @@ def get_lneditor(lightbar):
     return lneditor
 
 
-def main(save_key=u'draft'):
-    """ Main procedure. """
+def main(save_key=None, continue_draft=False):
+    """ Main Editor procedure.
+
+    When argument ``save_key`` is non-None, the result is saved
+    to the user attribute of the same name.  When unset, the
+    contents are returned to the caller.
+
+    When argument ``continue_draft`` is non-None, the editor
+    continues a previously saved draft, whose contents is its
+    value.
+    """
     # pylint: disable=R0914,R0912,R0915
     #         Too many local variables
     #         Too many branches
     #         Too many statements
-    from x84.bbs import getsession, getterminal, echo, getch, Ansi, Pager
+    from x84.bbs import getsession, getterminal, echo, getch, Pager
     session, term = getsession(), getterminal()
 
     movement = (term.KEY_UP, term.KEY_DOWN, term.KEY_NPAGE,
@@ -355,7 +375,10 @@ def main(save_key=u'draft'):
         echo(redraw(lbr, lne))
         return lbr, lne
 
-    ucs = session.user.get(save_key, u'')
+    if continue_draft:
+        ucs = continue_draft
+    else:
+        ucs = u''
     lightbar, lneditor = get_ui(ucs, None)
     echo(banner())
     dirty = True
@@ -511,7 +534,12 @@ def main(save_key=u'draft'):
                 if yes_no(lightbar, term.yellow(u'- ')
                           + term.bold_green(u'SAVE')
                           + term.yellow(u' -'), term.reverse_green):
-                    save(save_key, get_lbcontent(lightbar))
+                    # save contents to user attribtue
+                    content = get_contents(lightbar)
+                    if not save_key:
+                        # return entire message body as return value
+                        return content
+                    save(save_key, content)
                     return True
                 dirty = True
             elif inp in (u'?',):
