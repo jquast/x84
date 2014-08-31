@@ -641,7 +641,7 @@ class Session(object):
         """
         from x84.bbs.exception import ScriptError
         self._script_stack.append(script)
-        self.log.info("runscript: {0}".format(script))
+        self.log.info("runscript name={0}".format(script.name))
 
         # pylint: disable=W0142
         #        Used * or ** magic
