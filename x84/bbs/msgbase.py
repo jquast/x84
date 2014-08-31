@@ -86,7 +86,7 @@ class Msg(object):
 
     'parent' points to the message this message directly refers to, and
     'threads' points to messages that refer to this message. 'parent' must be
-    explicitly set, but children are automaticly populated into 'threads' of
+    explicitly set, but children are automatically populated into 'threads' of
     messages replied to through the send() method.
     """
     # pylint: disable=R0902
