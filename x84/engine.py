@@ -54,7 +54,7 @@ def main():
             for idx, thread in enumerate(server.threads[:]):
                 if not thread.stopped:
                     thread.stopped = True
-                del server.threads[idx]
+                server.threads.remove(thread)
             for key, client in server.clients.items()[:]:
                 kill_session(client, 'server shutdown')
                 del server.clients[key]
