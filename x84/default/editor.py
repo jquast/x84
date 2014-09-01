@@ -1,6 +1,14 @@
 """
 editor script for X/84, https://github.com/jquast/x84
 """
+# std
+import codecs
+import os
+
+# local
+from x84.bbs import getsession, getterminal, encode_pipe, echo, getch
+from x84.bbs import Pager, Lightbar, Selector, ScrollingEditor, showart
+
 # This is probably the fourth or more ansi multi-line editor
 # I've written for python. I did the least-effort this time.
 # There isn't any actual multi-line editor, just this script
@@ -16,6 +24,7 @@ HARDWRAP = u'\r\n'
 UNDO = list()
 UNDOLEVELS = 9
 
+here = os.path.dirname(__file__)
 
 def save_draft(key, ucs):
     """
@@ -42,17 +51,19 @@ def save(key, content):
     """
     Persist message to user attrs database
     """
-    from x84.bbs import getsession
     getsession().user[key] = content
 
 
-def get_help():
+def show_help(term, center=True):
     """
     Returns help text.
     """
-    import os
-    return open(os.path.join(
-        os.path.dirname(__file__), 'editor.txt')).read()
+    # clear screen
+    echo(term.normal + ('\r\n' * (term.height + 1)) + term.home)
+
+    map(echo, showart(os.path.join(here, 'art', 'po-help.ans')))
+#    return codecs.open(, 'r',
+#                       'cp437_art').read()
 
 
 def wrap_rstrip(value):
@@ -91,7 +102,6 @@ def get_lbcontent(lightbar):
     """
     Returns ucs string for content of Lightbar instance, ``lightbar``.
     """
-    from x84.bbs import encode_pipe
     # a custom 'soft newline' versus 'hard newline' is implemented,
     # '\n' == 'soft', '\r\n' == 'hard'
     lines = list()
@@ -119,7 +129,6 @@ def set_lbcontent(lightbar, ucs):
     """
     # a custom 'soft newline' versus 'hard newline' is implemented,
     # '\n' == 'soft', '\r\n' == 'hard'
-    from x84.bbs import getterminal
     term = getterminal()
     content = dict()
     lno = 0
@@ -145,7 +154,6 @@ def set_lbcontent(lightbar, ucs):
 
 def yes_no(lightbar, msg, prompt_msg='are you sure? ', attr=None):
     """ Prompt user for yes/no, returns True for yes, False for no. """
-    from x84.bbs import Selector, echo, getch, getterminal
     term = getterminal()
     keyset = {
         'yes': (u'y', u'Y'),
@@ -180,7 +188,6 @@ def get_lightbar(ucs):
     Returns lightbar instance with content of given
     Unicode string, ``ucs``.
     """
-    from x84.bbs import getterminal, Lightbar
     term = getterminal()
     width = min(80, max(term.width, 40))
     yloc = 0
@@ -198,12 +205,11 @@ def get_lneditor(lightbar):
     Returns ScrollingEditor instance positioned at location of current
     selection in Lightbar instance, ``lightbar``.
     """
-    from x84.bbs import getterminal, ScrollingEditor
     term = getterminal()
     width = min(80, max(term.width, 40))
     yloc = (lightbar.yloc + lightbar.ypadding + lightbar.position[0] - 1)
     xloc = max(0, (term.width / 2) - (width / 2))
-    lneditor = ScrollingEditor(width, yloc, xloc)
+    lneditor = ScrollingEditor(width=width, yloc=yloc, xloc=xloc)
     lneditor.enable_scrolling = True
     lneditor.max_length = 65534
     lneditor.glyphs['bot-horiz'] = u''
@@ -231,7 +237,6 @@ def main(save_key=None, continue_draft=False):
     #         Too many local variables
     #         Too many branches
     #         Too many statements
-    from x84.bbs import getsession, getterminal, echo, getch, Pager
     session, term = getsession(), getterminal()
 
     movement = (term.KEY_UP, term.KEY_DOWN, term.KEY_NPAGE,
@@ -546,18 +551,20 @@ def main(save_key=None, continue_draft=False):
                     return True
                 dirty = True
             elif inp in (u'?',):
-                pager = Pager(lightbar.height, lightbar.width,
-                              lightbar.yloc, lightbar.xloc)
-                pager.update(get_help())
-                pager.colors['border'] = term.bold_blue
-                echo(pager.border() + pager.title(u''.join((
-                    term.bold_blue(u'-( '),
-                    term.white_on_blue(u'r'), u':', term.bold(u'eturn'),
-                    u' ',
-                    term.bold_blue(u' )-'),))))
-                pager.keyset['exit'].extend([u'r', u'R'])
-                pager.read()
-                echo(pager.erase_border())
+                show_help(term)
+                term.inkey()
+                #pager = Pager(lightbar.height, lightbar.width,
+                #              lightbar.yloc, lightbar.xloc)
+                #pager.update(get_help())
+                #pager.colors['border'] = term.bold_blue
+                #echo(pager.border() + pager.title(u''.join((
+                #    term.bold_blue(u'-( '),
+                #    term.white_on_blue(u'r'), u':', term.bold(u'eturn'),
+                #    u' ',
+                #    term.bold_blue(u' )-'),))))
+                #pager.keyset['exit'].extend([u'r', u'R'])
+                #pager.read()
+                #echo(pager.erase_border())
                 dirty = True
             else:
                 moved = False
