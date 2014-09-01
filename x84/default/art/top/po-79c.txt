@@ -18,3 +18,5 @@
                               $$$'          $$$'
                               $'            $'
                               "             "
+
+                        {tenet,ssh}://oddnetwork.org
