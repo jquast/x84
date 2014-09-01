@@ -28,20 +28,44 @@ class Lightbar (AnsiWindow):
     #         Too many public methods (29/20)
     content = list()
 
-    def __init__(self, height, width, yloc, xloc):
+    def __init__(self, *args, **kwargs):
         """
-        Initialize a lightbar of height, width, y and x position.
+        Initialize a lightbar of height, width, y and x, and position.
         """
-        AnsiWindow.__init__(self, height, width, yloc, xloc)
-        self._vitem_idx = 0
-        self._vitem_shift = 0
-        self._vitem_lastidx = 0
-        self._vitem_lastshift = 0
         self._selected = False
         self._quit = False
-        self.keyset = NETHACK_KEYSET
-        self.init_keystrokes()
-        self.init_theme()
+        pos = kwargs.pop('position', (0, 0)) or (0, 0)
+
+        self.init_keystrokes(
+            keyset=kwargs.pop('keyset', NETHACK_KEYSET.copy()))
+
+        AnsiWindow.__init__(self, *args, **kwargs)
+        self.position = pos
+
+    def init_theme(self, colors=None, glyphs=None):
+        """
+        Initialize color['highlight'].
+        """
+        from x84.bbs.session import getterminal
+        colors = colors or {'highlight': getterminal().reverse_yellow}
+        glyphs = glyphs or {'strip': u' $'}
+        AnsiWindow.init_theme(self, colors, glyphs)
+
+    def init_keystrokes(self, keyset):
+        """
+        This initializer sets keyboard keys for various editing keystrokes.
+        """
+        from x84.bbs.session import getterminal
+        term = getterminal()
+        self.keyset = keyset
+        self.keyset['home'].append(term.KEY_HOME)
+        self.keyset['end'].append(term.KEY_END)
+        self.keyset['pgup'].append(term.KEY_PGUP)
+        self.keyset['pgdown'].append(term.KEY_PGDOWN)
+        self.keyset['up'].append(term.KEY_UP)
+        self.keyset['down'].append(term.KEY_DOWN)
+        self.keyset['enter'].append(term.KEY_ENTER)
+        self.keyset['exit'].append(term.KEY_ESCAPE)
 
     def update(self, keyed_uchars=None):
         """
@@ -141,33 +165,6 @@ class Lightbar (AnsiWindow):
                 # just highlight new ..
                 return (self.refresh_row(self.vitem_idx))
         return u''
-
-    def init_theme(self):
-        """
-        Initialize color['highlight'].
-        """
-        from x84.bbs.session import getterminal
-        self.colors['highlight'] = getterminal().reverse_green
-        self.glyphs['strip'] = u' $'  # indicates content was stripped
-        AnsiWindow.init_theme(self)
-
-    def init_keystrokes(self):
-        """
-        This initializer sets glyphs and colors appropriate for a "theme",
-        override or inherit this method to create a common color and graphic
-        set.
-        """
-        import x84.bbs.session
-        term = x84.bbs.session.getterminal()
-        self.keyset = NETHACK_KEYSET
-        self.keyset['home'].append(term.KEY_HOME)
-        self.keyset['end'].append(term.KEY_END)
-        self.keyset['pgup'].append(term.KEY_PGUP)
-        self.keyset['pgdown'].append(term.KEY_PGDOWN)
-        self.keyset['up'].append(term.KEY_UP)
-        self.keyset['down'].append(term.KEY_DOWN)
-        self.keyset['enter'].append(term.KEY_ENTER)
-        self.keyset['exit'].append(term.KEY_ESCAPE)
 
     def process_keystroke(self, key):
         """
@@ -321,10 +318,13 @@ class Lightbar (AnsiWindow):
     def vitem_idx(self, value):
         # pylint: disable=C0111
         #        Missing docstring
-        if self._vitem_idx != value:
+        if hasattr(self, '_vitem_idx') and self._vitem_idx != value:
             self._vitem_lastidx = self._vitem_idx
-            self._vitem_idx = value
             self._moved = True
+        else:
+            self._vitem_lastidx = value
+            self._moved = False
+        self._vitem_idx = value
 
     @property
     def vitem_shift(self):
@@ -341,10 +341,13 @@ class Lightbar (AnsiWindow):
     def vitem_shift(self, value):
         # pylint: disable=C0111
         #        Missing docstring
-        if self._vitem_shift != value:
+        if hasattr(self, '_vitem_shift') and self._vitem_shift != value:
             self._vitem_lastshift = self._vitem_shift
-            self._vitem_shift = value
             self._moved = True
+        else:
+            self._vitem_lastshift = value
+            self._moved = False
+        self._vitem_shift = value
 
     def _chk_bounds(self):
         """

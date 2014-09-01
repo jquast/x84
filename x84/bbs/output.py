@@ -93,12 +93,14 @@ def decode_pipe(ucs):
     outp = u''
     ptr = 0
     match = None
-    ANSI_PIPE = re.compile(r'\|(\d{2,3})')
+    ANSI_PIPE = re.compile(r'\|(\d{2,3}|\|)')
 
     for match in ANSI_PIPE.finditer(ucs):
         val = match.group(1)
         # allow escaping using a second pipe
-        if match.start() and ucs[match.start() - 1] == '|':
+        if val == u'|':
+            outp += ucs[ptr:match.start() + 1]
+            ptr = match.end()
             continue
         # 07 -> 7
         while val.startswith('0'):
@@ -110,7 +112,9 @@ def decode_pipe(ucs):
         # with term.color(11), whereas others have trouble, help
         # out by using dim color and bold attribute instead.
         attr = u''
-        if int_value <= 7 or int_value >= 16:
+        if int_value == 7:
+            attr = term.normal
+        elif int_value < 7 or int_value >= 16:
             attr = term.normal + term.color(int_value)
         elif int_value <= 15:
             attr = term.normal + term.color(int_value - 8) + term.bold

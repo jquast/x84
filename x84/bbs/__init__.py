@@ -1,7 +1,6 @@
 """
 x/84 bbs module, https://github.com/jquast/x84
 """
-
 import encodings.aliases
 import x84.encodings
 from x84.bbs.userbase import list_users, get_user, find_user, User, Group
@@ -137,19 +136,21 @@ def ropen(filename, mode='rb'):
     return open(random.choice(files), mode) if len(files) else None
 
 
-def showart(filepattern, encoding=None, auto_mode=True, center=False):
+def showart(filepattern, encoding=None, auto_mode=True, center=False,
+            poll_cancel=False, msg_cancel=None):
     """
     Yield unicode sequences for any given ANSI Art (of art_encoding). Effort
     is made to parse SAUCE data, translate input to unicode, and trim artwork
-    too large to display. If keyboard input is pressed, 'msg_cancel' is
-    returned as the last line of art.
+    too large to display.  If ``poll_cancel`` is not ``False``, represents
+    time as float for each line to block for keypress -- if any is received,
+    then iteration ends and ``msg_cancel`` is displayed as last line of art.
 
     If you provide no ``encoding``, the piece encoding will be based on either
     the encoding in the SAUCE record, the configured default or the default
     fallback ``CP437`` encoding.
 
-    Alternate codecs are available if you provide the ``encoding`` argument. Ie
-    if you want to show an Amiga style ASCII art file::
+    Alternate codecs are available if you provide the ``encoding`` argument.
+    For example, if you want to show an Amiga style ASCII art file::
 
         >>> from x84.bbs import echo, showart
         >>> for line in showart('test.asc', 'topaz'):
@@ -158,12 +159,13 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False):
     The ``auto_mode`` flag will, if set, only respect the selected encoding if
     the active session is UTF-8 capable.
 
-    If ``center`` is set to `True`, the piece will be centered respecing the
+    If ``center`` is set to ``True``, the piece will be centered respecting the
     current terminal's width.
 
     """
-    import glob
     import random
+    import glob
+    import os
     from sauce import SAUCE
     from x84.bbs.ini import CFG
 
@@ -171,15 +173,15 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False):
 
     # Open the piece
     try:
-        filename = random.choice(glob.glob(filepattern))
+        filename = os.path.relpath(random.choice(glob.glob(filepattern)))
     except IndexError:
         filename = None
 
     if filename is None:
         yield u''.join((
-            term.bold_red(u'--'),
-            u'no files matching %s' % (filepattern,),
-            term.bold_red(u'--'),
+            term.bold_red(u'-- '),
+            u'no files matching {0}'.format(filepattern),
+            term.bold_red(u' --'),
         ))
         return
 
@@ -226,18 +228,33 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False):
     if center and term.width > 81:
         padding = term.move_x((term.width / 2) - 40)
 
-    msg_cancel = u''.join((
-        term.normal,
-        term.bold_blue(u'--'),
-        u'CANCEllEd bY iNPUt ',
-        term.bold_blue(u'--'),
-    ))
+    msg_cancel = msg_cancel or u''.join(
+        (term.normal,
+         term.bold_blue(u'-- '),
+         u'cancelled {0} by input'.format(filename),
+         term.bold_blue(u' --'),
+         ))
+
+    msg_too_wide = u''.join(
+        (term.normal,
+         term.bold_blue(u'-- '),
+         u'cancelled {0}, too wide:: {{0}}'.format(filename),
+         term.bold_blue(u' --'),
+         ))
+
     for line in _decode(parsed.data).splitlines():
         # Allow slow terminals to cancel by pressing a keystroke
-        if session.poll_event('input'):
-            yield u'\r\n' + padding + msg_cancel + u'\r\n'
+        if poll_cancel is not False and term.inkey(poll_cancel):
+            yield u'\r\n' + term.center(msg_cancel) + u'\r\n'
+            return
+        line_length = term.length(line.rstrip())
+        if not padding and term.width < line_length:
+            yield (u'\r\n' +
+                   term.center(msg_too_wide.format(line_length)) +
+                   u'\r\n')
             return
         yield padding + line + u'\r\n'
+    yield term.normal
 
 
 def showcp437(filepattern):

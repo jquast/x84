@@ -6,34 +6,55 @@ import logging
 
 VI_KEYSET = {
     'refresh': [unichr(12), ],
-    'home': [],
-    'end': [],
+    'home': [u'0'],
+    'end': [u'G'],
     'up': [u'k', u'K'],
     'down': [u'j', u'J', u'\r'],
-    'pgup': [u'b', u'B'],
-    'pgdown': [u'f', u'F'],
+    'pgup': [u'b', u'B', u''],
+    'pgdown': [u'f', u'F', u''],
     'exit': [u'q', u'Q', unichr(27), ],
 }
 
 
 class Pager(AnsiWindow):
     """
-    Scrolling ansi viewert d
+    Scrolling viewer
     """
     # pylint: disable=R0904,R0902
     #        Too many public methods (24/20)
     #        Too many instance attributes (11/7)
 
-    def __init__(self, height, width, yloc, xloc):
+    def __init__(self, *args, **kwargs):
         """
         Initialize a pager of height, width, y, and x position.
         """
-        AnsiWindow.__init__(self, height, width, yloc, xloc)
-        self._position = self._position_last = 0
         self._quit = False
-        self.content = list()
-        self.keyset = VI_KEYSET.copy()
-        self.init_keystrokes()
+
+        self.init_keystrokes(keyset=kwargs.pop('keyset', VI_KEYSET.copy()))
+
+        content = kwargs.pop('content', u'') or u''
+        position = kwargs.pop('position', 0) or 0
+
+        AnsiWindow.__init__(self, *args, **kwargs)
+
+        self.position = position
+        self.content = content
+
+    def init_keystrokes(self, keyset):
+        """
+        This initializer sets keys appropriate for navigation.
+        """
+        import x84.bbs.session
+        term = x84.bbs.session.getterminal()
+        self.keyset = keyset
+        self.keyset['home'].append(term.KEY_HOME)
+        self.keyset['end'].append(term.KEY_END)
+        self.keyset['pgup'].append(term.KEY_PGUP)
+        self.keyset['pgdown'].append(term.KEY_PGDOWN)
+        self.keyset['up'].append(term.KEY_UP)
+        self.keyset['down'].append(term.KEY_DOWN)
+        self.keyset['down'].append(term.KEY_ENTER)
+        self.keyset['exit'].append(term.KEY_ESCAPE)
 
     @property
     def quit(self):
@@ -61,13 +82,11 @@ class Pager(AnsiWindow):
     def position(self, pos):
         # pylint: disable=C0111
         #         Missing docstring
-        self._position_last = self.position
-        self._position = pos
-        # bounds check
-        if self._position < 0:
-            self._position = 0
-        if self._position > self.bottom:
-            self._position = self.bottom
+        self._position_last = (self._position
+                               if hasattr(self, '_position')
+                               else pos)
+        # assign and bounds check
+        self._position = min(max(0, pos), self.bottom)
         self.moved = (self._position_last != self._position)
 
     @property
@@ -75,7 +94,7 @@ class Pager(AnsiWindow):
         """
         Returns content that is visible in window
         """
-        return self.content[self.position:self.position + self.visible_height]
+        return self._content[self.position:self.position + self.visible_height]
 
     @property
     def visible_bottom(self):
@@ -91,23 +110,10 @@ class Pager(AnsiWindow):
         """
         Returns bottom-most position that contains content
         """
-        return max(0, len(self.content) - self.visible_height)
-
-    def init_keystrokes(self):
-        """
-        This initializer sets keys appropriate for navigation.
-        override or inherit this method to create a common keyset.
-        """
-        import x84.bbs.session
-        term = x84.bbs.session.getterminal()
-        self.keyset['home'].append(term.KEY_HOME)
-        self.keyset['end'].append(term.KEY_END)
-        self.keyset['pgup'].append(term.KEY_PGUP)
-        self.keyset['pgdown'].append(term.KEY_PGDOWN)
-        self.keyset['up'].append(term.KEY_UP)
-        self.keyset['down'].append(term.KEY_DOWN)
-        self.keyset['down'].append(term.KEY_ENTER)
-        self.keyset['exit'].append(term.KEY_ESCAPE)
+        maximum = (
+            hasattr(self, '_content') and len(self._content)
+            or self.visible_height)
+        return max(0, maximum - self.visible_height)
 
     def process_keystroke(self, keystroke):
         """
@@ -115,10 +121,10 @@ class Pager(AnsiWindow):
         sequence suitable for refreshing when that keystroke modifies the
         window.
         """
-        from x84.bbs.session import getterminal
-        term = getterminal()
         self.moved = False
         rstr = u''
+        # convert to integer ... workaround for legacy
+        keystroke = hasattr(keystroke, 'code') and keystroke.code or keystroke
         if keystroke in self.keyset['refresh']:
             rstr += self.refresh()
         elif keystroke in self.keyset['up']:
@@ -135,9 +141,6 @@ class Pager(AnsiWindow):
             rstr += self.move_pgdown()
         elif keystroke in self.keyset['exit']:
             self._quit = True
-        else:
-            logger = logging.getLogger()
-            logger.debug('unhandled, %r', keystroke)
         return rstr
 
     def read(self):
@@ -164,7 +167,7 @@ class Pager(AnsiWindow):
         """
         Scroll to bottom.
         """
-        self.position = len(self.content) - self.visible_height
+        self.position = len(self._content) - self.visible_height
         if self.moved:
             return self.refresh()
         return u''
@@ -232,6 +235,23 @@ class Pager(AnsiWindow):
                 for row in range(start_row, len(self.visible_content))
             ] + [term.normal])
 
+    def update(self, ucs):
+        """
+        Update content buffer with newline-delimited text.
+        """
+        self.content = ucs
+        return self.refresh()
+
+    @property
+    def content(self):
+        from x84.bbs.output import encode_pipe
+        return encode_pipe('\r\n'.join(self._content))
+
+    @content.setter
+    def content(self, ucs_value):
+        from x84.bbs.output import decode_pipe
+        self._content = self.content_wrap(decode_pipe(ucs_value))
+
     def content_wrap(self, ucs):
         """
         Return word-wrapped text ``ucs`` that contains newlines.
@@ -246,18 +266,10 @@ class Pager(AnsiWindow):
                 lines.append(u'')
         return lines
 
-    def update(self, ucs):
-        """
-        Update content buffer with newline-delimited text.
-        """
-        from x84.bbs.output import decode_pipe
-        self.content = self.content_wrap(decode_pipe(ucs))
-        return self.refresh()
-
     def append(self, ucs):
         """
         Update content buffer with additional line(s) of text.
         """
         from x84.bbs.output import decode_pipe
-        self.content.extend(self.content_wrap(decode_pipe(ucs)))
+        self._content.extend(self.content_wrap(decode_pipe(ucs)))
         return self.move_end() or self.refresh(self.bottom)
