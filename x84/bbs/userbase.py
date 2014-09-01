@@ -214,7 +214,7 @@ class User(object):
                           .format(self.handle, key, default))
             return default
 
-        attrs = adb[self.handle]
+        attrs = adb.get(self.handle, {})
         if key not in attrs:
             if ini.CFG.getboolean('session', 'tap_db'):
                 log.debug('User({!r}.get(key={!r}) returns default={!r}'
@@ -240,7 +240,7 @@ class User(object):
         uadb = DBProxy(USERDB, 'attrs')
         with uadb:
             # retrieve attributes from uadb,
-            attrs = uadb[self.handle]
+            attrs = uadb.get(self.handle, {})
             # delete attribute if exists
             if key in attrs:
                 attrs.__delitem__(key)

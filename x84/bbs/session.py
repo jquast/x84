@@ -2,18 +2,18 @@
 """
 Session engine for x/84, http://github.com/jquast/x84/
 """
+import collections
 import traceback
 import logging
 import inspect
-import struct
-import math
 import time
 import imp
 import sys
 import os
-import io
 
 SESSION = None
+
+Script = collections.namedtuple('Script', ['name', 'args', 'kwargs'])
 
 
 def getsession():
@@ -51,18 +51,13 @@ class Session(object):
     _activity = None
     _user = None
 
-    # save state for ttyrec compression
-    _ttyrec_sec = -1
-    _ttyrec_usec = -1
-    _ttyrec_len_text = 0
-
     _script_module = None
-    _fp_ttyrec = None
 
     #: node number
     _node = None
 
-    def __init__(self, terminal, sid, env, child_pipes, kind, addrport):
+    def __init__(self, terminal, sid, env, child_pipes, kind, addrport,
+                 matrix_args, matrix_kwargs):
         """ Instantiate a Session.
 
         Only one session may be instantiated per process.
@@ -79,6 +74,11 @@ class Session(object):
         :type kind: str
         :param addrport: transport ip address and port as string
         :type addrport: str
+        :param matrix_args: When non-None, a tuple of positional arguments
+           that should be passed to the matrix script.
+        :param matrix_kwargs: When non-None, a dictionary of keyword arguments
+           that should be passed to the matrix script.
+        :type matrix_kwargs: dict
         """
         from x84.bbs import ini
         self.log = logging.getLogger(__name__)
@@ -99,23 +99,36 @@ class Session(object):
         self.addrport = addrport
 
         # private attributes
-        self.init_script_stack()
+        self.init_script_stack(matrix_args, matrix_kwargs)
         self.init_attributes()
 
         # initialize keyboard encoding
         terminal.set_keyboard_decoder(env.get('encoding', 'utf8'))
 
-    def init_script_stack(self):
+    def init_script_stack(self, matrix_args, matrix_kwargs):
+        """
+        Initialize the "script stack" with the matrix script.
+
+        Using the default configuration argument 'script' for
+        all connections, but preferring 'script_{kind}', where
+        ``kind`` may be ``telnet``, ``ssh``, or any kind of
+        supporting transport, for an alternative matrix script
+        (if it exists).
+        """
         from x84.bbs import ini
         script_kind = 'script_{self.kind}'.format(self=self)
         if ini.CFG.has_option('matrix', script_kind):
+            # TODO: also check that 'script_kind' exists (!)
             matrix_script = ini.CFG.get('matrix', script_kind)
         else:
             matrix_script = ini.CFG.get('matrix', 'script')
-        self._script_stack = [(matrix_script,)]
+
+        script = Script(name=matrix_script,
+                        args=matrix_args,
+                        kwargs=matrix_kwargs)
+        self._script_stack = [script]
 
     def init_attributes(self):
-        from x84.bbs import ini
         self._connect_time = time.time()
         self._last_input_time = time.time()
 
@@ -256,17 +269,6 @@ class Session(object):
         return self._node
 
     @property
-    def is_recording(self):
-        """ Session is being recorded """
-        return self._fp_ttyrec is not None
-
-    @property
-    def ttyrec_folder(self):
-        """ Folder for tty recordings. """
-        from x84.bbs import ini
-        return ini.CFG.get('system', 'ttyrecpath')
-
-    @property
     def tap_input(self):
         """ Keyboard input should be logged for debugging. """
         from x84.bbs import ini
@@ -285,12 +287,6 @@ class Session(object):
         return ini.CFG.getboolean('session', 'tap_events')
 
     @property
-    def record_tty(self):
-        """ Whether tty recordings should be saved. """
-        from x84.bbs import ini
-        return ini.CFG.getboolean('session', 'record_tty')
-
-    @property
     def show_traceback(self):
         """ Whether traceback errors should be displayed to user. """
         from x84.bbs import ini
@@ -306,6 +302,13 @@ class Session(object):
             'configuration section [system], value scriptpath: '
             'not a folder: {!r}'.format(val))
         return val
+
+    @property
+    def current_script(self):
+        self.value = 1
+        if len(self._script_stack):
+            return self._script_stack[-1]
+        return None
 
     @property
     def script_module(self):
@@ -330,27 +333,27 @@ class Session(object):
         if 0 != len(self._script_stack):
             # recover from exception
             fault = self._script_stack.pop()
-            stop, oper = True, u'STOP'
+            stop = False
             if len(self._script_stack):
-                stop, oper = False, u'RESUME'
-            msg = (u'%s %safter general exception in %s.' % (
-                oper, (
-                    (self._script_stack[-1][0] + u' ')
-                    if len(self._script_stack) else u' '),
-                fault[0],))
-            self.log.warn(msg)
-            self.write(u'\r\n\r\n')
-            if stop:
-                self.write(self.terminal.red_reverse(u'stop'))
+                # scripts remaining on the script_stack, resume the script that
+                # called us. Make sure your calling script queries for input or
+                # some other decision before chaining a gosub(), or you could
+                # end up in an infinite loop of gosub() followed by a crash (!)
+                resume = self.current_script
+                prefix = u'resume {resume.name}'.format(resume=resume)
             else:
-                self.write(self.terminal.bold_green(u'continue'))
-                self.write(u' ' + self.terminal.bold_cyan(
-                    self._script_stack[-1][0]))
-            self.write(u' after general exception in %s\r\n' % (
-                self.terminal.bold_cyan(fault[0]),))
-            # give time for exception to write down queue before
-            # continuing or exiting, esp. exiting, otherwise
-            # STOP message is not often fully received
+                stop = True
+                prefix = u'stop'
+
+            # display error to local log handler and to the user,
+            msg = (u'{prefix} after general exception in {fault.name}'
+                   .format(prefix=prefix, fault=fault))
+            self.log.error(msg)
+            self.write(u'\r\n\r\n{msg}\r\n'.format(msg=msg))
+
+            # give time for exception to write down the IPC queue before
+            # continuing or exiting, esp. exiting, otherwise STOP message
+            # is not often fully received to the transport.
             time.sleep(2)
 
     def run(self):
@@ -361,14 +364,15 @@ class Session(object):
         """
         from x84.bbs.exception import Goto, Disconnected
         while len(self._script_stack):
-            self.log.debug('script_stack: %r', self._script_stack)
+            self.log.debug('script_stack is {self._script_stack!r}'
+                           .format(self=self))
             try:
-                self.runscript(*self._script_stack.pop())
+                self.runscript(self._script_stack.pop())
                 continue
 
-            except Goto, err:
-                self.log.debug('Goto: %s', err)
-                self._script_stack = [err[0] + tuple(err[1:])]
+            except Goto as goto_script:
+                self.log.debug('goto {0}'.format(goto_script.value))
+                self._script_stack = [goto_script.value]
                 continue
 
             except Disconnected, err:
@@ -404,8 +408,6 @@ class Session(object):
         """
         Write unicode data to telnet client. Take special care to encode
         as 'iso8859-1' actually intended for 'cp437'-encoded terminals.
-
-        Has side effect of updating ttyrec file when recording.
         """
         from x84.bbs.cp437 import CP437
         if 0 == len(ucs):
@@ -437,11 +439,6 @@ class Session(object):
         if self.log.isEnabledFor(logging.DEBUG) and self.tap_output:
             self.log.debug('--> {!r}'.format(ucs))
 
-        if self.record_tty:
-            if not self.is_recording:
-                self.start_recording()
-            self._ttyrec_write(ucs)
-
     def flush_event(self, event):
         """
         Flush all return all data buffered for 'event'.
@@ -462,14 +459,11 @@ class Session(object):
         """
         return dict((
             ('TERM', self.env.get('TERM', u'unknown')),
-            ('LINES', self.terminal.height,),
-            ('COLUMNS', self.terminal.width,),
-            ('sid', self.sid,),
-            ('handle', self.user.handle,),
-            ('script', (self._script_stack[-1][0]
-                        if len(self._script_stack) else None)),
-            ('ttyrec',
-             self._fp_ttyrec.name if self._fp_ttyrec is not None else u'',),
+            ('LINES', self.terminal.height),
+            ('COLUMNS', self.terminal.width),
+            ('sid', self.sid),
+            ('handle', self.user.handle),
+            ('script', self.current_script.name),
             ('connect_time', self.connect_time),
             ('idle', self.idle),
             ('activity', self.activity),
@@ -499,11 +493,13 @@ class Session(object):
 
         # accept 'page' as instant chat when 'mesg' is True, or sender is -1
         # -- intent is that sysop can always 'chat' a user ..
-        if event == 'page' and self._script_stack[-1:][0][0] != 'chat':
+        if (event == 'page' and len(self._script_stack) and
+                self.current_script.name != 'chat'):
             channel, sender = data
             if self.user.get('mesg', True) or sender == -1:
                 self.log.info('page from {0}.'.format(sender))
-                if not self.runscript('chat', channel, sender):
+                chat_script = Script(name='chat', args=(channel, sender,))
+                if not self.runscript(chat_script):
                     self.log.info('rejected page from {0}.'.format(sender))
                 # buffer refresh event for any asyncronous event UI's
                 self.buffer_event('refresh', 'page-return')
@@ -638,126 +634,44 @@ class Session(object):
         """
         return self._buffer[event].pop()
 
-    def runscript(self, script_name, *args):
+    def runscript(self, script):
         """
         Execute the main() callable of script identified by
-        *script_name*, with optional args.
+        *script*, an instance of the ``Script`` namedtuple.
         """
         from x84.bbs.exception import ScriptError
-        self._script_stack.append((script_name,) + args)
-        self.log.info("run script {0!r} args={1!r}.".format(script_name, args))
+        self._script_stack.append(script)
+        self.log.info("runscript name={0}".format(script.name))
 
         # pylint: disable=W0142
         #        Used * or ** magic
-        lookup = imp.find_module(script_name, [self.script_module.__path__])
-        script = imp.load_module(script_name, *lookup)
-        if not hasattr(script, 'main'):
-            raise ScriptError("script {!r}: main() not found."
-                              .format(script_name))
-        if not callable(script.main):
-            raise ScriptError("script {!r}: main not callable."
-                              .format(script_name))
-        value = script.main(*args)
+        lookup = imp.find_module(script.name, [self.script_module.__path__])
+        module = imp.load_module(script.name, *lookup)
+
+        # ensure main() function exists!
+        if not hasattr(module, 'main'):
+            raise ScriptError("script {0}, module {1}: main() not found."
+                              .format(script, module))
+        if not callable(module.main):
+            raise ScriptError("script {0}, module {1}: main not callable."
+                              .format(script, module))
+
+        # capture the return value of the script and return
+        # to the caller -- so value = gosub('my_game') can retrieve
+        # the return value of its main() function.
+        value = module.main(*script.args, **script.kwargs)
+
+        # remove the current script from the script stack, since it has
+        # finished executing.
         self._script_stack.pop()
+
         return value
 
     def close(self):
         """
         Close session.
         """
-        if self.is_recording:
-            self.stop_recording()
         if self._node is not None:
             self.send_event(
                 event='lock-node/%d' % (self._node),
                 data=('release', None))
-
-    def stop_recording(self):
-        """
-        Cease recording to ttyrec file (close).
-        """
-        assert self.is_recording
-        self._ttyrec_write(self.terminal.normal)
-        self._ttyrec_write(u'\r\n\r\n')
-        self._ttyrec_write(u'\r\n'.join(
-            [u'%s: %s' % (key, val)
-             for (key, val) in sorted(self.info().items())]),)
-        self._ttyrec_write(u'\r\n')
-        self._fp_ttyrec.close()
-        self._fp_ttyrec = None
-
-    def start_recording(self):
-        """
-        Begin recording to ttyrec file.
-        """
-        assert self._fp_ttyrec is None, ('already recording')
-        digit = 0
-        while True:
-            fname = '{ts_stamp}{digit}-{sid}.ttyrec'.format(
-                ts_stamp=time.strftime('%Y%m%d.%H%M'),
-                digit=digit,
-                sid=self.sid.split(':', 1)[0],)
-            if not os.path.exists(fname):
-                break
-            digit += 1
-        assert os.path.sep not in fname
-        filename = os.path.join(self.ttyrec_folder, fname)
-        if not os.path.exists(self.ttyrec_folder):
-            self.log.info('Creating folder for ttyrecordings, {0}.'
-                          .format(self.ttyrec_folder))
-            os.makedirs(self.ttyrec_folder)
-        self._fp_ttyrec = io.open(filename, 'wb+')
-        self._ttyrec_sec = -1
-        self._ttyrec_write_header()
-        self.log.debug('tty recording to {0}'.format(filename))
-
-    def _ttyrec_write_header(self):
-        """
-        Write ttyrec header that identifies termianl height & width, and escape
-        sequence to indicate UTF-8 mode.
-        """
-        (height, width) = self.terminal.height, self.terminal.width
-        self._ttyrec_write(unichr(27) + u'[8;%d;%dt' % (height, width,))
-        # ESC %G activates UTF-8 with an unspecified implementation level from
-        # ISO 2022 in a way that allows to go back to ISO 2022 again.
-        self._ttyrec_write(unichr(27) + u'%G')
-
-    def _ttyrec_write(self, ucs):
-        """
-        Update ttyrec stream with unicode bytes 'ucs'.
-        """
-        # write bytestring to ttyrec file packed as timed byte.
-        # If the current timed byte is within TTYREC_UCOMPRESS
-        # (default: 15,000 μsec), rewind stream and re-write the
-        # 'length' portion, and append data to end of stream.
-        # .. unfortuantely, this is not compatible with ttyplay -p,
-        # so for the time being, it is disabled ..
-        assert self._fp_ttyrec is not None, 'call start_recording() first'
-        timekey = self.duration
-
-        # Round down timekey to nearest whole number,
-        # use the remainder for microseconds. Upconvert,
-        # constructing a (seconds, microseconds) pair.
-        sec = math.floor(timekey)
-        usec = (timekey - sec) * 1e+6
-        sec, usec = int(sec), int(usec)
-
-        def write_chunk(tm_sec, tm_usec, textlen, u_text):
-            """
-            Write new timechunk record,
-              bytes (sec, usec, len(text), text.. )
-            """
-            # build & write,
-            bp1 = struct.pack('<I', tm_sec) + struct.pack('<I', tm_usec)
-            bp2 = struct.pack('<I', textlen)
-            self._fp_ttyrec.write(bp1 + bp2 + u_text)
-            # save (time,len) state for compression
-            self._ttyrec_sec = tm_sec
-            self._ttyrec_usec = tm_usec
-            self._ttyrec_len_text = textlen
-            self._fp_ttyrec.flush()
-        text = ucs.encode('utf8', 'replace')
-        len_text = len(text)
-        # TODO: padd every 1 or 10 seconds, so 'VCR' type apps
-        # can FF/RW easier
-        return write_chunk(sec, usec, len_text, text)

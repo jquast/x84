@@ -2,6 +2,8 @@
 NEWSAGE = 0
 NEWS = None
 
+# TODO: expert mode does not interpret colors
+
 
 def dummy_pager(news_txt):
     """
@@ -120,14 +122,13 @@ def main():
             pager = get_pager(NEWS, pos)
             echo(redraw(pager))
             dirty = False
-        inp = getch(1)
+        inp = getch()
         if inp is not None:
             if inp in (u'e', u'E',) and 'sysop' in session.user.groups:
-                session.user['news'] = u'\r\n'.join(NEWS)
-                if gosub('editor', 'news'):
-                    NEWS = session.user['news'].splitlines()
-                    codecs.open(newsfile, 'wb', 'utf8').write(
-                        u'\r\n'.join(NEWS))
+                new_news = gosub('editor', continue_draft=u'\r\n'.join(NEWS))
+                if new_news:
+                    codecs.open(newsfile, 'wb', 'utf8').write(new_news)
+                    NEWS = new_news
                 dirty = True
             else:
                 echo(pager.process_keystroke(inp))

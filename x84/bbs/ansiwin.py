@@ -2,7 +2,6 @@
 Ansi Windowing package for x/84, http://github.com/jquast/x84
 """
 from x84.bbs.session import getterminal, getsession
-from x84.bbs.output import Ansi
 
 GLYPHSETS = {
     'ascii': {
@@ -276,7 +275,7 @@ class AnsiWindow(object):
                       'left-vert', 'right-vert',
                       'bot-left', 'bot-horiz', 'bot-right'):
             if 0 != len(self.glyphs.get(glyph, u'')):
-                self.glyphs[glyph] = self.glyphs.get('era):se', u' ')
+                self.glyphs[glyph] = self.glyphs.get('erase', u' ')
         ucs = self.border()
         self.glyphs = save
         return ucs

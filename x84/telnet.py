@@ -1,6 +1,6 @@
 """
 Handle Asynchronous Telnet Connections.
-Single-process, no threads, select-based.
+Single-process, threads for on-connect negotiation, select-based.
 
 Limitations:
  - No linemode support, character-at-a-time only.
@@ -870,14 +870,6 @@ class ConnectTelnet(BaseConnect):
     TIME_POLL = 0.10
     TTYPE_UNDETECTED = 'unknown'
 
-    def __init__(self, client):
-        """
-        client is a telnet.TelnetClient instance.
-        """
-        self.client = client
-        threading.Thread.__init__(self)
-        self.log = logging.getLogger(__name__)
-
     def banner(self):
         """
         This method is called after the connection is initiated.
@@ -940,6 +932,7 @@ class ConnectTelnet(BaseConnect):
         except (Disconnected, socket.error) as err:
             self.log.debug('Connection closed: %s', err)
             self.client.deactivate()
+            self.stopped = True
 
     def set_encoding(self):
         # set encoding to utf8 for clients negotiating BINARY mode and

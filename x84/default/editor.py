@@ -6,6 +6,10 @@ editor script for X/84, https://github.com/jquast/x84
 # There isn't any actual multi-line editor, just this script
 # that drives a LineEditor and a Lightbar.
 
+# TODO: use a timer to save the draft -- every 60 seconds or
+# so, instead of on every line change.  This should
+# significantly improve performance, especially on Raspberry Pi.
+
 WHITESPACE = u' '
 SOFTWRAP = u'\n'
 HARDWRAP = u'\r\n'
@@ -26,13 +30,20 @@ def save_draft(key, ucs):
         del UNDO[0]
 
 
-def save(key, ucs):
+def get_contents(lightbar):
+    """
+    Return well-formatted document given the lightbar
+    """
+    return HARDWRAP.join([softwrap_join(_ucs)
+                          for _ucs in get_lbcontent(lightbar).split(HARDWRAP)])
+
+
+def save(key, content):
     """
     Persist message to user attrs database
     """
     from x84.bbs import getsession
-    getsession().user[key] = HARDWRAP.join(
-        [softwrap_join(_ucs) for _ucs in ucs.split(HARDWRAP)])
+    getsession().user[key] = content
 
 
 def get_help():
@@ -106,9 +117,10 @@ def set_lbcontent(lightbar, ucs):
     Sets content of Lightbar instance, ``lightbar`` for given
     Unicode string, ``ucs``.
     """
-    from x84.bbs import Ansi
     # a custom 'soft newline' versus 'hard newline' is implemented,
     # '\n' == 'soft', '\r\n' == 'hard'
+    from x84.bbs import getterminal
+    term = getterminal()
     content = dict()
     lno = 0
     lines = ucs.split(HARDWRAP)
@@ -116,11 +128,10 @@ def set_lbcontent(lightbar, ucs):
         if idx == len(lines) - 1 and 0 == len(ucs_line):
             continue
         ucs_joined = WHITESPACE.join(ucs_line.split(SOFTWRAP))
-        ucs_wrapped = Ansi(ucs_joined).wrap(
-            lightbar.visible_width).splitlines()
+        ucs_wrapped = term.wrap(text=ucs_joined, width=lightbar.visible_width)
         for inner_lno, inner_line in enumerate(ucs_wrapped):
-            content[lno] = u''.join((inner_line,
-                SOFTWRAP if inner_lno != len(ucs_wrapped) - 1 else u''))
+            softwrap = SOFTWRAP if inner_lno != len(ucs_wrapped) - 1 else u''
+            content[lno] = u''.join((inner_line, softwrap))
             lno += 1
         if 0 == len(ucs_wrapped):
             content[lno] = HARDWRAP
@@ -142,10 +153,10 @@ def yes_no(lightbar, msg, prompt_msg='are you sure? ', attr=None):
     }
     echo(u''.join((
         lightbar.border(),
-        lightbar.pos(lightbar.height, lightbar.xpadding),
+        lightbar.pos(lightbar.yloc + lightbar.height - 1, lightbar.xpadding),
         msg, u' ', prompt_msg,)))
     sel = Selector(yloc=lightbar.yloc + lightbar.height - 1,
-                   xloc=term.width - 21, width=18,
+                   xloc=term.width - 25, width=18,
                    left='Yes', right=' No ')
     sel.colors['selected'] = term.reverse_red if attr is None else attr
     sel.keyset['left'].extend(keyset['yes'])
@@ -205,13 +216,22 @@ def get_lneditor(lightbar):
     return lneditor
 
 
-def main(save_key=u'draft'):
-    """ Main procedure. """
+def main(save_key=None, continue_draft=False):
+    """ Main Editor procedure.
+
+    When argument ``save_key`` is non-None, the result is saved
+    to the user attribute of the same name.  When unset, the
+    contents are returned to the caller.
+
+    When argument ``continue_draft`` is non-None, the editor
+    continues a previously saved draft, whose contents is its
+    value.
+    """
     # pylint: disable=R0914,R0912,R0915
     #         Too many local variables
     #         Too many branches
     #         Too many statements
-    from x84.bbs import getsession, getterminal, echo, getch, Ansi, Pager
+    from x84.bbs import getsession, getterminal, echo, getch, Pager
     session, term = getsession(), getterminal()
 
     movement = (term.KEY_UP, term.KEY_DOWN, term.KEY_NPAGE,
@@ -268,13 +288,16 @@ def main(save_key=u'draft'):
                 u' ',
                 term.yellow_underline(u'?'), u':', term.bold(u'help'),
                 term.yellow(u' )-'),))
-            keyset_cmd = lightbar.pos(lightbar.height - 1,
-                    max(0, lightbar.width - (len(Ansi(keyset_cmd)) + 3))
-                    ) + keyset_cmd
+            keyset_xpos = max(0, lightbar.width -
+                              (term.length(keyset_cmd) + 3))
+            keyset_cmd = lightbar.pos(lightbar.yloc + lightbar.height - 1,
+                                      keyset_xpos
+                                      ) + keyset_cmd
         return u''.join((
             lightbar.border(),
             keyset_cmd,
-            lightbar.pos(lightbar.height, lightbar.xpadding),
+            lightbar.pos(lightbar.yloc + lightbar.height - 1,
+                         lightbar.xpadding),
             u''.join((
                 term.red(u'-[ '),
                 u'EditiNG liNE ',
@@ -285,20 +308,20 @@ def main(save_key=u'draft'):
                     term.yellow('%d/%d ' % (
                         lightbar.index + 1,
                         len(lightbar.content),)),
-                    '%d%% ' % (
+                    '%3d%% ' % (
                         int((float(lightbar.index + 1)
-                            / max(1, len(lightbar.content))) * 100)),
+                             / max(1, len(lightbar.content))) * 100)),
                     term.yellow(u' )-'),)),
             lightbar.title(u''.join((
-            term.red('-] '),
-            term.bold(u'Escape'),
-            u':', term.bold_red(u'command mode'),
-            term.red(' [-'),)
+                term.red('-] '),
+                term.bold(u'Escape'),
+                u':', term.bold_red(u'command mode'),
+                term.red(' [-'),)
             ) if edit else u''.join((
-                                    term.yellow('-( '),
-                                    term.bold(u'Enter'),
-                                    u':', term.bold_yellow(u'edit mode'),
-                                    term.yellow(' )-'),))),))
+                term.yellow('-( '),
+                term.bold(u'Enter'),
+                u':', term.bold_yellow(u'edit mode'),
+                term.yellow(' )-'),))),))
 
     def redraw_lneditor(lightbar, lneditor):
         """
@@ -355,7 +378,10 @@ def main(save_key=u'draft'):
         echo(redraw(lbr, lne))
         return lbr, lne
 
-    ucs = session.user.get(save_key, u'')
+    if continue_draft:
+        ucs = continue_draft
+    else:
+        ucs = u''
     lightbar, lneditor = get_ui(ucs, None)
     echo(banner())
     dirty = True
@@ -511,7 +537,12 @@ def main(save_key=u'draft'):
                 if yes_no(lightbar, term.yellow(u'- ')
                           + term.bold_green(u'SAVE')
                           + term.yellow(u' -'), term.reverse_green):
-                    save(save_key, get_lbcontent(lightbar))
+                    # save contents to user attribtue
+                    content = get_contents(lightbar)
+                    if not save_key:
+                        # return entire message body as return value
+                        return content
+                    save(save_key, content)
                     return True
                 dirty = True
             elif inp in (u'?',):
@@ -546,13 +577,12 @@ def main(save_key=u'draft'):
                 dirty = True
             ucs = lightbar.process_keystroke(inp)
             if lightbar.moved:
+                # XXX optimize redraws
                 echo(term.normal + lneditor.erase_border())
                 echo(ucs)
                 lneditor = get_lneditor(lightbar)
                 save_draft(save_key, get_lbcontent(lightbar))
-                echo(lneditor.refresh())
-            else:
-                dirty = True
+                echo(lneditor.border() + lneditor.refresh())
 
         # edit mode -- append character / backspace
         elif edit and inp is not None:

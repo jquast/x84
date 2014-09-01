@@ -72,8 +72,6 @@ def refresh():
                 ))
                 entries.insert(0, (key, 'PlAY {}'.format(door)))
 
-    if 'sysop' in session.user.groups:
-        entries += (('v', 'idEO CASSEttE'),)
     buf_str = u''
     for key, name in entries:
         out_str = u''.join((
@@ -150,9 +148,6 @@ def main():
         elif inp == '\x1f' and 'sysop' in session.user.groups:
             # ctrl+_, run a debug script
             gosub('debug')
-        elif inp == u'v' and 'sysop' in session.user.groups:
-            # video cassette player
-            gosub('ttyplay')
         else:
             handled = False
             try:

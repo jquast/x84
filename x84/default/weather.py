@@ -6,8 +6,12 @@ import itertools
 import textwrap
 import requests
 import warnings
+import logging
 import time
 import os
+
+
+log = logging.getLogger(__name__)
 
 weather_icons = os.path.join(os.path.abspath(
     os.path.dirname(__file__)), 'art', 'weather')
@@ -172,7 +176,12 @@ def parse_todays_weather(root):
     """
     weather = dict()
     # parse all current conditions from XML, value is cdata.
-    for elem in root.find('CurrentConditions'):
+    current_conditions = root.find('CurrentConditions')
+    if current_conditions is None:
+        log.error('Current conditions is None: root={!r}'
+                  .format(ET.tostring(root)))
+        return weather
+    for elem in current_conditions:
         weather[elem.tag] = elem.text.strip() if elem.text is not None else u''
         # store attribute values
         for attr, val in elem.attrib.items():
@@ -186,13 +195,19 @@ def parse_forecast(root):
     from weather xml root node.
     """
     forecast = dict()
-    for elem in root.find('Forecast'):
+    xml_forecast = root.find('Forecast')
+    if xml_forecast is None:
+        log.error('Forecast is None: root={!r}'
+                  .format(ET.tostring(root)))
+        return forecast
+
+    for elem in xml_forecast:
         if elem.tag == 'day':
             key = int(elem.attrib.get('number'))
             forecast[key] = dict()
             for subelem in elem:
                 forecast[key][subelem.tag] = subelem.text.strip()
-    return [value for key, value in sorted(forecast.items())]
+    return [value for _key, value in sorted(forecast.items())]
 
 
 def get_centigrade():
@@ -438,7 +453,7 @@ def get_icon(weather):
     from x84.bbs import from_cp437
 
     # attribute 'WeatherIcon' is mapped to one of the {}.ans files
-    icon = int(weather['WeatherIcon'])
+    icon = int(weather.get('WeatherIcon', '1'))
     artfile = os.path.join(weather_icons, '{}.ans'.format(icon))
     if not os.path.exists(artfile):
         warnings.warn('{} not found'.format(artfile))
@@ -510,29 +525,33 @@ def display_weather(todays, weather, centigrade):
     echo(u'{at} {city}{state} {dotdot}'.format(
         at=at, city=city, state=state, dotdot=dotdot))
     bottom = 2
-    for column in range(0, (term.width - panel_width), panel_width):
-        try:
-            day = weather.pop(0)
-        except IndexError:
-            break
-        bottom = max(display_panel(day, column, centigrade), bottom)
+    if weather:
+        for column in range(0, (term.width - panel_width), panel_width):
+            try:
+                day = weather.pop(0)
+            except IndexError:
+                break
+            bottom = max(display_panel(day, column, centigrade), bottom)
 
-    timenow = time.strftime('%I:%M%p', time.strptime(todays['Time'], '%H:%M'))
+    timenow = time.strftime('%I:%M%p',
+                            time.strptime(todays.get('Time', '00:00'),
+                                          '%H:%M'))
     temp, deg_conv = temp_conv(todays.get('Temperature', ''), centigrade)
     real_temp, deg_conv = temp_conv(todays.get('RealFeel', ''), centigrade)
     speed, spd_conv = speed_conv(todays.get('WindSpeed', ''), centigrade)
     degree = from_cp437(''.join([chr(248)]))
 
     current_0 = u'Current conditions at {timenow}'.format(timenow=timenow)
-    current_1 = u'{w[WeatherText]}'.format(w=todays)
+    current_1 = u'{0}'.format(todays.get('WeatherText', ''))
     current_2 = u'Temperature is {temp}{degree}{deg_conv}'.format(
         temp=temp, degree=degree, deg_conv=deg_conv)
     current_3 = u'' if real_temp == temp else (
         u'(feels like {real_temp}{degree}{deg_conv})'.format(
             real_temp=real_temp, degree=degree, deg_conv=deg_conv))
-    current_4 = u'Winds {speed}{spd_conv} {w[WindDirection]}'.format(
-        speed=speed, w=todays, spd_conv=spd_conv)
-    current_5 = u'Humidity of {w[Humidity]}'.format(w=todays)
+    current_4 = u'Winds {speed}{spd_conv} {wind}'.format(
+        speed=speed, spd_conv=spd_conv,
+        wind=todays.get('WindDirection', ''))
+    current_5 = u'Humidity of {0}'.format(todays.get('Humidity', ''))
 
     wrapped = textwrap.wrap(
         u'{0}: {1}. {2} {3}, {4}, {5}.'.format(

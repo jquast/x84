@@ -205,12 +205,18 @@ def kill_session(client, reason='killed'):
         unregister_tty(tty)
 
 
-def start_process(sid, env, CFG, child_pipes, kind, addrport):
+def start_process(sid, env, CFG, child_pipes, kind, addrport,
+                  matrix_args=None, matrix_kwargs=None):
     """
     A multiprocessing.Process target. Arguments:
         sid: string describing session source (fe. IP address & Port)
         env: dictionary of client environment variables (requires 'TERM')
         CFG: ConfigParser instance of bbs configuration
+        child_pipes: tuple of (writer, reader) for the engine IPC.
+        kind: what kind of connection? 'telnet', 'ssh', etc.,
+        addrport: tuple of (client-ip, client-port)
+        matrix_args: optional positional arguments to pass to matrix script.
+        matrix_kwargs: optional keyward arguments to pass to matrix script.
     """
     import x84.bbs.ini
     from x84.bbs.ipc import make_root_logger
@@ -241,6 +247,8 @@ def start_process(sid, env, CFG, child_pipes, kind, addrport):
             'child_pipes': child_pipes,
             'kind': kind,
             'addrport': addrport,
+            'matrix_args': matrix_args or (),
+            'matrix_kwargs': matrix_kwargs or {},
         }
         Session(**kwargs).run()
     finally:
@@ -254,8 +262,10 @@ def start_process(sid, env, CFG, child_pipes, kind, addrport):
                 raise
 
 
-def spawn_client_session(client):
+def spawn_client_session(client, matrix_kwargs=None):
     """ Spawn sub-process for connecting client.
+
+    Optional
     """
     from multiprocessing import Process, Pipe
     import x84.bbs.ini
@@ -273,6 +283,7 @@ def spawn_client_session(client):
         'child_pipes': (child_write, child_read),
         'kind': client.kind,
         'addrport': client.addrport,
+        'matrix_kwargs': matrix_kwargs,
     }).start()
 
     # and register its tty and master-side pipes for polling by x84.engine

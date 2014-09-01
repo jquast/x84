@@ -510,7 +510,7 @@ def more(cont=False):
     Returns True if user 'q'uit; otherwise False
     when prompting is complete (moar/next/whatever)
     """
-    from x84.bbs import echo, getch, Ansi, getterminal, LineEditor, DBProxy
+    from x84.bbs import echo, getch, getterminal, LineEditor, DBProxy
     prompt_key = u'\r\n\r\nENtER BBS iD: '
     msg_badkey = u'\r\n\r\nbbS id iNVAliD!'
     term = getterminal()
@@ -527,7 +527,9 @@ def more(cont=False):
         prompt += u', ' + fancy_blue(' ', 'more')
     prompt += u': '
     while True:
-        echo(u'\r\n' + Ansi(prompt).wrap(term.width - (term.width / 3)))
+        echo(u'\r\n')
+        echo(u'\r\n'.join(term.wrap(text=prompt,
+                                    width=(term.width - (term.width / 3)))))
         inp = getch()
         if inp in (u'q', 'Q'):
             return True
@@ -553,7 +555,7 @@ def dummy_pager():
     """
     # pylint: disable=R0912
     #        Too many branches
-    from x84.bbs import getterminal, echo, getch, Ansi
+    from x84.bbs import getterminal, echo, getch
     term = getterminal()
     msg_header = u'// bbS liSt'
     hindent = 2
@@ -577,9 +579,9 @@ def dummy_pager():
                 echo(term.blue_reverse(line.rstrip()) + '\r\n')
                 nlines += 1
             else:
-                wrapd = Ansi(line).wrap(term.width - hindent)
+                wrapped = term.wrap(text=line, width=(term.width - hindent))
                 echo(term.bold_blue(key) + term.bold_black('. '))
-                for num, line in enumerate(wrapd.split('\r\n')):
+                for num, line in enumerate(wrapped):
                     if num != 0:
                         echo(u' ' * hindent)
                     echo(line + '\r\n')

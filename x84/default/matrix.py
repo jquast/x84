@@ -45,6 +45,9 @@ def get_username(handle=u''):
     enable_anonymous = ini.CFG.getboolean('matrix', 'enable_anonymous')
     newcmds = ini.CFG.get('matrix', 'newcmds').split()
     byecmds = ini.CFG.get('matrix', 'byecmds').split()
+    anoncmds = ['anonymous', ]
+    if ini.CFG.has_option('matrix', 'anoncmds'):
+        anoncmds = ini.CFG.get('matrix', 'anoncmds').split()
     denied_msg = u'\r\n\r\nfiRSt, YOU MUSt AbANdON YOUR libERtIES.'
     badanon_msg = u"\r\n  " + term.bright_red + u"'%s' login denied."
     max_user = ini.CFG.getint('nua', 'max_user')
@@ -64,7 +67,7 @@ def get_username(handle=u''):
         return u''
     elif handle.lower() in byecmds:
         goto('logoff')
-    elif handle.lower() == u'anonymous':
+    elif handle.lower() in anoncmds:
         if enable_anonymous:
             goto(topscript, 'anonymous')
         denied(badanon_msg % (handle,))
@@ -150,23 +153,6 @@ def main():
     from x84.engine import __url__ as url
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
-    whoami, port = session.sid.split(':')
-
-    if int(port) == 0:
-            from x84.bbs.userbase import User
-
-            if whoami == 'msgserve':
-                from x84 import msgserve
-                session.user = User(u'x84net server')
-                session.activity = u'Processing request'
-                msgserve.main()
-                return
-            elif whoami == 'msgpoll':
-                from x84 import msgpoll
-                session.user = User(u'x84net client')
-                session.activity = u'Polling for messages'
-                msgpoll.main()
-                return
 
     session.activity = u'Logging in'
     handle = (session.env.get('USER', '').decode('iso8859-1', 'replace'))

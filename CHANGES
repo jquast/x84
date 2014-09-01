@@ -1,4 +1,13 @@
 1.2.0
+  - *new* option, 'anoncmds' in section 'matrix', where previously only
+    the 'anonymous' user was a legitimate synonym, you may now provide
+    many different ones -- humorously, you could provide 'root'.
+  - *new* option, 'script_ssh' in section 'matrix', points to a new
+    login matrix script that takes new keyword arguments, 'anonymous',
+    or 'new' as booleans True or False, or user keyword argument as
+    string representing the (already authenticated) user handle.
+  - keyword arguments for gosub() and goto() are now supported.
+  - ssh key authentication support
   - *removed*: x84.bbs.log.ColoredConsoleHandler.
     If you see exception: ``ImportError: No module named log``
     simply change line, ``class = x84.bbs.log.ColoredConsoleHandler``
