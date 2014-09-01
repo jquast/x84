@@ -20,34 +20,46 @@ class LineEditor(object):
     _hidden = False
     _width = 0
 
-    def __init__(self, width=None, content=u''):
+    def __init__(self, width=None, content=u'', hidden=False,
+                 colors=None, glyphs=None, keyset=None):
         """
         Arguments:
-            width: the maximum input length
+            width: the maximum input length.
+            content: given default content.
+            colors: optional dictionary containing key 'highlight'.
+            keyset: optional dictionary of line editing values.
         """
-        self._width = width
         self.content = content
+        self._width = width
+
         self._quit = False
         self._carriage_returned = False
-        self.colors = dict()
-        self.keyset = PC_KEYSET
-        self.init_keystrokes()
-        self.init_theme()
 
-    def init_theme(self):
+        self.init_keystrokes(keyset=keyset or PC_KEYSET.copy())
+        self.init_theme(colors=colors, glyphs=glyphs)
+
+    def init_theme(self, colors=None, glyphs=None, hidden=False):
         """
         Initialize colors['highlight'].
         """
         from x84.bbs.session import getterminal
+        # set defaults,
         term = getterminal()
-        self.colors['highlight'] = term.reverse
+        self.colors = {'highlight': term.reverse}
 
-    def init_keystrokes(self):
+        # allow user override
+        if colors:
+            self.colors.update(colors)
+        if hidden:
+            self.hidden = hidden
+
+    def init_keystrokes(self, keyset):
         """
         This initializer sets keyboard keys for backspace/exit.
         """
         from x84.bbs.session import getterminal
         term = getterminal()
+        self.keyset = keyset
         self.keyset['refresh'].append(term.KEY_REFRESH)
         self.keyset['backspace'].append(term.KEY_BACKSPACE)
         self.keyset['backspace'].append(term.KEY_DELETE)
@@ -187,7 +199,7 @@ class ScrollingEditor(AnsiWindow):
     #        Too many instance attributes (14/7)
     #        Too many public methods (33/20)
 
-    def __init__(self, width, yloc, xloc):
+    def __init__(self, *args, **kwargs):
         """
         Construct a Line editor at (y,x) location of width (n).
         """
@@ -202,15 +214,36 @@ class ScrollingEditor(AnsiWindow):
         self._quit = False
         self._bell = False
         self.content = u''
-        self.keyset = PC_KEYSET
-        height = 3  # TODO: 2 of 3 for top and bottom border
-        # (optionaly displayed .. is this best x/y coord?
-        #   once working, lets set default as borderless!)
-        AnsiWindow.__init__(self, height, width, yloc, xloc)
-        self.init_keystrokes()
-        self.init_theme()
+        kwargs['height'] = 3
 
-    __init__.__doc__ = AnsiWindow.__init__.__doc__
+        self.init_keystrokes(keyset=kwargs.pop('keyset', PC_KEYSET.copy()))
+
+        #height = 3  # TODO: 2 of 3 for top and bottom border
+        # (optionally displayed .. is this best x/y coord?
+        #   once working, lets set default as borderless!)
+        AnsiWindow.__init__(self, *args, **kwargs)
+
+    def init_theme(self, colors=None, glyphs=None):
+        AnsiWindow.init_theme(self, colors, glyphs)
+        if 'highlight' not in self.colors:
+            from x84.bbs.session import getterminal
+            term = getterminal()
+            self.colors['highlight'] = term.yellow_reverse
+        if 'strip' not in self.glyphs:
+            self.glyphs['strip'] = u'$ '
+
+    def init_keystrokes(self, keyset):
+        """
+        This initializer sets keyboard keys for various editing keystrokes.
+        """
+        from x84.bbs.session import getterminal
+        term = getterminal()
+        self.keyset = keyset
+        self.keyset['refresh'].append(term.KEY_REFRESH)
+        self.keyset['backspace'].append(term.KEY_BACKSPACE)
+        self.keyset['backspace'].append(term.KEY_DELETE)
+        self.keyset['enter'].append(term.KEY_ENTER)
+        self.keyset['exit'].append(term.KEY_ESCAPE)
 
     @property
     def position(self):
@@ -344,30 +377,6 @@ class ScrollingEditor(AnsiWindow):
         # pylint: disable=C0111
         #         Missing docstring
         self._max_length = value
-
-    def init_theme(self):
-        """
-        Initialize colors['highlight'] as REVERSE and glyphs['strip'] as '$ '.
-        """
-        from x84.bbs.session import getterminal
-        term = getterminal()
-        AnsiWindow.init_theme(self)
-        self.colors['highlight'] = term.yellow_reverse
-        self.glyphs['strip'] = '$ '
-
-    def init_keystrokes(self):
-        """
-        This initializer sets glyphs and colors appropriate for a "theme",
-        override or inherit this method to create a common color and graphic
-        set.
-        """
-        from x84.bbs.session import getterminal
-        term = getterminal()
-        self.keyset['refresh'].append(term.KEY_REFRESH)
-        self.keyset['backspace'].append(term.KEY_BACKSPACE)
-        self.keyset['backspace'].append(term.KEY_DELETE)
-        self.keyset['enter'].append(term.KEY_ENTER)
-        self.keyset['exit'].append(term.KEY_ESCAPE)
 
     def process_keystroke(self, keystroke):
         """

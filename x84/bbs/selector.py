@@ -22,7 +22,7 @@ class Selector(AnsiWindow):
     #        Too many arguments (6/5)
     #        Too many public methods (25/20)
 
-    def __init__(self, yloc, xloc, width, left, right):
+    def __init__(self, yloc, xloc, width, left, right, **kwargs):
         """
         Set screen position of Selector UI and display width of both. The
         highlighted selection is displayed using the self.highlight attribute,
@@ -33,27 +33,27 @@ class Selector(AnsiWindow):
         self._moved = False
         self._quit = False
         self._selected = False
-        AnsiWindow.__init__(self, 1, width, yloc, xloc)  # height is 1
-        self.init_theme()
-        self.keyset = VI_KEYSET
-        self.init_keystrokes()
 
-    def init_theme(self):
-        """
-        Initialize colors['selected'] and colors['unselected'].
-        """
+        self.init_keystrokes(keyset=kwargs.pop('keyset', VI_KEYSET.copy()))
+
+        AnsiWindow.__init__(self, height=1, width=width,
+                            yloc=yloc, xloc=xloc, **kwargs)
+
+    def init_theme(self, colors=None, glyphs=None):
         from x84.bbs.session import getterminal
         term = getterminal()
-        AnsiWindow.init_theme(self)
-        self.colors['selected'] = term.reverse
-        self.colors['unselected'] = term.normal
+        colors = colors or {
+            'selected': term.reverse_yellow,
+            'unselected': term.bold_black,
+        }
+        AnsiWindow.init_theme(self, colors=colors, glyphs=glyphs)
 
-    def init_keystrokes(self):
+    def init_keystrokes(self, keyset):
         """
-        Merge curses-detected application keys into a VI_KEYSET-formatted
-        keyset, for keys 'refresh', 'left', 'right', 'enter', and 'exit'.
+        This initializer sets keyboard keys for various editing keystrokes.
         """
         from x84.bbs.session import getterminal
+        self.keyset = keyset
         term = getterminal()
         self.keyset['refresh'].append(term.KEY_REFRESH)
         self.keyset['left'].append(term.KEY_LEFT)
