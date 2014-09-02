@@ -119,11 +119,11 @@ def display_banner_animation(banner_text):
             if ch_guess == actual[idx]:
                 if attr != highlight:
                     attr = highlight
-                    rstr += attr
+                    rstr += term.normal + attr
             else:
                 if attr != lowlight:
                     attr = lowlight
-                    rstr += attr
+                    rstr += term.normal + attr
             rstr += ch_guess
         return rstr
 
