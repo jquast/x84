@@ -54,7 +54,28 @@ def lb_init(position=None,menu_index=None):
         ('s', 'sYS. iNfO'),
         ('u', 'uSER LiST'),
         ('e', 'edit PROfilE'),]
-    
+
+    key_map = {
+        '$': 'bulletins',
+        'n': 'news',
+        'p', 'writemsg',
+        'r': 'readmsgs',
+        'c': 'chat',
+        'i': 'ircchat',
+        'l': 'lc',
+        'o': 'ol',
+        'b': 'bbslist',
+        'f': 'weather',
+        't': 'tetris',
+        'w': 'online',
+        '!': 'charset',
+        's': 'si',
+        'u': 'userlist',
+        'x': 'main',
+        'v': 'ttyplay',
+        '#': 'lord',
+        'e': 'profile'}
+
     # add LORD to menu only if enabled,
     if ini.CFG.getboolean('dosemu', 'enabled') and (
             ini.CFG.get('dosemu', 'lord_path') != 'no'):
@@ -175,53 +196,18 @@ def main():
         if inp is not None:
             echo(lb.process_keystroke(inp))
 
-            if lb.selected and lb.selection[0] is not None: 
-                if lb.selection[0] == u'x':
-                    goto('main') 
-                elif lb.selection[0] == u'$':
-                    gosub('bulletins')
-                elif lb.selection[0] == u'b':
-                    gosub('bbslist')
-                elif lb.selection[0] == u'l':
-                    echo(term.clear)
-                    gosub('lc')
-                elif lb.selection[0] == u'o':
-                    gosub('ol')
-                elif lb.selection[0] == u's':
-                    gosub('si')
-                elif lb.selection[0] == u'w':
-                    echo(term.clear)
-                    gosub('online')
-                elif lb.selection[0] == u'n':
-                    gosub('news')
-                elif lb.selection[0] == u'f':
-                    gosub('weather')
-                elif lb.selection[0] == u'u':
-                    gosub('userlist')
-                elif lb.selection[0] == u'e':
-                    echo(term.clear)
-                    gosub('profile')
-                elif lb.selection[0] == u'#':
-                    gosub('lord')
-                elif lb.selection[0] == u't':
-                    echo(term.clear)
-                    gosub('tetris')
-                elif lb.selection[0] == u'c':
-                    gosub('chat')
-                elif lb.selection[0] == u'i':
-                    gosub('ircchat')
-                elif lb.selection[0] == u'p':
-                    gosub('writemsg')
-                elif lb.selection[0] == u'r':
-                    echo(term.clear)
-                    gosub('readmsgs')
-                elif lb.selection[0] == u'g':
-                    gosub('logoff')
-                elif lb.selection[0] == u'!':
-                    gosub('charset')
-                elif lb.selection[0] == u'v' and 'sysop' in session.user.groups:
+             script = key_map.get(lb.selection[0])
+
+             if script:
+
+                 if script == u'x':
+                    goto('main')
+                 elif script == u'v' and 'sysop' in session.user.groups:
                     gosub('ttyplay')
-            
+                 else
+                    echo(term.clear)
+                    gosub(lb.selection[1])
+
                 echo(term.clear)
                 show_banner()
 
