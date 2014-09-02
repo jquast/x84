@@ -187,7 +187,6 @@ def read_news_prompt(session, term):
                              enter=term.yellow(u'return')))
                 while True:
                     inp = LineEditor(1, colors=colors).read()
-                    print(('key', repr(inp)))
                     if inp is None or inp and inp.lower() in u'sqx':
                         # s/q/x/escape: quit
                         echo(u'\r\n')
