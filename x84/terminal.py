@@ -178,6 +178,7 @@ def get_terminals():
     """
     return TERMINALS.items()
 
+
 def find_tty(client):
     """
     Given a client, return a matching tty, or None if not registered.
