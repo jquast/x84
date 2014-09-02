@@ -75,4 +75,10 @@ class IPCStream(object):
         (context managers, such as "with term.location(0, 0):" have
         such side effects).
         """
-        self.writer.send(('output', (ucs, encoding)))
+        # wrap 'ucs' with call to 'unicode()', so that special unicode
+        # instances such as blessed.formatters.ParameterizingProxyString
+        # can be pickled -- as this one in particular contains a local
+        # function (lambda) as an attribute -- which would fail:
+        # PicklingError: Can't pickle <type 'function'>: attribute
+        #                lookup __builtin__.function failed
+        self.writer.send(('output', (unicode(ucs), encoding)))
