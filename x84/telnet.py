@@ -969,7 +969,7 @@ class ConnectTelnet(BaseConnect):
         """
         def detected():
             return (self.client.check_remote_option(NEW_ENVIRON) is not UNKNOWN
-                    and self.client.ENV_REPLIED)
+                    or self.client.ENV_REPLIED)
 
         while not detected() and self._timeleft(start_time):
             if not self.client.is_active():
