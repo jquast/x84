@@ -55,28 +55,6 @@ def lb_init(position=None,menu_index=None):
         ('u', 'uSER LiST'),
         ('e', 'edit PROfilE'),]
 
-    key_map = {
-        '$': 'bulletins',
-        'n': 'news',
-        'p', 'writemsg',
-        'r': 'readmsgs',
-        'c': 'chat',
-        'i': 'ircchat',
-        'l': 'lc',
-        'o': 'ol',
-        'b': 'bbslist',
-        'f': 'weather',
-        't': 'tetris',
-        'w': 'online',
-        '!': 'charset',
-        's': 'si',
-        'u': 'userlist',
-        'x': 'main',
-        'v': 'ttyplay',
-        '#': 'lord',
-        'e': 'profile'}
-
-    # add LORD to menu only if enabled,
     if ini.CFG.getboolean('dosemu', 'enabled') and (
             ini.CFG.get('dosemu', 'lord_path') != 'no'):
         entries.insert(0, ('#', 'PlAY lORd!'))
@@ -164,6 +142,28 @@ def main():
     import os
     import logging
 
+    key_map = {
+        '$': 'bulletins',
+        'n': 'news',
+        'p': 'writemsg',
+        'r': 'readmsgs',
+        'c': 'chat',
+        'i': 'ircchat',
+        'l': 'lc',
+        'o': 'ol',
+        'b': 'bbslist',
+        'f': 'weather',
+        't': 'tetris',
+        'w': 'online',
+        '!': 'charset',
+        's': 'si',
+        'u': 'userlist',
+        'e': 'profile',
+        'x': 'main',
+        'g': 'logoff',
+        '#': 'lord'}
+
+    # add LORD to menu only if enabled,
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
     session.activity = u'Lightbar Main menu'
@@ -196,20 +196,20 @@ def main():
         if inp is not None:
             echo(lb.process_keystroke(inp))
 
-             script = key_map.get(lb.selection[0])
+            if lb.selected and lb.selection[0] is not None:
+                 script = key_map.get(lb.selection[0])
 
-             if script:
+                 if script:
+                      if script == u'x':
+                         goto('main')
+                      elif script == u'v' and 'sysop' in session.user.groups:
+                         gosub('ttyplay')
+                      else:
+                         echo(term.clear)
+                         gosub(script)
 
-                 if script == u'x':
-                    goto('main')
-                 elif script == u'v' and 'sysop' in session.user.groups:
-                    gosub('ttyplay')
-                 else
-                    echo(term.clear)
-                    gosub(lb.selection[1])
-
-                echo(term.clear)
-                show_banner()
+                      echo(term.clear)
+                      show_banner()
 
             else:
                 handled = False
