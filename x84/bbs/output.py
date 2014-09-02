@@ -40,7 +40,7 @@ def syncterm_setfont(font_name, font_page=0):
                          "available fonts specified in module {1}, table "
                          "SYNCTERM_FONTMAP. Available values: {2!r}".format(
                              font_name, __name__, SYNCTERM_FONTMAP))
-    return '\x1b[{0};{1} D'.format(font_page, font_code)
+    return u'\x1b[{0};{1} D'.format(font_page, font_code)
 
 
 def echo(ucs):
