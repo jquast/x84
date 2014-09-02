@@ -202,6 +202,8 @@ def main():
 
                  if script == u'x':
                     goto('main')
+                 elif lb.selection[0] == u'v' and 'sysop' in session.user.groups:
+                    gosub('ttyplay')
                  else
                     echo(term.clear)
                     gosub(lb.selection[1])
