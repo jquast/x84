@@ -290,7 +290,7 @@ def do_reset(term, handle, email=u''):
 
         email = prompt_input(term=term,
                              key='E-mail',
-                             content=handle or u'',
+                             content=email or u'',
                              width=email_max_length)
         if not email:
             # canceled
