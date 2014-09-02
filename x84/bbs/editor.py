@@ -30,6 +30,7 @@ class LineEditor(object):
             keyset: optional dictionary of line editing values.
         """
         self.content = content
+        self.hidden = hidden
         self._width = width
 
         self._quit = False
@@ -175,8 +176,8 @@ class LineEditor(object):
         """
         from x84.bbs import getch
         from x84.bbs.output import echo
-        from x84.bbs.session import getsession, getterminal
-        session, term = getsession(), getterminal()
+        from x84.bbs.session import getterminal
+        term = getterminal()
         self._carriage_returned = False
         self._quit = False
         echo(self.refresh())
