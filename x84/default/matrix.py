@@ -265,3 +265,6 @@ def main():
     do_login(term)
 
     log.debug('Disconnecting.')
+    # it is necessary to provide sufficient time to send any pending
+    # output across the transport before disconnecting.
+    term.inkey(1.5)
