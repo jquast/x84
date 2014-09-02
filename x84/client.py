@@ -93,13 +93,11 @@ class BaseClient(object):
             try:
                 return self.sock.send(send_bytes)
             except socket.error as err:
-                if err[0] == errno.EDEADLK:
-                    warnings.warn('%s: %s (bandwidth exceed)' % (
-                        self.addrport,
-                        err[1],
-                    ), RuntimeWarning, 2)
+                if err.errno == errno.EDEADLK:
+                    self.log.debug('{self.addrport}: {err} (bandwidth exceed)'
+                                   .format(self=self, err=err))
                     return 0
-                raise Disconnected('send %d: %s' % (err[0], err[1],))
+                raise Disconnected('send: {0}'.format(err))
 
         sent = _send(ready_bytes)
         if sent < len(ready_bytes):
@@ -139,13 +137,9 @@ class BaseClient(object):
                 raise Disconnected('Closed by client (EOF)')
 
         except socket.error as err:
-            err = tuple(err)
-            if err[0] == errno.EWOULDBLOCK:
+            if err.errno == errno.EWOULDBLOCK:
                 return
-            else:
-                if len(err) == 1:
-                    err = (-1,) + err
-                raise Disconnected('socket errno %d: %s' % (err[0], err[1],))
+            raise Disconnected('socket_recv error: {0}'.format(err))
 
         self.bytes_received += recv
         self.last_input_time = time.time()

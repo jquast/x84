@@ -7,7 +7,9 @@ import time
 import os
 
 # local
-from x84.bbs import getterminal, getsession, echo, getch, gosub, Pager
+from x84.bbs import getterminal, getsession, gosub
+from x84.bbs import Pager, LineEditor, decode_pipe
+from x84.bbs import echo, showart
 
 #: filepath to folder containing this script
 here = os.path.dirname(__file__)
@@ -30,7 +32,6 @@ art_width = 75
 
 #: scroller percentage glyph
 scroller_glyph = u'\u25c4'
-scroller_backfill = (u'\u2502' * 10) + u'\u2321 \u2320'
 
 
 def get_pager(term, position=None):
@@ -44,7 +45,10 @@ def get_pager(term, position=None):
     width = min(art_width, term.width - 1)
     xloc = int((term.width / 2) - (width / 2))
     pager = Pager(height=height, width=width, yloc=pager_top, xloc=xloc,
-                  glyphs={'left-vert': u'', 'right-vert': u''},
+                  glyphs={'left-vert': u'', 'right-vert': u'',
+                          'top-horiz': u'-', 'bot-horiz': u'-',
+                          'bot-left': u'+', 'bot-right': u'+',
+                          'top-left': u'+', 'top-right': u'+'},
                   colors={'border': term.blue, },
                   content=news_contents,
                   position=position)
@@ -52,23 +56,25 @@ def get_pager(term, position=None):
     return pager
 
 
-def redraw(term, pager=None):
-    """ Returns string suitable for refreshing screen. """
-    from x84.bbs import getterminal, showart, echo
-
-    term = getterminal()
-
+def display_banner(term, pager=False):
     # clear screen
     echo(term.pos(term.height) + term.normal + ('\r\n' * (term.height + 1)))
 
-    # get and refresh pager
-    pager = get_pager(term, pager and pager.position)
-    echo(pager.border() + pager.refresh())
+    if pager is not False:
+        # get and refresh pager
+        pager = get_pager(term, pager and pager.position)
+        echo(pager.border() + pager.refresh())
 
     # show art
     echo(term.home)
     map(echo, showart(art_file, encoding=art_encoding,
                       auto_mode=False, center=True))
+    return pager
+
+
+def redraw(term, pager=None):
+    """ Returns string suitable for refreshing screen. """
+    pager = display_banner(term, pager=pager)
 
     # top-right: display 'quit' hotkey
     echo(u''.join((
@@ -77,7 +83,7 @@ def redraw(term, pager=None):
         .format(lp=term.blue(u'('),
                 q=u'q',
                 colon=term.bold_blue(u':'),
-                uit=term.blue(u'uit'),
+                uit=term.yellow(u'uit'),
                 rp=term.blue(u')')),
     )))
 
@@ -107,27 +113,14 @@ def redraw(term, pager=None):
 
 
 def fixate(term, pager):
-    """ Simple pct. scroller effect and fixate cursor to bottom-right. """
+    """ Simple Scroll-marker effect and fixate cursor to bottom-right. """
     marker_ypos = (pager.position / max(1, pager.bottom)) * (pager.height - 3)
-    marker_ypos = pager.height - int(round(marker_ypos)) - 2
+    marker_ypos = int(round(marker_ypos)) + 1
+    xpos = pager.width
 
-    xpos = pager.width - 1
-
-    echo(term.blue)
     for ypos in range(1, pager.height - 1):
-        offset = len(scroller_backfill) // 2
-        l_indicie = (ypos - pager.position) % len(scroller_backfill)
-        r_indicie = (ypos - pager.position - offset) % len(scroller_backfill)
-        echo(pager.pos(ypos, 0))
-        echo(scroller_backfill[l_indicie])
-        echo(pager.pos(ypos, pager.width - 1))
-        echo(scroller_backfill[r_indicie])
-        if ypos == marker_ypos:
-            echo(pager.pos(ypos, xpos - 1))
-            echo(term.bold(scroller_glyph))
-            echo(term.blue)
-    echo(term.normal)
-    echo(pager.pos(pager.height, pager.width))
+        glyph = scroller_glyph if ypos == marker_ypos else u' '
+        echo(pager.pos(ypos, xpos) + term.bold_blue(glyph))
 
 
 def check_news():
@@ -143,29 +136,14 @@ def has_seen(user):
     return news_age < user.get('news_lastread', 0)
 
 
-def main(quick=False):
-    """
-    Script entry point.
-
-    :param quick: When True, returns early if this news has already been read.
-    :type quick: bool
-    """
-    session, term = getsession(), getterminal()
-
-    if not os.path.exists(news_file):
-        echo(u'\r\n\rn')
-        echo(term.center(u'No news.').rstrip())
-        echo(u'\r\n\r\n')
-        return
-
+def read_news_hotkeys(session, term):
+    """ Read news contents using hotkeys and pager. """
     pager = None
     dirty = True
     with term.hidden_cursor():
         while pager is None or not pager.quit:
             session.activity = 'Reading news'
-            if check_news() or session.poll_event('refresh') or dirty:
-                if quick and has_seen(session.user):
-                    break
+            if session.poll_event('refresh') or dirty or check_news():
                 pager = redraw(term, pager=pager)
                 dirty = False
             inp = term.inkey(1)
@@ -178,4 +156,82 @@ def main(quick=False):
                 echo(pager.process_keystroke(inp))
                 if pager.moved:
                     fixate(term, pager)
+        echo(u'\r\n')
+
+
+def read_news_prompt(session, term):
+    """ Read news using command prompt (no hotkeys). """
+    session.activity = 'Reading news'
+    continuous = False
+    line_no = art_height
+
+    display_banner(term, pager=False)
+    echo(u'\r\n\r\n')
+
+    colors = {'highlight': term.yellow}
+
+    should_break = lambda line_no: line_no % (term.height - 3) == 0
+
+    for news_line in news_contents.splitlines():
+        lines = term.wrap(decode_pipe(news_line)) or [news_line]
+        for txt in lines:
+            echo(txt.rstrip() + u'\r\n')
+            line_no += 1
+            if not continuous and should_break(line_no):
+                echo(term.yellow(u'- ' * ((term.width // 2) - 1)))
+                echo(u'\r\n')
+                echo(u'{bl}{s}{br}top, {bl}{c}{br}ontinuous, or '
+                     u'{bl}{enter}{br} for next page {br} {bl}\b\b'
+                     .format(bl=term.green(u'['), br=term.green(u']'),
+                             s=term.yellow(u's'), c=term.yellow(u'c'),
+                             enter=term.yellow(u'return')))
+                while True:
+                    inp = LineEditor(1, colors=colors).read()
+                    if inp is None or inp and inp.lower() in u'sqx':
+                        # s/q/x/escape: quit
+                        echo(u'\r\n')
+                        return
+                    if len(inp) == 1:
+                        echo(u'\b')
+                    if inp.lower() == 'c':
+                        # c: enable continuous
+                        continuous = True
+                        break
+                    elif inp == u'':
+                        break
+                echo(term.move_x(0) + term.clear_eol)
+                echo(term.move_up() + term.clear_eol)
+
+    echo(u'\r\n\r\nPress {enter}.'.format(enter=term.yellow(u'return')))
+    inp = LineEditor(0, colors=colors).read()
+
+
+
+def main(quick=False):
+    """
+    Script entry point.
+
+    :param quick: When True, returns early if this news has already been read.
+    :type quick: bool
+    """
+    session, term = getsession(), getterminal()
+
+    if not os.path.exists(news_file):
+        echo(u'\r\n\rn')
+        echo(term.center(u'No news.').rstrip())
+        echo(u'\r\n')
+        return
+
+    check_news()
+
+    if quick and has_seen(session.user):
+        return
+
+    if session.user.get('hotkeys', False):
+        with term.hidden_cursor():
+            read_news_hotkeys(session, term)
+    else:
+        read_news_prompt(session, term)
+
     session.user['news_lastread'] = time.time()
+

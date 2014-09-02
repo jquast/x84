@@ -1,6 +1,10 @@
 """
 x/84 bbs module, https://github.com/jquast/x84
 """
+# std
+import warnings
+
+# local
 import encodings.aliases
 import x84.encodings
 from x84.bbs.userbase import list_users, get_user, find_user, User, Group
@@ -26,7 +30,7 @@ __all__ = ['list_users', 'get_user', 'find_user', 'User', 'Group', 'list_msgs',
            'Lightbar', 'from_cp437', 'DBProxy', 'Pager', 'Door', 'DOSDoor',
            'goto', 'disconnect', 'getsession', 'getterminal', 'getch', 'gosub',
            'ropen', 'showart', 'showcp437', 'Dropfile', 'encode_pipe',
-           'decode_pipe', 'syncterm_setfont',
+           'decode_pipe', 'syncterm_setfont', 'get_ini',
            ]
 
 
@@ -230,19 +234,20 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
 
     msg_cancel = msg_cancel or u''.join(
         (term.normal,
-         term.bold_blue(u'-- '),
+         term.bold_black(u'-- '),
          u'cancelled {0} by input'.format(filename),
-         term.bold_blue(u' --'),
+         term.bold_black(u' --'),
          ))
 
     msg_too_wide = u''.join(
         (term.normal,
-         term.bold_blue(u'-- '),
+         term.bold_black(u'-- '),
          u'cancelled {0}, too wide:: {{0}}'.format(filename),
-         term.bold_blue(u' --'),
+         term.bold_black(u' --'),
          ))
 
-    for line in _decode(parsed.data).splitlines():
+    lines = _decode(parsed.data).splitlines()
+    for idx, line in enumerate(lines):
         # Allow slow terminals to cancel by pressing a keystroke
         if poll_cancel is not False and term.inkey(poll_cancel):
             yield u'\r\n' + term.center(msg_cancel) + u'\r\n'
@@ -253,13 +258,43 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
                    term.center(msg_too_wide.format(line_length)) +
                    u'\r\n')
             return
+        if idx == len(lines) - 1:
+            # strip DOS end of file (^Z)
+            line = line.rstrip('\x1a')
+            if not line.strip():
+                break
         yield padding + line + u'\r\n'
     yield term.normal
 
 
 def showcp437(filepattern):
-    """
-    Alias for the :func:`showart` function, with the ``cp437`` codec as
-    default.
-    """
+    warnings.warn('showcp437() is deprecated, use show_art()')
     return showart(filepattern, 'cp437')
+
+
+def get_ini(section=None, key=None, getter='get', split=False):
+    """
+    Get an ini configuration of ``section`` and ``key``.
+
+    If the option does not exist, an empty list, string, or False
+    is returned -- return type decided by the given arguments.
+
+    The ``getter`` method is 'get' by default, returning a string.
+    For booleans, use ``getter='get_boolean'``.
+
+    To return a list, use ``split=True``.
+    """
+    from x84.bbs.ini import CFG
+    assert section is not None, section
+    assert key is not None, key
+    if CFG.has_option(section, key):
+        getter = getattr(CFG, getter)
+        value = getter(section, key)
+        if split and hasattr(value, 'split'):
+            return value.split()
+        return value
+    if getter == 'getboolean':
+        return False
+    if split:
+        return []
+    return u''

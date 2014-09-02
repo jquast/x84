@@ -4,17 +4,21 @@ Command-line launcher and main event loop for x/84
 """
 # Place ALL metadata in setup.py, except where not suitable, place here.
 # For any contributions, feel free to tag __author__ etc. at top of such file.
-__author__ = "Johannes Lundberg, Jeffrey Quast"
+__author__ = "Johannes Lundberg (jojo), Jeff Quast (dingo)"
 __url__ = u'https://github.com/jquast/x84/'
 __copyright__ = "Copyright 2014"
 __credits__ = [
+    # use 'scene' names unless preferred or unavailable.
     "zipe",
+    "jojo",
+    "maze",
+    "dingo",
     "spidy",
     "beardy",
     "haliphax",
+    "megagumbo",
     "hellbeard",
     "Mercyful Fate",
-    "Wijnand Modderman-Lenstra",
 ]
 __license__ = 'ISC'
 
