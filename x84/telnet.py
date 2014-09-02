@@ -254,49 +254,6 @@ class TelnetClient(BaseClient):
         self.send_str(bytes(''.join((
             IAC, SB, TTYPE, SEND, IAC, SE))))
 
-    def send(self):
-        """
-        Called by TelnetServer.poll() when send data is ready.  Send any
-        data buffered, trim self.send_buffer to bytes sent, and return number
-        of bytes sent.  Throws Disconnected
-        """
-        if not self.send_ready():
-            warnings.warn('send() called on empty buffer', RuntimeWarning, 2)
-            return 0
-
-        ready_bytes = bytes(''.join(self.send_buffer))
-        self.send_buffer = array.array('c')
-
-        def _send(send_bytes):
-            """
-            throws x84.bbs.exception.Disconnected on sock.send err
-            """
-            try:
-                return self.sock.send(send_bytes)
-            except socket.error as err:
-                if err[0] == errno.EDEADLK:
-                    warnings.warn('{self.addrport}: {err} (bandwidth exceed)'
-                                  .format(self=self, err=err[1]),
-                                  RuntimeWarning, 2)
-                    return 0
-                raise Disconnected('send %d: %s' % (err[0], err[1],))
-
-        sent = _send(ready_bytes)
-        if sent < len(ready_bytes):
-            # re-buffer data that could not be pushed to socket;
-            self.send_buffer.fromstring(ready_bytes[sent:])
-        else:
-            # When a process has completed sending data to an NVT printer
-            # and has no queued input from the NVT keyboard for further
-            # processing (i.e., when a process at one end of a TELNET
-            # connection cannot proceed without input from the other end),
-            # the process must transmit the TELNET Go Ahead (GA) command.
-            if (not self.input_ready()
-                    and self.check_local_option(SGA) is False
-                    and not self._check_reply_pending(SGA)):
-                sent += _send(bytes(''.join((IAC, GA))))
-        return sent
-
     def recv_ready(self):
         """
         Returns True if data is awaiting on the telnet socket.
@@ -312,14 +269,17 @@ class TelnetClient(BaseClient):
         or the connection is closed, x84.bbs.exception.Disconnected is
         raised.
         """
-        recv = 0
         try:
             data = self.sock.recv(self.BLOCKSIZE_RECV)
             recv = len(data)
-            if 0 == recv:
+            if recv == 0:
                 raise Disconnected('Closed by client (EOF)')
+
         except socket.error as err:
-            raise Disconnected('socket errno %d: %s' % (err[0], err[1],))
+            if err.errno == errno.EWOULDBLOCK:
+                return
+            raise Disconnected('socket_recv error: {0}'.format(err))
+
         self.bytes_received += recv
         self.last_input_time = time.time()
 
