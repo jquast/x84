@@ -54,7 +54,27 @@ def lb_init(position=None,menu_index=None):
         ('s', 'sYS. iNfO'),
         ('u', 'uSER LiST'),
         ('e', 'edit PROfilE'),]
-    
+
+    key_map = {
+        '$': 'bulletins',
+        'n': 'news',
+        'p', 'writemsg',
+        'r': 'readmsgs',
+        'c': 'chat',
+        'i': 'ircchat',
+        'l': 'lc',
+        'o': 'ol',
+        'b': 'bbslist',
+        'f': 'weather',
+        't': 'tetris',
+        'w': 'online',
+        '!': 'charset',
+        's': 'si',
+        'u': 'userlist',
+        'x': 'main',
+        '#': 'lord',
+        'e': 'profile'}
+
     # add LORD to menu only if enabled,
     if ini.CFG.getboolean('dosemu', 'enabled') and (
             ini.CFG.get('dosemu', 'lord_path') != 'no'):
