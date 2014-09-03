@@ -162,7 +162,6 @@ def fail2ban_check(ip):
     from x84.bbs.ini import CFG
     if not CFG.has_section('fail2ban'):
         return True
-    ip = address_pair[0]
     when = int(time.time())
     # default options
     ip_blacklist = set([])
