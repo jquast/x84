@@ -159,9 +159,11 @@ def fail2ban_check(ip):
     """
     import time
     import ConfigParser
+    from logging import getLogger
     from x84.bbs.ini import CFG
     if not CFG.has_section('fail2ban'):
         return True
+    log = getLogger(__name__)
     when = int(time.time())
     # default options
     ip_blacklist = set([])
