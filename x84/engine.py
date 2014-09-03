@@ -225,7 +225,7 @@ def fail2ban_check(ip):
                 'expiry': when + max_attempted_logins_window
                 }
             log.debug('Banned IP expired: {ip}'
-                    .format(ip=address_pair[0]))
+                    .format(ip=ip))
         else:
             # increase the expiry and kick them out
             BANNED_IP_LIST[ip] += ban_increment_length
