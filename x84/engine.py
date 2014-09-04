@@ -159,10 +159,11 @@ def fail2ban_check(ip):
     """
     import time
     import ConfigParser
+    from logging import getLogger
     from x84.bbs.ini import CFG
     if not CFG.has_section('fail2ban'):
         return True
-    ip = address_pair[0]
+    log = getLogger(__name__)
     when = int(time.time())
     # default options
     ip_blacklist = set([])
@@ -224,7 +225,7 @@ def fail2ban_check(ip):
                 'expiry': when + max_attempted_logins_window
                 }
             log.debug('Banned IP expired: {ip}'
-                    .format(ip=address_pair[0]))
+                    .format(ip=ip))
         else:
             # increase the expiry and kick them out
             BANNED_IP_LIST[ip] += ban_increment_length
