@@ -87,7 +87,7 @@ def main(last=10):
     ]
     # content:
     callers_txt.extend([
-        '{handle} {location} {num_calls} {timeago}'
+        u'{handle} {location} {num_calls} {timeago}'
         .format(handle=lc.handle.ljust(username_max_length + 1),
                 location=term.ljust(colors[idx % len(colors)](
                     lc.location or '-' * location_max_length),

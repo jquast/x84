@@ -57,7 +57,7 @@ def main():
 
     # get and format userlist
     userlist = (
-        '{sp}{handle} {location} {lastcall}'
+        u'{sp}{handle} {location} {lastcall}'
         .format(sp=u' ' * 4,
                 handle=ur.handle.ljust(username_max_length),
                 location=colors['lowlight'](
@@ -74,5 +74,3 @@ def main():
                          'lowlight': term.green,
                          },
                  width=80, breaker=None)
-
-
