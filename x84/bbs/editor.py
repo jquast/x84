@@ -164,7 +164,7 @@ class LineEditor(object):
         elif type(keystroke) is int:
             return u''
         elif (ord(keystroke) >= ord(' ') and
-                (term.length(self.content) < self.width or self.width == 0)):
+                (term.length(self.content) < self.width or self.width is None)):
             self.content += keystroke
             return keystroke if not self.hidden else self.hidden
         return u''
