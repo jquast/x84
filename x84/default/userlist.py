@@ -1,61 +1,78 @@
 """ Userlister for x/84 bbs, https://github.com/jquast/x84 """
-__version__ = 1.1
+__version__ = 1.2
 __author__ = 'Hellbeard'
 
-from x84.bbs import getsession, getterminal, echo, getch
-from x84.bbs import list_users, get_user, timeago, showart
+# std
+import collections
 import time
 import os
 
-# actually ansi height + prompt length
-BANNER_HEIGHT = 12
+# local
+from x84.bbs import getsession, getterminal
+from x84.bbs import echo, timeago
+from x84.bbs import get_user, list_users
+
+from common import display_banner, prompt_pager
+
+#: filepath to folder containing this script
+here = os.path.dirname(__file__)
+
+#: filepath to artfile displayed for this script
+art_file = os.path.join(here, 'art', 'userlist.ans')
+
+#: encoding used to display artfile
+art_encoding = 'topaz'
+
+#: fontset for SyncTerm emulator
+syncterm_font = 'topaz'
 
 
-def banner():
-    """ Display banner """
-    term = getterminal()
-    echo(term.clear)
-    artfile = os.path.join(os.path.dirname(__file__), 'userlist.ans')
-    for line_no, line in enumerate(showart(artfile,'topaz')):
-        echo(line)
-    else:
-        line_no = 0
-    echo(u'\r\n')
-    return line_no
+#: maximum length of user handles, hard-coded to match art_file.
+username_max_length = 27
+
+#: maximum length of location, hard-coded to match art_file.
+location_max_length = 26
+
+user_record = collections.namedtuple('userlist', [
+    'handle', 'location', 'timeago'])
 
 
-def waitprompt():
-    """ Display "press enter" prompt and returns key input """
-    term = getterminal()
-    echo(u'\n\r')
-    echo(term.magenta(u'(') + term.green(u'..'))
-    echo(term.white(u' press any key to continue ') + term.green(u'..'))
-    echo(term.magenta(u')'))
-    term.inkey()
+def iter_userlist():
+    handles = sorted(list_users(), key=unicode.lower)
+    timenow = time.time()
+    return (user_record(handle=user.handle,
+                        location=user.location,
+                        timeago=timenow - user.lastcall)
+            for user in (get_user(handle) for handle in handles))
+
 
 def main():
     session, term = getsession(), getterminal()
     session.activity = 'Viewing Userlist'
-    banner_height = banner()
-    firstpage = True
-    handles = sorted(list_users(), key=unicode.lower)
 
-    at_first_page = lambda counter: (
-        firstpage and counter == term.height - banner_height)
-    at_next_page = lambda counter: (
-        0 == counter % (term.height - 2))
+    colors = {'highlight': term.red,
+              'lowlight': term.green, }
 
-    for counter, handle in enumerate(handles, 1):
-        user = get_user(handle)
-        origin = user.location
-        ago = timeago(time.time() - user.lastcall)
-        echo(u' '*4)
-        echo(term.ljust(term.white(handle), 28))
-        echo(term.ljust(term.green(origin), 27))
-        echo(term.bright_white(ago))
-        echo(u'\r\n')
-        if at_first_page(counter) or at_next_page(counter):
-            if waitprompt() in (term.KEY_ESCAPE, 'q', 'Q'):
-                return
-            firstpage = False
-    waitprompt()
+    line_no = display_banner(filepattern=art_file, encoding=art_encoding)
+
+    # get and format userlist
+    userlist = (
+        '{sp}{handle} {location} {lastcall}'
+        .format(sp=u' ' * 4,
+                handle=ur.handle.ljust(username_max_length),
+                location=colors['lowlight'](
+                    ur.location.ljust(location_max_length)),
+                lastcall=timeago(ur.timeago))
+        for ur in iter_userlist())
+
+    echo(u'\r\n')
+
+    # display users, using a command-prompt pager.
+    prompt_pager(content=userlist,
+                 line_no=line_no + 1,
+                 colors={'highlight': term.red,
+                         'lowlight': term.green,
+                         },
+                 width=80, breaker=None)
+
+
