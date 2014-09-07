@@ -6,7 +6,8 @@ import codecs
 import logging
 
 # local
-from x84.bbs import getterminal, getsession, decode_pipe, echo
+from x84.bbs import getterminal, getsession, echo
+from x84.bbs import syncterm_setfont, decode_pipe
 from common import display_banner, prompt_pager
 
 #: filepath to folder containing this script
@@ -25,7 +26,10 @@ news_contents = None
 art_file = os.path.join(here, 'art', 'news.ans')
 
 #: encoding used to display artfile
-art_encoding = 'cp437_art'
+art_encoding = 'ascii'
+
+#: fontset for SyncTerm emulator
+syncterm_font = 'topaz'
 
 #: estimated art height (top of pager)
 art_height = 8
@@ -51,6 +55,10 @@ def main(quick=False):
     news_mtime = os.stat(news_file).st_mtime
     if quick and news_mtime < session.user.get('news_lastread', 0):
         return
+
+    # set syncterm font, if any
+    if syncterm_font and term._kind == 'ansi':
+        echo(syncterm_setfont(syncterm_font))
 
     session.activity = 'Reading news'
 

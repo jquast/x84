@@ -107,7 +107,7 @@ syncterm_font = 'topaz'
 art_file = os.path.join(here, 'art', 'matrix.ans')
 
 #: encoding on banner
-art_encoding = 'topaz'
+art_encoding = 'ascii'
 
 #: primary color (highlight)
 color_primary = 'red'
