@@ -41,20 +41,23 @@ def toplist(parameter):
     for handle in user_handles:
 
        user_record = get_user(handle)
+
+       if u'sysop' in user_record.groups:
+           continue
+
        if parameter == 'calls':
            database[user_record.handle.encode('utf8')] = user_record.calls
        if parameter == 'msgs':
            database[user_record.handle.encode('utf8')] = user_record.get('msgs_sent',0)
 
     for name in sorted(database, key=database.get, reverse=True):
-       if name != 'sysopname': # write your handle here if you dont want it to be included in the list
-           username[counter] = name
- 
-           user_record = get_user(name)
-           location[counter] = user_record.location
+       username[counter] = name
 
-           feature[counter] = str(database[name])
-           counter = counter + 1
+       user_record = get_user(name)
+       location[counter] = user_record.location
+
+       feature[counter] = str(database[name])
+       counter = counter + 1
 
     if counter > 10:
         counter = 10    # we only want to display the top ten users
