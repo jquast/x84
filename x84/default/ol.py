@@ -6,8 +6,16 @@
     [bbs-scene]
     user = my@email-addr.ess
     pass = my-plaintext-password
+
+  To use the (optional) http://shroo.ms API,
+  configure a section in your .ini file:
+
+    [shroo-ms]
+    idkey = id-key-here-ask-frost-lol
+    restkey = rest-key-here-ask-frost-too
 """
 import threading
+import time
 
 # bbs-scene.org API is 50-character limit max
 MAX_INPUT = 50
@@ -20,8 +28,16 @@ XML_HISTORY = 84
 WAIT_FETCH = 5
 
 
+def _sort_oneliner(a, b):
+    return cmp(
+        time.strptime(a[1]['timestamp'], '%Y-%m-%d %H:%M:%S'),
+        time.strptime(b[1]['timestamp'], '%Y-%m-%d %H:%M:%S'),
+    )
+
+
 class FetchUpdates(threading.Thread):
     """ Fetch bbs-scene.org oneliners as a background thread. """
+    ident = 'bbs-scene.org'
     url = 'http://bbs-scene.org/api/onelinerz?limit=%d' % (XML_HISTORY,)
     content = list()
 
@@ -69,6 +85,73 @@ class FetchUpdates(threading.Thread):
                      ('oneliner', 'alias', 'bbsname', 'timestamp',))),))
 
 
+class FetchUpdatesShrooMs(threading.Thread):
+    """ Fetch shroo.ms onliners as a background thread. """
+    ident = 'shroo.ms'
+    url = 'https://api.parse.com'
+    api_version = 1
+    content = list()
+
+    def run(self):
+        import logging
+        import requests
+        import time
+        from x84.bbs import ini
+
+        log = logging.getLogger(__name__)
+        idkey = ini.CFG.get('shroo-ms', 'idkey')
+        restkey = ini.CFG.get('shroo-ms', 'restkey')
+        log.debug('fetching %r ..', self.url)
+
+        stime = time.time()
+        params = {'order': 'createdAt'}
+        headers = {
+            'X-Parse-Application-Id': idkey,
+            'X-Parse-REST-API-Key': restkey,
+        }
+        result = requests.get(
+            '{url}/{api_version}/classes/wall'.format(
+                url=self.url,
+                api_version=self.api_version,
+            ),
+            params=params,
+            headers=headers,
+        )
+        if 200 != result.status_code:
+            log.error(result.content)
+            log.error('parse.com [shroo.ms] returned %s', result.status_code)
+            return
+        else:
+            log.info('parse.com [shroo.ms] returned %d in %2.2fs',
+                     result.status_code, time.time() - stime)
+        for item in result.json()['results']:
+            self.content.append((
+                self.parse_object_id(item['objectId']),
+                dict(
+                    oneliner=item['bbstagline'],
+                    alias=item['bbsuser'],
+                    bbsname=item['bbsname'],
+                    timestamp=self.parse_timestamp(item['createdAt']),
+                )
+            ))
+
+        self.content.sort(_sort_oneliner)
+
+    def parse_object_id(self, object_id):
+        '''
+        Converts a parse.com object ID to int.
+        '''
+        return int(object_id, 36) # lulz
+
+    def parse_timestamp(self, timestamp):
+        '''
+        Converts a parse.com timestamp to a UNIX timestamp.
+        '''
+        zulu = time.mktime(time.strptime(timestamp[:19], '%Y-%m-%dT%H:%M:%S'))
+        here = zulu - [time.timezone, time.altzone][time.daylight]
+        return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(here))
+
+
 def wait_for(thread):
     """
     for dummy or small terminals, wait until a request thread has
@@ -76,8 +159,8 @@ def wait_for(thread):
     """
     from x84.bbs import echo, getch
     if thread.is_alive():
-        echo(u"\r\n\r\nfetching bbs-scene.org oneliners .. "
-             "(%s)s\b\b%s" % (' ' * 2, '\b' * 2,))
+        echo(u"\r\n\r\nfetching %s oneliners .. "
+             "(%s)s\b\b%s" % (thread.ident, ' ' * 2, '\b' * 2,))
         for num in range(WAIT_FETCH):
             echo(u'%2d%s' % (WAIT_FETCH - num - 1, '\b' * 2,))
             if not thread.is_alive():
@@ -109,7 +192,7 @@ def chk_thread(thread):
             log.debug('%d new entries', nlc)
             session.buffer_event('oneliner_update', True)
         else:
-            log.debug('no new bbs-scene.org entries')
+            log.debug('no new %s entries'.format(thread.ident))
         return True
 
 
@@ -140,7 +223,7 @@ def get_oltxt():
     term = getterminal()
     colors = (term.bold_white, term.bold_green, term.bold_blue)
     hist = [(int(k), v) for (k, v) in DBProxy('oneliner').items()]
-    hist.sort()
+    hist.sort(_sort_oneliner)
     output = list()
     for idx, onel in hist[BUF_HISTORY * -1:]:
         color = colors[int(idx) % len(colors)]
@@ -272,10 +355,13 @@ def saysomething(dumb=True):
 
     session.user['lastliner'] = time.time()
     # post local-onlyw hen bbs-scene.org is not configured
-    if not ini.CFG.has_section('bbs-scene'):
+    if ini.CFG.has_section('bbs-scene'):
+        return post_bbs_scene(oneliner, dumb)
+    elif ini.CFG.has_section('shroo-ms'):
+        return post_shroo_ms(oneliner, dumb)
+    else:
         add_oneline(oneliner.strip())
         return None
-    return post_bbs_scene(oneliner, dumb)
 
 
 def post_bbs_scene(oneliner, dumb=True):
@@ -363,19 +449,119 @@ def post_bbs_scene(oneliner, dumb=True):
     return thread
 
 
+def post_shroo_ms(oneliner, dumb=True):
+    """
+    Prompt for posting to shroo.ms oneliners API,
+    returning thread if posting occured.
+    """
+    # pylint: disable=R0914
+    #        Too many local variables
+    import json
+    import logging
+    import requests
+    from x84.bbs import echo, getch, getterminal, getsession, ini
+    log = logging.getLogger(__name__)
+    session, term = getsession(), getterminal()
+    prompt_api = u'MAkE AN ASS Of YOURSElf ON sHroO.mS?!'
+    heard_api = u'YOUR MESSAGE hAS bEEN brOAdCAStEd.'
+    yloc = term.height - 3
+    if dumb:
+        # post to shroo.ms ?
+        echo(u'\r\n\r\n' + term.bold_blue(prompt_api) + u' [yn]')
+        inp = getch(1)
+        while inp not in (u'y', u'Y', u'n', u'N'):
+            inp = getch()
+        if inp in (u'n', u'N'):
+            #  no? then just post locally
+            add_oneline(oneliner.strip())
+            return None
+    else:
+        # fancy prompt, 'post to shroo.ms?'
+        sel = get_selector()
+        sel.colors['selected'] = term.red_reverse
+        echo(term.move(sel.yloc - 1, sel.xloc) or ('\r\n\r\n'))
+        echo(term.blue_reverse(prompt_api.center(sel.width)))
+        echo(sel.refresh())
+        while not sel.selected and not sel.quit:
+            echo(sel.process_keystroke(getch()))
+        session.buffer_event('refresh', 'dirty')
+        if sel.quit or sel.selection == sel.right:
+            echo(term.normal + term.move(yloc, 0) + term.clear_eol)
+            echo(term.move(sel.yloc, 0) + term.clear_eol)
+            return None
+
+    # This is an AJAX effect.
+    # Dispatch a thread to fetch updates, whose callback
+    # will cause the database and pager to update.
+    url = 'https://api.parse.com/1/classes/wall'
+    idkey = ini.CFG.get('shroo-ms', 'idkey')
+    restkey = ini.CFG.get('shroo-ms', 'restkey')
+    payload = json.dumps({
+        'bbsname': ini.CFG.get('system', 'bbsname'),
+        'bbsuser': session.user.handle,
+        'bbsfakeuser': False,
+        'bbstagline': oneliner.strip(),
+    })
+    headers = {
+        'X-Parse-Application-Id': idkey,
+        'X-Parse-REST-API-Key': restkey,
+        'Content-Type': 'application/json'
+    }
+    try:
+        result = requests.post(url, data=payload, headers=headers)
+    except requests.ConnectionError as err:
+        log.warn(err)
+        return
+    else:
+        if result.status_code >= 400:
+            log.error(result.content)
+            log.error('parse.com [shroo.ms] returned %s', result.status_code)
+            echo(u'\r\n\r\n%srequest failed,\r\n' % (term.clear_eol,))
+            echo(u'%r' % (result.content,))
+            echo(u'\r\n\r\n%s(code: %s).\r\n' % (
+                term.clear_eol, result.status_code,))
+            echo(u'\r\n%sPress any key ..' % (term.clear_eol,))
+            getch()
+            return None
+        log.info('parse.com [shroo.ms] api (%d): %r/%r', result.status_code,
+                 session.user.handle, oneliner.strip())
+        thread = FetchUpdates()
+        thread.start()
+    if not dumb:
+        # clear line w/input bar,
+        echo(term.normal + term.move(yloc, 0) + term.clear_eol)
+        # clear line w/selector
+        echo(term.move(sel.yloc, 0) + term.clear_eol)
+    else:
+        echo(u'\r\n\r\n' + heard_api)
+        getch(2)
+    return thread
+
+
 def main():
     """ Main procedure. """
     # pylint: disable=R0912
     #        Too many branches
+    import logging
     from x84.bbs import getsession, getterminal, ini, echo, getch
     session, term = getsession(), getterminal()
     pager, selector = get_pager(), get_selector()
+    log = logging.getLogger(__name__)
 
     thread = None
     if ini.CFG.has_section('bbs-scene'):
+        log.info('starting bbs-scene.org oneliners thread...')
         thread = FetchUpdates()
         thread.start()
-        session.activity = u'one-liners [bbs-scene.org]'
+    elif ini.CFG.has_section('shroo-ms'):
+        log.info('starting shroo.ms oneliners thread...')
+        thread = FetchUpdatesShrooMs()
+        thread.start()
+    else:
+        log.info('using built-in oneliners...')
+
+    if thread is not None:
+        session.activity = u'one-liners [%s]' % (thread.ident,)
     else:
         session.activity = u'one-liners'
 
