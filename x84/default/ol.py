@@ -131,6 +131,7 @@ class FetchUpdatesShrooMs(threading.Thread):
                     oneliner=item['bbstagline'],
                     alias=item['bbsuser'],
                     bbsname=item['bbsname'],
+                    fake=item['bbsfakeuser'],
                     timestamp=self.parse_timestamp(item['createdAt']),
                 )
             ))
@@ -229,11 +230,15 @@ def get_oltxt():
         color = colors[int(idx) % len(colors)]
         atime = timeago(time.time() - time.mktime(
             time.strptime(onel['timestamp'], '%Y-%m-%d %H:%M:%S'))).strip()
+        if onel.get('fake', False):
+            alias = term.bold_red(u'x') + color(onel['alias'])
+        else:
+            alias = color(onel['alias'])
         output.append(u''.join((
             term.bold_white('('),
             color(atime), term.bold_black(u' ago'),
             term.bold_black(u' '),
-            color(onel['alias']),
+            alias,
             term.bold_black(u'/'), onel['bbsname'],
             term.bold_white(u')'), color(u': '),
             decode_pipe(onel['oneliner']),
