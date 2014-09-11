@@ -1,3 +1,4 @@
+# coding=utf-8
 """ oneliners for x/84, http://github.com/jquast/x84
 
   To use the (optional) http://bbs-scene.org API,
@@ -13,6 +14,8 @@
     [shroo-ms]
     idkey = id-key-here-ask-frost-lol
     restkey = rest-key-here-ask-frost-too
+    alias-bf = Black Flag
+    alias-sh = bbs.shroo.ms
 """
 import threading
 import time
@@ -124,13 +127,20 @@ class FetchUpdatesShrooMs(threading.Thread):
         else:
             log.info('parse.com [shroo.ms] returned %d in %2.2fs',
                      result.status_code, time.time() - stime)
+
+        aliases = {}
+        for item in ini.CFG.options('shroo-ms'):
+            if item.startswith('alias-'):
+                alias = item.split('-', 1)[-1].lower()
+                aliases[alias] = ini.CFG.get('shroo-ms', item)
+
         for item in result.json()['results']:
             self.content.append((
                 self.parse_object_id(item['objectId']),
                 dict(
                     oneliner=item['bbstagline'],
                     alias=item['bbsuser'],
-                    bbsname=item['bbsname'],
+                    bbsname=aliases.get(item['bbsname'].lower(), item['bbsname']),
                     fake=item['bbsfakeuser'],
                     timestamp=self.parse_timestamp(item['createdAt']),
                 )
