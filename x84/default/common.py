@@ -1,5 +1,6 @@
 """ common interface module for x/84, https://github.com/jquast/x84 """
 from __future__ import division
+import math
 
 from x84.bbs import echo, showart
 from x84.bbs import getterminal, LineEditor
@@ -60,8 +61,14 @@ def prompt_pager(content, line_no=0, colors=None, width=None, breaker=u'- '):
                             enter=colors['highlight'](u'return')))
 
     should_break = lambda line_no, height: line_no % (height - 3) == 0
-    show_breaker = lambda breaker, width: colors['highlight'](
-        breaker * ((width // len(breaker)) - 1)) if breaker else u''
+
+    def show_breaker():
+        if not breaker:
+            return u''
+        attr = colors['highlight']
+        breaker_bar = breaker * (min(80, term.width - 1) // len(breaker))
+        echo(attr(term.center(breaker_bar).rstrip()))
+
     continuous = False
     for txt in content:
         lines = term.wrap(txt, width) or [txt]
@@ -71,8 +78,10 @@ def prompt_pager(content, line_no=0, colors=None, width=None, breaker=u'- '):
             echo(txt.rstrip() + term.normal + term.clear_eol + u'\r\n')
             line_no += 1
             if not continuous and should_break(line_no, term.height):
-                echo(show_breaker(breaker, term.width))
+                show_breaker()
                 echo(u'\r\n')
+                if term.width > 80:
+                    echo(term.move_x((term.width // 2) - 40))
                 echo(pager_prompt)
                 while True:
                     inp = LineEditor(1, colors=colors).read()
@@ -93,7 +102,26 @@ def prompt_pager(content, line_no=0, colors=None, width=None, breaker=u'- '):
                 echo(term.move_x(0) + term.clear_eol)
                 echo(term.move_up() + term.clear_eol)
 
-    echo(show_breaker(breaker, term.width))
-    echo(u'\r\nPress {enter}.'.format(
+    show_breaker()
+    echo(u'\r\n')
+    if term.width > 80:
+        echo(term.move_x((term.width // 2) - 40))
+    echo(u'Press {enter}.'.format(
         enter=colors['highlight'](u'return')))
     inp = LineEditor(0, colors=colors).read()
+
+
+def prompt_input(term, key, content=u'',
+                 sep_ok=u'::', sep_bad=u'::',
+                 width=None, colors=None):
+    """ Prompt for and return input, up to given width and colorscheme.
+    """
+    from x84.bbs import getterminal
+    term = getterminal()
+    colors = colors or {
+        'highlight': term.yellow,
+    }
+    sep_ok = colors['highlight'](sep_ok)
+
+    echo(u'{sep} {key:<8}: '.format(sep=sep_ok, key=key))
+    return LineEditor(colors=colors, width=width).read() or u''

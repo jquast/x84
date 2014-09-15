@@ -29,7 +29,7 @@ class LineEditor(object):
             colors: optional dictionary containing key 'highlight'.
             keyset: optional dictionary of line editing values.
         """
-        self.content = content
+        self.content = content or u''
         self.hidden = hidden
         self._width = width
 

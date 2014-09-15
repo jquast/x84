@@ -255,17 +255,20 @@ def main(handle=None):
     # display art and prompt for quick login
     quick = do_intro_art(term, session)
 
-    echo(u'\r\n' * 3)
+    echo(term.move_down() * 3)
 
-    gosub('news', quick=quick)
+    # only display news if the account has not
+    # yet read the news since last update.
+    gosub('news', quick=True)
+
+    if not quick:
+        # display last 10 callers, if any
+        gosub('lc')
+
+        # one-liners
+        gosub('ol')
 
     goto('main')
-
-    #goto('main')
-
-    # 5. last callers
-    #gosub('lc')
-    #session.activity = 'top'
 
     # 6. check for new public/private msgs,
     #gosub('readmsgs', set())

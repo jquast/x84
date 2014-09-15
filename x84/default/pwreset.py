@@ -6,8 +6,9 @@ import string
 import random
 
 from x84.bbs import getsession, getterminal
-from x84.bbs import showart, echo, LineEditor
+from x84.bbs import echo, LineEditor
 from x84.bbs import get_ini, find_user, get_user
+from common import display_banner
 
 import logging
 import smtplib
@@ -32,7 +33,9 @@ password_max_length = get_ini(section='nua',
                               ) or 15
 
 #: maximum length of email address
-email_max_length = get_ini(section='nua', key='max_email', getter='getint'
+email_max_length = get_ini(section='nua',
+                           key='max_email',
+                           getter='getint'
                            ) or 40
 
 #: smtp host for mail delivery
@@ -71,10 +74,9 @@ passkey_max_attempts = 5
 #: password hidden character
 hidden_char = u'\u00f7'
 
-
-#: position next prompt 30 pixels minus center of screen
+#: positions next prompt 40 pixels minus center of screen
 fixate_next = lambda term: (
-    u'\r\n\r\n' + term.move_x(max(0, (term.width // 2) - 30)))
+    u'\r\n\r\n' + term.move_x(max(0, (term.width // 2) - 40)))
 
 
 def display_banner_animation(banner_text):
@@ -154,7 +156,7 @@ def display_banner_animation(banner_text):
     echo(display_header(xpos, banner_text))
 
     # move-to banner animation row
-    echo(term.move_up)
+    echo(term.move_up())
 
     guess = get_garbage()
     for idx in range(0, animation_length):
@@ -191,32 +193,18 @@ def display_banner_animation(banner_text):
     echo(term.move_x(0) + (term.move_down * 2))
 
 
-def display_banner(term):
-    """ Display art banner and animation. """
-    # clear screen
-    echo(term.normal + ('\r\n' * (term.height + 1)) + term.home)
-
-    # display art
-    map(echo, showart(art_file, center=True))
-
-    # mix animation into art
-    echo(term.move_up * 5)
-
-    # display banner animation
-    display_banner_animation(banner_text='reset account password')
-
-
 def prompt_input(term, key, **kwargs):
+    """ Prompt for user input. """
     sep_ok = getattr(term, color_secondary)(u'::')
     sep_bad = getattr(term, color_primary)(u'::')
     colors = {'highlight': getattr(term, color_primary)}
 
     echo(fixate_next(term))
-    echo(u'{sep} {key:<8}: '.format(sep=sep_ok, key=key))
+    echo(u'{sep} {key:>18}: '.format(sep=sep_ok, key=key))
     entry = LineEditor(colors=colors, **kwargs).read() or u''
     if not entry.strip():
         echo(fixate_next(term))
-        echo('{sep} Canceled !'.format(sep=sep_bad))
+        echo(u'{sep} Canceled !\r\n'.format(sep=sep_bad))
         log.debug('Password reset canceled at prompt key={0}.'.format(key))
         return u''
 
@@ -263,7 +251,7 @@ def send_passkey(user):
         smtp.quit()
     except Exception as err:
         log.exception(err)
-        echo(u'\r\n\r\n{err}\r\n'.format(err=err))
+        echo('{0}'.format(err))
         return False
 
     log.info(u'Password reset token delivered '
@@ -303,12 +291,14 @@ def do_reset(term, handle, email=u''):
             # try e-mail address again
             continue
 
+        echo(fixate_next(term))
         passkey = send_passkey(user)
         if not passkey:
             # failed to send e-mail
+            term.inkey(1)
+            echo(u'\r\n\r\n')
             return False
 
-        echo(fixate_next(term))
         echo('{0} E-mail successfully delivered !'.format(sep_ok))
 
         for _ in range(passkey_max_attempts):
@@ -349,11 +339,20 @@ def do_reset(term, handle, email=u''):
     echo(fixate_next(term))
     echo('{0} Too many authentication attempts.'.format(sep_bad))
 
-def main(handle=None):
-    """ Main procedure. """
-    session, term = getsession(), getterminal()
-    session.activity = 'resetting password'
 
-    display_banner(term)
+def main(handle=None):
+    """
+    Main procedure.
+    """
+    session, term = getsession(), getterminal()
+    session.activity = u'resetting password'
+
+    display_banner(art_file)
+
+    # mix animation into art
+    echo(term.move_up() * 5)
+
+    # display banner animation
+    display_banner_animation(banner_text=u'reset account password')
 
     return do_reset(term, handle)

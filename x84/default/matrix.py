@@ -1,18 +1,18 @@
 """
- Matrix login screen for X/84 (Formerly, 'The Progressive') BBS,
+Matrix/login script for x/84, https://github.com/jquast/x84
 
- This script is the default session entry point for all connections.
+This script is the default session entry point for all connections.
 
- Or simply put, the login program. It is configured in default.ini file,
- under section 'matrix'. Alternative matrices may be considered by their
- connection type, using script_{telnet,ssh}
+Or simply put, the login program. It is configured in default.ini file,
+under section 'matrix'. Alternative matrices may be considered by their
+connection type, using script_{telnet,ssh}
 
- In legacy era, a matrix script might be something to fool folk not in the
- know, meant to divert agents from underground boards, require a passcode,
- or even swapping the modem into a strange stop/bit/parity configuration,
- callback mechanisms, etc..
+In legacy era, a matrix script might be something to fool folk not in the
+know, meant to divert agents from underground boards, require a passcode,
+or even swapping the modem into a strange stop/bit/parity configuration,
+callback mechanisms, etc..
 
- Read all about it in old e-zines.
+Read all about it in old e-zines.
 """
 # std
 import logging
@@ -20,7 +20,7 @@ import random
 import time
 import os
 
-from x84.bbs import getsession, getterminal, get_ini, goto, gosub
+from x84.bbs import getterminal, get_ini, goto, gosub
 from x84.bbs import echo, showart, syncterm_setfont, LineEditor
 from x84.bbs import find_user, get_user, User
 from x84.engine import __url__
@@ -217,11 +217,14 @@ def do_login(term):
 
         # user applies for new account
         if new_allowed and handle.lower() in new_usernames:
-            goto(new_script)
+            gosub(new_script)
+            display_banner(term)
+            continue
 
         # user wants to reset password
         if reset_allowed and handle.lower() == 'reset':
             gosub(reset_script)
+            display_banner(term)
             continue
 
         # user wants to login anonymously
