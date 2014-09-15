@@ -226,37 +226,37 @@ DECODING_MAP.update({
 
 DECODING_TABLE = (
     u'\x00'     #  0x0000 -> NULL
-    u'\x01'     #  0x0001 -> START OF HEADING
-    u'\x02'     #  0x0002 -> START OF TEXT
-    u'\x03'     #  0x0003 -> END OF TEXT
-    u'\x04'     #  0x0004 -> END OF TRANSMISSION
-    u'\x05'     #  0x0005 -> ENQUIRY
-    u'\x06'     #  0x0006 -> ACKNOWLEDGE
+    u'\u263a',  #  0x0001 -> WHITE SMILING FACE (START OF HEADING)
+    u'\u263b',  #  0x0002 -> BLACK SMILING FACE (START OF TEXT)
+    u'\u2665',  #  0x0003 -> BLACK HEART SUIT (END OF TEXT)
+    u'\u2666',  #  0x0004 -> BLACK DIAMOND SUIT (END OF TRANSMISSION)
+    u'\u2663',  #  0x0005 -> BLACK CLUB SUIT (ENQUIRY)
+    u'\u2660',  #  0x0006 -> BLACK SPADE SUIT (ACKNOWLEDGE)
     u'\x07'     #  0x0007 -> BELL
     u'\x08'     #  0x0008 -> BACKSPACE
     u'\t'       #  0x0009 -> HORIZONTAL TABULATION
     u'\n'       #  0x000a -> LINE FEED
-    u'\x0b'     #  0x000b -> VERTICAL TABULATION
-    u'\x0c'     #  0x000c -> FORM FEED
+    u'\u2642',  #  0x000b -> MALE SIGN (VERTICAL TABULATION)
+    u'\u2640',  #  0x000c -> FEMALE SIGN (FORM FEED)
     u'\r'       #  0x000d -> CARRIAGE RETURN
-    u'\x0e'     #  0x000e -> SHIFT OUT
-    u'\x0f'     #  0x000f -> SHIFT IN
-    u'\x10'     #  0x0010 -> DATA LINK ESCAPE
-    u'\x11'     #  0x0011 -> DEVICE CONTROL ONE
-    u'\x12'     #  0x0012 -> DEVICE CONTROL TWO
-    u'\x13'     #  0x0013 -> DEVICE CONTROL THREE
-    u'\x14'     #  0x0014 -> DEVICE CONTROL FOUR
-    u'\x15'     #  0x0015 -> NEGATIVE ACKNOWLEDGE
-    u'\x16'     #  0x0016 -> SYNCHRONOUS IDLE
-    u'\x17'     #  0x0017 -> END OF TRANSMISSION BLOCK
-    u'\x18'     #  0x0018 -> CANCEL
-    u'\x19'     #  0x0019 -> END OF MEDIUM
-    u'\x1a'     #  0x001a -> SUBSTITUTE
+    u'\u266c',  #  0x000e -> BEAMED SIXTEENTH NOTES (SHIFT OUT)
+    u'\u263c',  #  0x000f -> WHITE SUN WITH RAYS (SHIFT IN)
+    u'\u25ba',  #  0x0010 -> BLACK RIGHT-POINTING POINTER (DATA LINK ESCAPE)
+    u'\u25c4',  #  0x0011 -> BLACK LEFT-POINTING POINTER (DEVICE CONTROL ONE)
+    u'\u2195',  #  0x0012 -> UP DOWN ARROW (DEVICE CONTROL TWO)
+    u'\u203c',  #  0x0013 -> DOUBLE EXCLAMATION MARK (DEVICE CONTROL THREE)
+    u'\u00b6',  #  0x0014 -> PILCROW SIGN (DEVICE CONTROL FOUR)
+    u'\u00a7',  #  0x0015 -> SECTION SIGN (NEGATIVE ACKNOWLEDGE)
+    u'\u25ac',  #  0x0016 -> BLACK RECTANGLE (SYNCHRONOUS IDLE)
+    u'\u21a8',  #  0x0017 -> UP DOWN ARROW WITH BASE (END OF TRANSMISSION BLOCK)
+    u'\u2191',  #  0x0018 -> UPWARDS ARROW (CANCEL)
+    u'\u2193',  #  0x0019 -> DOWNWARDS ARROW (END OF MEDIUM)
+    u'\u2192',  #  0x001a -> RIGHTWARDS ARROW (SUBSTITUTE)
     u'\x1b'     #  0x001b -> ESCAPE
-    u'\x1c'     #  0x001c -> FILE SEPARATOR
-    u'\x1d'     #  0x001d -> GROUP SEPARATOR
-    u'\x1e'     #  0x001e -> RECORD SEPARATOR
-    u'\x1f'     #  0x001f -> UNIT SEPARATOR
+    u'\u221f',  #  0x001c -> RIGHT ANGLE (FILE SEPARATOR)
+    u'\u2194',  #  0x001d -> LEFT RIGHT ARROW (GROUP SEPARATOR)
+    u'\u25b2',  #  0x001e -> BLACK UP-POINTING TRIANGLE
+    u'\u25bc',  #  0x001f -> BLACK DOWN-POINTING TRIANGLE
     u' '        #  0x0020 -> SPACE
     u'!'        #  0x0021 -> EXCLAMATION MARK
     u'"'        #  0x0022 -> QUOTATION MARK
