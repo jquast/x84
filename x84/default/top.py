@@ -243,7 +243,7 @@ def main(handle=None):
     session.activity = 'top'
 
     # set syncterm font, if any
-    if term._kind == 'ansi':
+    if syncterm_font and term._kind == 'ansi':
         echo(syncterm_setfont(syncterm_font))
 
     # fetch user record
