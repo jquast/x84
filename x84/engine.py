@@ -28,8 +28,6 @@ import logging
 # local
 __import__('encodings')  # provides alternate encodings
 
-BANNED_IP_LIST = dict()
-ATTEMPTED_LOGINS = dict()
 
 def main():
     """
@@ -45,7 +43,7 @@ def main():
     x84.bbs.ini.init(*parse_args())
     from x84.bbs.ini import CFG
 
-    # retrieve enabled servers
+    # retrieve list of managed servers
     servers = get_servers(CFG)
 
     try:
@@ -138,141 +136,16 @@ def find_server(servers, fd):
             return server
 
 
-def fail2ban_check(ip):
+def accept(log, server, check_ban):
     """
-    Return True if the connection from address ``ip`` should be accepted.
+    accept new connection from server, spawning an unmanaged thread.
 
-    fail2ban-like blacklists for blocking brute force attempts.
-    just add [fail2ban] to your default.ini.
-
-    the following options are available, but not required:
-
-    ip_blacklist - space-separated list of IPs on permanent blacklist
-    ip_whitelist - space-separated list of IPs to always allow
-    max_attempted_logins - the maximum number of logins allowed for the
-        given time window
-    max_attempted_logins_window - the length (in seconds) of the window for
-        which logins will be tracked (sliding scale)
-    initial_ban_length - ban length (in seconds) when an IP is blacklisted
-    ban_increment_length - amount of time (in seconds) to add to a ban on
-        subsequent login attempts
-    """
-    import time
-    import ConfigParser
-    from logging import getLogger
-    from x84.bbs.ini import CFG
-    if not CFG.has_section('fail2ban'):
-        return True
-    log = getLogger(__name__)
-    when = int(time.time())
-    # default options
-    ip_blacklist = set([])
-    ip_whitelist = set([])
-    max_attempted_logins = 3
-    max_attempted_logins_window = 30
-    initial_ban_length = 360
-    ban_increment_length = 360
-
-    # pull config
-    try:
-        ip_blacklist = set(map(str.strip,
-           CFG.get('fail2ban', 'ip_blacklist', '').split(' ')))
-    except ConfigParser.NoOptionError:
-        pass
-
-    try:
-        ip_whitelist = set(map(str.strip,
-            CFG.get('fail2ban', 'ip_whitelist', '').split(' ')))
-    except ConfigParser.NoOptionError:
-        pass
-
-    try:
-        max_attempted_logins = CFG.getint(
-            'fail2ban', 'max_attempted_logins')
-    except ConfigParser.NoOptionError:
-        pass
-
-    try:
-        max_attempted_logins_window = CFG.getint(
-            'fail2ban', 'max_attempted_logins_window')
-    except ConfigParser.NoOptionError:
-        pass
-
-    try:
-        initial_ban_length = CFG.getint(
-            'fail2ban', 'initial_ban_length')
-    except ConfigParser.NoOptionError:
-        pass
-
-    try:
-        ban_increment_length = CFG.getint(
-            'fail2ban', 'ban_increment_length')
-    except ConfigParser.NoOptionError:
-        pass
-
-    # check to see if IP is blacklisted
-    if ip in ip_blacklist:
-        log.debug('Blacklisted IP rejected: {ip}'.format(ip=ip))
-        return False
-    # check to see if IP is banned
-    elif ip in BANNED_IP_LIST:
-        # expired?
-        if when > BANNED_IP_LIST[ip]:
-            # expired ban; remove it
-            del BANNED_IP_LIST[ip]
-            ATTEMPTED_LOGINS[ip] = {
-                'attempts': 1,
-                'expiry': when + max_attempted_logins_window
-                }
-            log.debug('Banned IP expired: {ip}'
-                    .format(ip=ip))
-        else:
-            # increase the expiry and kick them out
-            BANNED_IP_LIST[ip] += ban_increment_length
-            log.debug('Banned IP rejected: {ip}'.format(ip=ip))
-            return False
-    # check num of attempts, ban if exceeded max
-    elif ip in ATTEMPTED_LOGINS:
-        if when > ATTEMPTED_LOGINS[ip]['expiry']:
-            # window closed; start over
-            record = ATTEMPTED_LOGINS[ip]
-            record['attempts'] = 1
-            record['expiry'] = when + max_attempted_logins_window
-            ATTEMPTED_LOGINS[ip] = record
-            log.debug('Attempt outside of expiry window')
-        elif ATTEMPTED_LOGINS[ip]['attempts'] > max_attempted_logins:
-            # max # of attempts reached
-            del ATTEMPTED_LOGINS[ip]
-            BANNED_IP_LIST[ip] = when + initial_ban_length
-            log.warn('Exceeded maximum attempts; banning {ip}'
-                     .format(ip=ip))
-            return False
-        else:
-            # extend window
-            record = ATTEMPTED_LOGINS[ip]
-            record['attempts'] += 1
-            record['expiry'] += max_attempted_logins_window
-            ATTEMPTED_LOGINS[ip] = record
-            log.debug('Window extended')
-    # log attempted login
-    elif ip not in ip_whitelist:
-        log.debug('First attempted login for this window')
-        ATTEMPTED_LOGINS[ip] = {
-            'attempts': 1,
-            'expiry': when + max_attempted_logins_window,
-            }
-
-    return True
-
-
-
-
-def accept(log, server):
-    """
-    accept new connection from server.server_socket,
-    instantiate a new instance of client_factory,
-    registering it with dictionary server.clients,
-    spawning an unmanaged thread using connect_factory.
+    connecting socket accepted is server.server_socket, instantiate a
+    new instance of client_factory, with optional keyword arguments
+    defined by server.client_factory_kwargs, registering it with
+    dictionary server.clients, and spawning an unmanaged thread
+    using connect_factory, with optional keyword arguments
+    server.connect_factory_kwargs.
     """
     import socket
 
@@ -281,14 +154,14 @@ def accept(log, server):
             "No accept for server class {server.__class__.__name__}"
             .format(server=server))
 
+    client_factory_kwargs = server.client_factory_kwargs
     if callable(server.client_factory_kwargs):
         client_factory_kwargs = server.client_factory_kwargs(server)
-    else:
-        client_factory_kwargs = server.client_factory_kwargs
+
+    connect_factory_kwargs = server.connect_factory_kwargs
     if callable(server.connect_factory_kwargs):
         connect_factory_kwargs = server.connect_factory_kwargs(server)
-    else:
-        connect_factory_kwargs = server.connect_factory_kwargs
+
     try:
         sock, address_pair = server.server_socket.accept()
 
@@ -302,8 +175,8 @@ def accept(log, server):
             log.error('refused new connect; maximum reached.')
             return
 
-        # fail2ban check fails, the connecting IP has been banned.
-        if fail2ban_check(address_pair[0]) is False:
+        # connecting IP is banned
+        if check_ban(address_pair[0]) is False:
             try:
                 sock.shutdown(socket.SHUT_RDWR)
             except socket.error:
@@ -560,6 +433,7 @@ def _loop(servers):
         # poll much more often for windows until we come up with something
         # better regarding checking for session output
         SELECT_POLL = 0.05
+    from x84.fail2ban import get_fail2ban_function
 
     # WIN32 has no session_fds, use empty set.
     session_fds = set()
@@ -570,6 +444,7 @@ def _loop(servers):
         raise ValueError("No servers configured for event loop! (ssh, telnet)")
 
     tap_events = CFG.getboolean('session', 'tap_events')
+    check_ban = get_fail2ban_function()
     locks = dict()
 
     # message polling setup
@@ -622,7 +497,7 @@ def _loop(servers):
             # see if any new tcp connections were made
             server = find_server(servers, fd)
             if server is not None:
-                accept(log, server)
+                accept(log, server, check_ban)
 
         # receive new data from tcp clients.
         client_recv(servers, log)
