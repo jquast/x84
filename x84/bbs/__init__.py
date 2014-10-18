@@ -272,7 +272,7 @@ def showcp437(filepattern):
     return showart(filepattern, 'cp437')
 
 
-def get_ini(section=None, key=None, getter='get', split=False):
+def get_ini(section=None, key=None, getter='get', split=False, splitsep=None):
     """
     Get an ini configuration of ``section`` and ``key``.
 
@@ -291,7 +291,7 @@ def get_ini(section=None, key=None, getter='get', split=False):
         getter = getattr(CFG, getter)
         value = getter(section, key)
         if split and hasattr(value, 'split'):
-            return value.split()
+            return map(str.strip, value.split(splitsep))
         return value
     if getter == 'getboolean':
         return False
