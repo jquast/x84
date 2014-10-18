@@ -12,9 +12,9 @@ import os
 
 # local
 from x84.bbs.exception import Disconnected
-from .terminal import spawn_client_session, on_naws
-from .client import BaseClient, BaseConnect
-from .server import BaseServer
+from x84.terminal import spawn_client_session, on_naws
+from x84.client import BaseClient, BaseConnect
+from x84.server import BaseServer
 
 # 3rd-party
 import paramiko
