@@ -1,8 +1,14 @@
 """
 msgbase package for x/84, https://github.com/jquast/x84
 """
-import logging
+# std imports
 import datetime
+import logging
+
+# local
+from x84.bbs.dbproxy import DBProxy
+
+# 3rd party
 import dateutil.tz
 
 MSGDB = 'msgbase'
@@ -30,9 +36,10 @@ def to_utctime(tm_value):
 
 def get_origin_line():
     """ pull the origin line from config """
-    from x84.bbs.ini import CFG
-    return CFG.get('msg', 'origin_line', 'Sent from {0}'
-                   .format(CFG.get('system', 'bbsname')))
+    from x84.bbs import get_ini
+    return get_ini(section='msg', key='origin_line') or (
+        'Sent from {0}'.format(
+            get_ini(section='system', key='bbsname')))
 
 
 def format_origin_line():
@@ -198,17 +205,21 @@ class Msg(object):
 
     def queue_for_network(self):
         " Queue message for networks, hosting or sending. "
-        from x84.bbs.ini import CFG
-        from x84.bbs.dbproxy import DBProxy
+        from x84.bbs import get_ini
 
         log = logging.getLogger(__name__)
-        network_names = CFG.get('msg', 'network_tags')
-        member_networks = map(str.strip, network_names.split(','))
 
-        my_networks = []
-        if CFG.has_option('msg', 'server_tags'):
-            my_netnames = CFG.get('msg', 'server_tags')
-            my_networks = map(str.strip, my_netnames.split(','))
+        # server networks this server is a member of,
+        member_networks = get_ini(section='msg',
+                                  key='network_tags',
+                                  split=True,
+                                  splitsep=',')
+
+        # server networks offered by this server,
+        my_networks = get_ini(section='msg',
+                              key='server_tags',
+                              split=True,
+                              splitsep=',')
 
         # check all tags of message; if they match a message network,
         # either record for hosting servers, or schedule for delivery.
