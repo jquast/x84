@@ -225,7 +225,7 @@ class Msg(object):
                     self.save()
                     transdb[self.idx] = self.idx
                 log.info('[{tag}] Stored for network (msgid {self.idx}).'
-                              .format(tag=tag, self=self))
+                         .format(tag=tag, self=self))
 
             # message is for a another network, queue for delivery
             elif tag in member_networks:
@@ -234,4 +234,4 @@ class Msg(object):
                 with queuedb:
                     queuedb[self.idx] = tag
                 log.info('[{tag}] Message (msgid {self.idx}) queued '
-                              'for delivery'.format(tag=tag, self=self))
+                         'for delivery'.format(tag=tag, self=self))
