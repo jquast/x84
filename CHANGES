@@ -1,4 +1,6 @@
 1.2.0
+  - fail2ban is enabled by [fail2ban] option 'enabled = yes'. Previously,
+    the mere existence of section [fail2ban] was sufficient.
   - *new* option, 'anoncmds' in section 'matrix', where previously only
     the 'anonymous' user was a legitimate synonym, you may now provide
     many different ones -- humorously, you could provide 'root'.
@@ -36,7 +38,7 @@
     if you have a chained cert):
     [web]
     addr = 0.0.0.0
-    port = 1984
+    port = 8443
     cert = /home/bbs/ssl.cer
     key = /home/bbs/ssl.key
     chain = /home/bbs/chain.cer
