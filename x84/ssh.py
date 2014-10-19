@@ -372,10 +372,15 @@ class SshServer(BaseServer):
         self.address = config.get('ssh', 'addr')
         self.port = config.getint('ssh', 'port')
 
-        # generate/load host key
-        filename = config.get('ssh', 'HostKey')
+        if self.config.has_option('ssh', 'HostKey'):
+            filename = config.get('ssh', 'HostKey')
+        else:
+            filename = os.path.join(
+                os.path.expanduser((config.get('system', 'datapath'))),
+                'ssh_host_rsa_key')
+
         if not os.path.exists(filename):
-            self.host_key = self.generate_host_key()
+            self.host_key = self.generate_host_key(filename)
         else:
             self.host_key = paramiko.RSAKey(filename=filename)
             self.log.debug('Loaded host key {0}'.format(filename))
@@ -394,10 +399,9 @@ class SshServer(BaseServer):
         self.log.info('ssh listening on {self.address}:{self.port}/tcp'
                       .format(self=self))
 
-    def generate_host_key(self):
+    def generate_host_key(self, filename):
         from paramiko import RSAKey
 
-        filename = self.config.get('ssh', 'HostKey')
         bits = 4096
         if self.config.has_option('ssh', 'HostKeyBits'):
             bits = self.config.getint('ssh', 'HostKeyBits')
