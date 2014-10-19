@@ -234,7 +234,7 @@ def poll_network_for_messages(net):
         log.debug('{net[name]} no messages.'.format(net=net))
         return
 
-    transdb = DBProxy('{0}trans'.format(net), use_session=False)
+    transdb = DBProxy('{0}trans'.format(net['name']), use_session=False)
     transkeys = transdb.keys()
     msgs = sorted(msgs, cmp=lambda x, y: cmp(int(x['id']), int(y['id'])))
 
@@ -293,8 +293,8 @@ def publish_network_messages(net):
 
     log.debug(u'[{net[name]}] publishing new messages.'.format(net=net))
 
-    queuedb = DBProxy('{0}queue'.format(net), use_session=False)
-    transdb = DBProxy('{0}trans'.format(net), use_session=False)
+    queuedb = DBProxy('{0}queue'.format(net['name']), use_session=False)
+    transdb = DBProxy('{0}trans'.format(net['name']), use_session=False)
     msgdb = DBProxy(MSGDB, use_session=False)
 
     # publish each message
