@@ -1,8 +1,11 @@
 """
 telnet extras for x/x84 bbs, https://github.com/jquast/x84
 """
-import functools
+# std imports
 import threading
+
+# local
+from x84.telnet import SEND
 
 
 def callback_cmdopt(socket, cmd, opt, env_term=None, width=None, height=None):
