@@ -1,195 +1,329 @@
+# -*- coding: utf-8 -*-
 """
- New user account script for x/84, https://github.com/jquast/x84
+New user account script for x/84, https://github.com/jquast/x84
 """
+# std imports
+from __future__ import division
+import collections
+import logging
+import os
+import re
+
+# local
+from x84.bbs import getsession, getterminal, echo, LineEditor
+from x84.bbs import goto, get_ini, find_user, User, syncterm_setfont
+from common import display_banner
+
+log = logging.getLogger(__name__)
+here = os.path.dirname(__file__)
+
+#: banner art displayed in main()
+art_file = os.path.join(here, 'art', 'nua*.ans')
+
+#: preferred fontset for SyncTerm emulator
+syncterm_font = 'topaz'
+
+#: which script to execute after registration
+top_script = get_ini(section='matrix',
+                     key='topscript'
+                     ) or 'top'
+
+#: which login names trigger new user account script
+new_usernames = get_ini(section='matrix',
+                        key='newcmds',
+                        split=True
+                        ) or ['new']
+
+#: maximum length of user handles
+username_max_length = get_ini(section='nua',
+                              key='max_user',
+                              getter='getint'
+                              ) or 10
+
+#: minimum length of user handles
+username_min_length = get_ini(section='nua',
+                              key='min_user',
+                              getter='getint',
+                              ) or 2
+
+#: which login names trigger new user account script
+invalid_usernames = get_ini(section='nua',
+                            key='invalid_handles',
+                            split=True
+                            ) or ['new', 'apply',
+                                  'exit', 'logoff', 'bye', 'quit',
+                                  'sysop', 'anonymous',]
+
+#: login name validation as a regular expression
+username_re_validator = get_ini(section='nua',
+                                key='handle_validation',
+                                ) or ['^[A-Za-z0-9]{3,11}$']
 
 
-def warning(msg, cpsec=10.0, min_sec=3.0, split_loc=3):
-    """
-    Display a 2-tone warning to user with a dynamic pause
-    """
-    from x84.bbs import getterminal, echo, getch
+#: maximum length of user 'location' field
+location_max_length = get_ini(section='nua',
+                              key='max_location',
+                              getter='getint'
+                              ) or 25
+
+#: maximum length of email address
+email_max_length = get_ini(section='nua',
+                           key='max_email',
+                           getter='getint'
+                           ) or 40
+
+#: maximum length of password
+password_max_length = get_ini(section='nua',
+                              key='max_pass',
+                              getter='getint'
+                              ) or 15
+password_min_length = get_ini(section='nua',
+                              key='min_pass',
+                              getter='getint'
+                              ) or 4
+
+#: primary color (highlight)
+color_primary = 'magenta'
+
+#: secondary color (lowlight)
+color_secondary = 'red'
+
+#: password hidden character
+hidden_char = u'\u00f7'
+
+#: structure for prompting input/validation
+vfield = collections.namedtuple('input_validation', [
+    # field name of user record
+    'name',
+    # field query displayed to user
+    'prompt_key',
+    # dictionary of arguments passed to LineEditor
+    'kwargs',
+    # validation function, None if no validation is required.
+    # function receives (user, new_value) and returns tuple
+    # of (errmsg, index modifier).
+    'validation_function',
+    # when resuming input, how to retrieve field value, may
+    # return None (for example, the password field)
+    'getter',
+    # describe the necessity or optionality of the field and
+    # its purpose to the user
+    'description',
+])
+
+
+#: positions next prompt 40 pixels minus center of screen
+def fixate_next(term, newlines=2):
+    return u''.join((
+        u'\r\n\r\n' * newlines,
+        term.move_x(max(0, (term.width // 2) - 40))))
+
+
+def prompt_input(term, key, **kwargs):
+    """ Prompt for user input. """
+    sep_ok = getattr(term, color_primary)(u'::')
+    colors = {'highlight': getattr(term, color_primary)}
+    echo(u'{sep} {key:>18}: '.format(sep=sep_ok, key=key))
+    entry = LineEditor(colors=colors, **kwargs).read()
+    if entry is None:
+        log.debug('New User Account canceled at prompt key={0}.'.format(key))
+    return entry
+
+
+def prompt_yesno(question):
+    """ yes/no user prompt. """
     term = getterminal()
-    echo(u''.join((term.clear_eol, term.normal, u'\r\n\r\n',
-                   term.bold_red, msg[:-
-                                      split_loc], term.normal, msg[
-                                          -split_loc:],
-                   term.bold_black, u'!')))
-    inp = getch(max(min_sec, float(len(msg)) / cpsec))
-    return inp
-
-
-def set_handle(user):
-    """
-    Prompt for a user.handle, minumum length.
-    """
-    # pylint: disable=R0914
-    #        Too many local variables
-    from x84.bbs import getterminal, echo, ini, LineEditor, find_user
-    import os  # os.path.sep not allowed in nicks
-    import re
-    term = getterminal()
-    prompt_handle = u'username: '
-    msg_empty = u'ENtER AN AliAS'
-    msg_exists = u'USER EXiStS.'
-    msg_tooshort = u'TOO ShORt, MUSt bE At lEASt %s.'
-    msg_invalid = u'IllEGAl USERNAME'
-    width = ini.CFG.getint('nua', 'max_user')
-    min_user = ini.CFG.getint('nua', 'min_user')
-    # pylint: disable=E1103
-    #         Instance of '_Chainmap' has no 'split' member
-    #         (but some types could not be inferred)
-    invalid_nicks = ini.CFG.get('nua', 'invalid_handles').split()
-    handle_validation = re.compile(ini.CFG.get('nua', 'handle_validation'))
+    sep = getattr(term, color_secondary)(u'**')
+    colors = {'highlight': getattr(term, color_secondary)}
+    echo(fixate_next(term, newlines=1))
     while True:
-        echo(u'\r\n\r\n' + term.clear_eol + term.normal + prompt_handle)
-        user.handle = LineEditor(width, user.handle).read()
-        if user.handle == u'' or user.handle is None:
-            warning(msg_empty)
-        elif find_user(user.handle):
-            warning(msg_exists)
-        elif len(user.handle) < min_user:
-            warning(msg_tooshort % min_user)
-        elif ((user.handle.lower() in invalid_nicks)
-                or os.path.sep in user.handle):
-            warning(msg_invalid)
-        elif not handle_validation.match(user.handle):
-            warning(msg_invalid)
-        else:
-            return
-
-
-def set_location(user):
-    """
-    Prompt for and set user.location, may be empty
-    """
-    from x84.bbs import getterminal, echo, ini, LineEditor
-    term = getterminal()
-    prompt_location = u'origin (optional): '
-    width = ini.CFG.getint('nua', 'max_location')
-    echo(u'\r\n\r\n' + term.clear_eol + term.normal + prompt_location)
-    user.location = LineEditor(width, user.location).read()
-    if user.location is None:
-        user.location = u''
-
-
-def set_email(user):
-    """
-    Prompt for and set user.email, may be empty
-    """
-    from x84.bbs import getterminal, echo, ini, LineEditor
-    term = getterminal()
-    prompt_email = u'e-mail (optional): '
-    width = ini.CFG.getint('nua', 'max_email')
-    echo(u'\r\n\r\n' + term.clear_eol + term.normal + prompt_email)
-    user.email = LineEditor(width, user.email).read()
-    if user.email is None:
-        user.email = u''
-
-
-def set_password(user):
-    """
-    Prompt for user.password, minimum length.
-    """
-    # pylint: disable=R0914
-    #        Too many local variables
-    from x84.bbs import getterminal, echo, ini, LineEditor
-    term = getterminal()
-    hidden_ch = u'x'
-    prompt_password = u'password: '
-    prompt_verify = u'   again: '
-    msg_empty = u'ENtER A PASSWORd!'
-    msg_tooshort = u'TOO ShORt, MUSt bE At lEASt %s.'
-    msg_unmatched = u'VERifY MUSt MAtCH!'
-    width = ini.CFG.getint('nua', 'max_pass')
-    min_pass = ini.CFG.getint('nua', 'min_pass')
-    while True:
-        echo(u'\r\n\r\n' + term.clear_eol + term.normal + prompt_password)
-        led = LineEditor(width)
-        led.hidden = hidden_ch
-        password = led.read()
-        if password == u'' or password is None:
-            warning(msg_empty)
-        elif len(password) < min_pass:
-            warning(msg_tooshort % min_pass)
-        else:
-            echo(u'\r\n\r\n' + term.clear_eol + term.normal + prompt_verify)
-            led = LineEditor(width)
-            led.hidden = hidden_ch
-            verify = led.read()
-            if password != verify:
-                warning(msg_unmatched)
-                continue
-            user.password = password
-            return
-
-
-def prompt_ok():
-    """
-    Prompt user to continue, True if they select yes.
-    """
-    from x84.bbs import getsession, getterminal, echo, getch, Selector
-    session, term = getsession(), getterminal()
-    prompt_confirm = u'EVERYthiNG lOOk Ok ?'
-    prompt_continue = u'YES (CONtiNUE)'
-    prompt_chg = u'NO! (ChANGE)'
-
-    def prompt_ok_dumb():
-        """ Dummy terminal prompt for confirm/cancel. """
-        echo(u'\r\n\r\n%s\r\n' % (prompt_confirm,))
-        echo(u'1 - %s\r\n' % (prompt_continue,))
-        echo(u'2 - %s\r\n\r\n' % (prompt_chg,))
-        echo(u'select (1, 2) --> ')
-        while True:
-            inp = getch()
-            if inp == u'1':
-                return True
-            elif inp == u'2':
-                return False
-    if session.env.get('TERM') == 'unknown':
-        return prompt_ok_dumb()
-    sel = Selector(yloc=term.height - 1, xloc=5,
-                   width=term.width - 10,
-                   left=prompt_continue, right=prompt_chg)
-    echo(term.normal)
-    echo(term.move(term.height - 2, 0) + term.clear_eol)
-    echo(prompt_confirm.center(term.width - 1) + '\r\n')
-    echo(term.clear_eol + sel.refresh())
-    while True:
-        echo(sel.process_keystroke(getch()))
-        if sel.selected:
-            return True if sel.selection == prompt_continue else False
+        echo(u'{sep} {question} [yn] ?\b\b'.format(sep=sep, question=question))
+        yn = LineEditor(colors=colors, width=1).read() or u''
+        if yn.lower() in (u'y', u'n'):
+            return yn.lower() == u'y'
+        echo(term.move_x(0) + term.clear_eol)
+        echo(fixate_next(term, newlines=0))
 
 
 def main(handle=u''):
-    """ Main procedure. """
-    # pylint: disable=R0914
-    #        Too many local variables
-    from x84.bbs import getsession, getterminal, echo, ini, User, goto
-    from x84.bbs import showcp437
-    session, term = getsession(), getterminal()
-    import os
-    session.activity = u'Applying for an account'
-    artfile = os.path.join(os.path.dirname(__file__), 'art', 'nua.asc')
-    msg_header = u'NEW USER APPliCAtiON'
-    # pylint: disable=E1103
-    #         Instance of '_Chainmap' has no 'split' member
-    #         (but some types could not be inferred)
-    newcmds = ini.CFG.get('matrix', 'newcmds').split()
-    topscript = ini.CFG.get('matrix', 'topscript')
+    """
+    Main procedure.
+    """
 
-    # display art and msg_header as banner
-    echo(u'\r\n\r\n')
-    for line in showcp437(artfile):
-        echo(line)
-    echo(u'\r\n\r\n' + term.reverse(msg_header.center(term.width - 1)))
+    # set syncterm font, if any
+    term = getterminal()
+    if term._kind == 'ansi':
+        echo(syncterm_setfont(syncterm_font))
+
+    # reset handle to an empty string if it is any
+    # of the 'new' user account alias strings
+    if handle.lower() in new_usernames:
+        handle = u''
+
+    user = User(handle)
 
     # create new user record for manipulation
-    user = User(handle if handle.lower() not in newcmds else u'')
     while True:
-        set_handle(user)
-        set_location(user)
-        set_email(user)
-        set_password(user)
-        if prompt_ok():
+        display_banner(art_file, encoding='ascii')
+        user = do_nua(user)
+
+        # user canceled.
+        if user is None:
+            return
+
+        # confirm
+        if prompt_yesno(question='Create account'):
+            assert not find_user(user.handle), (
+                # prevent race condition, scenario: `billy' begins new account
+                # process, waits at 'Create account [yn] ?' prompt until a
+                # second `billy' finishes account creation process, then the
+                # first `billy' enters 'y', overwriting the existing account.
+                'Security race condition: account already exists')
             user.save()
-            goto(topscript, user.handle)
+            goto(top_script, user.handle)
+
+
+def show_validation_error(errmsg):
+    """ Display validation error message. """
+    term = getterminal()
+    sep_bad = getattr(term, color_secondary)(u'**')
+    echo(fixate_next(term, newlines=1))
+    for txt in term.wrap(errmsg, width=max(0, min(80, term.width) - 3)):
+        echo(fixate_next(term, newlines=0))
+        echo(u'{sep} {txt}'.format(sep=sep_bad, txt=txt))
+        echo(u'\r\n')
+
+
+def show_description(description):
+    term = getterminal()
+    for txt in term.wrap(description, width=min(80, term.width)):
+        echo(fixate_next(term, newlines=0))
+        echo(getattr(term, color_secondary)(txt.rstrip()))
+        echo(u'\r\n')
+
+
+def do_nua(user):
+    session, term = getsession(), getterminal()
+    session.activity = u'Applying for an account'
+
+    #: user record fields prompted by do_nua() loop
+    validation_fields = (
+        vfield(name='handle',
+               prompt_key='Username',
+               kwargs={'width': username_max_length},
+               validation_function=validate_handle,
+               getter=lambda: getattr(user, 'handle', None),
+               description=u'Handle or Alias that you will be known '
+               u'by on this board.'),
+        vfield(name='location',
+               prompt_key='Origin (optional)',
+               kwargs={'width': location_max_length},
+               validation_function=None,
+               getter=lambda: getattr(user, 'location', None),
+               description=u'Group of affiliation, geographic location, '
+               u'or other moniker which other members will '
+               u'know as your place or origin.'),
+        vfield(name='email',
+               prompt_key='E-mail (optional)',
+               kwargs={'width': email_max_length},
+               validation_function=None,
+               getter=lambda: getattr(user, 'email', None),
+               description=u'E-mail address is both private and optional, '
+               u'allowing the ability to reset your password '
+               u'should it ever be forgotten.'),
+        vfield(name='password',
+               prompt_key='Password',
+               kwargs={'width': password_max_length,
+                       'hidden': hidden_char},
+               validation_function=validate_password,
+               getter=lambda: None,
+               description=None),
+        vfield(name=None,
+               prompt_key='Again',
+               kwargs={'width': password_max_length,
+                       'hidden': hidden_char},
+               validation_function=validate_password_again,
+               getter=lambda: None,
+               description=None),
+    )
+
+    idx = 0
+    while idx != len(validation_fields):
+        field = validation_fields[idx]
+        echo(fixate_next(term, newlines=1))
+        if field.description:
+            show_description(field.description)
+            echo(fixate_next(term, newlines=0))
+        value = prompt_input(term=term,
+                             key=field.prompt_key,
+                             content=field.getter(),
+                             **field.kwargs)
+
+        # user pressed escape, prompt for cancellation
+        if value is None:
+            if prompt_yesno('Cancel'):
+                return None
+            # re-prompt for current field
+            continue
+
+        value = value.strip()
+
+        # validate using function, `field.validation_function()'
+        if field.validation_function:
+            errmsg, mod = field.validation_function(user, value)
+            if errmsg:
+                show_validation_error(errmsg)
+                # re-prompt for current field
+                idx += mod
+                continue
+
+        # set local variable, increment index to next field
+        if field.name:
+            setattr(user, field.name, value)
+        idx += 1
+
+    return user
+
+
+def validate_handle(user, handle):
+    errmsg = None
+    if find_user(handle):
+        errmsg = u'User by this name already exists.'
+
+    elif len(handle) < username_min_length:
+        errmsg = (u'Username too short, must be at least {0} characters.'
+                  .format(username_min_length))
+
+    elif handle.lower() in invalid_usernames:
+        errmsg = u'Username is not legal form: reserved.'
+
+    elif os.path.sep in handle:
+        errmsg = u'Username is not legal form: contains OS path separator.'
+
+    elif not re.match(username_re_validator, handle):
+        errmsg = (u'Username fails validation of regular expression, '
+                  u'{0!r}.'.format(username_re_validator))
+
+    # No validation error
+    return errmsg, 0
+
+
+def validate_password(user, password):
+    errmsg = None
+    if password == u'':
+        errmsg = u'Password is required.'
+    elif len(password) < password_min_length:
+        errmsg = (u'Password too short, must be at least {0} characters.'
+                  .format(password_min_length))
+
+    # No validation error
+    return errmsg, 0
+
+
+def validate_password_again(user, password):
+    errmsg = None
+    if not user.auth(password):
+        errmsg = u'Password does not match, try again!'
+
+    # returns -1 as modifier, to return to password prompt.
+    return errmsg, -1
