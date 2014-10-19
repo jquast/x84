@@ -223,7 +223,7 @@ class Msg(object):
         for tag in self.tags:
             # message is for a network we host
             if tag in my_networks:
-                transdb = DBProxy('{tag}trans'.format(tag))
+                transdb = DBProxy('{0}trans'.format(tag))
                 with transdb:
                     self.body = u''.join((self.body, format_origin_line()))
                     self.save()
@@ -233,7 +233,7 @@ class Msg(object):
 
             # message is for a another network, queue for delivery
             elif tag in member_networks:
-                queuedb = DBProxy('{tag}queues'.format(tag))
+                queuedb = DBProxy('{0}queues'.format(tag))
                 with queuedb:
                     queuedb[self.idx] = tag
                 log.info('[{tag}] Message (msgid {self.idx}) queued '
