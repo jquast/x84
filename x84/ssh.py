@@ -7,11 +7,18 @@ import socket
 import array
 import errno
 import time
-import sys
 import os
 
 # local
 from x84.bbs.exception import Disconnected
+from x84.bbs.userbase import (
+    check_new_user,
+    check_bye_user,
+    check_anonymous_user,
+    check_user_password,
+    check_user_pubkey,
+)
+
 from x84.terminal import spawn_client_session, on_naws
 from x84.client import BaseClient, BaseConnect
 from x84.server import BaseServer
@@ -142,6 +149,13 @@ class SshClient(BaseClient):
 
 
 class ConnectSsh(BaseConnect):
+    """
+    ssh protocol connection handler.
+
+    Takes care of the (initial) handshake, authentication, terminal,
+    and session setup.
+    """
+
     TIME_POLL = 0.05
     TIME_WAIT_STAGE = 60
 
@@ -200,10 +214,7 @@ class ConnectSsh(BaseConnect):
                 return spawn_client_session(client=self.client,
                                             matrix_kwargs=matrix_kwargs)
 
-        except paramiko.SSHException as err:
-            self.log.debug('{client.addrport}: connection closed: {err}'
-                           .format(client=self.client, err=err))
-        except socket.error as err:
+        except (paramiko.SSHException, socket.error) as err:
             self.log.debug('{client.addrport}: connection closed: {err}'
                            .format(client=self.client, err=err))
         except EOFError:
@@ -254,7 +265,7 @@ class SshSessionServer(paramiko.ServerInterface):
             self.log.debug('any password accepted for system-enabled '
                            'account, {0!r}'.format(username))
             return paramiko.AUTH_SUCCESSFUL
-        if self._check_user_password(username, password):
+        if check_user_password(username, password):
             self.log.debug('password accepted for user {0!r}.'
                            .format(username))
             return paramiko.AUTH_SUCCESSFUL
@@ -268,7 +279,7 @@ class SshSessionServer(paramiko.ServerInterface):
             self.log.debug('pubkey accepted for system-enabled account, {0!r}'
                            .format(username))
             return paramiko.AUTH_SUCCESSFUL
-        elif self._check_user_pubkey(username, public_key):
+        elif check_user_pubkey(username, public_key):
             self.log.debug('pubkey accepted for user {0!r}.'
                            .format(username))
             return paramiko.AUTH_SUCCESSFUL
@@ -288,7 +299,7 @@ class SshSessionServer(paramiko.ServerInterface):
         attribute ``new_user`` or ``anonymous`` to True if it is enabled
         by configuration and the username is of their matching handles.
         """
-        if self._check_new_user(username):
+        if check_new_user(username):
             # if allowed, allow new@, etc. to apply for an account.
             self.new = True
             self.log.debug('accepted without authentication, {0!r}: '
@@ -296,13 +307,13 @@ class SshSessionServer(paramiko.ServerInterface):
                            .format(username))
             return True
 
-        elif self._check_bye_user(username):
+        elif check_bye_user(username):
             # not allowed to login using bye@, logoff@, etc.
             self.log.debug('denied user, {0!r}: it is an alias for logoff'
                            .format(username))
             return False
 
-        elif self._check_anonymous_user(username):
+        elif check_anonymous_user(username):
             # if enabled, allow ssh anonymous@, root@, etc.
             self.log.debug('anonymous user, {0!r} accepted by configuration.'
                            .format(username))
@@ -335,113 +346,6 @@ class SshSessionServer(paramiko.ServerInterface):
         self.log.debug('env request: [{0}] = {1}'.format(name, value))
         self.client.env[name] = value
         return True
-
-    @staticmethod
-    def _get_ini(section='matrix', key=None, getter='get', split=False):
-        """
-        Get an ini configuration of ``section`` and ``key``
-
-        The ``getter`` is the method used to retrieve, you might
-        chose a different getter, such as ``getter='get_boolean'``.
-
-        When ``split`` is True, cause the resulting value to have
-        method ``.split()`` called before return -- most commonly
-        used for a list of strings, such as the 'byecmds' or some
-        such.
-        """
-        assert key is not None, key
-        from x84.bbs import ini
-        if ini.CFG.has_option(section, key):
-            getter = getattr(ini.CFG, getter)
-            value = getter(section, key)
-            if split and hasattr(value, 'split'):
-                return value.split()
-            return value
-        return []
-
-    @classmethod
-    def _check_new_user(cls, username):
-        """ Boolean return when username matches `newcmds' ini cfg. """
-        matching = cls._get_ini(section='matrix', key='newcmds', split=True)
-        allowed = cls._get_ini(section='nua', key='allow_apply',
-                               getter='getboolean')
-        return allowed and username in matching
-
-    @classmethod
-    def _check_anonymous_user(cls, username):
-        """ Boolean return when user is anonymous and is allowed. """
-        matching = cls._get_ini(section='matrix', key='anoncmds', split=True)
-        allowed = cls._get_ini(section='matrix', key='enable_anonymous',
-                               getter='getboolean', split=False)
-        return allowed and username in matching
-
-    @classmethod
-    def _check_bye_user(cls, username):
-        """ Boolean return when username matches `byecmds' in ini cfg. """
-        matching = cls._get_ini(section='matrix', key='byecmds', split=True)
-        return matching and username in matching
-
-    @staticmethod
-    def _check_user_password(username, password):
-        """ Boolean return when username and password match user record. """
-        from x84.bbs import find_user, get_user
-        handle = find_user(username)
-        if handle is None:
-            return False
-        user = get_user(handle)
-        if user is None:
-            return False
-        return password and user.auth(password)
-
-    def _check_user_pubkey(self, username, public_key):
-        """ Boolean return when public_key matches user record. """
-        from x84.bbs import find_user, get_user
-        handle = find_user(username)
-        if handle is None:
-            return False
-        user_pubkey = get_user(handle).get('pubkey', False)
-        if not user_pubkey:
-            self.log.debug('{0} attempted pubkey authentication, '
-                           'but no public key on record for the user.'
-                           .format(username))
-            return False
-        try:
-            stored_pubkey = parse_public_key(user_pubkey)
-        except (ValueError, Exception):
-            (exc_type, exc_value, exc_traceback) = sys.exc_info()
-            self.log.debug('{0} for stored public key of user {1!r}: '
-                           '{2}'.format(exc_type, username, exc_value))
-        else:
-            return stored_pubkey == public_key
-
-
-def parse_public_key(user_pubkey):
-    """ Return paramiko key class instance of a user's public key text. """
-    if len(user_pubkey.split()) == 3:
-        key_msg, key_data, _ = user_pubkey.split()
-    elif len(user_pubkey.split()) == 2:
-        key_msg, key_data = user_pubkey.split()
-    elif len(user_pubkey.split()) == 1:
-        # when no key-type is specified, assume rsa
-        key_msg, key_data = 'ssh-rsa', user_pubkey
-    else:
-        raise ValueError('Malformed public key format: {0!r}'
-                         .format(user_pubkey))
-    try:
-        key_bytes = key_data.decode('ascii')
-    except UnicodeDecodeError:
-        raise ValueError('Malformed public key encoding: {0!r}'
-                         .format(key_data))
-    decoded_keybytes = paramiko.py3compat.decodebytes(key_bytes)
-    try:
-        return {'ssh-rsa': paramiko.RSAKey,
-                'ssh-dss': paramiko.DSSKey,
-                'ecdsa-sha2-nistp256': paramiko.ECDSAKey,
-                }.get(key_msg)(data=decoded_keybytes)
-    except KeyError:
-        raise ValueError('Malformed public key_msg: {0!r}'
-                         .format(key_msg))
-
 
 class SshServer(BaseServer):
     """
@@ -487,7 +391,7 @@ class SshServer(BaseServer):
             self.log.error('Unable to bind {self.address}:self.port, {err}'
                            .format(self=self, err=err))
             exit(1)
-        self.log.info('listening on {self.address}:{self.port}/tcp'
+        self.log.info('ssh listening on {self.address}:{self.port}/tcp'
                       .format(self=self))
 
     def generate_host_key(self):
@@ -518,3 +422,4 @@ class SshServer(BaseServer):
         """
         return [_client.channel.fileno() for _client in self.clients.values()
                 if _client.channel is not None]
+
