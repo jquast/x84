@@ -126,13 +126,17 @@ def init_bbs_ini():
     cfg_bbs.set('system', 'mail_addr',
                 '%s@%s' % (getpass.getuser(), socket.gethostname()))
     cfg_bbs.set('system', 'mail_smtphost', 'localhost')
-    # one *Could* change 'ansi' termcaps to 'ansi-bbs', for SynchoTerm,
+
+    # one *Could* change 'ansi' termcaps to 'ansi-bbs', for SynchTerm,
     # but how do we identify that 'ansi-bbs' TERM is available on this
-    # system? hmm ..
+    # system? hmm .. lets offer the reverse, anything beginning with
+    # 'ansi' can changed to any other value; so we could be
+    # unidirectional: a value of 'ansi' will translate ansi-bbs -> ansi,
+    # and a value of 'ansi-bbs' will translate ansi -> ansi-bbs.
     ## cfg_bbs.set('system', 'termcap-ansi', 'ansi-bbs')
-    cfg_bbs.set('system', 'termcap-ansi', 'no')
-    # change 'unknown' termcaps to 'vt220', for dumb terminals
-    cfg_bbs.set('system', 'termcap-unknown', 'vt220')
+    cfg_bbs.set('system', 'termcap-ansi', 'ansi')
+    # change 'unknown' termcaps to 'ansi': for dumb terminals
+    cfg_bbs.set('system', 'termcap-unknown', 'ansi')
     # could be information leak to sensitive sysops
     cfg_bbs.set('system', 'show_traceback', 'no')
     # store passwords in uppercase, facebook and mystic bbs does this ..

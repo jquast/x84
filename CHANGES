@@ -1,4 +1,7 @@
 1.2.0
+  - the meaning of [system] option 'termcap-ansi', when not valued 'no', now
+    coerces any reported terminal types *beginning* with 'ansi' to
+    the target type.
   - fail2ban is enabled by [fail2ban] option 'enabled = yes'. Previously,
     the mere existence of section [fail2ban] was sufficient.
   - *new* option, 'anoncmds' in section 'matrix', where previously only

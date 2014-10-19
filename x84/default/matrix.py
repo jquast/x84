@@ -126,7 +126,7 @@ def display_banner(term):
     echo(term.normal)
 
     # set syncterm font, if any
-    if term._kind == 'ansi':
+    if syncterm_font and term._kind.startswith('ansi'):
         echo(syncterm_setfont(syncterm_font))
 
     # http://www.termsys.demon.co.uk/vtansi.htm
