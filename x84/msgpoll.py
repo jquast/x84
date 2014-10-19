@@ -179,10 +179,12 @@ def get_networks():
             ca_path = os.path.expanduser(ca_path)
             if not os.path.isfile(ca_path):
                 log.warn("File not found for Config section [{section}], "
-                         "option {key}, value={ca_path}.  default ca verify "
+                         "option {key}, value={ca_path}.  default ca_verify "
                          "will be used. ".format(section=section,
                                                  key='ca_path',
                                                  value=ca_path))
+            else:
+                net['verify'] = ca_path
 
         networks.append(net)
     return networks
