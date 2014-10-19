@@ -1,24 +1,24 @@
+#!/usr/bin/env python2.7
 """
 x84net message poll for x/84, https://github.com/jquast/x84
 
 To configure message polling, add a tag for the network to the 'server_tags'
-attribute in the [msg] section of your default.ini.
+attribute in the [msg] section of your default.ini.  Optionally include a
+custom 'origin' line.  If not provided, "Sent from <bbsname>" will be used.
+
 Next, create a section using the name of that tag, prefixed with 'msgnet_'.
 (Example: if the tag is 'x84net', create a 'msgnet_x84net' section.)
 
 The following attributes are required:
- - type: Must be 'rest', as REST APIs are the only supported type (for now).
  - url_base: The base URL for the message network's REST API.
  - board_id: Your board's ID in the network.
  - token: Your board's secure token, assigned to you by the network admin.
- - trans_db_name: The alphanumeric name of the translation database.
- - queue_db_name: The alphanumeric name of the queue database.
- - last_file: The filename of the file that stores the last-retrieved message
-   index number (relative to your data directory)
 
-The following attribute is optional:
+The following attributes are optional:
  - ca_path: The path to a CA bundle if the server's CA is not already
    included in your operating system.
+ - poll_interval: The number of seconds elapsed between polling a message
+   network for new messages (default is 1984, ~33 minutes).
 
 If you wish to tag your messages with a custom origin line when they are
 delivered to the network hub, add an 'origin_line' attribute to the [msg]
@@ -28,16 +28,13 @@ Example default.ini configuration:
 
 [msg]
 network_tags = x84net
-origin_line = Sent from The Best BBS In The World, baby!
+origin_line = Sent from a mediocre BBS.
 
 [msgnet_x84net]
-type = rest
 url_base = https://some.server:8443/api/messages/
 board_id = 1
 token = somereallylongtoken
-trans_db_name = x84nettrans
-queue_db_name = x84netqueue
-last_file = x84net_last
+poll_interval = 300
 """
 
 # local imports
@@ -75,15 +72,16 @@ def prepare_message(msg, network, parent):
     }
 
 
-def pull_rest(net, last_msg_id, log=None):
+def pull_rest(net, last_msg_id):
     """ pull messages for a given network newer than the 'last' message idx """
-    log = log or logging.getLogger(__name__)
     url = '%smessages/%s/%s' % (net['url_base'], net['name'], last_msg_id)
+
+    log = logging.getLogger(__name__)
 
     try:
         req = requests.get(url,
                            headers={'Auth-X84net': get_token(net)},
-                           verify=net['ca_path'])
+                           verify=net['verify'])
     except Exception, err:
         log.exception('[{net[name]}] exception in pull_rest: {err}'
                       .format(net=net, err=err))
@@ -103,19 +101,19 @@ def pull_rest(net, last_msg_id, log=None):
         return False
 
 
-def push_rest(net, msg, parent, log=None):
+def push_rest(net, msg, parent):
     """ push message for a given network and append an origin line """
-    log = log or logging.getLogger(__name__)
-
     msg_data = prepare_message(msg, net, parent)
     url = '{net[url_base]}messages/{net[name]}/'.format(net=net)
     data = {'message': json.dumps(msg_data)}
+
+    log = logging.getLogger(__name__)
 
     try:
         req = requests.put(url,
                            headers={'Auth-X84net': get_token(net)},
                            data=data,
-                           verify=net['ca_path'])
+                           verify=net['verify'])
     except Exception, err:
         log.exception('[{net[name]}] exception in push_rest: {err}'
                       .format(net=net, err=err))
@@ -137,81 +135,95 @@ def push_rest(net, msg, parent, log=None):
     return False
 
 
-def get_networks(cfg, log=None):
+def get_networks():
     " Get configured message networks. "
+    from x84.bbs import get_ini
 
-    log = log or logging.getLogger(__name__)
+    log = logging.getLogger(__name__)
 
     # pull list of network-associated tags
-    network_list = []
-    if cfg.has_option('msg', 'network_tags'):
-        net_names = cfg.get('msg', 'network_tags').split(',')
-        network_list = map(str.strip, net_names)
+    network_list = get_ini(section='msg',
+                           key='network_tags',
+                           split=True,
+                           splitsep=',')
 
     # expected configuration options,
-    net_options = ('url_base token board_id trans_db_name '
-                   'queue_db_name last_file'.split())
+    net_options = ('url_base token board_id'.split())
 
     networks = list()
     for net_name in network_list:
+        net = {'name': net_name}
+
         section = 'msgnet_{0}'.format(net_name)
-        net_type = cfg.get(section, 'type')
-        assert net_type == 'rest', ('Only "rest" is supported', net_type)
-        net = {'name': net_name, 'type': net_type}
-        if not cfg.has_section(section):
-            log.error('[{net_name}] No such config section: {section}'
-                      .format(net_name=net_name, section=section))
+        configured = True
+        for option in net_options:
+            if not get_ini(section=section, key=option):
+                log.error('[{net_name}] Missing configuration, '
+                          'section=[{section}], option={option}.'
+                          .format(net_name=net_name,
+                                  section=section,
+                                  option=option))
+                configured = False
+            net[option] = get_ini(section=section, key=option)
+        if not configured:
             continue
 
-        for option in net_options:
-            if not cfg.has_option(section, option):
-                log.error('[{net_name}] No such config option: {option}'
-                          .format(net_name=net_name, option=option))
-                continue
-            net[option] = cfg.get(section, option)
-
-        # make last_file absolute path, relative to datapath
+        # make last_file an absolute path, relative to `datapath`
         net['last_file'] = os.path.join(
-            os.path.expanduser(cfg.get('system', 'datapath')),
-            net['last_file'])
+            os.path.expanduser(get_ini(section='system', key='datapath')),
+            '{net[name]}_last'.format(net=net))
 
-        if not cfg.has_option(section, 'ca_path'):
-            ca_path = True
-        else:
-            ca_path = os.path.expanduser(cfg.get(section, 'ca_path'))
+        net['verify'] = True
+        ca_path = get_ini(section=section, key='ca_path')
+        if ca_path:
+            ca_path = os.path.expanduser(ca_path)
             if not os.path.isfile(ca_path):
-                log.warn("CFG option section {section}, File not found for "
-                         "{key} = {value}, default ca verify will be used. "
-                         .format(section=section,
-                                 key='ca_path',
-                                 value=ca_path))
-        net['ca_path'] = ca_path
+                log.warn("File not found for Config section [{section}], "
+                         "option {key}, value={ca_path}.  default ca verify "
+                         "will be used. ".format(section=section,
+                                                 key='ca_path',
+                                                 value=ca_path))
 
         networks.append(net)
     return networks
 
 
-def poll_network_for_messages(net, log=None):
+def get_last_msg_id(last_file):
+    last_msg_id = -1
+
+    log = logging.getLogger(__name__)
+
+    try:
+        # May raise IOError (File not Found)
+        with open(last_file, 'r') as last_fp:
+            last_msg_id = int(last_fp.read().strip())
+
+    except IOError as err:
+        # So, create it; but this too, may raise an
+        # OSError (Permission Denied), handled by caller.
+        with open(last_file, 'w') as last_fp:
+            last_fp.write(str(last_msg_id))
+
+        log.info('last_file created: {0}'.format(last_file))
+
+    return last_msg_id
+
+
+def poll_network_for_messages(net):
     " pull for new messages of network, storing locally. "
     from x84.bbs import Msg, DBProxy
     from x84.bbs.msgbase import to_localtime
-    log = log or logging.getLogger(__name__)
 
-    last_msg_id, msgs = -1, []
+    log = logging.getLogger(__name__)
+
+    log.debug(u'[{net[name]}] polling for new messages.'.format(net=net))
+
     try:
-        with open(net['last_file'], 'r') as last_fp:
-            last_msg_id = int(last_fp.read().strip())
-    except IOError as err:
-        try:
-            with open(net['last_file'], 'w') as last_fp:
-                last_fp.write(str(last_msg_id))
-
-            log.info('[{net[name]}] last_file created'.format(net=net))
-
-        except OSError as err:
-            log.error('[{net[name]}] skipping network: {err}'
-                      .format(net=net, err=err))
-            return
+        last_msg_id = get_last_msg_id(net['last_file'])
+    except (OSError, IOError) as err:
+        log.error('[{net[name]}] skipping network: {err}'
+                  .format(net=net, err=err))
+        return
 
     msgs = pull_rest(net=net, last_msg_id=last_msg_id)
 
@@ -222,7 +234,7 @@ def poll_network_for_messages(net, log=None):
         log.debug('{net[name]} no messages.'.format(net=net))
         return
 
-    transdb = DBProxy(net['trans_db_name'], use_session=False)
+    transdb = DBProxy('{0}trans'.format(net), use_session=False)
     transkeys = transdb.keys()
     msgs = sorted(msgs, cmp=lambda x, y: cmp(int(x['id']), int(y['id'])))
 
@@ -272,14 +284,17 @@ def poll_network_for_messages(net, log=None):
     return
 
 
-def publish_network_messages(net, log=None):
+def publish_network_messages(net):
     " Push messages to network. "
     from x84.bbs import DBProxy
     from x84.bbs.msgbase import format_origin_line, MSGDB
 
-    log = log or logging.getLogger(__name__)
-    queuedb = DBProxy(net['queue_db_name'], use_session=False)
-    transdb = DBProxy(net['trans_db_name'], use_session=False)
+    log = logging.getLogger(__name__)
+
+    log.debug(u'[{net[name]}] publishing new messages.'.format(net=net))
+
+    queuedb = DBProxy('{0}queue'.format(net), use_session=False)
+    transdb = DBProxy('{0}trans'.format(net), use_session=False)
     msgdb = DBProxy(MSGDB, use_session=False)
 
     # publish each message
@@ -328,48 +343,69 @@ def publish_network_messages(net, log=None):
         log.info('{net[name]} Published (msg_id={msg_id}) => {trans_id}'
                  .format(net=net, msg_id=msg_id, trans_id=trans_id))
 
-def start_polling():
-    """ launch method for polling process """
 
-    def polling_thread(poll_interval):
-        import time
-
-        last_poll = 0
-
-        while True:
-            now = time.time()
-            if now - last_poll >= poll_interval:
-                poll()
-                last_poll = now
-            time.sleep(1)
-
-    from threading import Thread
-    from x84.bbs.ini import CFG
-    import logging
-
-    log = logging.getLogger('x84.engine')
-    poll_interval = CFG.getint('msg', 'poll_interval')
-    t = Thread(target=polling_thread, args=(poll_interval,))
-    t.daemon = True
-    t.start()
-    log.info('msgpoll will poll at {0}s intervals.'
-              .format(poll_interval))
-
-def poll():
-    """ message polling process """
-    import x84.bbs.ini
-
+def poller(poll_interval):
     log = logging.getLogger(__name__)
 
     # get all networks
-    networks = get_networks(cfg=x84.bbs.ini.CFG)
-    log.debug(u'Begin poll/publish process for networks: {net_names}.'
-              .format(net_names=', '.join(net['name'] for net in networks)))
+    networks = get_networks()
 
-    # pull/push to all networks
-    for net in networks:
-        poll_network_for_messages(net)
-        publish_network_messages(net)
-    num = len(networks)
-    log.debug('Message poll/publish complete for {n} network{s}.'
-              .format(n=num, s='s' if num != 1 else ''))
+    while networks:
+        poll(networks)
+        time.sleep(poll_interval)
+    else:
+        log.error(u'No networks configured for poll/publish.')
+
+
+def main(background_daemon=True):
+    """
+    Entry point to configure and begin network message polling.
+
+    Called by x84/engine.py, function main() as unmanaged thread.
+
+    :param background_daemon: When True (default), this function returns and
+      web modules are served in an unmanaged, background (daemon) thread.
+      Otherwise, function call to ``main()`` is blocking.
+    :type background_daemon: bool
+    :rtype: None
+    """
+    from threading import Thread
+    from x84.bbs import get_ini
+
+    log = logging.getLogger(__name__)
+
+    poll_interval = get_ini(section='msg',
+                            key='poll_interval',
+                            getter='getint'
+                            ) or 1984
+
+    if background_daemon:
+        t = Thread(target=poller, args=(poll_interval,))
+        t.daemon = True
+        log.info('msgpoll at {0}s intervals.'.format(poll_interval))
+        t.start()
+    else:
+        poller(poll_interval)
+
+
+def poll(networks):
+    """ message polling process """
+
+    # pull-from all networks
+    map(poll_network_for_messages, networks)
+
+    # publish-to all networks
+    map(publish_network_messages, networks)
+
+if __name__ == '__main__':
+    # load only message polling module when executing this script directly.
+    #
+    # as we are running outside of the 'engine' context, it is necessary
+    # for us to initialize the .ini configuration scheme so that the list
+    # of web modules and ssl options may be gathered.
+    import x84.engine
+    import x84.bbs.ini
+    x84.bbs.ini.init(*x84.engine.parse_args())
+
+    # do not execute message polling as a background thread.
+    main(background_daemon=False)

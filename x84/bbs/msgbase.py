@@ -221,13 +221,9 @@ class Msg(object):
         # check all tags of message; if they match a message network,
         # either record for hosting servers, or schedule for delivery.
         for tag in self.tags:
-            section = 'msgnet_{tag}'.format(tag=tag)
-
             # message is for a network we host
             if tag in my_networks:
-                section = 'msgnet_{tag}'.format(tag=tag)
-                transdb_name = CFG.get(section, 'trans_db_name')
-                transdb = DBProxy(transdb_name)
+                transdb = DBProxy('{tag}trans'.format(tag))
                 with transdb:
                     self.body = u''.join((self.body, format_origin_line()))
                     self.save()
@@ -237,8 +233,7 @@ class Msg(object):
 
             # message is for a another network, queue for delivery
             elif tag in member_networks:
-                queuedb_name = CFG.get(section, 'queue_db_name')
-                queuedb = DBProxy(queuedb_name)
+                queuedb = DBProxy('{tag}queues'.format(tag))
                 with queuedb:
                     queuedb[self.idx] = tag
                 log.info('[{tag}] Message (msgid {self.idx}) queued '

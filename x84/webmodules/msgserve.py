@@ -7,30 +7,19 @@ To configure the message network server, you must first configure the
 web server. See x84/webserve.py for more information.
 
 Add 'msgserve' to your 'modules' in the [web] section of default.ini.
-Next, you will need to add the tag for the network to the 'server_tags'
-attribute of the [msg] section.
-Finally, create a section in default.ini with the name of that tag,
-prefixed with 'msgnet_'. If your network name is 'x84net', for example,
-you would create a [msgnet_x84net] section.
 
-The following attributes are required:
- - trans_db_name: The alphanumeric name of the translation database.
- - keys_db_name: The alphanumeric name of the keys database.
- - source_db_name: The alphanumeric name of the source database.
+Then, you must create a 'tag', that is, name your message network(s),
+with a comma-delimited list of ``server_tags`` of the ``[msg]``
+section.  The name of this tag will become the prefix of a series of
+database files, and must be named appropriately (that is, contain
+only alphanumerics).
 
 Example default.ini settings:
 
 [msg]
 # The name of the message networks hosted
 server_tags = x84net
-
-[msgnet_x84net]
-trans_db_name = x84nettrans
-keys_db_name = x84netkeys
-source_db_name = x84netsrc
 """
-import multiprocessing
-import threading
 import logging
 import hashlib
 import json
@@ -52,10 +41,6 @@ VALIDATE_FIELDS = ('network', 'action', 'auth',)
 #: sub-fields of 'message'
 VALIDATE_MSG_KEYS = (u'author', u'recipient', u'subject',
                      u'parent', u'tags', u'ctime', u'body', )
-
-#: required ini configuration options for section msgnet_{network_name}
-# todo: should generate database names, not require configuration
-VALIDATE_CFG = ('keys_db_name', 'source_db_name', 'trans_db_name',)
 
 
 def parse_auth(request_data):
@@ -124,13 +109,13 @@ class MessageApi(object):
                 err=err, response_data=response_data))
             raise web.HTTPError('500 Server Error', {}, RESP_FAIL)
 
+
 def web_module():
     """
-    Setup the module and return a dict of its REST API.
+    Return dictionary of url routes and function mappings for this module.
 
-    Called only once on server start.
+    Called by x84/webserve.py on server start.
     """
-
     return {
         'urls': ('/messages/([^/]+)/([^/]*)/?', 'messages'),
         'funcs': {
@@ -143,6 +128,7 @@ def web_module():
 # ---8<---
 #
 # Below is the method for serving requests and some helper funcs.
+
 
 def server_error(log_func, log_msg, http_msg=None):
     " helper method for logging and returning errors "
@@ -242,7 +228,7 @@ def get_response(request_data):
     # todo: The caller runs a while loop .. this should be a script
     # that does a while loop and imports x84.webserve.
 
-    from x84.bbs import ini, DBProxy
+    from x84.bbs import DBProxy, get_ini
     log = logging.getLogger(__name__)
 
     # validate primary json request keys
@@ -251,17 +237,20 @@ def get_response(request_data):
         return server_error(log_func=log.warn,
                             log_msg='Missing field, {key!r}'.format(key=key))
 
-    # validate message network & configuration.
-    section = 'msgnet_{data[network]}'.format(data=request_data)
-    for option in VALIDATE_CFG:
-        if not ini.CFG.has_option(section, option):
-            return server_error(log_func=log.warn,
-                                log_msg=('[{data[network]}] missing config '
-                                         'for section [{section}]: {option!r}'
-                                         .format(data=request_data,
-                                                 section=section,
-                                                 option=option)),
-                                http_msg=u'Server error')
+    # validate this server offers such message network
+    server_tags = get_ini(section='msg',
+                          key='server_tags',
+                          split=True,
+                          splitsep=',')
+
+    if not request_data['network'] in server_tags:
+        return server_error(log_func=log.warn,
+                            log_msg=('[{data[network]}] not in server_tags '
+                                     '({server_tags})'
+                                     .format(data=request_data,
+                                             server_tags=server_tags)),
+                            http_msg=u'Server error')
+    tag = request_data['network']
 
     # validate authentication token
     try:
@@ -277,7 +266,7 @@ def get_response(request_data):
                                           board_id=board_id))
 
     # validate board auth-key
-    keysdb = DBProxy(ini.CFG.get(section, 'keys_db_name'), use_session=False)
+    keysdb = DBProxy('{0}keys'.format(tag), use_session=False)
     try:
         client_key = keysdb[board_id]
     except KeyError:
@@ -297,30 +286,33 @@ def get_response(request_data):
 
     # these need to be better named for their transmission direction,
     # its very clear how they are consumed as they are currently named.
-    db_source = DBProxy(ini.CFG.get(section, 'source_db_name'), use_session=False)
-    db_transactions = DBProxy(ini.CFG.get(section, 'trans_db_name'), use_session=False)
+    db_source = DBProxy('{0}source'.format(tag), use_session=False)
+    db_transactions = DBProxy('{0}trans'.format(tag), use_session=False)
 
     if request_data.get('action', None) == 'pull':
         # client is requesting to pull messages
         return serve_messages_for(board_id=board_id,
-                           request_data=request_data,
-                           db_source=db_source)
+                                  request_data=request_data,
+                                  db_source=db_source)
 
     elif request_data.get('action', None) == 'push':
         # client is sending a message to the network
         return receive_message_from(board_id=board_id,
-                             request_data=request_data,
-                             db_source=db_source,
-                             db_transactions=db_transactions)
+                                    request_data=request_data,
+                                    db_source=db_source,
+                                    db_transactions=db_transactions)
 
     else:
-        return server_error(log_func=log.info,
-                     log_msg=('[{data[network]}] Unknown action, {data[action]!r}'
-                              .format(data=request_data)),
-                     http_msg=('action {data[action]!r} invalid.'
-                               .format(data=request_data)))
+        return server_error(
+            log_func=log.info,
+            log_msg=('[{data[network]}] Unknown action, {data[action]!r}'
+                     .format(data=request_data)),
+            http_msg=('action {data[action]!r} invalid.'
+                      .format(data=request_data)))
+
 # XX this should be automatic. cryptography.Fernet.generate_key()
 # XX 'somereallylongkey' encourages not very strong keys ..
+# XX and we should make a door/sysop script to generate these !
 #
 # You must assign each board in the network an ID (an integer) and
 # a key in the keys database. Use a script invoked by gosub() to

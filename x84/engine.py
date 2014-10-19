@@ -42,6 +42,7 @@ def main():
 
     # load existing .ini files or create default ones.
     x84.bbs.ini.init(*parse_args())
+    from x84.bbs import get_ini
     from x84.bbs.ini import CFG
 
     if sys.maxunicode == 65535:
@@ -50,6 +51,24 @@ def main():
 
     # retrieve list of managed servers
     servers = get_servers(CFG)
+
+    # begin unmanaged servers
+    if get_ini(section='web', key='modules'):
+        # start https server for one or more web modules.
+        #
+        # may raise an ImportError for systems where pyOpenSSL and etc. could
+        # not be installed (due to any issues with missing python-dev, libffi,
+        # cc, etc.).  Allow it to raise naturally, the curious user should
+        # either discover and resolve the root issue, or disable web modules if
+        # it cannot be resolved.
+        from x84 import webserve
+        webserve.main()
+
+    if get_ini(section='msg', key='network_tags'):
+        # start background timer to poll for new messages
+        # of message networks we may be a member of.
+        from x84 import msgpoll
+        msgpoll.start_polling()
 
     try:
         # begin main event loop
@@ -491,24 +510,6 @@ def _loop(servers):
     tap_events = CFG.getboolean('session', 'tap_events')
     check_ban = get_fail2ban_function()
     locks = dict()
-
-    # message polling setup
-    if CFG.has_option('msg', 'poll_interval'):
-        from x84 import msgpoll
-        msgpoll.start_polling()
-
-    if CFG.has_section('web') and CFG.has_option('web', 'modules'):
-        try:
-            __import__("web")
-            __import__("OpenSSL")
-            import webserve
-            module_names = CFG.get('web', 'modules', '').split(',')
-            if module_names:
-                web_modules = set(map(str.strip, module_names))
-                log.info('starting webmodules: {0!r}'.format(web_modules))
-                webserve.start(web_modules)
-        except ImportError as err:
-            log.error("section [web] enabled but not enabled: {0}".format(err))
 
     while True:
         # shutdown, close & delete inactive clients,
