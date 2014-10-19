@@ -247,7 +247,7 @@ def do_login(term):
          .format(sep=sep_bad))
 
 
-def main():
+def main(anonymous=False, new=False):
     """
     Script entry point.
 
@@ -261,11 +261,19 @@ def main():
 
     display_banner(term)
 
+    if anonymous:
+        # user rlogin'd in as anonymous@
+        goto(top_script, 'anonymous')
+    elif new:
+        # user rlogin'd in as new@
+        goto(new_script)
+
     # do_login will goto/gosub various scripts, if it returns, then
     # either the user entered 'bye', or had too many failed attempts.
     do_login(term)
 
     log.debug('Disconnecting.')
+
     # it is necessary to provide sufficient time to send any pending
     # output across the transport before disconnecting.
     term.inkey(1.5)
