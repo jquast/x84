@@ -173,13 +173,15 @@ class User(object):
 
         To authenticate, assert auth(try_pass) == True.
         """
+        from x84.bbs import ini
+        pass_ucase = ini.CFG.getboolean('system', 'pass_ucase')
         assert type(try_pass) is unicode
         assert len(try_pass) > 0
         assert self.password != (None, None), ('account is without password')
         salt = self.password[0]
         digestpw = get_digestpw()
-        return (self.password == digestpw(try_pass, salt) or
-                self.password == digestpw(try_pass.upper(), salt))
+        return (self.password == digestpw(try_pass, salt) or pass_ucase
+                and self.password == digestpw(try_pass.upper(), salt))
 
     def __setitem__(self, key, value):
         # pylint: disable=C0111,
