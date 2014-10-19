@@ -133,9 +133,10 @@ def display_banner(term):
     # disable line-wrapping (SyncTerm does not honor, careful!)
     echo(u'\x1b[7l')
 
-    # http://www.xfree86.org/4.5.0/ctlseqs.html
-    # Save xterm icon and window title on stack.
-    echo(u'\x1b[22;0t')
+    if term._kind.startswith('xterm'):
+        # http://www.xfree86.org/4.5.0/ctlseqs.html
+        # Save xterm icon and window title on stack.
+        echo(u'\x1b[22;0t')
 
     # move to beginning of line and clear, in case syncterm_setfont
     # has been mis-interpreted, as it follows CSI with space, which

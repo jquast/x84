@@ -200,9 +200,11 @@ def do_intro_art(term, session):
 
     Bonus: allow chosing other artfiles with '<' and '>'.
     """
-    editor_colors = {'highlight': (term.reverse_red_underline
-                                   if term._kind != 'ansi' else
-                                   term.black_on_red)}
+    editor_colors = {'highlight': term.black_on_red}
+
+    # set syncterm font, if any
+    if syncterm_font and term._kind.startswith('ansi'):
+        echo(syncterm_setfont(syncterm_font))
 
     index = int(time.time()) % len(art_files)
     dirty = True
@@ -224,7 +226,9 @@ def do_intro_art(term, session):
         if len(inp) == 1:
             echo(u'\b')
         if inp == u'!':
+            echo(u'\r\n' * 3)
             gosub('charset')
+            dirty = True
         elif inp == u'<':
             index -= 1
         elif inp == u'>':
@@ -242,10 +246,17 @@ def main(handle=None):
     session, term = getsession(), getterminal()
     session.activity = 'top'
 
-    # set syncterm font, if any
-    if syncterm_font and term._kind == 'ansi':
-    if syncterm_font and term._kind.startswith('ansi'):
-        echo(syncterm_setfont(syncterm_font))
+    # attempt to coerce encoding of terminal to match session.
+    echo ({
+        # ESC %G activates UTF-8 with an unspecified implementation
+        # level from ISO 2022 in a way that allows to go back to
+        # ISO 2022 again.
+        'utf8': unichr(27) + u'%G',
+        # ESC %@ returns to ISO 2022 in case UTF-8 had been entered.
+        # ESC ) U Sets character set G1 to codepage 437, such as on
+        # Linux vga console.
+        'cp437': unichr(27) + u'%@' + unichr(27) + u')U',
+    }.get(session.encoding, u''))
 
     # fetch user record
     user = get_user_record(handle)
@@ -260,13 +271,12 @@ def main(handle=None):
 
     gosub('news', quick=quick)
 
+    if not quick:
+        gosub('lc')
+
     goto('main')
 
-    #goto('main')
-
-    # 5. last callers
-    #gosub('lc')
-    #session.activity = 'top'
+    # WIP
 
     # 6. check for new public/private msgs,
     #gosub('readmsgs', set())
@@ -283,4 +293,3 @@ def main(handle=None):
 
     # 10. automsg
     #gosub('automsg')
-

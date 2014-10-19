@@ -1,114 +1,112 @@
 """
-Session script for x/84, https://github.com/jquast/x84
+Encoding selection script for x/84, https://github.com/jquast/x84
 
-This script displays a CP437 artwork (block ansi), and prompts the user to
-chose 'utf8' or 'cp437' encoding. Other than the default, 'utf8', the
-Session.write() method takes special handling of a session.encoding value
-of 'cp437' for encoding translation.
-
-feedback appreciated in the refresh() method; special characters
-are used to "switch" terminals from one mode to another -- do any work?
+Displays a CP437 artwork (block ansi), and prompts the user
+to chose 'utf8' or 'cp437' encoding.
 """
-
+# std imports
 import os
 
+# x/84
+from x84.bbs import getsession, getterminal, echo, syncterm_setfont, LineEditor
 
-def get_selector(selection):
-    """
-    Instantiate a new selector, dynamicly for the window size.
-    """
-    from x84.bbs import getterminal, Selector
-    term = getterminal()
-    width = max(30, (term.width / 2) - 10)
-    xloc = max(0, (term.width / 2) - (width / 2))
-    sel = Selector(yloc=term.height - 1,
-                   xloc=xloc, width=width,
-                   left='utf8', right='cp437')
-    sel.selection = selection
-    return sel
+# local
+from common import display_banner
+
+#: filepath to folder containing this script
+here = os.path.dirname(__file__)
+
+#: filepath to artfile displayed for this script
+art_file = os.path.join(here, 'art', 'encoding.ans')
+
+#: encoding used to display artfile
+art_encoding = 'cp437_art'
+
+#: fontset for SyncTerm emulator
+syncterm_font = 'cp437'
+
+#: text to display in prompt
+prompt_text = (u"Chose an encoding and set font until artwork "
+               u"looks best.  "
+
+               u"SyncTerm, netrunner, and other DOS-emulating clients "
+               u"should chose cp437, though internationalized languages "
+               u"will appear as '?'.  "
+
+               u"OSX Clients should chose an Andale Mono font. Linux "
+               u"fonts should chose an <...> font. ")
+
+prompt_padding = 10
+
+
+def _show_opt(term, keys):
+    """ Display characters ``key`` highlighted as keystroke """
+    return u''.join((term.bold_black(u'['),
+                     term.bold_green_underline(keys),
+                     term.bold_black(u']')))
+
+
+def display_prompt(term):
+    """ Display prompt of user choices. """
+    echo(u'\r\n\r\n')
+    width = min(term.width, 80 - prompt_padding)
+    for line in term.wrap(prompt_text, width):
+        echo(u' ' * ((term.width - width) / 2))
+        echo(line + '\r\n')
+
+    echo(u'\r\n')
+    echo(term.center(u'{0}tf8, {1}p437, {2}one:'
+                     .format(_show_opt(term, u'u'),
+                             _show_opt(term, u'c'),
+                             _show_opt(term, u'd'))
+                     ).rstrip() + u' ')
+
+
+def do_select_encoding(term, session):
+    editor_colors = {'highlight': term.black_on_green}
+    dirty = True
+    while True:
+        if session.poll_event('refresh') or dirty:
+            vertical_padding = 2 if term.height >= 24 else 0
+            display_banner(filepattern=art_file,
+                           encoding=art_encoding,
+                           vertical_padding=vertical_padding)
+            display_prompt(term)
+            echo ({
+                # ESC %G activates UTF-8 with an unspecified implementation
+                # level from ISO 2022 in a way that allows to go back to
+                # ISO 2022 again.
+                'utf8': unichr(27) + u'%G',
+                # ESC %@ returns to ISO 2022 in case UTF-8 had been entered.
+                # ESC ) U Sets character set G1 to codepage 437, such as on
+                # Linux vga console.
+                'cp437': unichr(27) + u'%@' + unichr(27) + u')U',
+            }.get(session.encoding, u''))
+            dirty = False
+
+        inp = LineEditor(1, colors=editor_colors).read()
+
+        if inp is None or inp.lower() == 'd':
+            break
+        elif len(inp) == 1:
+            # position cursor for next call to LineEditor()
+            echo(u'\b')
+
+        if inp.lower() == u'u' and session.encoding != 'utf8':
+            session.encoding = 'utf8'
+            dirty = True
+        elif inp.lower() == 'c' and session.encoding != 'cp437':
+            session.encoding = 'cp437'
+            dirty = True
 
 
 def main():
-    """ Main procedure. """
-    # pylint: disable=R0912
-    #        Too many branches
-    from x84.bbs import getsession, getterminal, echo, getch, from_cp437
+    """ Script entry point. """
     session, term = getsession(), getterminal()
-    session.activity = u'Selecting chracter set'
-    artfile = os.path.join(
-        os.path.dirname(__file__), 'art', (
-            'plant-256.ans' if term.number_of_colors == 256
-            else 'plant.ans'))
-    enc_prompt = (
-        u'Press left/right until artwork looks best. Clients should'
-        ' select utf8 encoding and Andale Mono font. Older clients or'
-        ' clients with appropriate 8-bit fontsets can select cp437, though'
-        ' some characters may appear as "?".')
-    save_msg = u"\r\n\r\n'%s' is now your preferred encoding ..\r\n"
-    if session.user.get('expert', False):
-        echo(u'\r\n\r\n(U) UTF-8 encoding or (C) CP437 encoding [uc] ?\b\b')
-        while True:
-            inp = getch()
-            if inp in (u'u', u'U'):
-                session.encoding = 'utf8'
-                break
-            elif inp in (u'c', u'C'):
-                session.encoding = 'cp437'
-                break
-        session.user['charset'] = session.encoding
-        echo(save_msg % (session.encoding,))
-        getch(1.0)
-        return
+    session.activity = u'Selecting character set'
 
-    art = (from_cp437(open(artfile).read()).splitlines()
-           if os.path.exists(artfile) else [u''])
+    # set syncterm font, if any
+    if syncterm_font and term._kind.startswith('ansi'):
+        echo(syncterm_setfont(syncterm_font))
 
-    def refresh(sel):
-        """ Refresh art and yes/no prompt, ``sel``. """
-        session.flush_event('refresh')
-        session.encoding = selector.selection
-        if sel.selection == 'utf8':
-            # ESC %G activates UTF-8 with an unspecified implementation
-            # level from ISO 2022 in a way that allows to go back to
-            # ISO 2022 again.
-            echo(unichr(27) + u'%G')
-        elif sel.selection == 'cp437':
-            # ESC %@ returns to ISO 2022 in case UTF-8 had been entered.
-            # ESC ) U Sets character set G1 to codepage 437 .. usually.
-            echo(unichr(27) + u'%@')
-            echo(unichr(27) + u')U')
-        else:
-            assert False, "Only encodings 'utf8' and 'cp437' supported."
-        # display art, banner, paragraph, refresh selector refresh
-        buf = [line for line in art]
-        return u''.join((
-            u'\r\n\r\n',
-            u'\r\n'.join(buf),
-            u'\r\n\r\n',
-            u'\r\n'.join(term.wrap(text=enc_prompt,
-                                   width=int(term.width * .95))),
-            u'\r\n\r\n',
-            sel.refresh(),))
-
-    selector = get_selector(session.encoding)
-    echo(refresh(selector))
-    while True:
-        inp = getch(1)
-        if inp == term.KEY_ENTER:
-            session.user['charset'] = session.encoding
-            echo(save_msg % (session.encoding,))
-            getch(1.0)
-            return
-        elif inp is not None:
-            selector.process_keystroke(inp)
-            if selector.quit:
-                # 'escape' quits without save, though the encoding
-                # has been temporarily set for this session.
-                return
-            if selector.moved:
-                # set and refresh art in new encoding
-                echo(refresh(selector))
-        if session.poll_event('refresh') is not None:
-            # instantiate a new selector in case the window size has changed.
-            selector = get_selector(session.encoding)
-            echo(refresh(selector))
+    do_select_encoding(term, session)
