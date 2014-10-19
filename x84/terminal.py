@@ -123,7 +123,7 @@ def init_term(writer, env):
     terminal-type is of 'ansi' or 'ansi-bbs', then the cp437 encoding
     is assumed; otherwise 'utf8'.
 
-    A blessings-abstracted curses terminal is returned.
+    A blessed-abstracted curses terminal is returned.
     """
     from x84.bbs.ipc import IPCStream
     env['TERM'] = translate_ttype(env.get('TERM', 'unknown'))

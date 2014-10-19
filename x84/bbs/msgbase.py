@@ -149,7 +149,7 @@ class Msg(object):
         db_msg = DBProxy(MSGDB, use_session=use_session)
         with db_msg:
             if new:
-                self.idx = max([int(key) for key in db_msg.keys()] or [-1]) + 1
+                self.idx = max(map(int, db_msg.keys()) or [-1]) + 1
                 if ctime is not None:
                     self._ctime = self._stime = ctime
                 else:

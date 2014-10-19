@@ -4,7 +4,7 @@ x/84
 
 **A python Telnet server for modern UTF-8 and classic cp437 network virtual terminals**.
 
-x/84 supplies a scripting_ engine for developing character-at a time telnet services, such as **MUD** or **BBS** systems.  Technologies used in x/84 are derived from miniboa_ (Apache 2.0 Licensed) for telnet, blessings_ (MIT Licensed) for terminal capabilities, and sqlitedict_ (Public Domain) for persistent data. Recordings of sessions are stored in ttyplay_-compatible format files.
+x/84 supplies a scripting_ engine for developing character-at a time telnet services, such as **MUD** or **BBS** systems.  Technologies used in x/84 are derived from miniboa_ (Apache 2.0 Licensed) for telnet, blessed_ (MIT Licensed) for terminal capabilities, and sqlitedict_ (Public Domain) for persistent data. Recordings of sessions are stored in ttyplay_-compatible format files.
 
 Asynchronous inter-process communication between sessions is provided through an event queuing framework, for scripting of 'shared' experiences. Several examples of these are provided, such as *chat.py*. The default board provides several activities.
 
@@ -64,7 +64,7 @@ See the project on github_ for source tree and issue tracking.
 
 .. _miniboa: https://code.google.com/p/miniboa/
 .. _sqlitedict: http://pypi.python.org/pypi/sqlitedict
-.. _blessings: http://pypi.python.org/pypi/blessings
+.. _blessed: http://pypi.python.org/pypi/blessed
 .. _ttyplay: http://0xcc.net/ttyrec/index.html.en
 .. _ACiD: https://en.wikipedia.org/wiki/ACiD_Productions
 .. _Sauce: https://github.com/tehmaze/sauce
