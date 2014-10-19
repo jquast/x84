@@ -1,18 +1,18 @@
 """
- Matrix login screen for X/84 (Formerly, 'The Progressive') BBS,
+Matrix login screen for X/84 (Formerly, 'The Progressive') BBS,
 
- This script is the default session entry point for all connections.
+This script is the default session entry point for all connections.
 
- Or simply put, the login program. It is configured in default.ini file,
- under section 'matrix'. Alternative matrices may be considered by their
- connection type, using script_{telnet,ssh}
+Or simply put, the login program. It is configured in default.ini file,
+under section 'matrix'. Alternative matrices may be considered by their
+connection type, using script_{telnet,ssh}
 
- In legacy era, a matrix script might be something to fool folk not in the
- know, meant to divert agents from underground boards, require a passcode,
- or even swapping the modem into a strange stop/bit/parity configuration,
- callback mechanisms, etc..
+In legacy era, a matrix script might be something to fool folk not in the
+know, meant to divert agents from underground boards, require a passcode,
+or even swapping the modem into a strange stop/bit/parity configuration,
+callback mechanisms, etc..
 
- Read all about it in old e-zines.
+Read all about it in old e-zines.
 """
 # std
 import logging
