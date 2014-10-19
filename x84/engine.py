@@ -68,7 +68,7 @@ def main():
         # start background timer to poll for new messages
         # of message networks we may be a member of.
         from x84 import msgpoll
-        msgpoll.start_polling()
+        msgpoll.main()
 
     try:
         # begin main event loop
