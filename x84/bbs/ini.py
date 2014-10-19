@@ -173,6 +173,7 @@ def init_bbs_ini():
     cfg_bbs.add_section('matrix')
     cfg_bbs.set('matrix', 'newcmds', 'new apply')
     cfg_bbs.set('matrix', 'byecmds', 'exit logoff bye quit')
+    cfg_bbs.set('matrix', 'anoncmds', 'anonymous')
     cfg_bbs.set('matrix', 'script', 'matrix')
     cfg_bbs.set('matrix', 'script_telnet', 'matrix')
     cfg_bbs.set('matrix', 'script_ssh', 'matrix_ssh')
