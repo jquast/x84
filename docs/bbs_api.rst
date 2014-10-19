@@ -25,7 +25,7 @@ Terminal
 ````````
 
 .. autofunction:: x84.bbs.getterminal
-.. autoclass: x84.blessings.Terminal
+.. autoclass: blessed.Terminal
 
 Session
 ```````
