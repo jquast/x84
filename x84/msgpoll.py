@@ -295,7 +295,7 @@ def publish_network_messages(net):
 
     log.debug(u'[{net[name]}] publishing new messages.'.format(net=net))
 
-    queuedb = DBProxy('{0}queue'.format(net['name']), use_session=False)
+    queuedb = DBProxy('{0}queues'.format(net['name']), use_session=False)
     transdb = DBProxy('{0}trans'.format(net['name']), use_session=False)
     msgdb = DBProxy(MSGDB, use_session=False)
 
