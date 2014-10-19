@@ -68,7 +68,7 @@ def do_select_encoding(term, session):
     while True:
         if session.poll_event('refresh') or dirty:
             # attempt to coerce encoding of terminal to match session.
-            coerce_terminal_encoding(session.encoding)
+            coerce_terminal_encoding(term, session.encoding)
 
             # display artwork and prompt
             vertical_padding = 2 if term.height >= 24 else 0

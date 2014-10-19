@@ -248,7 +248,7 @@ def main(handle=None):
     session.activity = 'top'
 
     # attempt to coerce encoding of terminal to match session.
-    coerce_terminal_encoding(session.encoding)
+    coerce_terminal_encoding(term, session.encoding)
 
     # fetch user record
     user = get_user_record(handle)
