@@ -251,7 +251,7 @@ def send_passkey(user):
         smtp.quit()
     except Exception as err:
         log.exception(err)
-        echo('{0}'.format(err))
+        echo(u'{0}'.format(err))
         return False
 
     log.info(u'Password reset token delivered '
@@ -287,7 +287,7 @@ def do_reset(term, handle, email=u''):
         user = matches_email(handle, email)
         if not user:
             echo(fixate_next(term))
-            echo('{0} Address is incorrect !'.format(sep_bad))
+            echo(u'{0} Address is incorrect !'.format(sep_bad))
             # try e-mail address again
             continue
 
@@ -299,7 +299,7 @@ def do_reset(term, handle, email=u''):
             echo(u'\r\n\r\n')
             return False
 
-        echo('{0} E-mail successfully delivered !'.format(sep_ok))
+        echo(u'{0} E-mail successfully delivered !'.format(sep_ok))
 
         for _ in range(passkey_max_attempts):
             try_passkey = prompt_input(term=term,
@@ -313,7 +313,7 @@ def do_reset(term, handle, email=u''):
             if passkey.strip() != try_passkey.strip():
                 # passkey does not match
                 echo(fixate_next(term))
-                echo('{0} Passkey does not verify !'.format(sep_bad))
+                echo(u'{0} Passkey does not verify !'.format(sep_bad))
                 # try passkey again
                 continue
 
@@ -330,14 +330,14 @@ def do_reset(term, handle, email=u''):
             log.debug('password reset successful for user {0!r}.'
                       .format(user.handle))
             echo(fixate_next(term))
-            echo('{0} Password reset successful !'.format(sep_ok))
+            echo(u'{0} Password reset successful !'.format(sep_ok))
             return True
 
         echo(fixate_next(term))
-        echo('{0} Too many authentication attempts.'.format(sep_bad))
+        echo(u'{0} Too many authentication attempts.'.format(sep_bad))
 
     echo(fixate_next(term))
-    echo('{0} Too many authentication attempts.'.format(sep_bad))
+    echo(u'{0} Too many authentication attempts.'.format(sep_bad))
 
 
 def main(handle=None):
