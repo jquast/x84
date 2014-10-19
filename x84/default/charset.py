@@ -11,7 +11,7 @@ import os
 from x84.bbs import getsession, getterminal, echo, syncterm_setfont, LineEditor
 
 # local
-from common import display_banner
+from common import display_banner, coerce_terminal_encoding
 
 #: filepath to folder containing this script
 here = os.path.dirname(__file__)
@@ -67,21 +67,15 @@ def do_select_encoding(term, session):
     dirty = True
     while True:
         if session.poll_event('refresh') or dirty:
+            # attempt to coerce encoding of terminal to match session.
+            coerce_terminal_encoding(session.encoding)
+
+            # display artwork and prompt
             vertical_padding = 2 if term.height >= 24 else 0
             display_banner(filepattern=art_file,
                            encoding=art_encoding,
                            vertical_padding=vertical_padding)
             display_prompt(term)
-            echo ({
-                # ESC %G activates UTF-8 with an unspecified implementation
-                # level from ISO 2022 in a way that allows to go back to
-                # ISO 2022 again.
-                'utf8': unichr(27) + u'%G',
-                # ESC %@ returns to ISO 2022 in case UTF-8 had been entered.
-                # ESC ) U Sets character set G1 to codepage 437, such as on
-                # Linux vga console.
-                'cp437': unichr(27) + u'%@' + unichr(27) + u')U',
-            }.get(session.encoding, u''))
             dirty = False
 
         inp = LineEditor(1, colors=editor_colors).read()

@@ -15,6 +15,7 @@ import os
 from x84.bbs import getterminal, showart, echo
 from x84.bbs import getsession, get_user, User, LineEditor
 from x84.bbs import goto, gosub, DBProxy, syncterm_setfont
+from x84.default.common import coerce_terminal_encoding
 
 # 3rd
 from sauce import SAUCE
@@ -247,16 +248,7 @@ def main(handle=None):
     session.activity = 'top'
 
     # attempt to coerce encoding of terminal to match session.
-    echo ({
-        # ESC %G activates UTF-8 with an unspecified implementation
-        # level from ISO 2022 in a way that allows to go back to
-        # ISO 2022 again.
-        'utf8': unichr(27) + u'%G',
-        # ESC %@ returns to ISO 2022 in case UTF-8 had been entered.
-        # ESC ) U Sets character set G1 to codepage 437, such as on
-        # Linux vga console.
-        'cp437': unichr(27) + u'%@' + unichr(27) + u')U',
-    }.get(session.encoding, u''))
+    coerce_terminal_encoding(session.encoding)
 
     # fetch user record
     user = get_user_record(handle)
