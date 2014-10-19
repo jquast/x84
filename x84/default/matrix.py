@@ -126,16 +126,17 @@ def display_banner(term):
     echo(term.normal)
 
     # set syncterm font, if any
-    if term._kind == 'ansi':
+    if syncterm_font and term._kind.startswith('ansi'):
         echo(syncterm_setfont(syncterm_font))
 
     # http://www.termsys.demon.co.uk/vtansi.htm
     # disable line-wrapping (SyncTerm does not honor, careful!)
     echo(u'\x1b[7l')
 
-    # http://www.xfree86.org/4.5.0/ctlseqs.html
-    # Save xterm icon and window title on stack.
-    echo(u'\x1b[22;0t')
+    if term._kind.startswith('xterm'):
+        # http://www.xfree86.org/4.5.0/ctlseqs.html
+        # Save xterm icon and window title on stack.
+        echo(u'\x1b[22;0t')
 
     # move to beginning of line and clear, in case syncterm_setfont
     # has been mis-interpreted, as it follows CSI with space, which
@@ -249,7 +250,7 @@ def do_login(term):
          .format(sep=sep_bad))
 
 
-def main():
+def main(anonymous=False, new=False):
     """
     Script entry point.
 
@@ -263,11 +264,19 @@ def main():
 
     display_banner(term)
 
+    if anonymous:
+        # user rlogin'd in as anonymous@
+        goto(top_script, 'anonymous')
+    elif new:
+        # user rlogin'd in as new@
+        goto(new_script)
+
     # do_login will goto/gosub various scripts, if it returns, then
     # either the user entered 'bye', or had too many failed attempts.
     do_login(term)
 
     log.debug('Disconnecting.')
+
     # it is necessary to provide sufficient time to send any pending
     # output across the transport before disconnecting.
     term.inkey(1.5)

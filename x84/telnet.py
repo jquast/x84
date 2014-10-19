@@ -33,14 +33,12 @@ which is meant for MUD's. This server would not be safe for MUD clients.
 from __future__ import absolute_import
 
 # std
-import warnings
 import socket
 import array
 import time
 import logging
 import select
 import errno
-import threading
 from telnetlib import LINEMODE, NAWS, NEW_ENVIRON, ENCRYPT, AUTHENTICATION
 from telnetlib import BINARY, SGA, ECHO, STATUS, TTYPE, TSPEED, LFLOW
 from telnetlib import XDISPLOC, IAC, DONT, DO, WONT, WILL, SE, NOP, DM, BRK
@@ -162,6 +160,10 @@ class TelnetClient(BaseClient):
 
     kind = 'telnet'
 
+    #: maximum size of telnet subnegotiation string, allowing for a fairly
+    #: large value for NEW_ENVIRON.
+    SB_MAXLEN = 65534
+
     def __init__(self, sock, address_pair, on_naws=None):
         super(TelnetClient, self).__init__(sock, address_pair, on_naws)
         self.telnet_sb_buffer = array.array('c')
@@ -277,7 +279,7 @@ class TelnetClient(BaseClient):
 
         except socket.error as err:
             if err.errno == errno.EWOULDBLOCK:
-                return
+                return 0
             raise Disconnected('socket_recv error: {0}'.format(err))
 
         self.bytes_received += recv
@@ -673,7 +675,7 @@ class TelnetClient(BaseClient):
         elif prev_term != term_str:
             self.log.debug("env['TERM'] = %r by TTYPE%s.", term_str,
                            ', was: %s' % (prev_term,)
-                           if prev_term != 'unknown' else '')
+                           if prev_term != self.TTYPE_UNDETECTED else '')
         else:
             self.log.debug('TTYPE ignored (TERM already set).')
         self.env['TERM'] = term_str
@@ -695,7 +697,7 @@ class TelnetClient(BaseClient):
                 if pair[0] == 'TERM':
                     pair[1] = pair[1].lower()
                 overwrite = (pair[0] == 'TERM'
-                             and self.env['TERM'] == 'unknown')
+                             and self.env['TERM'] == self.TTYPE_UNDETECTED)
                 if (not pair[0] in self.env or overwrite):
                     self.log.debug('env[%r] = %r', pair[0], pair[1])
                     self.env[pair[0]] = pair[1]
@@ -820,15 +822,12 @@ class ConnectTelnet(BaseConnect):
     """
     Accept new Telnet Connection and negotiate options.
     """
-    # this all gets much better using "telnetlib3" tulip/Futures, this is
-    # a pretty poor implementation, but necessary for correct "TERM" before
-    # going through the trouble of spawning a new process -- that process
-    # may only call curses.setupterm() once per process, so it is imperative
-    # to make a "good call": to have at least negotiated the TERM value.
-    TIME_NEGOTIATE = 2.50  # wait 2500ms on-connect
-    TIME_WAIT_STAGE = 3.50  # wait upto 3500ms foreach stage of negotiation :(
+    #: maximum time elapsed allowed to begin on-connect negotiation
+    TIME_NEGOTIATE = 2.50
+    #: wait upto 3500ms for all stages of negotiation to complete
+    TIME_WAIT_STAGE = 3.50
+    #: polling duration during negotiation
     TIME_POLL = 0.10
-    TTYPE_UNDETECTED = 'unknown'
 
     def banner(self):
         """
@@ -837,7 +836,6 @@ class ConnectTelnet(BaseConnect):
         This routine happens to communicate with a wide variety of network
         scanners when listening on the default port on a public IP address.
         """
-        mrk_bytes = self.client.bytes_received
         # According to Roger Espel Llima (espel@drakkar.ens.fr), you can
         #   have your server send a sequence of control characters:
         # (0xff 0xfb 0x01) (0xff 0xfb 0x03) (0xff 0xfd 0x0f3).
@@ -856,27 +854,6 @@ class ConnectTelnet(BaseConnect):
         self.client.request_do_env()
         self.client.send()  # push
 
-        # wait at least 1.25s for the client to speak. If it doesn't,
-        # we try only TTYPE. If it fails to report that, we forget
-        # the rest.
-        self.log.debug('pausing for negotiation')
-        st_time = time.time()
-        while ((0 == self.client.bytes_received
-                or mrk_bytes == self.client.bytes_received)
-               and time.time() - st_time < self.TIME_NEGOTIATE):
-            if not self.client.is_active():
-                return
-            if self.client.send_ready():
-                self.client.send()
-            time.sleep(self.TIME_POLL)
-
-        if not self._check_ttype(start_time=st_time):
-            # if client is unable to negotiate terminal type,
-            # do not bother with NAWS or ENV negotiation.
-            return
-        self._check_env(start_time=st_time)
-        self._check_naws(start_time=st_time)
-
     def run(self):
         """
         Negotiate and inquire about terminal type, telnet options, window size,
@@ -885,14 +862,47 @@ class ConnectTelnet(BaseConnect):
         from x84.bbs.exception import Disconnected
         try:
             self._set_socket_opts()
+            mrk_bytes = self.client.bytes_received
+
             self.banner()
+
+            # wait at least {TIME_NEGOTIATE} for the client to speak.
+            # If it doesn't, we try only TTYPE.
+            # If it fails to report that, we forget the rest.
+            self.log.debug('{client.addrport}: pausing for negotiation'
+                           .format(client=self.client))
+            st_time = time.time()
+            while ((0 == self.client.bytes_received
+                    or mrk_bytes == self.client.bytes_received)
+                   and time.time() - st_time < self.TIME_NEGOTIATE):
+                if not self.client.is_active():
+                    return
+                if self.client.send_ready():
+                    self.client.send()
+                time.sleep(self.TIME_POLL)
+
+            if not self._check_ttype(start_time=st_time):
+                # if client is unable to negotiate terminal type,
+                # do not bother with NAWS or ENV negotiation.
+                return
+            self._check_env(start_time=st_time)
+            self._check_naws(start_time=st_time)
             self.set_encoding()
             if self.client.is_active():
-                spawn_client_session(client=self.client)
+                return spawn_client_session(client=self.client)
         except (Disconnected, socket.error) as err:
-            self.log.debug('Connection closed: %s', err)
-            self.client.deactivate()
+            self.log.debug('{client.addrport}: connection closed: {err}'
+                           .format(client=self.client, err=err))
+        except EOFError:
+            self.log.debug('{client.addrport}: EOF from client'
+                           .format(client=self.client))
+        except Exception as err:
+            self.log.debug('{client.addrport}: connection closed: {err}'
+                           .format(client=self.client, err=err))
+
+        finally:
             self.stopped = True
+        self.client.deactivate()
 
     def set_encoding(self):
         # set encoding to utf8 for clients negotiating BINARY mode and
@@ -973,7 +983,7 @@ class ConnectTelnet(BaseConnect):
         Check for TTYPE negotiation.
         """
         def detected():
-            return self.client.env['TERM'] != 'unknown'
+            return self.client.env['TERM'] != self.client.TTYPE_UNDETECTED
 
         while not detected() and self._timeleft(start_time):
             if not self.client.is_active():
@@ -1025,5 +1035,5 @@ class TelnetServer(BaseServer):
             self.log.error('Unable to bind {0}:{1}: {2}'
                            .format(self.address, self.port, err))
             exit(1)
-        self.log.info('listening on {self.address}:{self.port}/tcp'
+        self.log.info('telnet listening on {self.address}:{self.port}/tcp'
                       .format(self=self))

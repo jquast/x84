@@ -6,13 +6,15 @@ from x84.bbs import echo, showart
 from x84.bbs import getterminal, LineEditor
 
 
-def display_banner(filepattern, encoding=None):
+def display_banner(filepattern, encoding=None, vertical_padding=0):
     """ Start new screen and show artwork, centered.
 
     :param filepattern: file to display
     :type filepattern: str
     :param encoding: encoding of art file(s).
     :type encoding: str or None
+    :param vertical_padding: number of blank lines to prefix art
+    :type vertical_padding: int
     :returns: number of lines displayed
     :rtype: int
     """
@@ -24,8 +26,8 @@ def display_banner(filepattern, encoding=None):
     # create a new, empty screen
     echo(u'\r\n' * (term.height + 1))
 
-    # move to home
-    echo(term.home)
+    # move to home, insert vertical padding
+    echo(term.home + (u'\r\n' * vertical_padding))
 
     # show art
     art_generator = showart(filepattern, encoding=encoding,
@@ -35,7 +37,7 @@ def display_banner(filepattern, encoding=None):
         echo(txt)
 
     # return line number
-    return line_no
+    return line_no + vertical_padding
 
 
 def prompt_pager(content, line_no=0, colors=None, width=None, breaker=u'- '):

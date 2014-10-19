@@ -21,10 +21,15 @@ class BaseClient(object):
     corresponding server class.
     '''
 
-    kind = None        # override in subclass
+    #: Override in subclass: a general string identifier for the
+    #: connecting protocol (for example, 'telnet', 'ssh', 'rlogin')
+    kind = None
+
+    #: maximum unit of data received for each call to socket_recv()
     BLOCKSIZE_RECV = 64
-    SB_MAXLEN = 65534  # maximum length of subnegotiation string, allow
-                       # a fairly large one for NEW_ENVIRON negotiation
+
+    #: terminal type identifier when not yet negotiated
+    TTYPE_UNDETECTED = 'unknown'
 
     def __init__(self, sock, address_pair, on_naws=None):
         self.log = logging.getLogger(self.__class__.__name__)
@@ -32,7 +37,7 @@ class BaseClient(object):
         self.address_pair = address_pair
         self.on_naws = on_naws
         self.active = True
-        self.env = dict([('TERM', 'unknown'),
+        self.env = dict([('TERM', self.TTYPE_UNDETECTED),
                          ('LINES', 24),
                          ('COLUMNS', 80),
                          ('connection-type', self.kind),
@@ -42,7 +47,6 @@ class BaseClient(object):
         self.bytes_received = 0
         self.connect_time = time.time()
         self.last_input_time = time.time()
-        self.log.info('new %s: %s', self.__class__.__name__, self.addrport)
 
     ## low level I/O
 
@@ -68,9 +72,9 @@ class BaseClient(object):
         return bool(self.recv_buffer.__len__())
 
     def recv_ready(self):
-        '''
-        Returns True if we have received any data. Subclass in implementation.
-        '''
+        """
+        Subclass and implement: returns True if socket_recv() should be called.
+        """
         raise NotImplementedError()
 
     def send(self):
@@ -127,9 +131,9 @@ class BaseClient(object):
         self.sock.close()
 
     def socket_recv(self):
-        '''
-        Receive data from the client socket.
-        '''
+        """
+        Receive data from the client socket and returns num bytes received.
+        """
         try:
             data = self.sock.recv(self.BLOCKSIZE_RECV)
             recv = len(data)
@@ -138,12 +142,13 @@ class BaseClient(object):
 
         except socket.error as err:
             if err.errno == errno.EWOULDBLOCK:
-                return
+                return 0
             raise Disconnected('socket_recv error: {0}'.format(err))
 
         self.bytes_received += recv
         self.last_input_time = time.time()
         self.recv_buffer.fromstring(data)
+        return recv
 
     ## high level I/O
 
@@ -244,11 +249,12 @@ class BaseConnect(threading.Thread):
             self._set_socket_opts()
             self.banner()
             if self.client.is_active():
-                spawn_client_session(client=self.client)
+                return spawn_client_session(client=self.client)
         except (Disconnected, socket.error) as err:
             self.log.debug('Connection closed: %s', err)
-            self.client.deactivate()
+        finally:
             self.stopped = True
+        self.client.deactivate()
 
     def _set_socket_opts(self):
         """

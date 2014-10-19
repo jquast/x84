@@ -4,9 +4,10 @@ x/84 bbs module, https://github.com/jquast/x84
 # std
 import warnings
 
-# local
-import encodings.aliases
-import x84.encodings
+# local, side-effects (encodings are registered)
+__import__('encodings.aliases')
+__import__('x84.encodings')
+# local/exported
 from x84.bbs.userbase import list_users, get_user, find_user, User, Group
 from x84.bbs.msgbase import list_msgs, get_msg, list_tags, Msg
 from x84.bbs.exception import Disconnected, Goto
@@ -34,8 +35,8 @@ __all__ = ['list_users', 'get_user', 'find_user', 'User', 'Group', 'list_msgs',
            ]
 
 
-## Translation map for embedded font hints in SAUCE records as documented at
-## http://www.acid.org/info/sauce/sauce.htm section FontName
+# Translation map for embedded font hints in SAUCE records as documented at
+# http://www.acid.org/info/sauce/sauce.htm section FontName
 
 SAUCE_FONT_MAP = {
     'Amiga MicroKnight':  'amiga',
@@ -54,12 +55,12 @@ SAUCE_FONT_MAP = {
     'IBM VGA':            'cp437',
 }
 
-## All IBM PC code pages that are supported
+# All IBM PC code pages that are supported
 
 for page in (
-        '437', '720', '737', '775', '819', '850', '852', '855', '857', '858',
-        '860', '861', '862', '863', '864', '865', '866', '869', '872',
-    ):
+    '437', '720', '737', '775', '819', '850', '852', '855', '857', '858',
+    '860', '861', '862', '863', '864', '865', '866', '869', '872',
+):
     codec = 'cp%s' % (page,)
     SAUCE_FONT_MAP.update({
         'IBM EGA43 %s'  % (page,): codec,
@@ -272,7 +273,7 @@ def showcp437(filepattern):
     return showart(filepattern, 'cp437')
 
 
-def get_ini(section=None, key=None, getter='get', split=False):
+def get_ini(section=None, key=None, getter='get', split=False, splitsep=None):
     """
     Get an ini configuration of ``section`` and ``key``.
 
@@ -291,7 +292,7 @@ def get_ini(section=None, key=None, getter='get', split=False):
         getter = getattr(CFG, getter)
         value = getter(section, key)
         if split and hasattr(value, 'split'):
-            return value.split()
+            return map(str.strip, value.split(splitsep))
         return value
     if getter == 'getboolean':
         return False

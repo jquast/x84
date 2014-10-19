@@ -30,6 +30,11 @@ maybe_requires = [
     'pycrypto >= 2.6.1',
     'cryptography >=0.4',
     'pyOpenSSL >=0.14',
+    # currently, ssl (from above) is required to run any kind
+    # of webserver, that is, only https webservers are
+    # supported for the moment.
+    'web.py >=0.37',
+    'cherrypy >=3.6.0',
 ]
 
 
@@ -184,6 +189,7 @@ setup(name='x84',
                               ],
       },
       install_requires=[
+          # NOTE: do a pip freeze on release!
           'requests >=1.1.0',
           'sauce >=1.0',
           'sqlitedict >=1.0.8',
@@ -191,7 +197,6 @@ setup(name='x84',
           'wcwidth >=0.1.1',
           'python-dateutil >=2.2',
           'irc >=8.9.1',
-          'web.py >=0.37',
       ] + get_maybe_requires(),
       scripts=['bin/x84'],
       classifiers=[

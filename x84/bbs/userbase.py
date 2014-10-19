@@ -463,3 +463,101 @@ def get_digestpw():
         'plaintext': _digestpw_plaintext,
     }.get(CFG.get('system', 'password_digest'))
     return FN_PASSWORD_DIGEST
+
+
+def check_new_user(username):
+    """ Boolean return when username matches `newcmds' ini cfg. """
+    from x84.bbs import get_ini
+    matching = get_ini(section='matrix',
+                       key='newcmds',
+                       split=True)
+    allowed = get_ini(section='nua',
+                      key='allow_apply',
+                      getter='getboolean')
+    return allowed and username in matching
+
+
+def check_bye_user(username):
+    """ Boolean return when username matches `byecmds' in ini cfg. """
+    from x84.bbs import get_ini
+    matching = get_ini(section='matrix', key='byecmds', split=True)
+    return matching and username in matching
+
+
+def check_anonymous_user(username):
+    """ Boolean return when user is anonymous and is allowed. """
+    from x84.bbs import get_ini
+    matching = get_ini(section='matrix',
+                       key='anoncmds',
+                       split=True)
+    allowed = get_ini(section='matrix',
+                      key='enable_anonymous',
+                      getter='getboolean',
+                      split=False)
+    return allowed and username in matching
+
+
+def check_user_password(username, password):
+    """ Boolean return when username and password match user record. """
+    from x84.bbs import find_user, get_user
+    handle = find_user(username)
+    if handle is None:
+        return False
+    user = get_user(handle)
+    if user is None:
+        return False
+    return password and user.auth(password)
+
+
+def parse_public_key(user_pubkey):
+    """ Return paramiko key class instance of a user's public key text. """
+    import paramiko
+
+    if len(user_pubkey.split()) == 3:
+        key_msg, key_data, _ = user_pubkey.split()
+    elif len(user_pubkey.split()) == 2:
+        key_msg, key_data = user_pubkey.split()
+    elif len(user_pubkey.split()) == 1:
+        # when no key-type is specified, assume rsa
+        key_msg, key_data = 'ssh-rsa', user_pubkey
+    else:
+        raise ValueError('Malformed public key format: {0!r}'
+                         .format(user_pubkey))
+    try:
+        key_bytes = key_data.decode('ascii')
+    except UnicodeDecodeError:
+        raise ValueError('Malformed public key encoding: {0!r}'
+                         .format(key_data))
+    decoded_keybytes = paramiko.py3compat.decodebytes(key_bytes)
+    try:
+        return {'ssh-rsa': paramiko.RSAKey,
+                'ssh-dss': paramiko.DSSKey,
+                'ecdsa-sha2-nistp256': paramiko.ECDSAKey,
+                }.get(key_msg)(data=decoded_keybytes)
+    except KeyError:
+        raise ValueError('Malformed public key_msg: {0!r}'
+                         .format(key_msg))
+
+
+def check_user_pubkey(self, username, public_key):
+    """ Boolean return when public_key matches user record. """
+    from x84.bbs import find_user, get_user
+    log = logging.getLogger(__name__)
+    handle = find_user(username)
+    if handle is None:
+        return False
+    user_pubkey = get_user(handle).get('pubkey', False)
+    if not user_pubkey:
+        log.debug('{0} attempted pubkey authentication, '
+                  'but no public key on record for the user.'
+                  .format(username))
+        return False
+    try:
+        stored_pubkey = parse_public_key(user_pubkey)
+    except (ValueError, Exception):
+        import sys
+        (exc_type, exc_value, exc_traceback) = sys.exc_info()
+        log.debug('{0} for stored public key of user {1!r}: '
+                  '{2}'.format(exc_type, username, exc_value))
+    else:
+        return stored_pubkey == public_key

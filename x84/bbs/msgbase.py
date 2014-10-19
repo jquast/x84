@@ -1,8 +1,14 @@
 """
 msgbase package for x/84, https://github.com/jquast/x84
 """
-import logging
+# std imports
 import datetime
+import logging
+
+# local
+from x84.bbs.dbproxy import DBProxy
+
+# 3rd party
 import dateutil.tz
 
 MSGDB = 'msgbase'
@@ -30,9 +36,10 @@ def to_utctime(tm_value):
 
 def get_origin_line():
     """ pull the origin line from config """
-    from x84.bbs.ini import CFG
-    return CFG.get('msg', 'origin_line', 'Sent from {0}'
-                   .format(CFG.get('system', 'bbsname')))
+    from x84.bbs import get_ini
+    return get_ini(section='msg', key='origin_line') or (
+        'Sent from {0}'.format(
+            get_ini(section='system', key='bbsname')))
 
 
 def format_origin_line():
@@ -44,7 +51,6 @@ def get_msg(idx=0):
     """
     Return Msg record instance by index ``idx``.
     """
-    from x84.bbs.dbproxy import DBProxy
     return DBProxy(MSGDB)['%d' % int(idx)]
 
 
@@ -52,7 +58,6 @@ def list_msgs(tags=None):
     """
     Return set of Msg keys matching 1 or more ``tags``, or all.
     """
-    from x84.bbs.dbproxy import DBProxy
     if tags is not None and 0 != len(tags):
         msgs = set()
         db_tag = DBProxy(TAGDB)
@@ -132,7 +137,6 @@ class Msg(object):
         """
         Save message in 'Msgs' sqlite db, and record index in 'tags' db.
         """
-        from x84.bbs.dbproxy import DBProxy
         from x84.bbs.ini import CFG
         from x84.bbs import getsession
 
@@ -198,17 +202,21 @@ class Msg(object):
 
     def queue_for_network(self):
         " Queue message for networks, hosting or sending. "
-        from x84.bbs.ini import CFG
-        from x84.bbs.dbproxy import DBProxy
+        from x84.bbs import get_ini
 
         log = logging.getLogger(__name__)
-        network_names = CFG.get('msg', 'network_tags')
-        member_networks = map(str.strip, network_names.split(','))
 
-        my_networks = []
-        if CFG.has_option('msg', 'server_tags'):
-            my_netnames = CFG.get('msg', 'server_tags')
-            my_networks = map(str.strip, my_netnames.split(','))
+        # server networks this server is a member of,
+        member_networks = get_ini(section='msg',
+                                  key='network_tags',
+                                  split=True,
+                                  splitsep=',')
+
+        # server networks offered by this server,
+        my_networks = get_ini(section='msg',
+                              key='server_tags',
+                              split=True,
+                              splitsep=',')
 
         # check all tags of message; if they match a message network,
         # either record for hosting servers, or schedule for delivery.
@@ -225,7 +233,7 @@ class Msg(object):
                     self.save()
                     transdb[self.idx] = self.idx
                 log.info('[{tag}] Stored for network (msgid {self.idx}).'
-                              .format(tag=tag, self=self))
+                         .format(tag=tag, self=self))
 
             # message is for a another network, queue for delivery
             elif tag in member_networks:
@@ -234,4 +242,4 @@ class Msg(object):
                 with queuedb:
                     queuedb[self.idx] = tag
                 log.info('[{tag}] Message (msgid {self.idx}) queued '
-                              'for delivery'.format(tag=tag, self=self))
+                         'for delivery'.format(tag=tag, self=self))
