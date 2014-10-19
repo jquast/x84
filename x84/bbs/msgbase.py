@@ -51,7 +51,6 @@ def get_msg(idx=0):
     """
     Return Msg record instance by index ``idx``.
     """
-    from x84.bbs.dbproxy import DBProxy
     return DBProxy(MSGDB)['%d' % int(idx)]
 
 
@@ -59,7 +58,6 @@ def list_msgs(tags=None):
     """
     Return set of Msg keys matching 1 or more ``tags``, or all.
     """
-    from x84.bbs.dbproxy import DBProxy
     if tags is not None and 0 != len(tags):
         msgs = set()
         db_tag = DBProxy(TAGDB)
@@ -139,7 +137,6 @@ class Msg(object):
         """
         Save message in 'Msgs' sqlite db, and record index in 'tags' db.
         """
-        from x84.bbs.dbproxy import DBProxy
         from x84.bbs.ini import CFG
         from x84.bbs import getsession
 
