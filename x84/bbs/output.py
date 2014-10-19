@@ -40,7 +40,7 @@ def syncterm_setfont(font_name, font_page=0):
                          "available fonts specified in module {1}, table "
                          "SYNCTERM_FONTMAP. Available values: {2!r}".format(
                              font_name, __name__, SYNCTERM_FONTMAP))
-    return '\x1b[{0};{1} D'.format(font_page, font_code)
+    return u'\x1b[{0};{1} D'.format(font_page, font_code)
 
 
 def echo(ucs):
@@ -87,18 +87,20 @@ def decode_pipe(ucs):
     with this terminals equivalent attribute sequence.
     """
     # simple optimization, no '|' ? exit early!
-    if not u'|' in ucs:
+    if u'|' not in ucs:
         return ucs
     term = getterminal()
     outp = u''
     ptr = 0
     match = None
-    ANSI_PIPE = re.compile(r'\|(\d{2,3})')
+    ANSI_PIPE = re.compile(r'\|(\d{2,3}|\|)')
 
     for match in ANSI_PIPE.finditer(ucs):
         val = match.group(1)
         # allow escaping using a second pipe
-        if match.start() and ucs[match.start() - 1] == '|':
+        if val == u'|':
+            outp += ucs[ptr:match.start() + 1]
+            ptr = match.end()
             continue
         # 07 -> 7
         while val.startswith('0'):
@@ -106,11 +108,13 @@ def decode_pipe(ucs):
         int_value = 0 if 0 == len(val) else int(val, 10)
         assert int_value >= 0 and int_value <= 256
         # colors 0-7 and 16-256 are as-is term.color()
-        # special accomidations for 8-15, some termcaps are ok
+        # special accommodations for 8-15, some termcaps are ok
         # with term.color(11), whereas others have trouble, help
         # out by using dim color and bold attribute instead.
         attr = u''
-        if int_value <= 7 or int_value >= 16:
+        if int_value == 7:
+            attr = term.normal
+        elif int_value < 7 or int_value >= 16:
             attr = term.normal + term.color(int_value)
         elif int_value <= 15:
             attr = term.normal + term.color(int_value - 8) + term.bold
@@ -129,10 +133,9 @@ def encode_pipe(ucs):
     color sequences with their pipe-equivalent values.
     """
     # TODO: Support all kinds of terminal color sequences,
-    # such as kermit or avatar or some such .. something non-emca
+    # such as kermit or avatar or some such, something non-emca
     outp = u''
     nxt = 0
-    term = getterminal()
     ANSI_COLOR = re.compile(r'\033\[(\d{2,3})m')
     for idx in range(0, len(ucs)):
         if idx == nxt:

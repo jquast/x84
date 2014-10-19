@@ -1,4 +1,18 @@
 1.2.0
+  - the meaning of [system] option 'termcap-ansi', when not valued 'no', now
+    coerces any reported terminal types *beginning* with 'ansi' to
+    the target type.
+  - fail2ban is enabled by [fail2ban] option 'enabled = yes'. Previously,
+    the mere existence of section [fail2ban] was sufficient.
+  - *new* option, 'anoncmds' in section 'matrix', where previously only
+    the 'anonymous' user was a legitimate synonym, you may now provide
+    many different ones -- humorously, you could provide 'root'.
+  - *new* option, 'script_ssh' in section 'matrix', points to a new
+    login matrix script that takes new keyword arguments, 'anonymous',
+    or 'new' as booleans True or False, or user keyword argument as
+    string representing the (already authenticated) user handle.
+  - keyword arguments for gosub() and goto() are now supported.
+  - ssh key authentication support
   - *removed*: x84.bbs.log.ColoredConsoleHandler.
     If you see exception: ``ImportError: No module named log``
     simply change line, ``class = x84.bbs.log.ColoredConsoleHandler``
@@ -27,22 +41,12 @@
     if you have a chained cert):
     [web]
     addr = 0.0.0.0
-    port = 1984
+    port = 8443
     cert = /home/bbs/ssl.cer
     key = /home/bbs/ssl.key
     chain = /home/bbs/chain.cer
-  - "bot" connections for interacting with userspace (default/bots.py).
-    These are setup with the [bots] default.ini section. The assumed
-    usernames of each bot are listed in the 'names' attribute. If you
-    want a bot to be shipped off to a script other than bots.py when
-    its telnet process connects to the board, you may assign it
-    using the bot's username. ('mybot' would launch 'some_script.py'
-    in the example below.)
-    [bots]
-    names = msgserve, msgpoll, mybot
-    mybot = some_script
-  - message network server web API endpoint (msgserve.py).
-  - message network client for pull/push (msgpoll.py).
+  - message network server web API endpoint (webmodules/msgserve.py).
+  - message network REST client for pull/push (msgpoll.py).
 
 1.1.0
   - resolve issue #53: using upstream 'blessed' fork.

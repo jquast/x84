@@ -1,9 +1,7 @@
 """
 Ansi Windowing package for x/84, http://github.com/jquast/x84
 """
-from x84.bbs.cp437 import CP437TABLE
 from x84.bbs.session import getterminal, getsession
-from x84.bbs.output import Ansi
 
 GLYPHSETS = {
     'ascii': {
@@ -16,14 +14,14 @@ GLYPHSETS = {
         'top-horiz': u'-',
         'bot-horiz': u'-', },
     'thin': {
-        'top-left': CP437TABLE[unichr(218)],
-        'bot-left': CP437TABLE[unichr(192)],
-        'top-right': CP437TABLE[unichr(191)],
-        'bot-right': CP437TABLE[unichr(217)],
-        'left-vert': CP437TABLE[unichr(179)],
-        'right-vert': CP437TABLE[unichr(179)],
-        'top-horiz': CP437TABLE[unichr(196)],
-        'bot-horiz': CP437TABLE[unichr(196)],
+        'top-left': chr(218).decode('cp437'),
+        'bot-left': chr(192).decode('cp437'),
+        'top-right': chr(191).decode('cp437'),
+        'bot-right': chr(217).decode('cp437'),
+        'left-vert': chr(179).decode('cp437'),
+        'right-vert': chr(179).decode('cp437'),
+        'top-horiz': chr(196).decode('cp437'),
+        'bot-horiz': chr(196).decode('cp437'),
     },
 }
 
@@ -32,47 +30,49 @@ class AnsiWindow(object):
     """
     The AnsiWindow base class provides position-relative window drawing
     routines to terminal interfaces, such as pager windows, editors, and
-    lightbar lists.
+    lightbar lists, as well as some drawing niceities such as borders,
+    text alignment
     """
     # pylint: disable=R0902
     #        Too many instance attributes (8/7)
 
-    def __init__(self, height, width, yloc, xloc):
+    def __init__(self, height, width, yloc, xloc, colors=None, glyphs=None):
         """
-        Construct an ansi window. Its base purpose is to provide
-        window-relativie positions using the pos() method.
+        Constructor class for a simple Window.
         """
         self.height = height
         self.width = width
         self.yloc = yloc
         self.xloc = xloc
+        self.init_theme(colors, glyphs)
+
         self._xpadding = 1
         self._ypadding = 1
         self._alignment = 'left'
         self._moved = False
-        self.glyphs = dict()
-        self.colors = dict()
-        self.init_theme()
-        term = getterminal()
-        assert self.isinview(), (
-            'AnsiWindow(height=%s, width=%s, yloc=%s, xloc=%s)'
-            ' not in viewport Terminal(height=%s, width=%s)'
-            % (height, width, yloc, xloc, term.height, term.width))
 
-    def init_theme(self):
+        assert self.isinview(), (
+            'AnsiWindow(height={self.height}, width={self.width}, '
+            'yloc={self.yloc}, xloc={self.xloc}) not in viewport '
+            'Terminal(height={term.height}, width={term.width})'
+            .format(self=self, term=getterminal()))
+
+    def init_theme(self, colors=None, glyphs=None):
         """
-        This initializer sets glyphs and colors appropriate for a "theme",
-        override this method to create a common color and graphic set.
+        This initializer sets glyphs and colors appropriate for a "theme".
         """
-        session = getsession()
+        # set defaults,
         term = getterminal()
-        self.colors['normal'] = term.normal
-        if term.number_of_colors != 0:
-            self.colors['border'] = term.cyan
-        # could be 'ascii' ..
-        ## self.glyphs = GLYPHSETS['ascii'].copy()
-        # but we chose PC-DOS 'thin' on smart terminals
+        self.colors = {
+            'normal': term.normal,
+            'border': term.number_of_colors and term.cyan or term.normal,
+        }
         self.glyphs = GLYPHSETS['thin'].copy()
+        # allow user override
+        if colors is not None:
+            self.colors.update(colors)
+        if glyphs is not None:
+            self.glyphs.update(glyphs)
 
     @property
     def xpadding(self):
@@ -187,8 +187,8 @@ class AnsiWindow(object):
         Returns terminal sequence to move cursor to window-relative position.
         """
         term = getterminal()
-        return term.move((yloc if yloc is not None else 0) + self.yloc,
-                         (xloc if xloc is not None else 0) + self.xloc)
+        return term.move((yloc and yloc or 0) + self.yloc,
+                         (xloc and xloc or 0) + self.xloc)
 
     def title(self, ansi_text):
         """
@@ -277,7 +277,7 @@ class AnsiWindow(object):
                       'left-vert', 'right-vert',
                       'bot-left', 'bot-horiz', 'bot-right'):
             if 0 != len(self.glyphs.get(glyph, u'')):
-                self.glyphs[glyph] = self.glyphs.get('era):se', u' ')
+                self.glyphs[glyph] = self.glyphs.get('erase', u' ')
         ucs = self.border()
         self.glyphs = save
         return ucs

@@ -303,6 +303,30 @@ def get_swinfo(entry, pager):
             "Author: g00r00\r\n"
             "IRC: #MysticBBS on irc.efnet.org\r\n")
         output += pager.title(u'- about ' + style('Mystic') + u' -')
+
+    elif entry.startswith('amiexpress') or entry.startswith('ami/x'):
+        output = pager.update(
+            "AmiExpress - also known as /X - by Synthetic Technologies is "
+            "a popular BBS software application for the Commodore Amiga "
+            "line of computers. AmiExpress was extremely popular among the"
+            "warez scene for trading (exchanging) software."
+            "  " + term.bold_blue('http://www.amiexpress.co.uk\r\n') + "\r\n\r\n"
+            "Author: Synthetic technologies\r\n")
+        output += pager.title(u'- about ' + style('amiexpress') + u' -')
+    elif entry.startswith('c*base') or entry.startswith('cbase'):
+        output = pager.update(
+            "C*Base is a popular bulletin board system software for the"
+            "Commodore 64/128 range of computers."     
+            "  " + term.bold_blue('http://www.acc.umu.se/~tao/cbase\r\n') + "\r\n\r\n"
+            "Authors: Various\r\n")
+        output += pager.title(u'- about ' + style('c*base') + u' -')
+    elif entry.startswith('bbbs'):
+        output = pager.update(
+            "BBBS is an odd featured and experimental BBS system from"
+            "Finland." 
+            "  " + term.bold_blue('http://www.bbbs.net\r\n') + "\r\n\r\n"
+            "Authors: Kim 'B' Heino & Tapani T. 'Z' Salmi\r\n")
+        output += pager.title(u'- about ' + style('c*base') + u' -')
     elif entry.startswith('daydream'):
         output = pager.update(
             "DayDream was initially created as a dialup BBS for the Amiga "
@@ -312,6 +336,14 @@ def get_swinfo(entry, pager):
             "  " + term.bold_blue('http://daydreambbs.com/\r\n') + "\r\n\r\n"
             "Author: Ryan Fantus\r\n")
         output += pager.title(u'- about ' + style('daydream') + u' -')
+    elif entry.startswith('pcboard'):
+        output = pager.update(
+            "Pcboard is a classic DOS bbs software of high calibre. It was "
+            "one of the first commercial BBS packages for DOS systems, and "
+            "was considered one of the high end packages during the rapid "
+            "expansion of BBS systems in the early 1990s. Cancelled in 1997. "
+            "Author: Clark development\r\n")
+        output += pager.title(u'- about ' + style('Pcboard') + u' -')
     elif entry.startswith('synchronet'):
         output = pager.update(
             "Synchronet Bulletin Board System Software is a free "
@@ -478,7 +510,7 @@ def more(cont=False):
     Returns True if user 'q'uit; otherwise False
     when prompting is complete (moar/next/whatever)
     """
-    from x84.bbs import echo, getch, Ansi, getterminal, LineEditor, DBProxy
+    from x84.bbs import echo, getch, getterminal, LineEditor, DBProxy
     prompt_key = u'\r\n\r\nENtER BBS iD: '
     msg_badkey = u'\r\n\r\nbbS id iNVAliD!'
     term = getterminal()
@@ -495,7 +527,9 @@ def more(cont=False):
         prompt += u', ' + fancy_blue(' ', 'more')
     prompt += u': '
     while True:
-        echo(u'\r\n' + Ansi(prompt).wrap(term.width - (term.width / 3)))
+        echo(u'\r\n')
+        echo(u'\r\n'.join(term.wrap(text=prompt,
+                                    width=(term.width - (term.width / 3)))))
         inp = getch()
         if inp in (u'q', 'Q'):
             return True
@@ -521,7 +555,7 @@ def dummy_pager():
     """
     # pylint: disable=R0912
     #        Too many branches
-    from x84.bbs import getterminal, echo, getch, Ansi
+    from x84.bbs import getterminal, echo, getch
     term = getterminal()
     msg_header = u'// bbS liSt'
     hindent = 2
@@ -545,9 +579,9 @@ def dummy_pager():
                 echo(term.blue_reverse(line.rstrip()) + '\r\n')
                 nlines += 1
             else:
-                wrapd = Ansi(line).wrap(term.width - hindent)
+                wrapped = term.wrap(text=line, width=(term.width - hindent))
                 echo(term.bold_blue(key) + term.bold_black('. '))
-                for num, line in enumerate(wrapd.split('\r\n')):
+                for num, line in enumerate(wrapped):
                     if num != 0:
                         echo(u' ' * hindent)
                     echo(line + '\r\n')

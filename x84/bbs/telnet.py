@@ -1,8 +1,11 @@
 """
 telnet extras for x/x84 bbs, https://github.com/jquast/x84
 """
-import functools
+# std imports
 import threading
+
+# local
+from x84.telnet import SEND
 
 
 def callback_cmdopt(socket, cmd, opt, env_term=None, width=None, height=None):
@@ -50,7 +53,7 @@ def connect_bot(botname):
     from x84.bbs.session import BOTLOCK, BOTQUEUE
     telnet_addr = CFG.get('telnet', 'addr')
     telnet_port = CFG.getint('telnet', 'port')
-    with BOTLOCK.acquire():
+    with BOTLOCK:
         client = telnetlib.Telnet()
         client.set_option_negotiation_callback(callback_cmdopt)
         client.open(telnet_addr, telnet_port)

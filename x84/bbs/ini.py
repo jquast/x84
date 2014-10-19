@@ -24,6 +24,7 @@ def init(lookup_bbs, lookup_log):
     """
     import ConfigParser
     root = logging.getLogger()
+    log = logging.getLogger(__name__)
 
     def write_cfg(cfg, filepath):
         """
@@ -56,12 +57,12 @@ def init(lookup_bbs, lookup_log):
             try:
                 os.makedirs(dir_name)
             except OSError as err:
-                root.warn(err)
+                log.warn(err)
         try:
             write_cfg(cfg_log, cfg_logfile)
-            root.info('Saved {0}'.format(cfg_logfile))
+            log.info('Saved {0}'.format(cfg_logfile))
         except IOError as err:
-            root.error(err)
+            log.error(err)
         logging.config.fileConfig(cfg_logfile)
 
     loaded = False
@@ -72,7 +73,7 @@ def init(lookup_bbs, lookup_log):
         # load defaults,
         if os.path.exists(cfg_bbsfile):
             cfg_bbs.read(cfg_bbsfile)
-            root.info('loaded %s', cfg_bbsfile)
+            log.info('loaded %s', cfg_bbsfile)
             loaded = True
             break
     if not loaded:
@@ -82,12 +83,12 @@ def init(lookup_bbs, lookup_log):
             try:
                 os.makedirs(dir_name)
             except OSError as err:
-                root.warn(err)
+                log.warn(err)
         try:
             write_cfg(cfg_bbs, cfg_bbsfile)
-            root.info('Saved {0}'.format(cfg_bbsfile))
+            log.info('Saved {0}'.format(cfg_bbsfile))
         except IOError as err:
-            root.error(err)
+            log.error(err)
 
     global CFG
     CFG = cfg_bbs
@@ -111,8 +112,6 @@ def init_bbs_ini():
         os.path.join(os.path.dirname(__file__), os.path.pardir, 'default')))
     cfg_bbs.set('system', 'datapath', os.path.expanduser(os.path.join(
         os.path.join('~', '.x84', 'data'))))
-    cfg_bbs.set('system', 'ttyrecpath', os.path.expanduser(os.path.join(
-        os.path.join('~', '.x84', 'ttyrecordings'))))
     cfg_bbs.set('system', 'timeout', '1984')
     # for very slow systems, you may need to increase IPC timeout for acquiring
     # locks and sending input to sub-processes -- this can happen when the
@@ -127,17 +126,23 @@ def init_bbs_ini():
     cfg_bbs.set('system', 'mail_addr',
                 '%s@%s' % (getpass.getuser(), socket.gethostname()))
     cfg_bbs.set('system', 'mail_smtphost', 'localhost')
-    # one *Could* change 'ansi' termcaps to 'ansi-bbs', for SynchoTerm,
+
+    # one *Could* change 'ansi' termcaps to 'ansi-bbs', for SynchTerm,
     # but how do we identify that 'ansi-bbs' TERM is available on this
-    # system? hmm ..
+    # system? hmm .. lets offer the reverse, anything beginning with
+    # 'ansi' can changed to any other value; so we could be
+    # unidirectional: a value of 'ansi' will translate ansi-bbs -> ansi,
+    # and a value of 'ansi-bbs' will translate ansi -> ansi-bbs.
     ## cfg_bbs.set('system', 'termcap-ansi', 'ansi-bbs')
-    cfg_bbs.set('system', 'termcap-ansi', 'no')
-    # change 'unknown' termcaps to 'vt220', for dumb terminals
-    cfg_bbs.set('system', 'termcap-unknown', 'vt220')
+    cfg_bbs.set('system', 'termcap-ansi', 'ansi')
+    # change 'unknown' termcaps to 'ansi': for dumb terminals
+    cfg_bbs.set('system', 'termcap-unknown', 'ansi')
     # could be information leak to sensitive sysops
     cfg_bbs.set('system', 'show_traceback', 'no')
     # store passwords in uppercase, facebook and mystic bbs does this ..
     cfg_bbs.set('system', 'pass_ucase', 'no')
+    # default encoding for the showart function on UTF-8 capable terminals
+    cfg_bbs.set('system', 'art_utf8_codec', 'cp437')
 
     cfg_bbs.add_section('telnet')
     cfg_bbs.set('telnet', 'addr', '127.0.0.1')
@@ -157,6 +162,10 @@ def init_bbs_ini():
         # for something longer, then you can buy your own patience !
         cfg_bbs.set('ssh', 'hostkeybits', '2048')
 
+    cfg_bbs.add_section('rlogin')
+    cfg_bbs.set('rlogin', 'addr', '127.0.0.1')
+    cfg_bbs.set('rlogin', 'port', '6513')
+
     # default path if cmd argument is not absolute,
     cfg_bbs.add_section('door')
     cfg_bbs.set('door', 'path', '/usr/local/bin:/usr/games')
@@ -164,13 +173,15 @@ def init_bbs_ini():
     cfg_bbs.add_section('matrix')
     cfg_bbs.set('matrix', 'newcmds', 'new apply')
     cfg_bbs.set('matrix', 'byecmds', 'exit logoff bye quit')
+    cfg_bbs.set('matrix', 'anoncmds', 'anonymous')
     cfg_bbs.set('matrix', 'script', 'matrix')
+    cfg_bbs.set('matrix', 'script_telnet', 'matrix')
+    cfg_bbs.set('matrix', 'script_ssh', 'matrix_ssh')
     cfg_bbs.set('matrix', 'topscript', 'top')
     cfg_bbs.set('matrix', 'enable_anonymous', 'no')
     cfg_bbs.set('matrix', 'enable_pwreset', 'yes')
 
     cfg_bbs.add_section('session')
-    cfg_bbs.set('session', 'record_tty', 'yes')
     cfg_bbs.set('session', 'tap_input', 'no')
     cfg_bbs.set('session', 'tap_output', 'no')
     cfg_bbs.set('session', 'tap_events', 'no')
@@ -234,8 +245,6 @@ def init_bbs_ini():
     cfg_bbs.set('sesame', 'MyMan', '/usr/bin/myman')
     cfg_bbs.set('sesame', 'MyMan_key', '&')
 
-    cfg_bbs.add_section('ttyplay')
-    cfg_bbs.set('ttyplay', 'exe', '/usr/bin/ttyplay')
     return cfg_bbs
 
 def init_log_ini():
@@ -250,8 +259,8 @@ def init_log_ini():
     cfg_log.add_section('formatter_default')
     # for multiprocessing/threads, use: %(processName)s %(threadName) !
     cfg_log.set('formatter_default', 'format',
-                u'%(asctime)s %(levelname)s '
-                u'%(filename)11s:%(lineno)-3s %(message)s')
+                u'%(asctime)s %(levelname)-6s '
+                u'%(filename)15s:%(lineno)-3s %(message)s')
     cfg_log.set('formatter_default', 'class', 'logging.Formatter')
     cfg_log.set('formatter_default', 'datefmt', '%a-%m-%d %I:%M%p')
 
@@ -276,19 +285,27 @@ def init_log_ini():
                 '("' + daily_log + '", "midnight", 1, 60)')
 
     cfg_log.add_section('loggers')
-    cfg_log.set('loggers', 'keys', 'root, sqlitedict')
+    cfg_log.set('loggers', 'keys', 'root, sqlitedict, paramiko')
 
     cfg_log.add_section('logger_root')
     cfg_log.set('logger_root', 'level', 'INFO')
     cfg_log.set('logger_root', 'formatter', 'default')
     cfg_log.set('logger_root', 'handlers', 'console, rotate_daily')
 
-    # squelche sqlitedict's info on open, its rather long
+    # squelch sqlitedict's info, its rather long
     cfg_log.add_section('logger_sqlitedict')
     cfg_log.set('logger_sqlitedict', 'level', 'WARN')
     cfg_log.set('logger_sqlitedict', 'formatter', 'default')
     cfg_log.set('logger_sqlitedict', 'handlers', 'console, rotate_daily')
     cfg_log.set('logger_sqlitedict', 'qualname', 'sqlitedict')
     cfg_log.set('logger_sqlitedict', 'propagate', '0')
+
+    # squelch paramiko.transport info, also too verbose
+    cfg_log.add_section('logger_paramiko')
+    cfg_log.set('logger_paramiko', 'level', 'WARN')
+    cfg_log.set('logger_paramiko', 'formatter', 'default')
+    cfg_log.set('logger_paramiko', 'handlers', 'console, rotate_daily')
+    cfg_log.set('logger_paramiko', 'qualname', 'paramiko.transport')
+    cfg_log.set('logger_paramiko', 'propagate', '0')
 
     return cfg_log

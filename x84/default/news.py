@@ -1,135 +1,83 @@
 """ news script for x/84, https://github.com/jquast/x84 """
-NEWSAGE = 0
-NEWS = None
+# std
+import os
+import time
+import codecs
+import logging
+
+# local
+from x84.bbs import getterminal, getsession, echo
+from x84.bbs import syncterm_setfont, decode_pipe
+from common import display_banner, prompt_pager
+
+#: filepath to folder containing this script
+here = os.path.dirname(__file__)
+
+#: filepath to news contents persisted to disk
+news_file = os.path.join(os.path.dirname(__file__), 'art', 'news.txt')
+
+#: encoding of news_file
+news_file_encoding = 'utf8'
+
+#: cached global memory view of news.txt
+news_contents = None
+
+#: filepath to artfile displayed for this script
+art_file = os.path.join(here, 'art', 'news.ans')
+
+#: encoding used to display artfile
+art_encoding = 'ascii'
+
+#: fontset for SyncTerm emulator
+syncterm_font = 'topaz'
+
+#: estimated art height (top of pager)
+art_height = 8
+
+log = logging.getLogger(__name__)
 
 
-def dummy_pager(news_txt):
+def main(quick=False):
     """
-    Given news_txt as unicode string, display using a dummy pager.
+    Script entry point.
+
+    :param quick: When True, returns early if this news has already been read.
+    :type quick: bool
     """
-    from x84.bbs import getterminal, echo, getch
-    term = getterminal()
-    prompt_msg = u'\r\n[%s]ontinue, [%s]top, [%s]on-stop  ?\b\b' % (
-        term.bold_blue('c'), term.bold_blue('s'), term.bold_blue('n'),)
-    nonstop = False
-    echo(redraw(None))
-    for row in range(len(news_txt)):
-        echo(news_txt[row].rstrip() + '\r\n')
-        if not nonstop and row > 0 and 0 == (row % (term.height - 3)):
-            echo(prompt_msg)
-            inp = getch()
-            if inp in (u's', u'S', u'q', u'Q', term.KEY_EXIT):
-                return
-            if inp in ('n', u'N'):
-                nonstop = True
-            echo(u'\r\n')
-    echo(u'\r\npress any key .. ')
-    getch()
-    return
-
-
-def get_pager(news_txt, position=None):
-    """
-    Return Pager instance with content ``news_txt``.
-    """
-    from x84.bbs import getterminal, Pager
-    term = getterminal()
-    width = min(130, (term.width - 2))
-    height = term.height - len(redraw(None).splitlines())
-    yloc = term.height - height
-    xloc = (term.width / 2) - (width / 2)
-    pager = Pager(height, width, yloc, xloc)
-    pager.colors['border'] = term.blue
-    pager.glyphs['left-vert'] = u''
-    pager.glyphs['right-vert'] = u''
-    pager.update('\n'.join(news_txt))
-    if position is not None:
-        pager.position = position
-    return pager
-
-
-def redraw(pager):
-    """ Returns string suitable for refreshing screen. """
-    from x84.bbs import getsession, getterminal, from_cp437
-    import os
-    # pylint: disable=W0603
-    #         Using the global statement
     session, term = getsession(), getterminal()
 
-    output = ''
-    output += term.home + term.normal + term.clear
-    artfile = os.path.join(os.path.dirname(__file__), 'art', 'news.ans')
-    art = [line.rstrip()
-        for line in from_cp437(open(artfile).read()).splitlines()]
-    max_ans = max([term.length(line) for line in art])
-    for line in art:
-        output += term.center(term.ljust(line.rstrip(), max_ans)).rstrip() + '\r\n'
-
-
-    title = u''.join((u']- ', term.bold_blue('PARtY NEWS'), ' [-',))
-    footer = u''.join((u'-[ ',
-                       term.blue_underline(u'Escape'), '/',
-                       term.blue_underline(u'q'), term.bold_blue(u'uit '),
-                       ((u'- ' + term.blue_underline(u'e')
-                           + term.bold_blue(u'dit ')) if (
-                               'sysop' in session.user.groups) else u''),
-                           u']-',
-    ))
-
-    return u''.join((u'',
-                         (output), u'',
-                     u''.join((
-                              u'' * pager.height,
-                              pager.refresh(),
-                              pager.border(),
-                              pager.title(title),
-                              pager.footer(footer))
-                              ) if pager is not None else u'',))
-
-
-def main():
-    """ Main procedure. """
-    from x84.bbs import getsession, echo, getch, gosub
-    import codecs
-    import time
-    import os
-    # pylint: disable=W0603
-    #         Using the global statement
-    global NEWS, NEWSAGE  # in-memory cache
-    session = getsession()
-    session.activity = 'Reading news'
-    newsfile = os.path.join(os.path.dirname(__file__), 'art', 'news.txt')
-    if not os.path.exists(newsfile):
-        echo(u'\r\n\r\nNo news.')
+    if not os.path.exists(news_file):
+        log.warn('No news file, {0}'.format(news_file))
+        echo(u'\r\n\r\n' + term.center(u'No news.').rstrip() + u'\r\n')
         return
 
-    pager = None
-    dirty = True
-    while True:
-        if session.poll_event('refresh'):
-            dirty = True
-        if dirty:
-            if NEWS is None or os.stat(newsfile).st_mtime > NEWSAGE:
-                # open a utf-8 file for international encodings/art/language
-                NEWSAGE = time.time()
-                NEWS = [line.rstrip() for line in
-                        codecs.open(newsfile, 'rb', 'utf8')]
-            if (session.user.get('expert', False)):
-                return dummy_pager(NEWS)
-            pos = pager.position if pager is not None else None
-            pager = get_pager(NEWS, pos)
-            echo(redraw(pager))
-            dirty = False
-        inp = getch(1)
-        if inp is not None:
-            if inp in (u'e', u'E',) and 'sysop' in session.user.groups:
-                session.user['news'] = u'\r\n'.join(NEWS)
-                if gosub('editor', 'news'):
-                    NEWS = session.user['news'].splitlines()
-                    codecs.open(newsfile, 'wb', 'utf8').write(
-                        u'\r\n'.join(NEWS))
-                dirty = True
-            else:
-                echo(pager.process_keystroke(inp))
-                if pager.quit:
-                    return
+    # return early if 'quick' is True and news is not new
+    news_mtime = os.stat(news_file).st_mtime
+    if quick and news_mtime < session.user.get('news_lastread', 0):
+        return
+
+    # set syncterm font, if any
+    if syncterm_font and term._kind == 'ansi':
+        echo(syncterm_setfont(syncterm_font))
+
+    session.activity = 'Reading news'
+
+    # display banner
+    line_no = display_banner(filepattern=art_file, encoding=art_encoding)
+
+    # retrieve news_file contents (decoded as utf8)
+    news = decode_pipe(codecs.open(
+        news_file, 'rb', news_file_encoding).read()
+    ).splitlines()
+    echo(u'\r\n\r\n')
+
+    # display file contents, decoded, using a command-prompt pager.
+    prompt_pager(content=news,
+                 line_no=line_no + 2,
+                 colors={'highlight': term.yellow,
+                         'lowlight': term.green,
+                         },
+                 width=80)
+
+    # update user's last-read time of news.
+    session.user['news_lastread'] = time.time()

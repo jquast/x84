@@ -1,7 +1,20 @@
 """
 Database proxy helper for X/84.
 """
-import time
+# std
+import logging
+
+# for session-based ipc
+
+# for drect-db access
+from x84.db import (
+    get_db_filepath,
+    should_tapdb,
+    get_database,
+    get_db_func,
+    get_db_lock,
+    log_db_cmd,
+)
 
 
 class DBProxy(object):
@@ -12,73 +25,90 @@ class DBProxy(object):
     results via IPC pipe transfer.
     """
 
-    def __init__(self, schema, table='unnamed'):
+    def __init__(self, schema, table='unnamed', use_session=True):
         """
         Arguments:
             schema: database key, to become basename of .sqlite3 files.
         """
+        from x84.bbs.session import getsession
+        self.log = logging.getLogger(__name__)
         self.schema = schema
         self.table = table
+        self._tap_db = should_tapdb()
+        self.session = use_session and getsession()
+
+    def proxy_iter_session(self, method, *args):
+        """
+        Proxy for iterable dictionary method calls over session IPC pipe.
+        """
+        if self.session:
+            event = 'db=%s' % (self.schema,)
+            self.session.flush_event(event)
+            self.session.send_event(event, (self.table, method, args))
+            data = self.session.read_event(event)
+            assert data == (None, 'StartIteration'), (
+                'iterable proxy used on non-iterable, %r' % (data,))
+            data = self.session.read_event(event)
+            while data != (None, StopIteration):
+                yield data
+                data = self.session.read_event(event)
+            self.session.flush_event(event)
+
+    def proxy_method_direct(self, method, *args):
+        """
+        Proxy for direct dictionary method calls.
+        """
+        dictdb = get_database(filepath=get_db_filepath(self.schema),
+                              table=self.table)
+        try:
+            func = get_db_func(dictdb, method)
+            if self._tap_db:
+                log_db_cmd(self.log, self.schema, method, args)
+            return func(*args)
+        finally:
+            dictdb.close()
 
     def proxy_iter(self, method, *args):
         """
-        Iterable proxy for dictionary methods called over IPC pipe.
+        Proxy for iterable dictionary method calls.
         """
-        import x84.bbs.session
-        event = 'db=%s' % (self.schema,)
-        session = x84.bbs.session.getsession()
-        session.flush_event(event)
-        session.send_event(event, (self.table, method, args))
-        data = session.read_event(event)
-        assert data == (None, 'StartIteration'), (
-            'iterable proxy used on non-iterable, %r' % (data,))
-        data = session.read_event(event)
-        while data != (None, StopIteration):
-            yield data
-            data = session.read_event(event)
-        session.flush_event(event)
+        if self.session:
+            return self.proxy_iter_session(method, *args)
+
+        return self.proxy_method_direct(method, *args)
 
     def proxy_method(self, method, *args):
         """
-        Proxy for dictionary methods called over IPC pipe.
+        Proxy for dictionary method calls.
         """
-        import x84.bbs.session
+        if self.session:
+            return self.proxy_method_session(method, *args)
+
+        return self.proxy_method_direct(method, *args)
+
+    def proxy_method_session(self, method, *args):
+        """
+        Proxy for dictionary method calls over IPC pipe.
+        """
         event = 'db-%s' % (self.schema,)
-        session = x84.bbs.session.getsession()
-        session.send_event(event, (self.table, method, args))
-        return session.read_event(event)
+        self.session.send_event(event, (self.table, method, args))
+        return self.session.read_event(event)
 
-    def acquire(self, blocking=True, stale=2.0):
-        """
-        Acquire a fine-grained BBS-global lock, blocking or non-blocking.
-
-        When invoked with the blocking argument set to True (the default),
-        block until the lock is acquired, and return True.
-
-        When invoked with the blocking argument set to False, do not block.
-        Returns False if lock is not acquired.
-
-        If the engine has held the lock longer than ``stale`` seconds, the
-        lock is granted anyway.
-        """
-        import x84.bbs.session
-        event = 'lock-%s/%s' % (self.schema, self.table)
-        session = x84.bbs.session.getsession()
-        while True:
-            session.send_event(event, ('acquire', stale))
-            data = session.read_event(event)
-            if data is True or not blocking:
-                return data
-            time.sleep(0.1)
+    def acquire(self):
+        self.log.debug('acquire lock, {0}'.format((self.schema, self.table)))
+        get_db_lock(schema=self.schema,
+                    table=self.table).acquire()
 
     def release(self):
-        """
-        Release bbs-global lock on database.
-        """
-        import x84.bbs.session
-        event = 'lock-%s/%s' % (self.schema, self.table)
-        session = x84.bbs.session.getsession()
-        return session.send_event(event, ('release', None))
+        self.log.debug('release lock, {0}'.format((self.schema, self.table)))
+        get_db_lock(schema=self.schema,
+                    table=self.table).release()
+
+    def __enter__(self):
+        self.acquire()
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.release()
 
     # pylint: disable=C0111
     #        Missing docstring

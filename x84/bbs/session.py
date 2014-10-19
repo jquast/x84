@@ -2,20 +2,19 @@
 """
 Session engine for x/84, http://github.com/jquast/x84/
 """
+import collections
 import traceback
 import logging
 import inspect
-import struct
-import math
 import time
 import imp
 import sys
 import os
-import io
 
 SESSION = None
-BOTQUEUE = None
-BOTLOCK = None
+
+Script = collections.namedtuple('Script', ['name', 'args', 'kwargs'])
+
 
 def getsession():
     """
@@ -30,11 +29,13 @@ def getterminal():
     """
     return getsession().terminal
 
+
 def getnode():
     """
     Returns unique session identifier for this session as integer.
     """
     return getsession().node
+
 
 class Session(object):
     """
@@ -44,78 +45,95 @@ class Session(object):
     #        Too many instance attributes
     #        Too many public methods
     #        Too many arguments
-    TRIM_CP437 = bytes(chr(14) + chr(15)) # HACK
+    TRIM_CP437 = bytes(chr(14) + chr(15))  # HACK
     _encoding = None
     _decoder = None
+    _activity = None
+    _user = None
 
-    def __init__(self, terminal, inp_queue, out_queue,
-                 sid, env, lock, encoding='utf8'):
+    _script_module = None
+
+    #: node number
+    _node = None
+
+    def __init__(self, terminal, sid, env, child_pipes, kind, addrport,
+                 matrix_args, matrix_kwargs):
+        """ Instantiate a Session.
+
+        Only one session may be instantiated per process.
+
+        :param terminal: interactive terminal associated with this session.
+        :type terminal: blessed.Terminal.
+        :param sid: session identification string
+        :type sid: str
+        :param env: transport-negotiated environment variables, should
+           contain at least values for TERM and 'encoding'.
+        :type env: dict
+        :param child_pipes: tuple of (writer, reader)
+        :type child_pipes: tuple
+        :param kind: transport description string (ssh, telnet)
+        :type kind: str
+        :param addrport: transport ip address and port as string
+        :type addrport: str
+        :param matrix_args: When non-None, a tuple of positional arguments
+           that should be passed to the matrix script.
+        :param matrix_kwargs: When non-None, a dictionary of keyword arguments
+           that should be passed to the matrix script.
+        :type matrix_kwargs: dict
         """
-        Instantiate a Session instanance, only one session
-        may be instantiated per process. Arguments:
-            terminal: blessed.Terminal,
-            inp_queue: multiprocessing.Queue Parent writes, Child reads
-            out_queue: multiprocessing.Queue Parent reads, Child writes
-            sid: session id by engine: origin of telnet connection (ip:port),
-            env: dict of environment variables, such as 'TERM', 'USER'.
-        """
-        from x84.bbs import ini
+        self.log = logging.getLogger(__name__)
+
         # pylint: disable=W0603
         #        Using the global statement
-        global SESSION, BOTQUEUE, BOTLOCk
-        assert SESSION is None, 'Session may be instantiated only once'
+        global SESSION
+        assert SESSION is None, ('Session may be instantiated only once '
+                                 'per sub-process')
         SESSION = self
-        self.iqueue = inp_queue
-        self.oqueue = out_queue
+
+        # public attributes
         self.terminal = terminal
         self.sid = sid
         self.env = env
-        self.encoding = encoding
-        self.lock = lock
-        self._user = None
-        self._script_stack = [(ini.CFG.get('matrix', 'script'),)]
-        self._tap_input = ini.CFG.getboolean('session', 'tap_input')
-        self._tap_output = ini.CFG.getboolean('session', 'tap_output')
-        self._tap_events = ini.CFG.getboolean('session', 'tap_events')
-        self._ttyrec_folder = ini.CFG.get('system', 'ttyrecpath')
-        self._record_tty = ini.CFG.getboolean('session', 'record_tty')
-        self._show_traceback = ini.CFG.getboolean('system', 'show_traceback')
-        self._script_path = ini.CFG.get('system', 'scriptpath')
-        self._script_module = None
-        self._fp_ttyrec = None
-        self._ttyrec_fname = None
-        self._node = None
+        self.writer, self.reader = child_pipes
+        self.kind = kind
+        self.addrport = addrport
+
+        # private attributes
+        self.init_script_stack(matrix_args, matrix_kwargs)
+        self.init_attributes()
+
+        # initialize keyboard encoding
+        terminal.set_keyboard_decoder(env['encoding'])
+
+    def init_script_stack(self, matrix_args, matrix_kwargs):
+        """
+        Initialize the "script stack" with the matrix script.
+
+        Using the default configuration argument 'script' for
+        all connections, but preferring 'script_{kind}', where
+        ``kind`` may be ``telnet``, ``ssh``, or any kind of
+        supporting transport, for an alternative matrix script
+        (if it exists).
+        """
+        from x84.bbs import ini
+        script_kind = 'script_{self.kind}'.format(self=self)
+        if ini.CFG.has_option('matrix', script_kind):
+            # TODO: also check that 'script_kind' exists (!)
+            matrix_script = ini.CFG.get('matrix', script_kind)
+        else:
+            matrix_script = ini.CFG.get('matrix', 'script')
+
+        script = Script(name=matrix_script,
+                        args=matrix_args,
+                        kwargs=matrix_kwargs)
+        self._script_stack = [script]
+
+    def init_attributes(self):
         self._connect_time = time.time()
         self._last_input_time = time.time()
-        self._activity = u'<uninitialized>'
-        # event buffer
+
+        # create event buffer
         self._buffer = dict()
-        # save state for ttyrec compression
-        self._ttyrec_sec = -1
-        self._ttyrec_usec = -1
-        self._ttyrec_len_text = 0
-
-        # detect if this is a "robot" user and handle it accordingly
-        addr, port = sid.split(':', 1)
-
-        if ini.CFG.has_section('bots') and addr == '127.0.0.1':
-            from Queue import Empty
-
-            try:
-                whoami = BOTQUEUE.get(True, 0.1)
-                robots = [robot.strip() for robot in ini.CFG.get('bots', 'names').split(',')]
-
-                if whoami in robots:
-                    from x84.bbs import User
-                    self._user = User(whoami)
-                    self._script_stack.pop()
-
-                    if ini.CFG.has_option('bots', addr):
-                        self._script_stack.append((ini.CFG.get('bots', whoami),))
-                    else:
-                        self._script_stack.append(('bots',))
-            except Empty:
-                pass
 
     def to_dict(self):
         """
@@ -139,30 +157,30 @@ class Session(object):
     @property
     def duration(self):
         """
-        Return length of time since connection began (float).
+        Seconds elapsed since connection began as float.
         """
-        return time.time() - self._connect_time
+        return time.time() - self.connect_time
 
     @property
     def connect_time(self):
         """
-        Return time when connection began (float).
+        Time of session start as float.
         """
         return self._connect_time
 
     @property
     def last_input_time(self):
         """
-        Return last time of keypress (epoch float).
+        Time of last keypress as epoch.
         """
         return self._last_input_time
 
     @property
     def idle(self):
         """
-        Return length of time since last keypress occured (float).
+        Seconds elapsed since last keypress as float.
         """
-        return time.time() - self._last_input_time
+        return time.time() - self.last_input_time
 
     @property
     def activity(self):
@@ -171,15 +189,14 @@ class Session(object):
         and is globally broadcasted as a "current activity" in the Who's
         online script.
         """
-        return self._activity
+        return self._activity or u'<uninitialized>'
 
     @activity.setter
     def activity(self, value):
         # pylint: disable=C0111
         #         Missing docstring
         if self._activity != value:
-            logger = logging.getLogger()
-            logger.debug('activity=%s', value)
+            self.log.debug('activity=%s', value)
             kind = self.env.get('TERM', 'unknown')
             set_title = self.user.get('set-title', (
                 'xterm' in kind or 'rxvt' in kind
@@ -202,43 +219,38 @@ class Session(object):
         User record of session.
         """
         from x84.bbs.userbase import User
-        if self._user is not None:
-            return self._user
-        return User()
+        return self._user or User()
 
     @user.setter
     def user(self, value):
         # pylint: disable=C0111
         #         Missing docstring
+        self.log.info("user {!r} -> {!r}".format(self._user, value.handle))
         self._user = value
-        logger = logging.getLogger()
-        logger.info("set user '%s'.", value.handle)
 
     @property
     def encoding(self):
         """
-        Session terminal encoding; only 'utf8' and 'cp437' are supported.
+        Session encoding.
         """
-        return self._encoding
+        return self.env.get('encoding', 'utf8')
 
     @encoding.setter
     def encoding(self, value):
-        # pylint: disable=C0111
-        #         Missing docstring
-        if value != self._encoding:
-            logger = logging.getLogger()
-            logger.info('encoding is %s.', value)
-            assert value in ('utf8', 'cp437')
-            self._encoding = value
-            getterminal().set_keyboard_decoder(self._encoding)
+        """
+        Setter for Session encoding.
+        """
+        if value != self.encoding:
+            self.log.debug('session encoding {0} -> {1}'
+                           .format(self.encoding, value))
+            self.env['encoding'] = value
+            getterminal().set_keyboard_decoder(value)
 
     @property
     def pid(self):
         """
         Returns Process ID.
         """
-        # pylint: disable=R0201
-        #        Method could be a function
         return os.getpid()
 
     @property
@@ -256,36 +268,92 @@ class Session(object):
                     break
         return self._node
 
+    @property
+    def tap_input(self):
+        """ Keyboard input should be logged for debugging. """
+        from x84.bbs import ini
+        return ini.CFG.getboolean('session', 'tap_input')
+
+    @property
+    def tap_output(self):
+        """ Screen output should be logged for debugging. """
+        from x84.bbs import ini
+        return ini.CFG.getboolean('session', 'tap_output')
+
+    @property
+    def tap_events(self):
+        """ IPC Events should be logged for debugging. """
+        from x84.bbs import ini
+        return ini.CFG.getboolean('session', 'tap_events')
+
+    @property
+    def show_traceback(self):
+        """ Whether traceback errors should be displayed to user. """
+        from x84.bbs import ini
+        return ini.CFG.getboolean('system', 'show_traceback')
+
+    @property
+    def script_path(self):
+        """ Base filepath folder for all scripts. """
+        from x84.bbs import ini
+        val = ini.CFG.get('system', 'scriptpath')
+        # ensure folder exists
+        assert os.path.isdir(val), (
+            'configuration section [system], value scriptpath: '
+            'not a folder: {!r}'.format(val))
+        return val
+
+    @property
+    def current_script(self):
+        self.value = 1
+        if len(self._script_stack):
+            return self._script_stack[-1]
+        return None
+
+    @property
+    def script_module(self):
+        """ base module location of self.script_path """
+        if self._script_module is None:
+            # load default/__init__.py as 'default',
+            folder_name = os.path.basename(self.script_path)
+
+            # put it in sys.path for relative imports
+            if self.script_path not in sys.path:
+                sys.path.insert(0, self.script_path)
+                self.log.debug("sys.path[0] <- {!r}".format(self.script_path))
+
+            # discover import path to __init__.py, store result
+            lookup = imp.find_module('__init__', [self.script_path])
+            self._script_module = imp.load_module(folder_name, *lookup)
+            self._script_module.__path__ = self.script_path
+        return self._script_module
+
     def __error_recovery(self):
-        """
-        jojo's invention; recover from a general exception by using
-        a script stack, and resuming last good script.
-        """
-        logger = logging.getLogger()
+        """ Recover from general exception in script. """
         if 0 != len(self._script_stack):
             # recover from exception
             fault = self._script_stack.pop()
-            stop, oper = True, u'STOP'
+            stop = False
             if len(self._script_stack):
-                stop, oper = False, u'RESUME'
-            msg = (u'%s %safter general exception in %s.' % (
-                oper, (
-                    (self._script_stack[-1][0] + u' ')
-                    if len(self._script_stack) else u' '),
-                fault[0],))
-            logger.info(msg)
-            self.write(u'\r\n\r\n')
-            if stop:
-                self.write(self.terminal.red_reverse(u'stop'))
+                # scripts remaining on the script_stack, resume the script that
+                # called us. Make sure your calling script queries for input or
+                # some other decision before chaining a gosub(), or you could
+                # end up in an infinite loop of gosub() followed by a crash (!)
+                resume = self.current_script
+                prefix = u'resume {resume.name}'.format(resume=resume)
             else:
-                self.write(self.terminal.bold_green(u'continue'))
-                self.write(u' ' + self.terminal.bold_cyan(
-                    self._script_stack[-1][0]))
-            self.write(u' after general exception in %s\r\n' % (
-                self.terminal.bold_cyan(fault[0]),))
-            # give time for exception to write down queue before
-            # continuing or exiting, esp. exiting, otherwise
-            # STOP message is not often fully received
+                stop = True
+                prefix = u'stop'
+
+            # display error to local log handler and to the user,
+            msg = (u'{prefix} after general exception in {fault.name}'
+                   .format(prefix=prefix, fault=fault))
+            self.log.error(msg)
+            self.write(u'\r\n\r\n{msg}\r\n'.format(msg=msg))
+
+            # give time for exception to write down the IPC queue before
+            # continuing or exiting, esp. exiting, otherwise STOP message
+            # is not often fully received to the transport.
             time.sleep(2)
 
     def run(self):
@@ -295,36 +363,44 @@ class Session(object):
         Scripts manipulate control flow of scripts using goto and gosub.
         """
         from x84.bbs.exception import Goto, Disconnected
-        logger = logging.getLogger()
         while len(self._script_stack):
-            logger.debug('script_stack: %r', self._script_stack)
+            self.log.debug('script_stack is {self._script_stack!r}'
+                           .format(self=self))
             try:
-                self.runscript(*self._script_stack.pop())
+                self.runscript(self._script_stack.pop())
                 continue
-            except Goto, err:
-                logger.debug('Goto: %s', err)
-                self._script_stack = [err[0] + tuple(err[1:])]
+
+            except Goto as goto_script:
+                self.log.debug('goto {0}'.format(goto_script.value))
+                self._script_stack = [goto_script.value]
                 continue
+
             except Disconnected, err:
-                logger.info('Disconnected: %s', err)
+                self.log.info('Disconnected: %s', err)
                 self.close()
                 return None
+
             except Exception, err:
                 # Pokemon exception, log and Cc: telnet client, then resume.
                 e_type, e_value, e_tb = sys.exc_info()
-                if self._show_traceback:
+                if self.show_traceback:
                     self.write(self.terminal.normal + u'\r\n')
+
                 terrs = list()
                 for line in traceback.format_tb(e_tb):
                     for subln in line.split('\n'):
                         terrs.append(subln)
+
                 terrs.extend(traceback.format_exception_only(e_type, e_value))
-                for etxt in terrs:
-                    logger.error(etxt.rstrip())
-                    if self._show_traceback:
-                        self.write(etxt.rstrip() + u'\r\n')
+                for etxt in map(str.rstrip, terrs):
+                    self.log.error(etxt)
+                    if self.show_traceback:
+                        self.write(etxt + u'\r\n')
+
+            # recover from general exception
             self.__error_recovery()
-        logger.info('End of script stack.')
+
+        self.log.debug('End of script stack.')
         self.close()
         return None
 
@@ -332,11 +408,8 @@ class Session(object):
         """
         Write unicode data to telnet client. Take special care to encode
         as 'iso8859-1' actually intended for 'cp437'-encoded terminals.
-
-        Has side effect of updating ttyrec file when recording.
         """
         from x84.bbs.cp437 import CP437
-        logger = logging.getLogger()
         if 0 == len(ucs):
             return
         assert isinstance(ucs, unicode)
@@ -350,11 +423,11 @@ class Session(object):
             # additionally, the 'shift-in' and 'shift-out' characters
             # display as '*' on SyncTerm, I think they stem from curses:
             # http://lkml.indiana.edu/hypermail/linux/kernel/0602.2/0868.html
-            # regardless, remove them using str.translate()
+            # regardless, remove them (self.TRIM_CP437)
             text = ucs.encode(encoding, 'replace')
             ucs = u''.join([(unichr(CP437.index(glyph))
                              if glyph in CP437
-                             and not glyph in self.TRIM_CP437
+                             and glyph not in self.TRIM_CP437
                              else unicode(
                                  text[idx].translate(None, self.TRIM_CP437),
                                  encoding, 'replace'))
@@ -363,25 +436,19 @@ class Session(object):
             encoding = self.encoding
         self.terminal.stream.write(ucs, encoding)
 
-        if self._tap_output and logger.isEnabledFor(logging.DEBUG):
-            logger.debug('--> %r.', ucs)
-
-        if self._record_tty:
-            if not self.is_recording:
-                self.start_recording()
-            self._ttyrec_write(ucs)
+        if self.log.isEnabledFor(logging.DEBUG) and self.tap_output:
+            self.log.debug('--> {!r}'.format(ucs))
 
     def flush_event(self, event):
         """
         Flush all return all data buffered for 'event'.
         """
-        logger = logging.getLogger()
         flushed = list()
         while True:
             data = self.read_event(event, -1)
             if data is None:
                 if 0 != len(flushed):
-                    logger.debug('flushed from %s: %r', event, flushed)
+                    self.log.debug('flushed from %s: %r', event, flushed)
                 return flushed
             flushed.append(data)
         return flushed
@@ -392,14 +459,11 @@ class Session(object):
         """
         return dict((
             ('TERM', self.env.get('TERM', u'unknown')),
-            ('LINES', self.terminal.height,),
-            ('COLUMNS', self.terminal.width,),
-            ('sid', self.sid,),
-            ('handle', self.user.handle,),
-            ('script', (self._script_stack[-1][0]
-                        if len(self._script_stack) else None)),
-            ('ttyrec',
-             self._fp_ttyrec.name if self._fp_ttyrec is not None else u'',),
+            ('LINES', self.terminal.height),
+            ('COLUMNS', self.terminal.width),
+            ('sid', self.sid),
+            ('handle', self.user.handle),
+            ('script', self.current_script.name),
             ('connect_time', self.connect_time),
             ('idle', self.idle),
             ('activity', self.activity),
@@ -413,7 +477,6 @@ class Session(object):
             'exception', 'global' AYT (are you there),
             'page', 'info-req', 'refresh', and 'input'.
         """
-        logger = logging.getLogger()
         # exceptions aren't buffered; they are thrown!
         if event == 'exception':
             # pylint: disable=E0702
@@ -430,12 +493,14 @@ class Session(object):
 
         # accept 'page' as instant chat when 'mesg' is True, or sender is -1
         # -- intent is that sysop can always 'chat' a user ..
-        if event == 'page' and self._script_stack[-1:][0][0] != 'chat':
+        if (event == 'page' and len(self._script_stack) and
+                self.current_script.name != 'chat'):
             channel, sender = data
             if self.user.get('mesg', True) or sender == -1:
-                logger.info('page from %s.' % (sender,))
-                if not self.runscript('chat', channel, sender):
-                    logger.info('rejected page from %s.' % (sender,))
+                self.log.info('page from {0}.'.format(sender))
+                chat_script = Script(name='chat', args=(channel, sender,))
+                if not self.runscript(chat_script):
+                    self.log.info('rejected page from {0}.'.format(sender))
                 # buffer refresh event for any asyncronous event UI's
                 self.buffer_event('refresh', 'page-return')
                 return True
@@ -447,7 +512,7 @@ class Session(object):
             return True
 
         # init new unmanaged & unlimited-sized buffer ;p
-        if not event in self._buffer:
+        if event not in self._buffer:
             self._buffer[event] = list()
 
         # buffer input
@@ -479,9 +544,8 @@ class Session(object):
         """
         self._last_input_time = time.time()
 
-        logger = logging.getLogger()
-        if self._tap_input and logger.isEnabledFor(logging.DEBUG):
-            logger.debug('<-- (%d): %r.', len(data), data)
+        if self.log.isEnabledFor(logging.DEBUG) and self.tap_input:
+            self.log.debug('<-- {!r}'.format(data))
 
         for keystroke in data:
             self._buffer['input'].insert(0, keystroke)
@@ -501,8 +565,7 @@ class Session(object):
                'db=<schema>': Request sqlite dict method result as iterable.
                'lock-<name>': Fine-grained global bbs locking.
         """
-        with self.lock.acquire():
-            self.oqueue.send((event, data))
+        self.writer.send((event, data))
 
     def poll_event(self, event):
         """
@@ -531,7 +594,6 @@ class Session(object):
            Return the first matched IPC data for any event specified in tuple
            events, in the form of (event, data).
         """
-        logger = logging.getLogger()
         (event, data) = (None, None)
         # return immediately any events that are already buffered
         for (event, data) in ((e, self._event_pop(e))
@@ -546,16 +608,16 @@ class Session(object):
         waitfor = timeleft(stime)
         while waitfor > 0:
             poll = None if waitfor == float('inf') else waitfor
-            if self.iqueue.poll(poll):
-                event, data = self.iqueue.recv()
+            if self.reader.poll(poll):
+                event, data = self.reader.recv()
                 retval = self.buffer_event(event, data)
-                if (self._tap_events and logger.isEnabledFor(logging.DEBUG)):
+                if self.log.isEnabledFor(logging.DEBUG) and self.tap_events:
                     stack = inspect.stack()
                     caller_mod, caller_func = stack[2][1], stack[2][3]
-                    logger.debug('event %s %s by %s in %s.', event,
-                                 'caught' if event in events else
-                                 'handled' if retval is not None else
-                                 'buffered', caller_func, caller_mod,)
+                    self.log.debug('event %s %s by %s in %s.', event,
+                                   'caught' if event in events else
+                                   'handled' if retval is not None else
+                                   'buffered', caller_func, caller_mod,)
                 if event in events:
                     return (event, self._event_pop(event))
             elif timeout == -1:
@@ -572,157 +634,44 @@ class Session(object):
         """
         return self._buffer[event].pop()
 
-    def runscript(self, script_name, *args):
+    def runscript(self, script):
         """
         Execute the main() callable of script identified by
-        *script_name*, with optional args.
+        *script*, an instance of the ``Script`` namedtuple.
         """
         from x84.bbs.exception import ScriptError
-        logger = logging.getLogger()
-        self._script_stack.append((script_name,) + args)
-        logger.info("run script '%s'%s.", script_name,
-                    ', args %r' % (args,) if 0 != len(args) else '')
-
-        def _load_script_module():
-            """
-            Load and return ini folder, `scriptpath` as a module (cached).
-            """
-            if self._script_module is None:
-                # load default/__init__.py as 'default',
-                base_script = os.path.basename(self._script_path)
-                # ensure _script_path exists
-                assert os.path.exists(self._script_path), (
-                    '[system] section value "scriptpath", %r, does not exist!'
-                    .format(self._script_path))
-                # and put it in sys.path for relative imports
-                if not self._script_path in sys.path:
-                    sys.path.insert(0, self._script_path)
-                    logger.debug("Added to sys.path: %s", self._script_path)
-                # finally, import the script
-                lookup = imp.find_module(script_name, [self._script_path])
-                # pylint: disable=W0142
-                #        Used * or ** magic
-                self._script_module = imp.load_module(base_script, *lookup)
-                self._script_module.__path__ = self._script_path
-            return self._script_module
+        self._script_stack.append(script)
+        self.log.info("runscript name={0}".format(script.name))
 
         # pylint: disable=W0142
         #        Used * or ** magic
-        script_module = _load_script_module()
-        lookup = imp.find_module(script_name, [script_module.__path__])
-        script = imp.load_module(script_name, *lookup)
-        if not hasattr(script, 'main'):
-            raise ScriptError("%s: main() not found." % (script_name,))
-        if not callable(script.main):
-            raise ScriptError("%s: main not callable." % (script_name,))
-        value = script.main(*args)
-        toss = self._script_stack.pop()
-        logger.info("script '%s' returned%s.", toss[0],
-                    ' %r' % (value,) if value is not None else u'')
+        lookup = imp.find_module(script.name, [self.script_module.__path__])
+        module = imp.load_module(script.name, *lookup)
+
+        # ensure main() function exists!
+        if not hasattr(module, 'main'):
+            raise ScriptError("script {0}, module {1}: main() not found."
+                              .format(script, module))
+        if not callable(module.main):
+            raise ScriptError("script {0}, module {1}: main not callable."
+                              .format(script, module))
+
+        # capture the return value of the script and return
+        # to the caller -- so value = gosub('my_game') can retrieve
+        # the return value of its main() function.
+        value = module.main(*script.args, **script.kwargs)
+
+        # remove the current script from the script stack, since it has
+        # finished executing.
+        self._script_stack.pop()
+
         return value
 
     def close(self):
         """
         Close session.
         """
-        if self.is_recording:
-            self.stop_recording()
         if self._node is not None:
             self.send_event(
-                    event='lock-node/%d' % (self._node),
-                    data=('release', None))
-
-    @property
-    def is_recording(self):
-        """
-        True when session is being recorded to ttyrec file
-        """
-        return self._fp_ttyrec is not None
-
-    def stop_recording(self):
-        """
-        Cease recording to ttyrec file (close).
-        """
-        assert self.is_recording
-        self._ttyrec_write(u''.join((
-            self.terminal.normal, u'\r\n\r\n',
-            u'\r\n'.join([u'%s: %s' % (key, val)
-            for (key, val) in sorted(self.info().items())]),
-            u'\r\n')))
-        self._fp_ttyrec.close()
-        self._fp_ttyrec = None
-
-    def start_recording(self):
-        """
-        Begin recording to ttyrec file.
-        """
-        logger = logging.getLogger()
-        assert self._fp_ttyrec is None, ('already recording')
-        digit = 0
-        while True:
-            self._ttyrec_fname = '%s%d-%s.ttyrec' % (
-                time.strftime('%Y%m%d.%H%M%S'), digit,
-                self.sid.split(':', 1)[0],)
-            if not os.path.exists(self._ttyrec_fname):
-                break
-            digit += 1
-        assert os.path.sep not in self._ttyrec_fname
-        filename = os.path.join(self._ttyrec_folder, self._ttyrec_fname)
-        if not os.path.exists(self._ttyrec_folder):
-            logger.info('creating ttyrec folder, %s.', self._ttyrec_folder)
-            os.makedirs(self._ttyrec_folder)
-        self._fp_ttyrec = io.open(filename, 'wb+')
-        self._ttyrec_sec = -1
-        self._ttyrec_write_header()
-        logger.info('recording %s.' % (filename,))
-
-    def _ttyrec_write_header(self):
-        """
-        Write ttyrec header that identifies termianl height & width, and escape
-        sequence to indicate UTF-8 mode.
-        """
-        (height, width) = self.terminal.height, self.terminal.width
-        self._ttyrec_write(unichr(27) + u'[8;%d;%dt' % (height, width,))
-        # ESC %G activates UTF-8 with an unspecified implementation level from
-        # ISO 2022 in a way that allows to go back to ISO 2022 again.
-        self._ttyrec_write(unichr(27) + u'%G')
-
-    def _ttyrec_write(self, ucs):
-        """
-        Update ttyrec stream with unicode bytes 'ucs'.
-        """
-        # write bytestring to ttyrec file packed as timed byte.
-        # If the current timed byte is within TTYREC_UCOMPRESS
-        # (default: 15,000 μsec), rewind stream and re-write the
-        # 'length' portion, and append data to end of stream.
-        # .. unfortuantely, this is not compatible with ttyplay -p,
-        # so for the time being, it is disabled ..
-        assert self._fp_ttyrec is not None, 'call start_recording() first'
-        timekey = self.duration
-
-        # Round down timekey to nearest whole number,
-        # use the remainder for microseconds. Upconvert,
-        # constructing a (seconds, microseconds) pair.
-        sec = math.floor(timekey)
-        usec = (timekey - sec) * 1e+6
-        sec, usec = int(sec), int(usec)
-
-        def write_chunk(tm_sec, tm_usec, textlen, u_text):
-            """
-            Write new timechunk record,
-              bytes (sec, usec, len(text), text.. )
-            """
-            # build & write,
-            bp1 = struct.pack('<I', tm_sec) + struct.pack('<I', tm_usec)
-            bp2 = struct.pack('<I', textlen)
-            self._fp_ttyrec.write(bp1 + bp2 + u_text)
-            # save (time,len) state for compression
-            self._ttyrec_sec = tm_sec
-            self._ttyrec_usec = tm_usec
-            self._ttyrec_len_text = textlen
-            self._fp_ttyrec.flush()
-        text = ucs.encode('utf8', 'replace')
-        len_text = len(text)
-        # TODO: padd every 1 or 10 seconds, so 'VCR' type apps
-        # can FF/RW easier
-        return write_chunk(sec, usec, len_text, text)
+                event='lock-node/%d' % (self._node),
+                data=('release', None))

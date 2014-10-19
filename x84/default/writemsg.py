@@ -267,14 +267,16 @@ def prompt_body(msg):
         echo(term.move(inp.yloc, 0) + term.clear_eol)
         if selection == u'REStORE':
             msg.body = session.user['draft']
+        else:
+            # delete the draft
+            del session.user['draft']
 
     echo(u'\r\n\r\n')
-    session.user['draft'] = msg.body
-    if gosub('editor', 'draft'):
+    content = gosub('editor', save_key=None, continue_draft=msg.body)
+    if content and content.strip():
         echo(u'\r\n\r\n' + term.normal)
-        msg.body = session.user.get('draft', u'')
-        del session.user['draft']
-        return 0 != len(msg.body.strip())
+        msg.body = content
+        return True
     return False
 
 
@@ -420,5 +422,6 @@ def main(msg=None):
             break
 
         msg.save()
+        session.user['msgs_sent'] = session.user.get('msgs_sent', 0) + 1
         return True
     return False

@@ -1,5 +1,5 @@
 """ Automsg script for x/84 bbs, https://github.com/jquast/x84 """
-from x84.bbs import getsession, getterminal, echo, LineEditor, showcp437
+from x84.bbs import getsession, getterminal, echo, LineEditor, showart
 import os
 import codecs
 __author__ = 'Hellbeard'
@@ -14,8 +14,8 @@ def get_datafile_path():
 
 def ask(msg):
     term = getterminal()
-    echo(term.move(18, 0))
-    echo(term.magenta(msg))
+    echo(term.move(21, 0))
+    echo(term.white(msg))
     echo(term.green(u'(') + term.cyan(u'yes/no') + term.green(u')'))
 
 
@@ -23,7 +23,7 @@ def banner():
     session, term = getsession(), getterminal()
     art_file = os.path.join(os.path.dirname(__file__), 'art', 'automsg.ans')
     echo(term.clear)
-    for line in showcp437(art_file):
+    for line in showart(art_file,'topaz'):
         echo(line)
 
     if not os.path.exists(get_datafile_path()):
@@ -32,13 +32,13 @@ def banner():
             fo.write('behave yourselves.\n')
             fo.write('\n\n')
 
-    echo(term.move(9, 9) + term.white(u'Public message from:'))
+    echo(term.move(12, 10) + term.blue(u'Public message from:'))
 
     with codecs.open(get_datafile_path(), 'r', 'utf-8') as fo:
         handle = fo.readline().strip()
-        echo(term.move(9, 30) + term.blue_on_green(handle))
+        echo(term.move(12, 31) + term.bold_white(handle))
         for row in range(1, 4):
-            echo(term.move(10 + row, 9) + term.yellow(fo.readline().strip()))
+            echo(term.move(15 + row, 5) + term.white(fo.readline().strip()))
 
     ask(u'do you want to write a new public message? ')
 
@@ -56,20 +56,20 @@ def main():
 
         if inp.lower() == u'y':
             session.activity = 'Writing automsg'
-            echo(term.move(9, 30))
-            echo(term.blue_on_green(session.user.handle))
+            echo(term.move(12, 31))
+            echo(term.bold_white(session.user.handle))
             echo((u' ' * 7))
 
-            echo(term.move(18, 0) + term.clear_eol)
+            echo(term.move(21, 0) + term.clear_eol)
             for row in range (1, 4):
-                echo(term.move(10 + row, 9))
+                echo(term.move(15 + row, 5))
                 echo(u' ' * 57)
 
             msg = []
             for row in range (1, 4):
-                echo(term.move(10 + row, 9))
-                le = LineEditor(56)
-                le.colors['highlight'] = term.yellow
+                echo(term.move(15 + row, 5))
+                le = LineEditor(70)
+                le.colors['highlight'] = term.white
                 msg.append(le.read())
 
             ask(u'submit your text as a public message? ')
@@ -79,7 +79,7 @@ def main():
                 if inp.lower() == u'n':
                     return
                 if inp == 'y' or inp == 'Y':
-                    echo(term.move(18, 0) + term.clear_eol)
+                    echo(term.move(21, 0) + term.clear_eol)
                     with codecs.open(get_datafile_path(), 'w', 'utf-8') as fo:
                         fo.write('\n'.join([session.user.handle] + msg))
                         fo.close()

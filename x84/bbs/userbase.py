@@ -4,10 +4,7 @@ Userbase record access for x/84, https://github.com/jquast/x84/
 import logging
 from x84.bbs.dbproxy import DBProxy
 
-# pylint: disable=C0103
-#        Invalid name "logger" for type constant
-logger = logging.getLogger()
-digestpw = None
+FN_PASSWORD_DIGEST = None
 GROUPDB = 'groupbase'
 USERDB = 'userbase'
 
@@ -35,61 +32,6 @@ def find_user(handle):
     for key in DBProxy(USERDB).keys():
         if handle.lower() == key.decode('utf8').lower():
             return key
-
-
-def digestpw_bcrypt(password, salt=None):
-    """
-    Password digest using bcrypt (optional)
-    """
-    import bcrypt
-    if not salt:
-        salt = bcrypt.gensalt()
-    if isinstance(password, unicode):
-        password = password.encode('utf8')
-    return salt, bcrypt.hashpw(password, salt)
-
-
-def digestpw_internal(password, salt=None):
-    """
-    Password digest using regular python libs
-    """
-    import hashlib
-    import base64
-    import os
-    if not salt:
-        salt = base64.b64encode(os.urandom(32))
-    digest = salt + password
-    for _count in range(0, 100000):
-        # pylint: disable=E1101
-        #         Module 'hashlib' has no 'sha256'
-        digest = hashlib.sha256(digest).hexdigest()
-    return salt, digest
-
-
-def digestpw_plaintext(password, salt=None):
-    """
-    No password digest, just store the passwords in plain text
-    """
-    if not salt:
-        salt = 'none'
-    return salt, password
-
-
-def digestpw_init(password_digest):
-    """
-    Set which password digest routine to use
-    """
-    # pylint: disable=W0603
-    #         Using the global statement
-    global digestpw
-    if password_digest == 'bcrypt':
-        digestpw = digestpw_bcrypt
-    elif password_digest == 'internal':
-        digestpw = digestpw_internal
-    elif password_digest == 'plaintext':
-        digestpw = digestpw_plaintext
-    else:
-        assert False, ('Invalid value for "system.password_digest"')
 
 
 class Group(object):
@@ -130,14 +72,16 @@ class Group(object):
         """
         Add user to group.
         """
-        logger.info("Group('%s').add('%s')", self.name, handle)
+        log = logging.getLogger(__name__)
+        log.info("Group({!r}).add({!r})".format(self.name, handle))
         self._members.add(handle)
 
     def remove(self, handle):
         """
         Remove user from group.
         """
-        logger.info("Group('%s').remove('%s')", self.name, handle)
+        log = logging.getLogger(__name__)
+        log.info("Group({!r}).remove({!r})".format(self.name, handle))
         self._members.remove(handle)
 
     def save(self):
@@ -210,16 +154,18 @@ class User(object):
 
     @password.setter
     def password(self, value):
-        # pylint: disable=C0111
-        #         Missing docstring
+        """
+        U.password = value
+        """
+        log = logging.getLogger(__name__)
         from x84.bbs import ini
         if ini.CFG.getboolean('system', 'pass_ucase'):
             # facebook and mystic storage style, i wouldn't
             # recommend it though.
-            self._password = digestpw(value.upper())
+            self._password = get_digestpw()(value.upper())
         else:
-            self._password = digestpw(value)
-        logger.info("set password for user '%s'.", self.handle)
+            self._password = get_digestpw()(value)
+        log.info("set password for user {!r}.".format(self.handle))
 
     def auth(self, try_pass):
         """
@@ -227,54 +173,60 @@ class User(object):
 
         To authenticate, assert auth(try_pass) == True.
         """
+        from x84.bbs import ini
+        pass_ucase = ini.CFG.getboolean('system', 'pass_ucase')
         assert type(try_pass) is unicode
         assert len(try_pass) > 0
         assert self.password != (None, None), ('account is without password')
         salt = self.password[0]
-        return (self.password == digestpw(try_pass, salt) or
-                self.password == digestpw(try_pass.upper(), salt))
+        digestpw = get_digestpw()
+        return (self.password == digestpw(try_pass, salt) or pass_ucase
+                and self.password == digestpw(try_pass.upper(), salt))
 
     def __setitem__(self, key, value):
         # pylint: disable=C0111,
         #        Missing docstring
-        if self.handle == 'anonymous':
-            logger.debug("set attr %r not possible for 'anonymous'", key)
-            return
+        log = logging.getLogger(__name__)
         adb = DBProxy(USERDB, 'attrs')
-        adb.acquire()
-        if not self.handle in adb:
-            adb[self.handle] = dict([(key, value), ])
-        else:
-            attrs = adb[self.handle]
-            attrs.__setitem__(key, value)
-            adb[self.handle] = attrs
-        adb.release()
-        logger.info("set attr %r for user '%s'.", key, self.handle)
+
+        if self.handle == 'anonymous':
+            log.debug("set attr {!r} not possible for 'anonymous'".format(key))
+            return
+
+        with adb:
+            if self.handle not in adb:
+                adb[self.handle] = dict([(key, value), ])
+            else:
+                attrs = adb[self.handle]
+                attrs.__setitem__(key, value)
+                adb[self.handle] = attrs
+        log.debug("set attr {!r} for user {!r}.".format(key, self.handle))
     __setitem__.__doc__ = dict.__setitem__.__doc__
 
     def get(self, key, default=None):
         # pylint: disable=C0111,
         #        Missing docstring
+        from x84.bbs import ini
+        log = logging.getLogger(__name__)
         adb = DBProxy(USERDB, 'attrs')
-        adb.acquire()
-        if not self.handle in adb:
-            logger.debug(
-                '%r GET %r: default; missing attrs.', self.handle, key)
-            val = default
-        else:
-            attrs = adb[self.handle]
-            if not key in attrs:
-                logger.debug('%r GET %r: default', self.handle, key)
-                val = default
-            else:
-                logger.debug('%r GET %r%s.' % (
-                    self.handle, key,
-                    ' (size: %d)' % (len(attrs[key]),)
-                    if hasattr(attrs[key], '__len__')
-                    else '(1)'))
-                val = attrs[key]
-        adb.release()
-        return val
+
+        if self.handle not in adb:
+            if ini.CFG.getboolean('session', 'tap_db'):
+                log.debug('User({!r}).get(key={!r}) returns default={!r}'
+                          .format(self.handle, key, default))
+            return default
+
+        attrs = adb.get(self.handle, {})
+        if key not in attrs:
+            if ini.CFG.getboolean('session', 'tap_db'):
+                log.debug('User({!r}.get(key={!r}) returns default={!r}'
+                          .format(self.handle, key, default))
+            return default
+
+        if ini.CFG.getboolean('session', 'tap_db'):
+            log.debug('User({!r}.get(key={!r}) returns value.'
+                      .format(self.handle, key))
+        return attrs[key]
     get.__doc__ = dict.get.__doc__
 
     def __getitem__(self, key):
@@ -286,14 +238,17 @@ class User(object):
     def __delitem__(self, key):
         # pylint: disable=C0111,
         #        Missing docstring
+        log = logging.getLogger(__name__)
         uadb = DBProxy(USERDB, 'attrs')
-        uadb.acquire()
-        attrs = uadb[self.handle]
-        if key in attrs:
-            attrs.__delitem__(key)
-            uadb[self.handle] = attrs
-        uadb.release()
-        logger.info("del attr %r for user '%s'.", key, self.handle)
+        with uadb:
+            # retrieve attributes from uadb,
+            attrs = uadb.get(self.handle, {})
+            # delete attribute if exists
+            if key in attrs:
+                attrs.__delitem__(key)
+                uadb[self.handle] = attrs
+                log.info("User({!r}) delete attr {!r}."
+                         .format(self.handle, key))
     __delitem__.__doc__ = dict.__delitem__.__doc__
 
     @property
@@ -322,37 +277,41 @@ class User(object):
         (re-)Save user record to database. Changes to user record to not
         automatically persist.  A call to the .save() method must be done.
         """
+        log = logging.getLogger(__name__)
         assert type(self._handle) is unicode, ('handle must be unicode')
         assert len(self._handle) > 0, ('handle must be non-zero length')
         assert (None, None) != self._password, ('password must be set')
         assert self._handle != u'anonymous', ('anonymous may not be saved.')
         udb = DBProxy(USERDB)
-        udb.acquire()
-        if 0 == len(udb) and self.is_sysop is False:
-            logger.warn('%s: First new user becomes sysop.', self.handle)
-            self.group_add(u'sysop')
-        udb[self.handle] = self
+        with udb:
+            if 0 == len(udb) and self.is_sysop is False:
+                log.warn('{!r}: First new user becomes sysop.'
+                         .format(self.handle))
+                self.group_add(u'sysop')
+            udb[self.handle] = self
         adb = DBProxy(USERDB, 'attrs')
-        adb.acquire()
-        if not self.handle in adb:
-            adb[self.handle] = dict()
-        adb.release()
-        self._apply_groups(DBProxy(GROUPDB))
-        udb.release()
-        logger.info("saved user '%s'.", self.handle)
+        with adb:
+            if self.handle not in adb:
+                adb[self.handle] = dict()
+        self._apply_groups()
+        log.info("saved user '%s'.", self.handle)
 
     def delete(self):
         """
         Remove user record from database, and as a member of any groups.
         """
+        log = logging.getLogger(__name__)
         gdb = DBProxy(GROUPDB)
-        for gname in self._groups:
-            group = gdb[gname]
-            if self.handle in group.members:
-                group.remove(self.handle)
-                group.save()
-        del DBProxy(USERDB)[self.handle]
-        logger.info("deleted user '%s'.", self.handle)
+        with gdb:
+            for gname in self._groups:
+                group = gdb[gname]
+                if self.handle in group.members:
+                    group.remove(self.handle)
+                    group.save()
+        udb = DBProxy(USERDB)
+        with udb:
+            del udb[self.handle]
+        log.info("deleted user '%s'.", self.handle)
 
     @property
     def is_sysop(self):
@@ -428,23 +387,177 @@ class User(object):
         #         Missing docstring
         self._plan = value
 
-    def _apply_groups(self, gdb):
+    def _apply_groups(self):
         """
         Inspect all groupbase members and enforce referential integrity.
         """
-        gdb.acquire()
-        for chk_grp in self._groups:
-            if not chk_grp in gdb:
-                gdb[chk_grp] = Group(chk_grp, set([self.handle]))
-                logger.info("created group '%s' for user '%s'.",
-                        chk_grp, self.handle)
-            # ensure membership in existing groups
-            group = gdb[chk_grp]
-            if not self.handle in group.members:
-                group.add(self.handle)
-                group.save()
-        for gname, group in gdb.items():
-            if gname not in self._groups and self.handle in group.members:
-                group.remove(self.handle)
-                group.save()
-        gdb.release()
+        log = logging.getLogger(__name__)
+        gdb = DBProxy(GROUPDB)
+        with gdb:
+            for chk_grp in self._groups:
+                if chk_grp not in gdb:
+                    gdb[chk_grp] = Group(chk_grp, set([self.handle]))
+                    log.info("created group {!r} for user {!r}."
+                             .format(chk_grp, self.handle))
+                # ensure membership in existing groups
+                group = gdb[chk_grp]
+                if self.handle not in group.members:
+                    group.add(self.handle)
+                    group.save()
+            for gname, group in gdb.items():
+                if gname not in self._groups and self.handle in group.members:
+                    group.remove(self.handle)
+                    group.save()
+
+
+def _digestpw_bcrypt(password, salt=None):
+    """
+    Password digest using bcrypt (optional)
+    """
+    import bcrypt
+    if not salt:
+        salt = bcrypt.gensalt()
+    if isinstance(password, unicode):
+        password = password.encode('utf8')
+    return salt, bcrypt.hashpw(password, salt)
+
+
+def _digestpw_internal(password, salt=None):
+    """
+    Password digest using regular python libs (slow)
+    """
+    import hashlib
+    import base64
+    import os
+    if not salt:
+        salt = base64.b64encode(os.urandom(32))
+    digest = salt + password
+    for _count in range(0, 100000):
+        # pylint: disable=E1101
+        #         Module 'hashlib' has no 'sha256'
+        digest = hashlib.sha256(digest).hexdigest()
+    return salt, digest
+
+
+def _digestpw_plaintext(password, salt=None):
+    """
+    No password digest, just store the passwords in plain text
+    """
+    if not salt:
+        salt = 'none'
+    return salt, password
+
+
+def get_digestpw():
+    """
+    Returns singleton to password digest routine.
+    """
+    global FN_PASSWORD_DIGEST
+    if FN_PASSWORD_DIGEST is not None:
+        return FN_PASSWORD_DIGEST
+
+    from x84.bbs.ini import CFG
+    FN_PASSWORD_DIGEST = {
+        'bcrypt': _digestpw_bcrypt,
+        'internal': _digestpw_internal,
+        'plaintext': _digestpw_plaintext,
+    }.get(CFG.get('system', 'password_digest'))
+    return FN_PASSWORD_DIGEST
+
+
+def check_new_user(username):
+    """ Boolean return when username matches `newcmds' ini cfg. """
+    from x84.bbs import get_ini
+    matching = get_ini(section='matrix',
+                       key='newcmds',
+                       split=True)
+    allowed = get_ini(section='nua',
+                      key='allow_apply',
+                      getter='getboolean')
+    return allowed and username in matching
+
+
+def check_bye_user(username):
+    """ Boolean return when username matches `byecmds' in ini cfg. """
+    from x84.bbs import get_ini
+    matching = get_ini(section='matrix', key='byecmds', split=True)
+    return matching and username in matching
+
+
+def check_anonymous_user(username):
+    """ Boolean return when user is anonymous and is allowed. """
+    from x84.bbs import get_ini
+    matching = get_ini(section='matrix',
+                       key='anoncmds',
+                       split=True)
+    allowed = get_ini(section='matrix',
+                      key='enable_anonymous',
+                      getter='getboolean',
+                      split=False)
+    return allowed and username in matching
+
+
+def check_user_password(username, password):
+    """ Boolean return when username and password match user record. """
+    from x84.bbs import find_user, get_user
+    handle = find_user(username)
+    if handle is None:
+        return False
+    user = get_user(handle)
+    if user is None:
+        return False
+    return password and user.auth(password)
+
+
+def parse_public_key(user_pubkey):
+    """ Return paramiko key class instance of a user's public key text. """
+    import paramiko
+
+    if len(user_pubkey.split()) == 3:
+        key_msg, key_data, _ = user_pubkey.split()
+    elif len(user_pubkey.split()) == 2:
+        key_msg, key_data = user_pubkey.split()
+    elif len(user_pubkey.split()) == 1:
+        # when no key-type is specified, assume rsa
+        key_msg, key_data = 'ssh-rsa', user_pubkey
+    else:
+        raise ValueError('Malformed public key format: {0!r}'
+                         .format(user_pubkey))
+    try:
+        key_bytes = key_data.decode('ascii')
+    except UnicodeDecodeError:
+        raise ValueError('Malformed public key encoding: {0!r}'
+                         .format(key_data))
+    decoded_keybytes = paramiko.py3compat.decodebytes(key_bytes)
+    try:
+        return {'ssh-rsa': paramiko.RSAKey,
+                'ssh-dss': paramiko.DSSKey,
+                'ecdsa-sha2-nistp256': paramiko.ECDSAKey,
+                }.get(key_msg)(data=decoded_keybytes)
+    except KeyError:
+        raise ValueError('Malformed public key_msg: {0!r}'
+                         .format(key_msg))
+
+
+def check_user_pubkey(self, username, public_key):
+    """ Boolean return when public_key matches user record. """
+    from x84.bbs import find_user, get_user
+    log = logging.getLogger(__name__)
+    handle = find_user(username)
+    if handle is None:
+        return False
+    user_pubkey = get_user(handle).get('pubkey', False)
+    if not user_pubkey:
+        log.debug('{0} attempted pubkey authentication, '
+                  'but no public key on record for the user.'
+                  .format(username))
+        return False
+    try:
+        stored_pubkey = parse_public_key(user_pubkey)
+    except (ValueError, Exception):
+        import sys
+        (exc_type, exc_value, exc_traceback) = sys.exc_info()
+        log.debug('{0} for stored public key of user {1!r}: '
+                  '{2}'.format(exc_type, username, exc_value))
+    else:
+        return stored_pubkey == public_key

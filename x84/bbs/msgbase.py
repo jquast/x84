@@ -1,8 +1,14 @@
 """
 msgbase package for x/84, https://github.com/jquast/x84
 """
-import logging
+# std imports
 import datetime
+import logging
+
+# local
+from x84.bbs.dbproxy import DBProxy
+
+# 3rd party
 import dateutil.tz
 
 MSGDB = 'msgbase'
@@ -30,9 +36,10 @@ def to_utctime(tm_value):
 
 def get_origin_line():
     """ pull the origin line from config """
-    from x84.bbs.ini import CFG
-    return CFG.get('msg', 'origin_line', 'Sent from {0}'
-                   .format(CFG.get('system', 'bbsname')))
+    from x84.bbs import get_ini
+    return get_ini(section='msg', key='origin_line') or (
+        'Sent from {0}'.format(
+            get_ini(section='system', key='bbsname')))
 
 
 def format_origin_line():
@@ -44,7 +51,6 @@ def get_msg(idx=0):
     """
     Return Msg record instance by index ``idx``.
     """
-    from x84.bbs.dbproxy import DBProxy
     return DBProxy(MSGDB)['%d' % int(idx)]
 
 
@@ -52,7 +58,6 @@ def list_msgs(tags=None):
     """
     Return set of Msg keys matching 1 or more ``tags``, or all.
     """
-    from x84.bbs.dbproxy import DBProxy
     if tags is not None and 0 != len(tags):
         msgs = set()
         db_tag = DBProxy(TAGDB)
@@ -86,7 +91,7 @@ class Msg(object):
 
     'parent' points to the message this message directly refers to, and
     'threads' points to messages that refer to this message. 'parent' must be
-    explicitly set, but children are automaticly populated into 'threads' of
+    explicitly set, but children are automatically populated into 'threads' of
     messages replied to through the send() method.
     """
     # pylint: disable=R0902
@@ -113,7 +118,6 @@ class Msg(object):
 
     def __init__(self, recipient=None, subject=u'', body=u''):
         from x84.bbs.session import getsession
-        self.log = logging.getLogger(__name__)
         self.author = None
         session = getsession()
         if session:
@@ -133,12 +137,17 @@ class Msg(object):
         """
         Save message in 'Msgs' sqlite db, and record index in 'tags' db.
         """
-        from x84.bbs.dbproxy import DBProxy
+        from x84.bbs.ini import CFG
+        from x84.bbs import getsession
 
+        session = getsession()
+        use_session = bool(session is not None)
+        log = logging.getLogger(__name__)
         new = self.idx is None or self._stime is None
+
         # persist message record to MSGDB
-        db_msg = DBProxy(MSGDB)
-        with db_msg.acquire():
+        db_msg = DBProxy(MSGDB, use_session=use_session)
+        with db_msg:
             if new:
                 self.idx = max([int(key) for key in db_msg.keys()] or [-1]) + 1
                 if ctime is not None:
@@ -149,19 +158,20 @@ class Msg(object):
             db_msg['%d' % (self.idx,)] = self
 
         # persist message idx to TAGDB
-        db_tag = DBProxy(TAGDB)
-        with db_tag.acquire():
-            for tag, msgs in db_tag.iteritems():
+        db_tag = DBProxy(TAGDB, use_session=use_session)
+        with db_tag:
+            for tag in db_tag.keys():
+                msgs = db_tag[tag]
                 if tag in self.tags and self.idx not in msgs:
                     msgs.add(self.idx)
                     db_tag[tag] = msgs
-                    self.log.debug("msg {self.idx} tagged '{tag}'"
-                                   .format(self=self, tag=tag))
+                    log.debug("msg {self.idx} tagged '{tag}'"
+                              .format(self=self, tag=tag))
                 elif tag not in self.tags and self.idx in msgs:
                     msgs.remove(self.idx)
                     db_tag[tag] = msgs
-                    self.log.info("msg {self.idx} removed tag '{tag}'"
-                                  .format(self=self, tag=tag))
+                    log.info("msg {self.idx} removed tag '{tag}'"
+                             .format(self=self, tag=tag))
             for tag in [_tag for _tag in self.tags if _tag not in db_tag]:
                 db_tag[tag] = set([self.idx])
 
@@ -175,33 +185,38 @@ class Msg(object):
                 parent_msg.children.add(self.idx)
                 parent_msg.save()
             else:
-                self.log.error('Parent idx same as message idx; stripping')
+                log.error('Parent idx same as message idx; stripping')
                 self.parent = None
-                with db_msg.acquire():
+                with db_msg:
                     db_msg['%d' % (self.idx)] = self
 
         if send_net and new and CFG.has_option('msg', 'network_tags'):
             self.queue_for_network()
 
-        self.log.info(
+        log.info(
             u"saved {new}{public}msg {post}, addressed to '{self.recipient}'."
             .format(new='new ' if new else '',
                     public='public ' if 'public' in self.tags else '',
-                    message='post' if self.parent is None else 'reply',
+                    post='post' if self.parent is None else 'reply',
                     self=self))
 
     def queue_for_network(self):
         " Queue message for networks, hosting or sending. "
-        from x84.bbs.ini import CFG
-        from x84.bbs.dbproxy import DBProxy
+        from x84.bbs import get_ini
 
-        network_names = CFG.get('msg', 'network_tags')
-        member_networks = map(str.strip(), network_names.split(','))
+        log = logging.getLogger(__name__)
 
-        my_networks = []
-        if CFG.has_option('msg', 'server_tags'):
-            my_netnames = CFG.get('msg', 'server_tags')
-            my_networks = map(str.strip(), my_netnames.split(','))
+        # server networks this server is a member of,
+        member_networks = get_ini(section='msg',
+                                  key='network_tags',
+                                  split=True,
+                                  splitsep=',')
+
+        # server networks offered by this server,
+        my_networks = get_ini(section='msg',
+                              key='server_tags',
+                              split=True,
+                              splitsep=',')
 
         # check all tags of message; if they match a message network,
         # either record for hosting servers, or schedule for delivery.
@@ -213,18 +228,18 @@ class Msg(object):
                 section = 'msgnet_{tag}'.format(tag=tag)
                 transdb_name = CFG.get(section, 'trans_db_name')
                 transdb = DBProxy(transdb_name)
-                with transdb.acquire():
+                with transdb:
                     self.body = u''.join((self.body, format_origin_line()))
                     self.save()
                     transdb[self.idx] = self.idx
-                self.log.info('[{tag}] Stored for network (msgid {self.idx}).'
-                              .format(tag=tag, self=self))
+                log.info('[{tag}] Stored for network (msgid {self.idx}).'
+                         .format(tag=tag, self=self))
 
             # message is for a another network, queue for delivery
             elif tag in member_networks:
                 queuedb_name = CFG.get(section, 'queue_db_name')
                 queuedb = DBProxy(queuedb_name)
-                with queuedb.acquire():
+                with queuedb:
                     queuedb[self.idx] = tag
-                self.log.info('[{tag}] Message (msgid {self.idx}) queued '
-                              'for delivery'.format(tag=tag, self=self))
+                log.info('[{tag}] Message (msgid {self.idx}) queued '
+                         'for delivery'.format(tag=tag, self=self))

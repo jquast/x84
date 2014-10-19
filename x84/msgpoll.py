@@ -27,7 +27,7 @@ section of your default.ini.
 Example default.ini configuration:
 
 [msg]
-server_tags = x84net
+network_tags = x84net
 origin_line = Sent from The Best BBS In The World, baby!
 
 [msgnet_x84net]
@@ -90,7 +90,7 @@ def pull_rest(net, last_msg_id, log=None):
         return False
 
     if req.status_code != 200:
-        log.error('[{net[name]] HTTP error, code={req.status_code}'
+        log.error('[{net[name]}] HTTP error, code={req.status_code}'
                   .format(net=net, req=req))
         return False
 
@@ -108,7 +108,7 @@ def push_rest(net, msg, parent, log=None):
     log = log or logging.getLogger(__name__)
 
     msg_data = prepare_message(msg, net, parent)
-    url = '{net[url_base]}messages/{net[name]/'.format(net=net)
+    url = '{net[url_base]}messages/{net[name]}/'.format(net=net)
     data = {'message': json.dumps(msg_data)}
 
     try:
@@ -171,7 +171,9 @@ def get_networks(cfg, log=None):
             net[option] = cfg.get(section, option)
 
         # make last_file absolute path, relative to datapath
-        net['last_file'] = os.path.expanduser(cfg.get('system', 'datapath'))
+        net['last_file'] = os.path.join(
+            os.path.expanduser(cfg.get('system', 'datapath')),
+            net['last_file'])
 
         if not cfg.has_option(section, 'ca_path'):
             ca_path = True
@@ -199,7 +201,7 @@ def poll_network_for_messages(net, log=None):
     try:
         with open(net['last_file'], 'r') as last_fp:
             last_msg_id = int(last_fp.read().strip())
-    except OSError as err:
+    except IOError as err:
         try:
             with open(net['last_file'], 'w') as last_fp:
                 last_fp.write(str(last_msg_id))
@@ -209,7 +211,7 @@ def poll_network_for_messages(net, log=None):
         except OSError as err:
             log.error('[{net[name]}] skipping network: {err}'
                       .format(net=net, err=err))
-            return None
+            return
 
     msgs = pull_rest(net=net, last_msg_id=last_msg_id)
 
@@ -218,9 +220,9 @@ def poll_network_for_messages(net, log=None):
                  .format(net=net, num=len(msgs)))
     else:
         log.debug('{net[name]} no messages.'.format(net=net))
-        return None
+        return
 
-    transdb = DBProxy(net['trans_db_name'])
+    transdb = DBProxy(net['trans_db_name'], use_session=False)
     transkeys = transdb.keys()
     msgs = sorted(msgs, cmp=lambda x, y: cmp(int(x['id']), int(y['id'])))
 
@@ -241,8 +243,8 @@ def poll_network_for_messages(net, log=None):
 
         if (msg['parent'] is not None and
                 str(msg['parent']) not in transkeys):
-            log.warn('{net[name]} No such parent message ({msg[parent], '
-                     'msg_id=msg[id]), removing reference.'
+            log.warn('{net[name]} No such parent message ({msg[parent]}, '
+                     'msg_id={msg[id]}), removing reference.'
                      .format(net=net, msg=msg))
         elif msg['parent'] is not None:
             store_msg.parent = int(transdb[msg['parent']])
@@ -254,7 +256,7 @@ def poll_network_for_messages(net, log=None):
             # do not save this message to network, we already received
             # it from the network, set send_net=False
             store_msg.save(send_net=False, ctime=to_localtime(msg['ctime']))
-            with transdb.acquire():
+            with transdb:
                 transdb[msg['id']] = store_msg.idx
             transkeys.append(msg['id'])
             log.info('{net[name]} Processed (msg_id={msg[id]}) => {new_id}'
@@ -267,17 +269,18 @@ def poll_network_for_messages(net, log=None):
         with open(net['last_file'], 'w') as last_fp:
             last_fp.write(str(net['last']))
 
-    return transdb
+    return
 
 
-def publish_network_messages(net, transdb, log=None):
+def publish_network_messages(net, log=None):
     " Push messages to network. "
     from x84.bbs import DBProxy
     from x84.bbs.msgbase import format_origin_line, MSGDB
 
     log = log or logging.getLogger(__name__)
-    queuedb = DBProxy(net['queue_db_name'])
-    msgdb = DBProxy(MSGDB)
+    queuedb = DBProxy(net['queue_db_name'], use_session=False)
+    transdb = DBProxy(net['trans_db_name'], use_session=False)
+    msgdb = DBProxy(MSGDB, use_session=False)
 
     # publish each message
     for msg_id in sorted(queuedb.keys(),
@@ -292,8 +295,8 @@ def publish_network_messages(net, transdb, log=None):
 
         trans_parent = None
         if msg.parent is not None:
-            matches = [key for key, data in transdb.iteritems()
-                       if data == msg.parent]
+            matches = [key for key, data in transdb.items()
+                       if int(data) == msg.parent]
 
             if len(matches) > 0:
                 trans_parent = matches[0]
@@ -312,12 +315,12 @@ def publish_network_messages(net, transdb, log=None):
             log.error('{net[name]} trans_id={trans_id} conflicts with '
                       '(msg_id={msg_id})'
                       .format(net=net, trans_id=trans_id, msg_id=msg_id))
-            with queuedb.acquire():
+            with queuedb:
                 del queuedb[msg_id]
             continue
 
         # transform, and possibly duplicate(?) message ..
-        with transdb.acquire(), msgdb.acquire(), queuedb.acquire():
+        with transdb, msgdb, queuedb:
             transdb[trans_id] = msg_id
             msg.body = u''.join((msg.body, format_origin_line()))
             msgdb[msg_id] = msg
@@ -325,8 +328,34 @@ def publish_network_messages(net, transdb, log=None):
         log.info('{net[name]} Published (msg_id={msg_id}) => {trans_id}'
                  .format(net=net, msg_id=msg_id, trans_id=trans_id))
 
+def start_polling():
+    """ launch method for polling process """
 
-def main():
+    def polling_thread(poll_interval):
+        import time
+
+        last_poll = 0
+
+        while True:
+            now = time.time()
+            if now - last_poll >= poll_interval:
+                poll()
+                last_poll = now
+            time.sleep(1)
+
+    from threading import Thread
+    from x84.bbs.ini import CFG
+    import logging
+
+    log = logging.getLogger('x84.engine')
+    poll_interval = CFG.getint('msg', 'poll_interval')
+    t = Thread(target=polling_thread, args=(poll_interval,))
+    t.daemon = True
+    t.start()
+    log.info('msgpoll will poll at {0}s intervals.'
+              .format(poll_interval))
+
+def poll():
     """ message polling process """
     import x84.bbs.ini
 
@@ -338,10 +367,9 @@ def main():
               .format(net_names=', '.join(net['name'] for net in networks)))
 
     # pull/push to all networks
-    num = 0
-    for num, net in enumerate(networks):
-        transdb = poll_network_for_messages(net)
-        if transdb is not None:
-            publish_network_messages(net, transdb)
+    for net in networks:
+        poll_network_for_messages(net)
+        publish_network_messages(net)
+    num = len(networks)
     log.debug('Message poll/publish complete for {n} network{s}.'
               .format(n=num, s='s' if num != 1 else ''))

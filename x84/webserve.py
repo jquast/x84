@@ -24,9 +24,6 @@ chain = /home/bbs/ca.cer
 
 import web
 
-queues = None
-locks = None
-
 
 def start(web_modules):
     """ fire up a web server with the given modules as endpoints """
@@ -36,13 +33,11 @@ def start(web_modules):
     import os
     from x84.bbs.ini import CFG
 
-    global queues, locks
     logger = logging.getLogger()
     sys.path.insert(0, os.path.expanduser(CFG.get('system', 'scriptpath')))
-    queues = dict()
-    locks = dict()
-    urls = list()
+    urls = ('/favicon.ico', 'favicon')
     funcs = globals()
+    funcs['favicon'] = Favicon
 
     for mod in web_modules:
         module = None
@@ -71,17 +66,39 @@ def start(web_modules):
     logger.info(u'Web modules: %s' % u', '.join(web_modules))
 
 
+class Favicon:
+    """ Dummy class for preventing /favicon.ico 404 errors """
+
+    def GET(self):
+        pass
+
+
 def server_thread(urls, funcs):
     """ thread for running the web server """
     from x84.bbs import ini
     from web.wsgiserver import CherryPyWSGIServer
+    from web.wsgiserver.ssl_pyopenssl import pyOpenSSLAdapter
+    from OpenSSL import SSL
+
+    cert, key, chain = None, None, None
 
     if ini.CFG.has_option('web', 'cert'):
-        CherryPyWSGIServer.ssl_certificate = ini.CFG.get('web', 'cert')
+        cert = ini.CFG.get('web', 'cert')
     if ini.CFG.has_option('web', 'key'):
-        CherryPyWSGIServer.ssl_private_key = ini.CFG.get('web', 'key')
+        key = ini.CFG.get('web', 'key')
     if ini.CFG.has_option('web', 'chain'):
-        CherryPyWSGIServer.ssl_certificate_chain = ini.CFG.get('web', 'chain')
+        chain = ini.CFG.get('web', 'chain')
+
+    CherryPyWSGIServer.ssl_adapter = pyOpenSSLAdapter(cert, key, chain)
+    CherryPyWSGIServer.ssl_adapter.context = SSL.Context(SSL.SSLv23_METHOD)
+    CherryPyWSGIServer.ssl_adapter.context.set_options(SSL.OP_NO_SSLv3)
+    CherryPyWSGIServer.ssl_adapter.context.use_certificate_file(cert)
+    CherryPyWSGIServer.ssl_adapter.context.use_privatekey_file(key)
+
+    if chain:
+        CherryPyWSGIServer.ssl_adapter.context.use_certificate_chain_file(chain)
+
+    CherryPyWSGIServer.ssl_adapter.context.set_cipher_list('ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS')
 
     app = web.application(urls, funcs)
     addr = (ini.CFG.get('web', 'addr'), ini.CFG.getint('web', 'port'))

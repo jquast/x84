@@ -162,7 +162,7 @@ def get_inputbar(pager):
     width = pager.visible_width - 2
     yloc = (pager.yloc + pager.height) - 2
     xloc = pager.xloc + 2
-    ibar = ScrollingEditor(width, yloc, xloc)
+    ibar = ScrollingEditor(width=width, yloc=yloc, xloc=xloc)
     ibar.enable_scrolling = True
     ibar.max_length = 512
     ibar.colors['highlight'] = term.cyan_reverse

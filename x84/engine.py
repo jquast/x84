@@ -2,23 +2,32 @@
 """
 Command-line launcher and main event loop for x/84
 """
-# Please place _ALL_ Metadata in setup.py, and any that don't belong there,
-# here.  Except for a few bits which don't belong there right here. (perhaps
-# user-contributed art or scripts) -- Do not include metadata in any other
-# part of x/84, its a damn pain in the ass to maintain so much meta.
-
-__author__ = "Johannes Lundberg, Jeffrey Quast"
+# Place ALL metadata in setup.py, except where not suitable, place here.
+# For any contributions, feel free to tag __author__ etc. at top of such file.
+__author__ = "Johannes Lundberg (jojo), Jeff Quast (dingo)"
 __url__ = u'https://github.com/jquast/x84/'
 __copyright__ = "Copyright 2014"
 __credits__ = [
-    "Wijnand Modderman-Lenstra",
+    # use 'scene' names unless preferred or unavailable.
     "zipe",
+    "jojo",
+    "maze",
+    "dingo",
     "spidy",
-    "Mercyful Fate",
+    "beardy",
     "haliphax",
+    "megagumbo",
     "hellbeard",
+    "Mercyful Fate",
 ]
 __license__ = 'ISC'
+
+# std
+import sys
+import logging
+
+# local
+__import__('encodings')  # provides alternate encodings
 
 
 def main():
@@ -35,7 +44,11 @@ def main():
     x84.bbs.ini.init(*parse_args())
     from x84.bbs.ini import CFG
 
-    # retrieve enabled servers
+    if sys.maxunicode == 65535:
+        import warnings
+        warnings.warn('Python not built with wide unicode support!')
+
+    # retrieve list of managed servers
     servers = get_servers(CFG)
 
     try:
@@ -45,6 +58,10 @@ def main():
         # exit on ^C, killing any client sessions.
         from x84.terminal import kill_session
         for server in servers:
+            for idx, thread in enumerate(server.threads[:]):
+                if not thread.stopped:
+                    thread.stopped = True
+                server.threads.remove(thread)
             for key, client in server.clients.items()[:]:
                 kill_session(client, 'server shutdown')
                 del server.clients[key]
@@ -70,7 +87,7 @@ def parse_args():
         opts, tail = getopt.getopt(sys.argv[1:], u'', (
             'config=', 'logger=', 'help'))
     except getopt.GetoptError as err:
-        sys.stderr.write('%s\n' % (err,))
+        sys.stderr.write('{0}\n'.format(err))
         return 1
     for opt, arg in opts:
         if opt in ('--config',):
@@ -78,12 +95,14 @@ def parse_args():
         elif opt in ('--logger',):
             lookup_log = (arg,)
         elif opt in ('--help',):
-            sys.stderr.write('Usage: \n%s [--config <filepath>] '
-                             '[--logger <filepath>]\n' % (
-                                 os.path.basename(sys.argv[0],)))
+            sys.stderr.write(
+                'Usage: \n'
+                '{0} [--config <filepath>] [--logger <filepath>]\n'
+                .format(os.path.basename(sys.argv[0])))
             sys.exit(1)
     if len(tail):
-        sys.stderr.write('Unrecognized program arguments: %s\n' % (tail,))
+        sys.stderr.write('Unrecognized program arguments: {0}\n'
+                         .format(tail))
         sys.exit(1)
     return (lookup_bbs, lookup_log)
 
@@ -93,26 +112,30 @@ def get_servers(CFG):
     Given a configuration file, instantiate and return a list of enabled
     servers.
     """
-    import logging
-    from x84.terminal import on_naws
-    from x84.telnet import TelnetServer
-    log = logging.getLogger(__name__)
+    log = logging.getLogger('x84.engine')
 
     servers = []
 
     if CFG.has_section('telnet'):
         # start telnet server instance
-        telnetd = TelnetServer(config=CFG, on_naws=on_naws)
-        servers.append(telnetd)
+        from x84.telnet import TelnetServer
+        servers.append(TelnetServer(config=CFG))
 
     if CFG.has_section('ssh'):
-        try:
         # start ssh server instance
-            from x84.ssh import SshServer
-            sshd = SshServer(config=CFG)
-            servers.append(sshd)
-        except ImportError as err:
-            log.error(err)
+        #
+        # may raise an ImportError for systems where pyOpenSSL and etc. could
+        # not be installed (due to any issues with missing python-dev, libffi,
+        # cc, etc.).  Allow it to raise naturally, the curious user should
+        # either discover and resolve the root issue, or disable ssh if it
+        # cannot be resolved.
+        from x84.ssh import SshServer
+        servers.append(SshServer(config=CFG))
+
+    if CFG.has_section('rlogin'):
+        # start rlogin server instance
+        from x84.rlogin import RLoginServer
+        servers.append(RLoginServer(config=CFG))
 
     return servers
 
@@ -123,48 +146,35 @@ def find_server(servers, fd):
             return server
 
 
-def accept_server(server, log):
+def accept(log, server, check_ban):
     """
-    Given a server awaiting a new connection, call the accept() function with
-    the appropriate arguments for client_factory, connect_factory, and any
-    optional kwargs.
+    Accept new connection from server, spawning an unmanaged thread.
+
+    Connecting socket accepted is server.server_socket, instantiate a
+    new instance of client_factory, with optional keyword arguments
+    defined by server.client_factory_kwargs, registering it with
+    dictionary server.clients, and spawning an unmanaged thread
+    using connect_factory, with optional keyword arguments
+    server.connect_factory_kwargs.
     """
-    from x84.telnet import TelnetServer, TelnetClient, ConnectTelnet
-    try:
-        from x84.ssh import SshServer, SshClient, ConnectSsh
-    except ImportError:
-        pass
-    if server.__class__ == TelnetServer:
-        accept(log=log, server=server,
-               client_factory=TelnetClient,
-               connect_factory=ConnectTelnet,
-               client_factory_kwargs={
-                   'on_naws': server.on_naws})
-    elif server.__class__ == SshServer:
-        accept(log=log, server=server,
-               client_factory=SshClient,
-               connect_factory=ConnectSsh,
-               connect_factory_kwargs={
-                   'server_host_key': server.host_key})
-    else:
+    import socket
+
+    if None in (server.client_factory, server.connect_factory):
         raise NotImplementedError(
             "No accept for server class {server.__class__.__name__}"
             .format(server=server))
 
+    client_factory_kwargs = server.client_factory_kwargs
+    if callable(server.client_factory_kwargs):
+        client_factory_kwargs = server.client_factory_kwargs(server)
 
-def accept(log, server, client_factory, connect_factory,
-           client_factory_kwargs=None, connect_factory_kwargs=None):
-    """
-    accept new connection from server.server_socket,
-    instantiate a new instance of client_factory,
-    registering it with dictionary server.clients,
-    spawning an unmanaged thread using connect_factory.
-    """
-    import socket
-    client_factory_kwargs = client_factory_kwargs or {}
-    connect_factory_kwargs = connect_factory_kwargs or {}
+    connect_factory_kwargs = server.connect_factory_kwargs
+    if callable(server.connect_factory_kwargs):
+        connect_factory_kwargs = server.connect_factory_kwargs(server)
+
     try:
         sock, address_pair = server.server_socket.accept()
+
         # busy signal
         if server.client_count() > server.MAX_CONNECTIONS:
             try:
@@ -172,15 +182,33 @@ def accept(log, server, client_factory, connect_factory,
             except socket.error:
                 pass
             sock.close()
-            log.error('refused new connect; maximum reached.')
+            log.error('{addr}: refused, maximum connections reached.'
+                      .format(addr=address_pair[0]))
             return
-        client = client_factory(sock, address_pair, **client_factory_kwargs)
-        server.clients[client.sock.fileno()] = client
 
-        # spawn negotiation and process registration thread
-        connect_factory(client, **connect_factory_kwargs).start()
-        log.info('{0} Connected by {1}.'.format(client.addrport(),
-                                                server.__class__.__name__))
+        # connecting IP is banned
+        if check_ban(address_pair[0]) is False:
+            try:
+                sock.shutdown(socket.SHUT_RDWR)
+            except socket.error:
+                pass
+            sock.close()
+            log.error('{addr}: refused, banned.'
+                      .format(addr=address_pair[0]))
+            return
+
+        # instantiate a client of this type
+        client = server.client_factory(sock, address_pair,
+                                       **client_factory_kwargs)
+
+        # spawn on-connect negotiation thread.  When successful,
+        # a new sub-process is spawned and registered as a session tty.
+        server.clients[client.sock.fileno()] = client
+        thread = server.connect_factory(client, **connect_factory_kwargs)
+        log.info('{client.kind} connection from {client.addrport} '
+                 '(*{thread.name}).'.format(client=client, thread=thread))
+        server.threads.append(thread)
+        thread.start()
 
     except socket.error as err:
         log.error('accept error {0}:{1}'.format(*err))
@@ -193,7 +221,7 @@ def get_session_output_fds(servers):
         for client in server.clients.values():
             tty = find_tty(client)
             if tty is not None:
-                session_fds.append(tty.oqueue.fileno())
+                session_fds.append(tty.master_read.fileno())
     return session_fds
 
 
@@ -211,8 +239,9 @@ def client_recv(servers, log):
                 try:
                     client.socket_recv()
                 except Disconnected as err:
-                    log.info('%s Disconnected: %s.', client.addrport(), err)
-                    kill_session(client, 'disconnected on recv')
+                    log.debug('{client.addrport}: disconnect on recv: {err}'
+                              .format(client=client, err=err))
+                    kill_session(client, 'disconnected: {err}'.format(err=err))
 
 
 def client_send(terminals, log):
@@ -224,20 +253,21 @@ def client_send(terminals, log):
     from x84.bbs.exception import Disconnected
     from x84.terminal import kill_session
     # nothing to send until tty is registered.
-    for sid, tty in terminals[:]:
+    for sid, tty in terminals:
         if tty.client.send_ready():
             try:
                 tty.client.send()
             except Disconnected as err:
-                log.info('%s Disconnected: %s.', sid, err)
-                kill_session(tty.client, 'disconnected on send')
+                log.debug('{client.addrport}: disconnect on send: {err}'
+                          .format(client=tty.client, err=err))
+                kill_session(tty.client, 'disconnected: {err}'.format(err=err))
 
 
 def session_send(terminals):
     """
     Test all tty clients for input_ready(), meaning tcp data has been
     buffered to be received by the tty session, and sent it to the tty
-    input queue (tty.iqueue).
+    input queue (tty.master_write).
 
     Also, test all sessions for idle timeout, signaling exit to
     subprocess when reached
@@ -245,7 +275,14 @@ def session_send(terminals):
     from x84.terminal import kill_session
     for sid, tty in terminals:
         if tty.client.input_ready():
-            tty.iqueue.send(('input', tty.client.get_input()))
+            try:
+                tty.master_write.send(('input', tty.client.get_input()))
+            except IOError:
+                # this may happen if a sub-process crashes, or more often,
+                # because the subprocess has logged off, but the user kept
+                # banging the keyboard before we have had the opportunity
+                # to close their telnet socket.
+                kill_session(tty.client, 'no tty for socket data')
 
         # poll about and kick off idle users
         elif tty.timeout and tty.client.idle() > tty.timeout:
@@ -260,47 +297,76 @@ def handle_lock(locks, tty, event, data, tap_events, log):
     from x84.terminal import get_terminals
     method, stale = data
     if method == 'acquire':
+        # this lock is already held,
         if event in locks:
-            # lock already held; check for and display owner, or
-            # acquire a lock from a now-deceased session.
-            held = False
+            # check if lock held by an active session,
+            holder = locks[event][1]
             for _sid, _tty in get_terminals():
-                if _sid == locks[event][1] and _sid != tty.sid:
-                    log.debug('[%s] %r not acquired, held by %s.',
-                              tty.sid, (event, data), _sid)
-                    held = _sid
+                if _sid == holder and _sid != tty.sid:
+                    # acquire the lock from a now-deceased session.
+                    log.debug('[{tty.sid}] {event} not acquired, '
+                              'held by active session: {holder}'
+                              .format(tty=tty, event=event, holder=holder))
                     break
-            if held is not False:
-                log.debug('[%s] %r discovered stale lock, previously '
-                          'held by %s.', tty.sid, (event, data), held)
+                elif _sid == holder and _sid == tty.sid:
+                    # acquire the lock from ourselves!  We'll allow it
+                    # (this is termed, "re-entrant locking").
+                    log.debug('{tty.sid}] {event} is re-acquired!'
+                              .format(tty=tty, event=event))
+            else:
+                # lock is held by a now-defunct session, re-acquired.
+                log.debug('[{tty.sid}] {event} re-acquiring stale lock, '
+                          'previously held by session no longer active: '
+                          '{holder}'
+                          .format(tty=tty, event=event, holder=holder))
                 del locks[event]
+
+        # lock is not held, or release by previous block
         if event not in locks:
+            # acknowledge its requirement,
             locks[event] = (time.time(), tty.sid)
-            tty.iqueue.send((event, True,))
+            tty.master_write.send((event, True,))
             if tap_events:
-                log.debug('[%s] %r granted.', tty.sid, (event, data))
+                log.debug('[{tty.sid}] {event} granted lock.'
+                          .format(tty=tty, event=event))
+
+        # lock cannot be acquired,
         else:
-            # caller signals this kind of thread is short-lived, and any
-            # existing lock older than 'stale' should be released.
-            if (stale is not None
-                    and time.time() - locks[event][0] > stale):
-                tty.iqueue.send((event, True,))
+            holder = locks[event][1]
+            elapsed = time.time() - locks[event][0]
+            if (stale is not None and elapsed > stale):
+                # caller has decreed that this lock may be acquired even if
+                # it already held, if it has been held longer than length of
+                # time `stale`.  This is simply to prevent a global freeze
+                # when the programmer knows the holder may fail to release,
+                # though this is not currently used in the demonstration
+                # system.
                 locks[event] = (time.time(), tty.sid)
-                log.warn('[%s] %r stale %fs.',
-                         tty.sid, (event, data),
-                         time.time() - locks[event][0])
+                tty.master_write.send((event, True,))
+                log.warn('[{tty.sid}] {event} re-acquiring stale lock, '
+                         'previously held active session {holder} after '
+                         '{elapsed}s elapsed (stale={stale})'
+                         .format(tty=tty, event=event, holder=holder,
+                                 elapsed=elapsed, stale=stale))
+
             # signal busy with matching event, data=False
             else:
-                tty.iqueue.send((event, False,))
-                log.debug('[%s] %r not acquired.', tty.sid, (event, data))
+                tty.master_write.send((event, False,))
+                log.warn('[{tty.sid}] {event} lock rejected; already held '
+                         'by active session {holder} for {elapsed} seconds '
+                         '(stale={stale})'
+                         .format(tty=tty, event=event, holder=holder,
+                                 elapsed=elapsed, stale=stale))
 
     elif method == 'release':
         if event not in locks:
-            log.error('[%s] %r failed: no match', tty.sid, (event, data))
+            log.error('[{tty.sid}] {event} lock failed to release, '
+                      'not acquired.'.format(tty=tty, event=event))
         else:
             del locks[event]
             if tap_events:
-                log.debug('[%s] %r removed.', tty.sid, (event, data))
+                log.debug('[{tty.sid}] {event} released lock.'
+                          .format(tty=tty, event=event))
 
 
 def session_recv(locks, terminals, log, tap_events):
@@ -314,22 +380,22 @@ def session_recv(locks, terminals, log, tap_events):
     """
     # No actual Lock instances are held or released, just a simple dictionary
     # state/time tracking system.
-    from x84.terminal import unregister_tty, kill_session
+    from x84.terminal import kill_session
     from x84.db import DBHandler
 
-    disp_handle = lambda handle: ((handle + u' ')
-                                  if handle is not None
-                                  and 0 != len(handle) else u'')
-    disp_origin = lambda client: client.addrport().split(':', 1)[0]
-
     for sid, tty in terminals:
-        while tty.oqueue.poll():
+        while tty.master_read.poll():
             try:
-                event, data = tty.oqueue.recv()
+                event, data = tty.master_read.recv()
             except (EOFError, IOError) as err:
                 # sub-process unexpectedly closed
-                log.exception(err)
-                unregister_tty(tty)
+                msg_err = 'master_read pipe: {err}'.format(err=err)
+                log.exception(msg_err)
+                kill_session(tty.client, msg_err)
+                break
+            except TypeError:
+                msg_err = 'unpickling error'
+                log.exception(msg_err)
                 break
 
             # 'exit' event, unregisters client
@@ -337,13 +403,10 @@ def session_recv(locks, terminals, log, tap_events):
                 kill_session(tty.client, 'client exit')
                 break
 
-            # 'logger' event, propagated upward
+            # 'logger' event, prefix log message with handle and IP address
             elif event == 'logger':
-                # prefix message with 'ip:port/nick '
-                data.msg = '%s[%s] %s' % (
-                    disp_handle(data.handle),
-                    disp_origin(tty.client),
-                    data.msg)
+                data.msg = ('{data.handle}[{tty.sid}] {data.msg}'
+                            .format(data=data, tty=tty))
                 log.handle(data)
 
             # 'output' event, buffer for tcp socket
@@ -353,46 +416,50 @@ def session_recv(locks, terminals, log, tap_events):
             # 'remote-disconnect' event, hunt and destroy
             elif event == 'remote-disconnect':
                 send_to = data[0]
-                reason = 'remote-disconnect by %s' % (sid,)
+                reason = 'remote-disconnect by {sid.tty}'.format(sid=sid)
                 for _sid, _tty in terminals:
                     if send_to == _sid:
-                        kill_session(client, reason)
+                        kill_session(tty.client, reason)
                         break
 
             # 'route': message passing directly from one session to another
             elif event == 'route':
                 if tap_events:
-                    log.debug('route %r', (event, data))
+                    log.debug('route {0!r}'.format(data))
                 tgt_sid, send_event, send_val = data[0], data[1], data[2:]
                 for _sid, _tty in terminals:
                     if tgt_sid == _sid:
-                        _tty.iqueue.send((send_event, send_val))
+                        _tty.master_write.send((send_event, send_val))
                         break
 
             # 'global': message broadcasting to all sessions
             elif event == 'global':
                 if tap_events:
-                    log.debug('broadcast %r', (event, data))
+                    log.debug('broadcast: {data!r}'.format(data=data))
                 for _sid, _tty in terminals:
                     if sid != _sid:
-                        _tty.iqueue.send((event, data,))
+                        _tty.master_write.send((event, data,))
 
             # 'set-timeout': set user-preferred timeout
             elif event == 'set-timeout':
                 if tap_events:
-                    log.debug('set-timeout %d', data)
+                    log.debug('[{tty.sid}] set-timeout {data}'
+                              .format(tty=tty, data=data))
                 tty.timeout = data
 
             # 'db*': access DBProxy API for shared sqlitedict
             elif event.startswith('db'):
-                DBHandler(tty.iqueue, event, data).start()
+                thread = DBHandler(tty.master_write, event, data)
+                thread.start()
 
             # 'lock': access fine-grained bbs-global locking
             elif event.startswith('lock'):
                 handle_lock(locks, tty, event, data, tap_events, log)
 
             else:
-                assert False, 'unhandled %r' % ((event, data),)
+                log.error('[{tty.sid}] unhandled event, data: '
+                          '({event}, {data})'
+                          .format(tty=tty, event=event, data=data))
 
 
 def _loop(servers):
@@ -403,50 +470,37 @@ def _loop(servers):
     #         Too many local variables (24/15)
     import logging
     import select
-    import time
     import sys
     from x84.terminal import get_terminals, kill_session
     from x84.bbs.ini import CFG
-    from x84.bbs import session
-    from multiprocessing import Queue
-    from threading import Lock
-    SELECT_POLL = 0.05
+    from x84.fail2ban import get_fail2ban_function
+
+    SELECT_POLL = 0.02 # polling time is 20ms
+
+    # WIN32 has no session_fds (multiprocess queues are not polled using
+    # select), use a persistently empty set; for WIN32, sessions are always
+    # polled for data at every loop.
     WIN32 = sys.platform.lower().startswith('win32')
-    if WIN32:
-        # poll much more often for windows until we come up with something
-        # better regarding checking for session output
-        SELECT_POLL = 0.05
-    # WIN32 has no session_fds, use empty set.
     session_fds = set()
 
-    log = logging.getLogger(__name__)
+    log = logging.getLogger('x84.engine')
 
     if not len(servers):
         raise ValueError("No servers configured for event loop! (ssh, telnet)")
 
     tap_events = CFG.getboolean('session', 'tap_events')
+    check_ban = get_fail2ban_function()
     locks = dict()
 
-    # "bots" ..
-    poll_interval = None
-    last_poll = None
-    if CFG.has_section('bots'):
-        from x84.bbs.telnet import connect_bot
-        session.BOTQUEUE = Queue()
-        session.BOTLOCK = Lock()
-        DO_BOTS = True
-        if CFG.has_option('msg', 'poll_interval'):
-            poll_interval = CFG.getint('msg', 'poll_interval')
-            last_poll = int(time.time()) - poll_interval
-            log.debug('bots will poll at {0}s intervals.'
-                      .format(poll_interval))
-    else:
-        DO_BOTS = False
+    # message polling setup
+    if CFG.has_option('msg', 'poll_interval'):
+        from x84 import msgpoll
+        msgpoll.start_polling()
 
-    if CFG.has_section('web'):
+    if CFG.has_section('web') and CFG.has_option('web', 'modules'):
         try:
-            import web      # NOQA
-            import OpenSSL  # NOQA
+            __import__("web")
+            __import__("OpenSSL")
             import webserve
             module_names = CFG.get('web', 'modules', '').split(',')
             if module_names:
@@ -454,15 +508,22 @@ def _loop(servers):
                 log.info('starting webmodules: {0!r}'.format(web_modules))
                 webserve.start(web_modules)
         except ImportError as err:
-            log.error(err)
+            log.error("section [web] enabled but not enabled: {0}".format(err))
 
     while True:
         # shutdown, close & delete inactive clients,
         for server in servers:
+            # bbs sessions that are no longer active on the socket
+            # level -- send them a 'kill signal'
             for key, client in server.clients.items()[:]:
                 if not client.is_active():
                     kill_session(client, 'socket shutdown')
                     del server.clients[key]
+            # on-connect negotiations that have completed or failed.
+            # delete their thread instance from further evaluation
+            for thread in [_thread for _thread in server.threads
+                           if _thread.stopped][:]:
+                server.threads.remove(thread)
 
         server_fds = [server.server_socket.fileno() for server in servers]
         client_fds = [fd for fd in server.client_fds() for server in servers]
@@ -481,19 +542,10 @@ def _loop(servers):
             # see if any new tcp connections were made
             server = find_server(servers, fd)
             if server is not None:
-                accept_server(server, log)
+                accept(log, server, check_ban)
 
         # receive new data from tcp clients.
         client_recv(servers, log)
-
-        # fire up message polling process if enabled
-        if poll_interval is not None:
-            now = int(time.time())
-            if now - last_poll >= poll_interval:
-                log.debug("connect_bot(msgpoll)")
-                connect_bot(u'msgpoll')
-                last_poll = now
-
         terms = get_terminals()
 
         # receive new data from session terminals
@@ -512,8 +564,4 @@ def _loop(servers):
 
 
 if __name__ == '__main__':
-    import sys
-    if sys.maxunicode == 65535:
-        sys.stderr.write('Python not built with wide unicode support!\n')
-
     exit(main())

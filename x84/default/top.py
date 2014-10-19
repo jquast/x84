@@ -4,67 +4,237 @@ Post-login screen for x/84, http://github.com/jquast/x84
 When handle is None or u'', an in-memory account 'anonymous' is created
 and assigned to the session.
 """
+# std
+import functools
+import logging
+import time
+import glob
+import os
 
-# generated using lolcat ..
+# local
+from x84.bbs import getterminal, showart, echo
+from x84.bbs import getsession, get_user, User, LineEditor
+from x84.bbs import goto, gosub, DBProxy, syncterm_setfont
 
-BADGE256 = u'\x1b'.join((u'',
-                            u'[38;5;49m2', u'[0m', u'[38;5;48m5', u'[0m',
-                            u'[38;5;48m6', u'[0m', u'[38;5;48m-', u'[0m',
-                            u'[38;5;48mC', u'[0m', u'[38;5;84mO', u'[0m',
-                            u'[38;5;83ml', u'[0m', u'[38;5;83mO', u'[0m',
-                            u'[38;5;83mr', u'[0m', u'[38;5;83m ', u'[0m',
-                            u'[38;5;83mb', u'[0m', u'[38;5;119mA', u'[0m',
-                            u'[38;5;118md', u'[0m', u'[38;5;118mG', u'[0m',
-                            u'[38;5;118mE', u'[0m', u'[38;5;118m ', u'[0m',
-                            u'[38;5;154mA', u'[0m', u'[38;5;154mW', u'[0m',
-                            u'[38;5;154mA', u'[0m', u'[38;5;154mR', u'[0m',
-                            u'[38;5;154mD', u'[0m', u'[38;5;184mE', u'[0m',
-                            u'[38;5;184md', u'[0m', u'[38;5;184m!', u'[0m',))
+# 3rd
+from sauce import SAUCE
+
+here = os.path.dirname(__file__)
+log = logging.getLogger(__name__)
+
+#: glob of art files
+art_files = glob.glob(os.path.join(here, 'art', 'top', '*'))
+
+#: encoding used for artwork
+art_encoding = 'cp437_art'
+
+#: font used for syncterm
+syncterm_font = 'cp437'
+
+#: time to pause while displaying
+art_speed = 0.04
+
+#: which sauce records to display
+sauce_records = set(['author', 'title', 'group', 'date', 'filename'])
+
+#: maximum number of sauce columns for wide displays
+max_sauce_columns = 2
+
+#: iterator returns each line of art with given settings
+idisplay_art = functools.partial(showart, encoding=art_encoding,
+                                 auto_mode=False, center=True,
+                                 poll_cancel=art_speed)
 
 
-def display_intro():
-    """ Display art, 256-color badge, and '!'encoding help. """
-    from x84.bbs import getterminal, showcp437, echo
-    import os
-    term = getterminal()
-    # display random artwork ..
-    artfile = os.path.join(os.path.dirname(__file__), 'art',
-                           '*.ans' if term.number_of_colors != 0 else '*.asc')
+def _show_opt(term, keys):
+    """ Display characters ``key`` highlighted as keystroke """
+    return u''.join((term.bold_black(u'['),
+                     term.bold_red_underline(keys),
+                     term.bold_black(u']')))
+
+
+def get_art_detail(art_file):
+    """
+    Return list of tuple (key, value) of ``art_file`` details.
+
+    at least key and value of filename is produced, and additional
+    details when ``art_file`` contains sauce records.
+    """
+    parsed = SAUCE(art_file)
+    value = ()
+    if parsed.record:
+        # parse all 'sauce_records' except 'filename',
+        value = tuple((attr, getattr(parsed, attr).strip())
+                      for attr in sauce_records ^ set(['filename'])
+                      if getattr(parsed, attr).strip())
+    # inject 'filename' in return value
+    return value + (('filename', os.path.basename(art_file)),)
+
+
+def display_sauce(term, art_file):
+
+    # total number of columns
+    sauce_columns = min(len(sauce_records), max_sauce_columns)
+
+    # 'value' column size
+    val_adjust = 20
+
+    # 'key' column size
+    key_adjust = max(len(val) for val in sauce_records)
+
+    # will the current tabulation fit?
+    sauce_width = lambda: (
+        ((key_adjust + val_adjust) * sauce_columns)
+        + (len(u':' * sauce_columns))
+        + (len(u' ') * sauce_columns))
+
+    # resize until it does !
+    while sauce_columns > 1 and sauce_width() >= term.width:
+        sauce_columns -= 1
+
+    # construct formatted tabular sauce data
+    sauce_disp = [u'{key}{colon}{space}{value}'
+                  .format(key=term.bold_black(key.rjust(key_adjust)),
+                          colon=term.bold_black_underline(u':'),
+                          space=u' ',
+                          value=term.red(value.ljust(val_adjust)))
+                  for key, value in get_art_detail(art_file)]
+
+    # justify last row for alignment
+    if sauce_disp:
+        while len(sauce_disp) % sauce_columns != 0:
+            sauce_disp.append(u'{key}{colon}{space}{value}'
+                              .format(key=u' ' * key_adjust,
+                                      colon=u' ',
+                                      space=u' ',
+                                      value=u' ' * val_adjust))
+
+    # display sauce / filename data
+    for idx in range(0, len(sauce_disp), sauce_columns):
+        echo(term.center(
+            u''.join(sauce_disp[idx:idx + sauce_columns])
+        ).rstrip() + u'\r\n')
+
+
+def display_prompt(term):
+    """ Display prompt of user choices. """
+    # show prompt
     echo(u'\r\n\r\n')
-    for line in showcp437(artfile):
+    echo(term.center(u'{0} previous - {1} change encoding - next {2}'
+                     .format(_show_opt(term, u'<'),
+                             _show_opt(term, u'!'),
+                             _show_opt(term, u'>'))
+                     ).rstrip())
+    echo(term.move_up() + term.move_up() + term.move_x(0))
+    echo(term.center(u'quick login {0} ?\b\b'
+                     .format(_show_opt(term, u'yn'))
+                     ).rstrip())
+
+
+def display_intro(term, index):
+    """ Display art, '!' encoding prompt, and quick login [yn] ? """
+
+    # clear screen
+    echo(term.move_x(0) + term.clear_eol + '\r\n\r\n' + term.clear_eol)
+    echo(term.normal + ('\r\n' * (term.height + 1)) + term.home)
+
+    # show art
+    art_file = art_files[index % len(art_files)]
+    line = u''
+    for line in idisplay_art(art_file):
         echo(line)
-    if term.number_of_colors == 256 and term.kind.startswith('xterm'):
-        echo(u''.join((
-            term.normal, '\r\n\r\n',
-            BADGE256, u'\r\n',
-            u'\r\n')))
-    echo(u'! to change encoding\r\n')
+    if line.strip():
+        # write newline only if last line was artful
+        echo(u'\r\n')
+    display_sauce(term, art_file)
+    echo(u'\r\n')
 
 
-def get_ynbar():
-    """ Retrieve yes/no bar for quick login. """
-    from x84.bbs import getterminal, Selector
-    term = getterminal()
-    ynbar = Selector(yloc=term.height - 1,
-                     xloc=term.width - 31,
-                     width=30, left='Yes', right='No')
-    ynbar.colors['selected'] = term.green_reverse
-    ynbar.keyset['left'].extend((u'y', u'Y',))
-    ynbar.keyset['right'].extend((u'n', u'N',))
-    return ynbar
+def get_user_record(handle):
+    """
+    Find and return User class instance by given ``handle``.
+
+    If handle is ``anonymous``, Create and return a new User object.
+    """
+    if handle == u'anonymous':
+        log.debug('anonymous login'.format(handle))
+        return User(u'anonymous')
+
+    log.debug('login by {0!r}'.format(handle))
+    return get_user(handle)
 
 
-def redraw_quicklogin(ynbar):
-    """ Redraw yes/no bar for quick login. """
-    from x84.bbs import getterminal
-    prompt_ql = u' QUiCk lOGiN ?! '
-    term = getterminal()
-    return u''.join((
-        term.move(ynbar.yloc - 1, ynbar.xloc),
-        term.normal,
-        term.bold_blue(prompt_ql),
-        ynbar.refresh(),
-    ))
+def login(session, user):
+    """
+    Assign ``user`` to ``session`` and return time of last call.
+
+    performs various saves and lookups of call records
+    """
+    session.user = user
+
+    # assign timeout preference
+    timeout = session.user.get('timeout', None)
+    if timeout is not None:
+        session.send_event('set-timeout', timeout)
+
+    # update call records
+    user.calls += 1
+    user.lastcall = time.time()
+
+    # save user record
+    if user.handle != u'anonymous':
+        user.save()
+
+    # update 'lastcalls' database
+    lc_db = DBProxy('lastcalls')
+    with lc_db:
+        previous_call, _, _ = lc_db.get(user.handle, (0, 0, 0,))
+        lc_db[user.handle] = (user.lastcall, user.calls, user.location)
+
+    return previous_call
+
+
+def do_intro_art(term, session):
+    """
+    Display random art file, prompt for quick login.
+
+    Bonus: allow chosing other artfiles with '<' and '>'.
+    """
+    editor_colors = {'highlight': term.black_on_red}
+
+    # set syncterm font, if any
+    if syncterm_font and term._kind.startswith('ansi'):
+        echo(syncterm_setfont(syncterm_font))
+
+    index = int(time.time()) % len(art_files)
+    dirty = True
+    echo(u'\r\n')
+    while True:
+        session.activity = 'top'
+        if session.poll_event('refresh') or dirty:
+            display_intro(term, index)
+            display_prompt(term)
+            dirty = False
+        dirty = True
+        inp = LineEditor(1, colors=editor_colors).read()
+        if inp is None or inp.lower() == u'y':
+            # escape/yes: quick login
+            return True
+        elif inp.lower() == u'n':
+            break
+
+        if len(inp) == 1:
+            echo(u'\b')
+        if inp == u'!':
+            echo(u'\r\n' * 3)
+            gosub('charset')
+            dirty = True
+        elif inp == u'<':
+            index -= 1
+        elif inp == u'>':
+            index += 1
+        else:
+            dirty = False
 
 
 def main(handle=None):
@@ -73,123 +243,59 @@ def main(handle=None):
     #         Too many local variables
     #         Too many branches
     #         Too many statements
-    from x84.bbs import getsession, getterminal, echo, getch
-    from x84.bbs import goto, gosub, User, get_user, DBProxy
-    import logging
-    import time
     session, term = getsession(), getterminal()
     session.activity = 'top'
-    logger = logging.getLogger()
 
-    # 0. just a gimmicky example,
-    gosub('productive')
+    # attempt to coerce encoding of terminal to match session.
+    echo ({
+        # ESC %G activates UTF-8 with an unspecified implementation
+        # level from ISO 2022 in a way that allows to go back to
+        # ISO 2022 again.
+        'utf8': unichr(27) + u'%G',
+        # ESC %@ returns to ISO 2022 in case UTF-8 had been entered.
+        # ESC ) U Sets character set G1 to codepage 437, such as on
+        # Linux vga console.
+        'cp437': unichr(27) + u'%@' + unichr(27) + u')U',
+    }.get(session.encoding, u''))
 
-    # 1. determine & assign user record,
-    if handle in (None, u'', 'anonymous',):
-        logger.info('anonymous login by %s.', session.sid)
-        session.user = User(u'anonymous')
-    else:
-        logger.debug('%r logged in.', handle)
-        session.user = get_user(handle)
-        timeout = session.user.get('timeout', None)
-        if timeout is not None:
-            echo(u'\r\n\r\nUsing preferred timeout of %ss.\r\n' % (
-                timeout,))
-            session.send_event('set-timeout', timeout)
+    # fetch user record
+    user = get_user_record(handle)
 
-    # 2. update call records
-    session.user.calls += 1
-    session.user.lastcall = time.time()
-    if session.user.handle != 'anonymous':
-        session.user.save()
+    # register call
+    login(session, user)
 
-    # record into " last caller " record
-    key = (session.user.handle)
-    lcall = (session.user.lastcall, session.user.calls, session.user.location)
-    db = DBProxy('lastcalls')
-    db[key] = lcall
+    # display art and prompt for quick login
+    quick = do_intro_art(term, session)
 
-    # 3. if no preferred charset run charset.py selector
-    if (session.user.get('charset', None) is None
-            or session.user.handle == 'anonymous'):
-        gosub('charset')
-        session.activity = 'top'
-    else:
-        # load default charset
-        session.encoding = session.user.get('charset')
-        fun = term.bold_green(' (EXCEllENt!)')
-        if session.encoding != 'utf8':
-            fun = term.bold_red(u' (bUMMER!)')
-        echo(u'\r\n\r\nUsing preferred charset, %s%s.\r\n' % (
-            session.encoding, fun))
+    echo(term.move_down() * 3)
 
-    # 4. impress with art, prompt for quick login (goto 'main'),
-    if session.user.get('expert', False):
-        dirty = True
-        while True:
-            if session.poll_event('refresh'):
-                dirty = True
-            if dirty:
-                session.activity = 'top'
-                display_intro()
-                echo(u'\r\n QUiCk lOGiN [yn] ?\b\b')
-            dirty = False
-            inp = getch(1)
-            if inp in (u'y', u'Y'):
-                goto('main')
-            elif inp in (u'n', u'N'):
-                break
-            elif inp in (u'!',):
-                gosub('charset')
-                dirty = True
-    else:
-        ynbar = get_ynbar()
-        dirty = True
-        while not ynbar.selected:
-            if session.poll_event('refresh'):
-                dirty = True
-            if dirty:
-                # redraw yes/no
-                session.activity = 'top'
-                swp = ynbar.selection
-                ynbar = get_ynbar()
-                ynbar.selection = swp
-                display_intro()
-                echo(redraw_quicklogin(ynbar))
-            dirty = False
-            inp = getch(1)
-            if inp in (u'!',):
-                gosub('charset')
-                dirty = True
-            elif inp is not None:
-                echo(ynbar.process_keystroke(inp))
-                if ynbar.quit:
-                    goto('main')
-        if ynbar.selection == ynbar.left:
-            goto('main')
+    # only display news if the account has not
+    # yet read the news since last update.
+    gosub('news', quick=True)
 
-    # 5. last callers
-    gosub('lc')
-    session.activity = 'top'
+    if not quick:
+        # display last 10 callers, if any
+        gosub('lc')
+
+        # one-liners
+        gosub('ol')
+
+    goto('main')
+
+    # WIP
 
     # 6. check for new public/private msgs,
-    gosub('readmsgs', set())
-    session.activity = 'top'
-
-    # 7. news
-    gosub('news')
-    session.activity = 'top'
+    #gosub('readmsgs', set())
+    #session.activity = 'top'
 
     # 8. one-liners
-    gosub('ol')
-    session.activity = 'top'
+    #gosub('ol')
+    #session.activity = 'top'
 
     # 9. weather
-    if session.user.get('location', None):
-        gosub('weather')
-    session.activity = 'top'
+    #if session.user.get('location', None):
+    #    gosub('weather')
+    #session.activity = 'top'
 
     # 10. automsg
-    gosub('automsg')
-    
-    goto('main')
+    #gosub('automsg')

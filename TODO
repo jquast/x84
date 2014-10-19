@@ -1,3 +1,9 @@
+XXX xpadding doesn't work
+XXX blessed on_red == bold !? check using ecma
+XXX blessed _kind should be accessible as @property
+
+
+
 ROADMAP, 1.0:
 =============
 
