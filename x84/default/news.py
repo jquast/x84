@@ -77,7 +77,7 @@ def main(quick=False):
                  colors={'highlight': term.yellow,
                          'lowlight': term.green,
                          },
-                 width=80)
+                 width=min(80, term.width))
 
     # update user's last-read time of news.
     session.user['news_lastread'] = time.time()
