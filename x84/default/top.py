@@ -136,6 +136,7 @@ def display_intro(term, index):
     """ Display art, '!' encoding prompt, and quick login [yn] ? """
 
     # clear screen
+    echo(term.normal)
     echo(term.move_x(0) + term.clear_eol + '\r\n\r\n' + term.clear_eol)
     echo(term.normal + ('\r\n' * (term.height + 1)) + term.home)
 
