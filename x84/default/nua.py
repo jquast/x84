@@ -181,7 +181,7 @@ def main(handle=u''):
     echo(u'\r\n\r\n')
     for line in showcp437(artfile):
         echo(line)
-    echo(u'\r\n\r\n' + term.reverse + msg_header.center(term.width))
+    echo(u'\r\n\r\n' + term.reverse(msg_header.center(term.width - 1)))
 
     # create new user record for manipulation
     user = User(handle if handle.lower() not in newcmds else u'')
