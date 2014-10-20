@@ -149,7 +149,7 @@ class Msg(object):
         db_msg = DBProxy(MSGDB, use_session=use_session)
         with db_msg:
             if new:
-                self.idx = max([int(key) for key in db_msg.keys()] or [-1]) + 1
+                self.idx = max(map(int, db_msg.keys()) or [-1]) + 1
                 if ctime is not None:
                     self._ctime = self._stime = ctime
                 else:
@@ -221,13 +221,9 @@ class Msg(object):
         # check all tags of message; if they match a message network,
         # either record for hosting servers, or schedule for delivery.
         for tag in self.tags:
-            section = 'msgnet_{tag}'.format(tag=tag)
-
             # message is for a network we host
             if tag in my_networks:
-                section = 'msgnet_{tag}'.format(tag=tag)
-                transdb_name = CFG.get(section, 'trans_db_name')
-                transdb = DBProxy(transdb_name)
+                transdb = DBProxy('{0}trans'.format(tag))
                 with transdb:
                     self.body = u''.join((self.body, format_origin_line()))
                     self.save()
@@ -237,8 +233,7 @@ class Msg(object):
 
             # message is for a another network, queue for delivery
             elif tag in member_networks:
-                queuedb_name = CFG.get(section, 'queue_db_name')
-                queuedb = DBProxy(queuedb_name)
+                queuedb = DBProxy('{0}queues'.format(tag))
                 with queuedb:
                     queuedb[self.idx] = tag
                 log.info('[{tag}] Message (msgid {self.idx}) queued '

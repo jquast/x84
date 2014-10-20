@@ -539,7 +539,7 @@ def parse_public_key(user_pubkey):
                          .format(key_msg))
 
 
-def check_user_pubkey(self, username, public_key):
+def check_user_pubkey(username, public_key):
     """ Boolean return when public_key matches user record. """
     from x84.bbs import find_user, get_user
     log = logging.getLogger(__name__)

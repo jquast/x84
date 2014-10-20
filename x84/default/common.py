@@ -127,3 +127,20 @@ def prompt_input(term, key, content=u'',
 
     echo(u'{sep} {key:<8}: '.format(sep=sep_ok, key=key))
     return LineEditor(colors=colors, width=width).read() or u''
+
+def coerce_terminal_encoding(term, encoding):
+    # attempt to coerce encoding of terminal to match session.
+    # NOTE: duplicated in top.py
+    echo(u'\r\n')
+    echo({
+        # ESC %G activates UTF-8 with an unspecified implementation
+        # level from ISO 2022 in a way that allows to go back to
+        # ISO 2022 again.
+        'utf8': u'\x1b%G',
+        # ESC %@ returns to ISO 2022 in case UTF-8 had been entered.
+        # ESC (U Sets character set G0 to codepage 437, such as on
+        # Linux vga console.
+        'cp437': u'\x1b%@\x1b(U',
+    }.get(encoding, u''))
+    # remove possible artifacts, at least, %G may print a raw G
+    echo(term.move_x(0) + term.clear_eol)
