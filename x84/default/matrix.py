@@ -1,18 +1,18 @@
 """
- Matrix login screen for X/84 (Formerly, 'The Progressive') BBS,
+Matrix/login script for x/84, https://github.com/jquast/x84
 
- This script is the default session entry point for all connections.
+This script is the default session entry point for all connections.
 
- Or simply put, the login program. It is configured in default.ini file,
- under section 'matrix'. Alternative matrices may be considered by their
- connection type, using script_{telnet,ssh}
+Or simply put, the login program. It is configured in default.ini file,
+under section 'matrix'. Alternative matrices may be considered by their
+connection type, using script_{telnet,ssh}
 
- In legacy era, a matrix script might be something to fool folk not in the
- know, meant to divert agents from underground boards, require a passcode,
- or even swapping the modem into a strange stop/bit/parity configuration,
- callback mechanisms, etc..
+In legacy era, a matrix script might be something to fool folk not in the
+know, meant to divert agents from underground boards, require a passcode,
+or even swapping the modem into a strange stop/bit/parity configuration,
+callback mechanisms, etc..
 
- Read all about it in old e-zines.
+Read all about it in old e-zines.
 """
 # std
 import logging
@@ -20,7 +20,7 @@ import random
 import time
 import os
 
-from x84.bbs import getsession, getterminal, get_ini, goto, gosub
+from x84.bbs import getterminal, get_ini, goto, gosub
 from x84.bbs import echo, showart, syncterm_setfont, LineEditor
 from x84.bbs import find_user, get_user, User
 from x84.engine import __url__
@@ -126,16 +126,17 @@ def display_banner(term):
     echo(term.normal)
 
     # set syncterm font, if any
-    if term._kind == 'ansi':
+    if syncterm_font and term._kind.startswith('ansi'):
         echo(syncterm_setfont(syncterm_font))
 
     # http://www.termsys.demon.co.uk/vtansi.htm
     # disable line-wrapping (SyncTerm does not honor, careful!)
     echo(u'\x1b[7l')
 
-    # http://www.xfree86.org/4.5.0/ctlseqs.html
-    # Save xterm icon and window title on stack.
-    echo(u'\x1b[22;0t')
+    if term._kind.startswith('xterm'):
+        # http://www.xfree86.org/4.5.0/ctlseqs.html
+        # Save xterm icon and window title on stack.
+        echo(u'\x1b[22;0t')
 
     # move to beginning of line and clear, in case syncterm_setfont
     # has been mis-interpreted, as it follows CSI with space, which
@@ -217,11 +218,14 @@ def do_login(term):
 
         # user applies for new account
         if new_allowed and handle.lower() in new_usernames:
-            goto(new_script)
+            gosub(new_script)
+            display_banner(term)
+            continue
 
         # user wants to reset password
         if reset_allowed and handle.lower() == 'reset':
             gosub(reset_script)
+            display_banner(term)
             continue
 
         # user wants to login anonymously
@@ -246,7 +250,7 @@ def do_login(term):
          .format(sep=sep_bad))
 
 
-def main():
+def main(anonymous=False, new=False):
     """
     Script entry point.
 
@@ -260,11 +264,19 @@ def main():
 
     display_banner(term)
 
+    if anonymous:
+        # user rlogin'd in as anonymous@
+        goto(top_script, 'anonymous')
+    elif new:
+        # user rlogin'd in as new@
+        goto(new_script)
+
     # do_login will goto/gosub various scripts, if it returns, then
     # either the user entered 'bye', or had too many failed attempts.
     do_login(term)
 
     log.debug('Disconnecting.')
+
     # it is necessary to provide sufficient time to send any pending
     # output across the transport before disconnecting.
     term.inkey(1.5)

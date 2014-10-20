@@ -66,7 +66,8 @@ class Session(object):
         :type terminal: blessed.Terminal.
         :param sid: session identification string
         :type sid: str
-        :param env: transport-negotiated environment variables
+        :param env: transport-negotiated environment variables, should
+           contain at least values for TERM and 'encoding'.
         :type env: dict
         :param child_pipes: tuple of (writer, reader)
         :type child_pipes: tuple
@@ -80,7 +81,6 @@ class Session(object):
            that should be passed to the matrix script.
         :type matrix_kwargs: dict
         """
-        from x84.bbs import ini
         self.log = logging.getLogger(__name__)
 
         # pylint: disable=W0603
@@ -103,7 +103,7 @@ class Session(object):
         self.init_attributes()
 
         # initialize keyboard encoding
-        terminal.set_keyboard_decoder(env.get('encoding', 'utf8'))
+        terminal.set_keyboard_decoder(env['encoding'])
 
     def init_script_stack(self, matrix_args, matrix_kwargs):
         """

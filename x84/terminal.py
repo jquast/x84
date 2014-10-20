@@ -84,13 +84,13 @@ def translate_ttype(ttype):
     termcap_unknown = CFG.get('system', 'termcap-unknown')
     termcap_ansi = CFG.get('system', 'termcap-ansi')
 
-    if termcap_unknown not in ('no',) and ttype == 'unknown':
-        log.debug("terminal type {0!r} -> {1!r}"
+    if termcap_unknown != 'no' and ttype == 'unknown':
+        log.debug("terminal-type {0!r} => {1!r}"
                   .format(ttype, termcap_unknown))
         return termcap_unknown
 
-    elif termcap_ansi not in ('no', 'ansi') and ttype == 'ansi':
-        log.debug("terminal type {0!r} -> {1!r}"
+    elif termcap_ansi != 'no' and ttype.lower().startswith('ansi'):
+        log.debug("terminal-type {0!r} => {1!r}"
                   .format(ttype, termcap_ansi))
         return termcap_ansi
 
@@ -98,16 +98,36 @@ def translate_ttype(ttype):
     return ttype
 
 
+def determine_encoding(env):
+    """
+    Determine and return preferred encoding given session env.
+    """
+    from x84.bbs import get_ini
+    default_encoding = get_ini(section='session',
+                               key='default_encoding'
+                               ) or 'utf8'
+    fallback_encoding = {
+        'ansi': 'cp437',
+        'ansi-bbs': 'cp437',
+    }.get(env['TERM'], default_encoding)
+
+    return env.get('encoding', fallback_encoding)
+
+
 def init_term(writer, env):
     """
-    curses is initialized using the value of 'TERM' of dictionary env,
-    as well as a starting window size of 'LINES' and 'COLUMNS'.
+    Determine the final TERM and encoding and return a Terminal.
 
-    A blessings-abstracted curses terminal is returned.
+    curses is initialized using the value of 'TERM' of dictionary env,
+    as well as a starting window size of 'LINES' and 'COLUMNS'. If the
+    terminal-type is of 'ansi' or 'ansi-bbs', then the cp437 encoding
+    is assumed; otherwise 'utf8'.
+
+    A blessed-abstracted curses terminal is returned.
     """
     from x84.bbs.ipc import IPCStream
     env['TERM'] = translate_ttype(env.get('TERM', 'unknown'))
-
+    env['encoding'] = determine_encoding(env)
     return Terminal(kind=env['TERM'],
                     stream=IPCStream(writer=writer),
                     rows=int(env.get('LINES', '24')),
@@ -126,7 +146,6 @@ class TerminalProcess(object):
         self.sid = sid
         (self.master_write, self.master_read) = master_pipes
         self.timeout = CFG.getint('system', 'timeout')
-        register_tty(self)
 
 
 def flush_queue(queue):

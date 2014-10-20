@@ -126,13 +126,17 @@ def init_bbs_ini():
     cfg_bbs.set('system', 'mail_addr',
                 '%s@%s' % (getpass.getuser(), socket.gethostname()))
     cfg_bbs.set('system', 'mail_smtphost', 'localhost')
-    # one *Could* change 'ansi' termcaps to 'ansi-bbs', for SynchoTerm,
+
+    # one *Could* change 'ansi' termcaps to 'ansi-bbs', for SynchTerm,
     # but how do we identify that 'ansi-bbs' TERM is available on this
-    # system? hmm ..
+    # system? hmm .. lets offer the reverse, anything beginning with
+    # 'ansi' can changed to any other value; so we could be
+    # unidirectional: a value of 'ansi' will translate ansi-bbs -> ansi,
+    # and a value of 'ansi-bbs' will translate ansi -> ansi-bbs.
     ## cfg_bbs.set('system', 'termcap-ansi', 'ansi-bbs')
-    cfg_bbs.set('system', 'termcap-ansi', 'no')
-    # change 'unknown' termcaps to 'vt220', for dumb terminals
-    cfg_bbs.set('system', 'termcap-unknown', 'vt220')
+    cfg_bbs.set('system', 'termcap-ansi', 'ansi')
+    # change 'unknown' termcaps to 'ansi': for dumb terminals
+    cfg_bbs.set('system', 'termcap-unknown', 'ansi')
     # could be information leak to sensitive sysops
     cfg_bbs.set('system', 'show_traceback', 'no')
     # store passwords in uppercase, facebook and mystic bbs does this ..
@@ -169,6 +173,7 @@ def init_bbs_ini():
     cfg_bbs.add_section('matrix')
     cfg_bbs.set('matrix', 'newcmds', 'new apply')
     cfg_bbs.set('matrix', 'byecmds', 'exit logoff bye quit')
+    cfg_bbs.set('matrix', 'anoncmds', 'anonymous')
     cfg_bbs.set('matrix', 'script', 'matrix')
     cfg_bbs.set('matrix', 'script_telnet', 'matrix')
     cfg_bbs.set('matrix', 'script_ssh', 'matrix_ssh')
@@ -254,8 +259,8 @@ def init_log_ini():
     cfg_log.add_section('formatter_default')
     # for multiprocessing/threads, use: %(processName)s %(threadName) !
     cfg_log.set('formatter_default', 'format',
-                u'%(asctime)s %(levelname)s '
-                u'%(filename)11s:%(lineno)-3s %(message)s')
+                u'%(asctime)s %(levelname)-6s '
+                u'%(filename)15s:%(lineno)-3s %(message)s')
     cfg_log.set('formatter_default', 'class', 'logging.Formatter')
     cfg_log.set('formatter_default', 'datefmt', '%a-%m-%d %I:%M%p')
 

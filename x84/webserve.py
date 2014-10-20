@@ -1,69 +1,60 @@
+#!/usr/bin/env python2.7
 """
 web server for x/84, https://github.com/jquast/x84
 
-To configure the web server, add a [web] section to your default.ini.
+To configure the web server, add a ``[web]`` section to your default.ini.
 
 The following attributes are required:
- - addr: The address to bind to. Must be resolvable.
- - port: The port number to bind to.
- - cert: The SSL certificate.
- - key: The SSL certificate's key.
+- cert: An SSL certificate filepath.
+- key: An SSL certificate key filepath.
+- modules: A list of webmodules to load.
 
-The following attribute is optional:
- - chain: The SSL chain certificate.
+The following attributes are optional:
+- addr: A single address to bind to, defaults to 0.0.0.0 (ANY).
+- port: A single port number to bind to, defaults to 8443.
+- chain: An SSL chain certificate filepath.
 
-Example:
+Example::
 
-[web]
-addr = 0.0.0.0
-port = 8443
-cert = /home/bbs/ssl.cer
-key = /home/bbs/ssl.key
-chain = /home/bbs/ca.cer
+    [web]
+    addr = 0.0.0.0
+    port = 8443
+    cert = ~/.x84/ssl.cer
+    key = ~/.x84/ssl.key
+    chain = ~/.x84/ca.cer
+
+You can generate your own self-signed certificate.
+First, generate a server key::
+
+    openssl genrsa -des3 -out server.key 1024
+
+(The password doesn't matter, so long as you can remember it until prompted.)
+
+Then, create a certificate signing request::
+
+    openssl req -new -key server.key -out server.csr
+
+And remove the passphrase from the certificate::
+
+    openssl rsa -in server.key.org -out server.key
+
+Finally, generate a self-signed certificate::
+
+    openssl x509 -req -days 1984 -in server.csr \
+        -signkey server.key -out server.crt
+
+Install::
+
+    cp server.crt ~/.x84/ssl.cer
+    cp server.key ~/.x84/ssl.key
+
 """
-
+import threading
+import traceback
+import logging
 import web
-
-
-def start(web_modules):
-    """ fire up a web server with the given modules as endpoints """
-    from threading import Thread
-    import logging
-    import sys
-    import os
-    from x84.bbs.ini import CFG
-
-    logger = logging.getLogger()
-    sys.path.insert(0, os.path.expanduser(CFG.get('system', 'scriptpath')))
-    urls = ('/favicon.ico', 'favicon')
-    funcs = globals()
-    funcs['favicon'] = Favicon
-
-    for mod in web_modules:
-        module = None
-
-        # first check for it in the scripttpath's webmodules dir
-        try:
-            module = __import__('webmodules.%s' % mod,
-                                fromlist=('webmodules',))
-        except ImportError:
-            pass
-
-        # fallback to the engine's webmodules dir
-        if module is None:
-            module = __import__('x84.webmodules.%s' % mod,
-                                fromlist=('x84.webmodules',))
-
-        api = module.web_module()
-        urls += api['urls']
-
-        for key in api['funcs']:
-            funcs[key] = api['funcs'][key]
-
-    t = Thread(target=server_thread, args=(urls, funcs,))
-    t.daemon = True
-    t.start()
-    logger.info(u'Web modules: %s' % u', '.join(web_modules))
+import sys
+import os
 
 
 class Favicon:
@@ -73,33 +64,209 @@ class Favicon:
         pass
 
 
-def server_thread(urls, funcs):
-    """ thread for running the web server """
-    from x84.bbs import ini
+def _get_fp(section_key, optional=False):
+    """ Return filepath of [web] option by ``section_key``. """
+    from x84.bbs import get_ini
+    value = get_ini(section='web', key=section_key) or None
+    if value:
+        value = os.path.expanduser(value)
+    elif optional:
+        return None
+    assert value is not None and os.path.isfile(value), (
+        'Configuration section [web], key `{section_key}`, '
+        'must {optional_exist}identify a path to an '
+        'SSL {section_key} file. '
+        '(value is {value})'.format(
+            section_key=section_key,
+            optional_exist=not optional and 'exist and ' or '',
+            value=value))
+    return value
+
+
+def get_urls_funcs(web_modules):
+    log = logging.getLogger(__name__)
+
+    # list of url's to route to each module api; defaults to route /favicon.ico
+    # to a non-op to avoid 404 errors.
+    # See: http://webpy.org/docs/0.3/api#web.application
+    urls = ('/favicon.ico', 'favicon')
+    funcs = globals()
+    funcs['favicon'] = Favicon
+
+    log.debug('add url {0} => {1}'.format(
+        '/favicon.ico', Favicon.__name__))
+
+    for mod in web_modules:
+        module = None
+
+        # first, check in system PATH (includes SCRIPT_PATH)
+        try:
+            module = __import__('webmodules.{0}'.format(mod),
+                                fromlist=('webmodules',))
+        except ImportError:
+            # failed to import, check in x84's path, raise naturally
+            module = __import__('x84.webmodules.{0}'.format(mod),
+                                fromlist=('x84.webmodules',))
+
+        api = module.web_module()
+
+        for key in api['funcs']:
+            funcs[key] = api['funcs'][key]
+
+        for (url, f_key) in zip(api['urls'], api['urls'][1:]):
+            if f_key not in funcs:
+                log.error('module {module} provided url {url_tuple} without '
+                          'matching function (available: {f_avail})'
+                          .format(module=module,
+                                  url_tuple=(url, f_key,),
+                                  f_avail=funcs.keys()))
+            else:
+                log.debug('add url {0} => {1}'.format(
+                    url, funcs[f_key].__name__))
+        urls += api['urls']
+    return urls, funcs
+
+
+def server(urls, funcs):
+    """ Main server thread for running the web server """
+    from x84.bbs import get_ini
     from web.wsgiserver import CherryPyWSGIServer
     from web.wsgiserver.ssl_pyopenssl import pyOpenSSLAdapter
     from OpenSSL import SSL
 
-    cert, key, chain = None, None, None
+    log = logging.getLogger(__name__)
 
-    if ini.CFG.has_option('web', 'cert'):
-        cert = ini.CFG.get('web', 'cert')
-    if ini.CFG.has_option('web', 'key'):
-        key = ini.CFG.get('web', 'key')
-    if ini.CFG.has_option('web', 'chain'):
-        chain = ini.CFG.get('web', 'chain')
+    cert, key, chain = (_get_fp('cert'),
+                        _get_fp('key'),
+                        _get_fp('chain', optional=True))
+
+    addr = get_ini(section='web',
+                   key='addr'
+                   ) or '0.0.0.0'
+
+    port = get_ini(section='web',
+                   key='port',
+                   getter='getint'
+                   ) or 8443
+
+    # List of ciphers made available, composed by haliphax without reference,
+    # but apparently to prevent POODLE? This stuff is hard -- the best source
+    # would probably be to compare by cloudflare's latest sslconfig file:
+    #
+    #   https://github.com/cloudflare/sslconfig/blob/master/conf
+    #
+    cipher_list = (get_ini(section='web', key='cipher_list')
+                   or ':'.join((
+                       'ECDH+AESGCM',
+                       'ECDH+AES256',
+                       'ECDH+AES128',
+                       'ECDH+3DES',
+                       'DH+AESGCM',
+                       'DH+AES256',
+                       'DH+AES',
+                       'DH+3DES',
+                       'RSA+AESGCM',
+                       'RSA+AES',
+                       'RSA+3DES',
+                       '!aNULL',
+                       '!MD5',
+                       '!DSS',
+                   )))
 
     CherryPyWSGIServer.ssl_adapter = pyOpenSSLAdapter(cert, key, chain)
     CherryPyWSGIServer.ssl_adapter.context = SSL.Context(SSL.SSLv23_METHOD)
     CherryPyWSGIServer.ssl_adapter.context.set_options(SSL.OP_NO_SSLv3)
-    CherryPyWSGIServer.ssl_adapter.context.use_certificate_file(cert)
-    CherryPyWSGIServer.ssl_adapter.context.use_privatekey_file(key)
 
-    if chain:
-        CherryPyWSGIServer.ssl_adapter.context.use_certificate_chain_file(chain)
+    try:
+        CherryPyWSGIServer.ssl_adapter.context.use_certificate_file(cert)
+    except:
+        # wrap exception to contain filepath to 'cert' file, which will
+        # hopefully help the user better understand what otherwise be very
+        # obscure.
+        error = ''.join(
+            traceback.format_exception_only(
+                sys.exc_info()[0],
+                sys.exc_info()[1])).rstrip()
+        raise ValueError('Exception loading ssl certificate file {0!r}: '
+                         '{1}'.format(cert, error))
 
-    CherryPyWSGIServer.ssl_adapter.context.set_cipher_list('ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS')
+    try:
+        CherryPyWSGIServer.ssl_adapter.context.use_privatekey_file(key)
+    except:
+        # also wrap exception to contain filepath to 'key' file.
+        error = ''.join(
+            traceback.format_exception_only(
+                sys.exc_info()[0],
+                sys.exc_info()[1])).rstrip()
+        raise ValueError('Exception loading ssl key file {0!r}: '
+                         '{1}'.format(key, error))
+
+    if chain is not None:
+        (CherryPyWSGIServer.ssl_adapter.context
+         .use_certificate_chain_file(chain))
+
+    CherryPyWSGIServer.ssl_adapter.context.set_cipher_list(cipher_list)
 
     app = web.application(urls, funcs)
-    addr = (ini.CFG.get('web', 'addr'), ini.CFG.getint('web', 'port'))
-    web.httpserver.runsimple(app.wsgifunc(), addr)
+
+    web.config.debug = False
+
+    log.info('https listening on {addr}:{port}/tcp'.format(addr=addr, port=port))
+
+    # Runs CherryPy WSGI server hosting WSGI app.wsgifunc().
+    web.httpserver.runsimple(app.wsgifunc(), (addr, port))  # blocking
+
+
+def main(background_daemon=True):
+    """
+    Entry point to configure and begin web server.
+
+    Called by x84/engine.py, function main() as unmanaged thread.
+
+    :param background_daemon: When True (default), this function returns and
+      web modules are served in an unmanaged, background (daemon) thread.
+      Otherwise, function call to ``main()`` is blocking.
+    :type background_daemon: bool
+    :rtype: None
+    """
+    from x84.bbs import get_ini
+
+    log = logging.getLogger(__name__)
+
+    SCRIPT_PATH = get_ini(section='system', key='scriptpath')
+
+    # ensure the SCRIPT_PATH is in os environment PATH for module lookup.
+    sys.path.insert(0, os.path.expanduser(SCRIPT_PATH))
+
+    web_modules = get_ini(section='web',
+                          key='modules',
+                          split=True,
+                          splitsep=',')
+
+    if not web_modules:
+        log.debug('No `modules` defined in section [web]')
+        return
+
+    log.info(u'Ready web modules: {0}'.format(web_modules))
+    urls, funcs = get_urls_funcs(web_modules)
+
+    if background_daemon:
+        t = threading.Thread(target=server, args=(urls, funcs,))
+        t.daemon = True
+        t.start()
+    else:
+        server(urls=urls, funcs=funcs)
+
+
+if __name__ == '__main__':
+    # load only the webserver module when executing this script directly.
+    #
+    # as we are running outside of the 'engine' context, it is necessary
+    # for us to initialize the .ini configuration scheme so that the list
+    # of web modules and ssl options may be gathered.
+    import x84.engine
+    import x84.bbs.ini
+    x84.bbs.ini.init(*x84.engine.parse_args())
+
+    # do not execute webserver as a background thread.
+    main(background_daemon=False)

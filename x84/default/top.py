@@ -15,6 +15,7 @@ import os
 from x84.bbs import getterminal, showart, echo
 from x84.bbs import getsession, get_user, User, LineEditor
 from x84.bbs import goto, gosub, DBProxy, syncterm_setfont
+from x84.default.common import coerce_terminal_encoding
 
 # 3rd
 from sauce import SAUCE
@@ -135,6 +136,7 @@ def display_intro(term, index):
     """ Display art, '!' encoding prompt, and quick login [yn] ? """
 
     # clear screen
+    echo(term.normal)
     echo(term.move_x(0) + term.clear_eol + '\r\n\r\n' + term.clear_eol)
     echo(term.normal + ('\r\n' * (term.height + 1)) + term.home)
 
@@ -200,9 +202,11 @@ def do_intro_art(term, session):
 
     Bonus: allow chosing other artfiles with '<' and '>'.
     """
-    editor_colors = {'highlight': (term.reverse_red_underline
-                                   if term._kind != 'ansi' else
-                                   term.black_on_red)}
+    editor_colors = {'highlight': term.black_on_red}
+
+    # set syncterm font, if any
+    if syncterm_font and term._kind.startswith('ansi'):
+        echo(syncterm_setfont(syncterm_font))
 
     index = int(time.time()) % len(art_files)
     dirty = True
@@ -224,7 +228,9 @@ def do_intro_art(term, session):
         if len(inp) == 1:
             echo(u'\b')
         if inp == u'!':
+            echo(u'\r\n' * 3)
             gosub('charset')
+            dirty = True
         elif inp == u'<':
             index -= 1
         elif inp == u'>':
@@ -242,9 +248,8 @@ def main(handle=None):
     session, term = getsession(), getterminal()
     session.activity = 'top'
 
-    # set syncterm font, if any
-    if syncterm_font and term._kind == 'ansi':
-        echo(syncterm_setfont(syncterm_font))
+    # attempt to coerce encoding of terminal to match session.
+    coerce_terminal_encoding(term, session.encoding)
 
     # fetch user record
     user = get_user_record(handle)
@@ -255,17 +260,22 @@ def main(handle=None):
     # display art and prompt for quick login
     quick = do_intro_art(term, session)
 
-    echo(u'\r\n' * 3)
+    echo(term.move_down() * 3)
 
-    gosub('news', quick=quick)
+    # only display news if the account has not
+    # yet read the news since last update.
+    gosub('news', quick=True)
+
+    if not quick:
+        # display last 10 callers, if any
+        gosub('lc')
+
+        # one-liners
+        gosub('ol')
 
     goto('main')
 
-    #goto('main')
-
-    # 5. last callers
-    #gosub('lc')
-    #session.activity = 'top'
+    # WIP
 
     # 6. check for new public/private msgs,
     #gosub('readmsgs', set())
@@ -282,4 +292,3 @@ def main(handle=None):
 
     # 10. automsg
     #gosub('automsg')
-

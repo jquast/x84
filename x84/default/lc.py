@@ -63,7 +63,7 @@ def main(last=10):
               term.cyan, term.bold_black]
 
     # set syncterm font, if any
-    if syncterm_font and term._kind == 'ansi':
+    if syncterm_font and term._kind.startswith('ansi'):
         echo(syncterm_setfont(syncterm_font))
 
     # display banner
