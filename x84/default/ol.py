@@ -232,7 +232,7 @@ def get_oltxt():
     import time
     from x84.bbs import getterminal, DBProxy, timeago, decode_pipe
     term = getterminal()
-    colors = (term.bold_white, term.white, term.cyan)
+    colors = (term.bright_white, term.cyan, term.white)
     hist = [(int(k), v) for (k, v) in DBProxy('oneliner').items()]
     hist.sort(_sort_oneliner)
     output = list()
@@ -274,8 +274,8 @@ def get_pager():
     """ Returns pager window for oneliners content. """
     from x84.bbs import getterminal, Pager
     term = getterminal()
-    xloc = max(3, (term.width / 2) - 50)
-    width = min(term.width - 6, 100)
+    xloc = max(0, (term.width / 2) - 50)
+    width = min(term.width - 0, 100)
     pager = Pager(yloc=7, xloc=xloc, height=term.height - 10, width=width)
     pager.colors['border'] = term.blue
     return pager
