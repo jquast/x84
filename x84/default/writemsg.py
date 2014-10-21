@@ -359,26 +359,26 @@ def main(msg=None):
     from x84.bbs.ini import CFG
     session, term = getsession(), getterminal()
     new_message = True if msg is None else False
-    network_tags = None
+    network_tags = list()
     is_network_msg = False
 
     if CFG.has_option('msg', 'network_tags'):
         network_tags = map(
             str.strip, CFG.get('msg', 'network_tags').split(','))
 
+    if CFG.has_option('msg', 'server_tags'):
+        network_tags += map(
+            str.strip, CFG.get('msg', 'server_tags').split(','))
+
     if new_message:
         msg = Msg()
         msg.tags = ('public',)
-
-    elif network_tags is not None:
-        net_tags = [tag for tag in network_tags if tag in msg.tags]
-        is_network_msg = True if len(net_tags) > 0 else False
 
     banner()
     while True:
         session.activity = 'Constructing a %s message' % (
             u'public' if u'public' in msg.tags else u'private',)
-        if network_tags and new_message:
+        if len(network_tags) > 0 and new_message:
             is_network_msg = prompt_network(msg, network_tags)
         if not prompt_recipient(msg, is_network_msg):
             break
