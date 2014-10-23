@@ -51,7 +51,6 @@ def get_db_lock(schema, table):
     with FILELOCK:
         if key not in DATALOCK:
             DATALOCK[key] = multiprocessing.Lock()
-    log.debug("get_db_lock({!r})".format(key))
     return DATALOCK[key]
 
 

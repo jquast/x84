@@ -95,14 +95,18 @@ class DBProxy(object):
         return self.session.read_event(event)
 
     def acquire(self):
-        self.log.debug('acquire lock, {0}'.format((self.schema, self.table)))
-        get_db_lock(schema=self.schema,
-                    table=self.table).acquire()
+        lock = get_db_lock(schema=self.schema, table=self.table)
+        if self._tap_db:
+            self.log.debug('lock acquire schema={0}, table={1}'
+                           .format(self.schema, self.table))
+        lock.acquire()
 
     def release(self):
-        self.log.debug('release lock, {0}'.format((self.schema, self.table)))
-        get_db_lock(schema=self.schema,
-                    table=self.table).release()
+        lock = get_db_lock(schema=self.schema, table=self.table)
+        if self._tap_db:
+            self.log.debug('lock release schema={0}, table={1}'
+                           .format(self.schema, self.table))
+        lock.release()
 
     def __enter__(self):
         self.acquire()
