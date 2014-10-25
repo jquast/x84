@@ -113,7 +113,11 @@ def get_urls_funcs(web_modules):
         for key in api['funcs']:
             funcs[key] = api['funcs'][key]
 
-        for (url, f_key) in zip(api['urls'], api['urls'][1:]):
+        # use zip to transform (1,2,3,4,5,6,7,8) =>
+        # [(1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 7), (7, 8)]
+        # then, use slice to 'step 2' =>
+        # [(1, 2), (3, 4), (5, 6), (7, 8)]
+        for (url, f_key) in zip(api['urls'], api['urls'][1:])[::2]:
             if f_key not in funcs:
                 log.error('module {module} provided url {url_tuple} without '
                           'matching function (available: {f_avail})'
