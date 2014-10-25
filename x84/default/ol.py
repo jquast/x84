@@ -107,7 +107,7 @@ class FetchUpdatesShrooMs(threading.Thread):
         log.debug('fetching %r ..', self.url)
 
         stime = time.time()
-        params = {'order': 'createdAt'}
+        params = {'limit':1000,'order':'createdAt'}
         headers = {
             'X-Parse-Application-Id': idkey,
             'X-Parse-REST-API-Key': restkey,
