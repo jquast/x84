@@ -1,4 +1,16 @@
 """ Automsg script for x/84 bbs, https://github.com/jquast/x84 """
+
+ Classic /X style script that enables the user to leave a message/statement
+ for the next users logging in.
+
+ Installation instructions:
+ ---------------------
+
+ Copy the automsg.ans file from the extras/art folder to your art folder and
+ automsg.py to your script folder. Start automsg.py from your top script.
+ The script will generate an automsg.txt file in your data folder.
+"""
+
 from x84.bbs import getsession, getterminal, echo, LineEditor, showart
 import os
 import codecs

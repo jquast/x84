@@ -107,7 +107,7 @@ class FetchUpdatesShrooMs(threading.Thread):
         log.debug('fetching %r ..', self.url)
 
         stime = time.time()
-        params = {'order': 'createdAt'}
+        params = {'limit':1000,'order':'createdAt'}
         headers = {
             'X-Parse-Application-Id': idkey,
             'X-Parse-REST-API-Key': restkey,
@@ -232,7 +232,7 @@ def get_oltxt():
     import time
     from x84.bbs import getterminal, DBProxy, timeago, decode_pipe
     term = getterminal()
-    colors = (term.bold_white, term.bold_green, term.bold_blue)
+    colors = (term.bright_white, term.cyan, term.white)
     hist = [(int(k), v) for (k, v) in DBProxy('oneliner').items()]
     hist.sort(_sort_oneliner)
     output = list()
@@ -266,7 +266,7 @@ def get_selector(selection=u'No'):
     selector.keyset['left'].extend((u'y', u'Y'))
     selector.keyset['right'].extend((u'y', u'Y'))
     selector.selection = selection
-    selector.colors['selected'] = term.green_reverse
+    selector.colors['selected'] = term.bold_white_reverse
     return selector
 
 
@@ -274,27 +274,31 @@ def get_pager():
     """ Returns pager window for oneliners content. """
     from x84.bbs import getterminal, Pager
     term = getterminal()
-    xloc = max(3, (term.width / 2) - 50)
-    width = min(term.width - 6, 100)
-    pager = Pager(yloc=9, xloc=xloc, height=term.height - 12, width=width)
+    xloc = max(0, (term.width / 2) - 50)
+    width = min(term.width - 0, 100)
+    pager = Pager(yloc=7, xloc=xloc, height=term.height - 10, width=width)
     pager.colors['border'] = term.blue
     return pager
 
 
 def banner():
     """ Return centered banner """
-    from x84.bbs import getterminal, from_cp437, showcp437
+    from x84.bbs import getterminal, showart
     import os
     term = getterminal()
     output = u''
     output += u'\r\n\r\n' + term.normal
     if term.width >= 78:
-        output += term.home + term.normal + term.clear
-        artfile = os.path.join(os.path.dirname(__file__), 'art', 'ol.ans')
+        artfile = os.path.join(os.path.dirname(__file__), 'art', 'oneliner.ans')
+        artfilewidth = 80
+    if term.width >= 100:
+        artfile = os.path.join(os.path.dirname(__file__), 'art', 'oneliner100.ans')
+        artfilewidth = 100
 
-        for line in showcp437(artfile):
-           output = output + term.move_x((term.width/2)-40)+line
-        return output + term.normal
+    output += term.home + term.normal + term.clear
+    for line in showart(artfile,'topaz'):
+        output = output + term.move_x((term.width/2)-artfilewidth/2)+line
+    return output + term.normal
 
 
 def redraw(pager, selector):
@@ -303,15 +307,21 @@ def redraw(pager, selector):
     session, term = getsession(), getterminal()
     session.flush_event('oneliner_update')
     pager.colors['border'] = term.white
-    pager.glyphs['left-vert'] = u' '
-    pager.glyphs['right-vert'] = u' '
-    prompt_ole = u'SAY somethiNG ?!'
+    pager.glyphs['top-horiz'] = u''
+    pager.glyphs['top-right'] = u''
+    pager.glyphs['top-left'] = u''
+    pager.glyphs['bot-horiz'] = u''
+    pager.glyphs['bot-right'] = u''
+    pager.glyphs['bot-left'] = u''
+    pager.glyphs['left-vert'] = u''
+    pager.glyphs['right-vert'] = u''
+    prompt_ole = u'write an oneliner?'
     pager.update(u'\n\n\nFetching ...')
     echo(u''.join((
         pager.refresh(),
         pager.border(),
         term.move(selector.yloc - 2, selector.xloc),
-        term.bold_green(prompt_ole.center(selector.width).rstrip()),
+        term.bold_red(prompt_ole.center(selector.width).rstrip()),
         term.clear_eol,
         selector.refresh(),)))
     pager.update(u'\n'.join(get_oltxt()))
@@ -325,7 +335,7 @@ def dummy_pager():
     term = getterminal()
     tail = term.height - 4
     indent = 3
-    prompt_ole = u'\r\n\r\nSAY somethiNG ?! [yn]'
+    prompt_ole = u'\r\n\r\nwrite an oneliner? [yn]'
     buf = list()
     for record in get_oltxt():
         buf.extend(term.wrap(term.rstrip(record),
@@ -349,16 +359,16 @@ def saysomething(dumb=True):
     import time
     from x84.bbs import getsession, getterminal, echo, LineEditor, ini
     session, term = getsession(), getterminal()
-    prompt_say = u'SAY WhAt ?! '
-    # heard_msg = u'YOUR MESSAGE hAS bEEN VOiCEd.'
+    prompt_say = u'your message '
+    # heard_msg = u'thanks.'
 
     yloc = term.height - 3
     xloc = max(0, ((term.width / 2) - (MAX_INPUT / 2)))
     if dumb:
-        echo(u'\r\n\r\n' + term.bold_blue(prompt_say))
+        echo(u'\r\n\r\n' + term.red(prompt_say))
     else:
         echo(term.move(yloc, xloc) or u'\r\n\r\n')
-        echo(term.bold_blue(prompt_say))
+        echo(term.bold_red(prompt_say))
     ole = LineEditor(MAX_INPUT)
     ole.highlight = term.green_reverse
     oneliner = ole.read()
@@ -392,12 +402,12 @@ def post_bbs_scene(oneliner, dumb=True):
     from x84.bbs import echo, getch, getterminal, getsession, ini
     log = logging.getLogger(__name__)
     session, term = getsession(), getterminal()
-    prompt_api = u'MAkE AN ASS Of YOURSElf ON bbS-SCENE.ORG?!'
-    heard_api = u'YOUR MESSAGE hAS bEEN brOAdCAStEd.'
+    prompt_api = u'make an ass out of yourself at bbs-scene.org?'
+    heard_api = u'your message has been broadcasted.'
     yloc = term.height - 3
     if dumb:
         # post to bbs-scene.org ?
-        echo(u'\r\n\r\n' + term.bold_blue(prompt_api) + u' [yn]')
+        echo(u'\r\n\r\n' + term.bold_red(prompt_api) + u' [yn]')
         inp = getch(1)
         while inp not in (u'y', u'Y', u'n', u'N'):
             inp = getch()
@@ -410,7 +420,7 @@ def post_bbs_scene(oneliner, dumb=True):
         sel = get_selector()
         sel.colors['selected'] = term.red_reverse
         echo(term.move(sel.yloc - 1, sel.xloc) or ('\r\n\r\n'))
-        echo(term.blue_reverse(prompt_api.center(sel.width)))
+        echo(term.bold_white_reverse(prompt_api.center(sel.width)))
         echo(sel.refresh())
         while not sel.selected and not sel.quit:
             echo(sel.process_keystroke(getch()))
@@ -477,12 +487,12 @@ def post_shroo_ms(oneliner, dumb=True):
     from x84.bbs import echo, getch, getterminal, getsession, ini
     log = logging.getLogger(__name__)
     session, term = getsession(), getterminal()
-    prompt_api = u'MAkE AN ASS Of YOURSElf ON sHroO.mS?!'
-    heard_api = u'YOUR MESSAGE hAS bEEN brOAdCAStEd.'
+    prompt_api = u'make an ass of yourself at shroo.ms?'
+    heard_api = u'your message has been broadcasted.'
     yloc = term.height - 3
     if dumb:
         # post to shroo.ms ?
-        echo(u'\r\n\r\n' + term.bold_blue(prompt_api) + u' [yn]')
+        echo(u'\r\n\r\n' + term.red(prompt_api) + u' [yn]')
         inp = getch(1)
         while inp not in (u'y', u'Y', u'n', u'N'):
             inp = getch()
@@ -495,7 +505,7 @@ def post_shroo_ms(oneliner, dumb=True):
         sel = get_selector()
         sel.colors['selected'] = term.red_reverse
         echo(term.move(sel.yloc - 1, sel.xloc) or ('\r\n\r\n'))
-        echo(term.blue_reverse(prompt_api.center(sel.width)))
+        echo(term.bold_white_reverse(prompt_api.center(sel.width)))
         echo(sel.refresh())
         while not sel.selected and not sel.quit:
             echo(sel.process_keystroke(getch()))
@@ -558,7 +568,7 @@ def main():
     # pylint: disable=R0912
     #        Too many branches
     import logging
-    from x84.bbs import getsession, getterminal, ini, echo, getch
+    from x84.bbs import getsession, getterminal, ini, echo, getch, syncterm_setfont
     session, term = getsession(), getterminal()
     pager, selector = get_pager(), get_selector()
     log = logging.getLogger(__name__)
@@ -584,6 +594,11 @@ def main():
     dirty = True
     # force screen clear on first loop,
     session.buffer_event('refresh', ('init',))
+
+    # makes syncterm switch back to the amiga topaz font
+    if term._kind.startswith('ansi'):
+        echo(syncterm_setfont('topaz'))
+
     while True:
         # 1. calculate and redraw screen,
         # or enter dumb pager mode (no scrolling)
@@ -626,4 +641,8 @@ def main():
             # quit 'q', or selected 'no' & return
             elif (selector.selected and selector.selection == selector.right
                     or pager.quit):
+                # makes syncterm switch back to the cp437 font
+                if term._kind.startswith('ansi'):
+                    echo(syncterm_setfont('cp437'))
+
                 return
