@@ -881,13 +881,16 @@ class ConnectTelnet(BaseConnect):
                     self.client.send()
                 time.sleep(self.TIME_POLL)
 
-            if not self._check_ttype(start_time=st_time):
-                # if client is unable to negotiate terminal type,
-                # do not bother with NAWS or ENV negotiation.
-                return
-            self._check_env(start_time=st_time)
-            self._check_naws(start_time=st_time)
+            if self._check_ttype(start_time=st_time):
+                # if client is able to negotiate terminal type,
+                # try NAWS or ENV negotiation.
+                if self.client.is_active():
+                    self._check_env(start_time=st_time)
+                if self.client.is_active():
+                    self._check_naws(start_time=st_time)
+
             self.set_encoding()
+
             if self.client.is_active():
                 return spawn_client_session(client=self.client)
         except (Disconnected, socket.error) as err:
@@ -899,7 +902,6 @@ class ConnectTelnet(BaseConnect):
         except Exception as err:
             self.log.debug('{client.addrport}: connection closed: {err}'
                            .format(client=self.client, err=err))
-
         finally:
             self.stopped = True
         self.client.deactivate()

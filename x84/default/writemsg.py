@@ -366,6 +366,12 @@ def main(msg=None):
         network_tags = map(
             str.strip, CFG.get('msg', 'network_tags').split(','))
 
+    if CFG.has_option('msg', 'server_tags'):
+        if network_tags is None:
+            network_tags = list()
+        network_tags += map(
+            str.strip, CFG.get('msg', 'server_tags').split(','))
+
     if new_message:
         msg = Msg()
         msg.tags = ('public',)
