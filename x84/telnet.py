@@ -484,28 +484,23 @@ class TelnetClient(BaseClient):
         Process a DONT command option received by DE.
         """
         self._note_reply_pending(option, False)
-        self._note_reply_pending(option, False)
         if option == ECHO:
             # client demands we do not echo
             if self.check_local_option(ECHO) is not False:
                 self._note_local_option(ECHO, False)
-                self._iac_wont(ECHO)  # agree
         elif option == BINARY:
             # client demands no binary mode
             if self.check_local_option(BINARY) is not False:
                 self._note_local_option(BINARY, False)
-                self._iac_wont(BINARY)
         elif option == SGA:
             # DE demands that we start or continue transmitting
             # GAs (go-aheads) when transmitting data.
             if self.check_local_option(SGA) is not False:
                 self._note_local_option(SGA, False)
-                self._iac_wont(SGA)
         elif option == LINEMODE:
             # client demands no linemode.
             if self.check_remote_option(LINEMODE) is not False:
                 self._note_remote_option(LINEMODE, False)
-                self._iac_wont(LINEMODE)
         else:
             self.log.debug('{self.addrport}: unhandled dont: {opt}.'
                            .format(self=self, opt=name_option(option)))
