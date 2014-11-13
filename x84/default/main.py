@@ -10,10 +10,12 @@ def refresh():
     from x84.bbs import getsession, getterminal, echo, showart, ini
     import os
     import logging
+    import random
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
     session.activity = u'Main menu'
-    artfile = os.path.join(os.path.dirname(__file__), 'art', 'main.asc')
+    randomnumber = random.randint(1,2) # randomly display main1.asc or main2.asc
+    artfile = os.path.join(os.path.dirname(__file__), 'art', 'main'+str(randomnumber)+'.asc')
     echo(u''.join((
         u'\r\n\r\n',
         term.blue(u'/'.rjust(term.width / 2)), term.bold_black(u'/ '),
