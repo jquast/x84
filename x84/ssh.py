@@ -146,6 +146,7 @@ class SshClient(BaseClient):
         self.bytes_received += recv
         self.last_input_time = time.time()
         self.recv_buffer.fromstring(data)
+        return recv
 
 
 class ConnectSsh(BaseConnect):
