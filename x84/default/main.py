@@ -21,7 +21,7 @@ def refresh():
         'MAiN MENU',
         u'\r\n')))
     # displays a centered main menu header in topaz encoding for utf8
-    for line in showart(os.path.join(os.path.dirname(__file__), 'art',artfile)):
+    for line in showart(os.path.join(os.path.dirname(__file__),'art',artfile),'topaz'):
         echo(term.cyan+term.move_x((term.width/2)-40)+line)
     echo(u'\r\n\r\n')
     entries = [
