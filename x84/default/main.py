@@ -15,7 +15,7 @@ def refresh():
     session, term = getsession(), getterminal()
     session.activity = u'Main menu'
     randomnumber = random.randint(1,2) # randomly display main1.asc or main2.asc
-    artfile = os.path.join(os.path.dirname(__file__), 'art', 'main'+str(randomnumber)+'.asc')
+    artfile = 'main*.asc'
     echo(u''.join((
         u'\r\n\r\n',
         term.blue(u'/'.rjust(term.width / 2)), term.bold_black(u'/ '),
@@ -23,7 +23,7 @@ def refresh():
         'MAiN MENU',
         u'\r\n')))
     # displays a centered main menu header in topaz encoding for utf8
-    for line in showart(artfile,'topaz'):
+    for line in showart(os.path.join(os.path.dirname(__file__), 'art','main*.asc')):
         echo(term.cyan+term.move_x((term.width/2)-40)+line)
     echo(u'\r\n\r\n')
     entries = [

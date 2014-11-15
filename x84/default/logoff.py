@@ -57,7 +57,7 @@ def main():
     db_firstrecord = ((time.time() - 1984,
                        u'B. b.', u'bEhAVE YOURSElVES ...'),)
     automsg_len = 40
-    artfile = os.path.join(os.path.dirname(__file__), 'art', 'logoff.ans')
+    artfile = 'art/logoff.ans'
 
     def refresh_prompt(msg):
         """ Refresh automsg prompt using string msg. """
