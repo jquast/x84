@@ -13,7 +13,7 @@ def refresh():
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
     session.activity = u'Main menu'
-    artfile = os.path.join(os.path.dirname(__file__), 'art', 'main.asc')
+    artfile = 'main*.asc'
     echo(u''.join((
         u'\r\n\r\n',
         term.blue(u'/'.rjust(term.width / 2)), term.bold_black(u'/ '),
@@ -21,7 +21,7 @@ def refresh():
         'MAiN MENU',
         u'\r\n')))
     # displays a centered main menu header in topaz encoding for utf8
-    for line in showart(artfile,'topaz'):
+    for line in showart(os.path.join(os.path.dirname(__file__),'art',artfile),'topaz'):
         echo(term.cyan+term.move_x((term.width/2)-40)+line)
     echo(u'\r\n\r\n')
     entries = [

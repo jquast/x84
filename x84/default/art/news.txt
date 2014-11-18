@@ -1,5 +1,5 @@
 |06Mon Sep  1 02:49:05 PDT 2014
-|03============================
+|01============================
 
 There are now several boards running x/84:
 
@@ -16,7 +16,7 @@ We're pounding out bugs and creating a more homogeneous style for the default bo
 Ssh support is complete -- you can ssh anonymous@, new@, or your_username@1984.ws and connect securely.  Ssh provides a lower latency than connection than telnet.  pubkey authentication is also supported.
 
 |06Tue Apr  1 20:05:28 PDT 2014
-|03============================
+|01============================
 
 Release 1.1.0 has been reached -- 10 iterations!
 
@@ -30,7 +30,7 @@ For example, somebody recently created a 2048 clone with 'blessed':
 
 
 |06Sun Mar  2 14:57:06 PST 2014
-|03============================
+|01============================
 
 Release 1.0.9 is now on pypi.  New features include a revamped 'weather' program, and some new art from xzip!impure.  Otherwise, various bugs were resolved.  Thanks to a few folk now running the bbs and providing feedback.
 
@@ -39,7 +39,7 @@ Meanwhile, Mercyful of telnet://|03htc.zapto.org|07 has been (ab)using this bbs 
 As for blessings, the upstream author has not been accepting patches, delayed over 1 year now.  I will fork the project, tentatively named 'blessed'.
 
 |06Fri Jun  7 14:37:07 EDT 2013
-|03============================
+|01============================
 
 Release 1.0.5 is now on pypi. This release includes "dropfile" and concise dosemu support. An example lord.py door is used and hosted on 1984.ws.
 
@@ -48,7 +48,7 @@ If you're interested in the telnet protocol, check out another project:
   |02https://github.com/jquast/telnetlib3
 
 |06Thu Feb 21 01:19:47 EST 2013
-|03============================
+|01============================
 
 x/84 version 1.0.4 has been released to pypi, to install:
 
