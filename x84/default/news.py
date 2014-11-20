@@ -26,7 +26,7 @@ news_contents = None
 art_file = os.path.join(here, 'art', 'news.ans')
 
 #: encoding used to display artfile
-art_encoding = 'ascii'
+art_encoding = 'topaz'
 
 #: fontset for SyncTerm emulator
 syncterm_font = 'topaz'
