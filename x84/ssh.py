@@ -91,12 +91,15 @@ class SshClient(BaseClient):
         """
         try:
             return self.channel.send(send_bytes)
+        except EOFError:
+            raise Disconnected('{self.addrport}: EOFError'
+                               .format(self=self))
         except socket.error as err:
             if err[0] == errno.EDEADLK:
                 self.log.debug('{self.addrport}: {err} (bandwidth exceed)'
                                .format(self=self, err=err))
                 return 0
-            raise Disconnected('{self.addrport}: {err}'
+            raise Disconnected('socket error: {err}'
                                .format(self=self, err=err))
 
     def send(self):
