@@ -7,7 +7,7 @@ def main():
     #         Too many local variables
     #         Too many branches
     from x84.bbs import DBProxy, getsession, getterminal, echo
-    from x84.bbs import ini, LineEditor, timeago, showcp437
+    from x84.bbs import ini, LineEditor, timeago, showart
     from x84.bbs import disconnect, getch
     import time
     import os
@@ -57,7 +57,6 @@ def main():
     db_firstrecord = ((time.time() - 1984,
                        u'B. b.', u'bEhAVE YOURSElVES ...'),)
     automsg_len = 40
-    artfile = os.path.join(os.path.dirname(__file__), 'art', '1984.asc')
 
     def refresh_prompt(msg):
         """ Refresh automsg prompt using string msg. """
@@ -92,7 +91,7 @@ def main():
         refresh screen, database, and return database index
         """
         echo(u''.join((u'\r\n\r\n', term.clear_eol,)))
-        for line in showcp437(artfile):
+        for line in showart(os.path.join(os.path.dirname(__file__), 'art','logoff.ans'),'topaz'):
             echo(line)
         idx = refresh_automsg(-1 if idx is None else idx)
         refresh_prompt(prompt_msg)
