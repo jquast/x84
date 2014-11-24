@@ -55,9 +55,13 @@ class SshClient(BaseClient):
         """
         self.active = False
         if self.channel is not None:
-            self.channel.shutdown(how=2)
-            self.log.debug('{self.addrport}: channel shutdown '
-                           '{self.__class__.__name__}'.format(self=self))
+            try:
+                self.channel.shutdown(how=2)
+            except EOFError:
+                pass
+            finally:
+                self.log.debug('{self.addrport}: channel shutdown '
+                               '{self.__class__.__name__}'.format(self=self))
 
         if self.transport.is_active():
             self.transport.close()
