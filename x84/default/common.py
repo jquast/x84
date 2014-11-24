@@ -6,6 +6,18 @@ from x84.bbs import echo, showart
 from x84.bbs import getterminal, LineEditor
 
 
+def waitprompt():
+    # Displays a simple "press enter to continue prompt". Very handy!
+    from x84.bbs import echo, getch, getterminal
+    term = getterminal()
+
+    echo (term.normal+'\n\r'+term.magenta+'('+term.green+'..'+term.white+
+          ' press any key to continue '+term.green+'..'+term.magenta+')')
+    getch()
+    echo(term.normal_cursor)
+    return
+
+
 def display_banner(filepattern, encoding=None, vertical_padding=0):
     """ Start new screen and show artwork, centered.
 

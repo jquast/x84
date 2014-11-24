@@ -41,6 +41,7 @@ def refresh():
         ('e', 'dit PROfilE'),
         ('p', 'OSt A MSG'),
         ('r', 'EAd All MSGS'),
+        ('v', 'OTiNG bOOTH'),
         ('g', 'OOdbYE /lOGOff'),]
 
     # add LORD to menu only if enabled,
@@ -141,6 +142,8 @@ def main():
             gosub('writemsg')
         elif inp == u'r':
             gosub('readmsgs')
+        elif inp == u'v':
+            gosub('vote')
         elif inp == u'g':
             goto('logoff')
         elif inp == u'!':
