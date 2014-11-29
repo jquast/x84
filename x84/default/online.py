@@ -323,12 +323,6 @@ def main():
                 otxt_h = heading(sessions)
                 cur_row = len(otxt_b.splitlines()) + len(otxt_h.splitlines())
                 echo(u''.join((otxt_b, otxt, u'\r\n\r\n\r\n',otxt_h)))
-            else:
-                echo(u''.join((
-                    u'\r\n',
-                    '-'.center(term.width).rstrip(),
-                    u'\r\n')))
-                echo(otxt)
             cur_row += olen
             dirty = None
 
