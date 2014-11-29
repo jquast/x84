@@ -35,18 +35,18 @@ def describe(sessions):
     max_user = ini.CFG.getint('nua', 'max_user')
 
     text = u'\r\n'.join(([u''.join((
-        term.move_x((term.width/2)-40),
-        u'%*d' % (5 + slen(sessions), node),u' '*7,
+        term.move_x((term.width/2)-40), term.green,
+        u'%*d' % (5 + slen(sessions), node), u' '*7, term.normal,
         u'%4is' % (attrs.get('idle', 0),), u' ',u' '*8,
-        (term.bold_green(u'%-*s' % (max_user, (
+        (term.bold_red(u'%-*s' % (max_user, (
         u'** diSCONNECtEd' if 'delete' in attrs
         else attrs.get('handle', u'** CONNECtiNG')),)
         ) if attrs.get('handle', u'') != session.user.handle
-            else term.green(u'%-*s' % (max_user, session.user.handle))),
+            else term.red(u'%-*s' % (max_user, session.user.handle))),
         term.green(u'       '),
-        term.bold_green((attrs.get('activity', u''))
+        term.yellow((attrs.get('activity', u''))
                         if attrs.get('sid') != session.sid else
-                        term.bold_black(session.activity)),
+                        term.yellow(session.activity)),
     )) for node, (_sid, attrs) in get_nodes(sessions)]))
 
     return text
@@ -60,14 +60,19 @@ def heading(sessions):
     """
     Given an array of sessions, return string suitable for display heading.
     """
-    from x84.bbs import getterminal, ini
+    from x84.bbs import getterminal, ini, showart
+    import os
     slen = lambda sessions: len(u'%d' % (len(sessions),))
     term = getterminal()
     max_user = ini.CFG.getint('nua', 'max_user')
+
+    bar = ''
+    for line in showart(os.path.join(os.path.dirname(__file__),'art','onlinebar.ans'),'topaz'):
+        bar = bar + term.move_x((term.width/2)-40) + line
     return u'\r\n'.join((
         u'\r\n'.join([term.center(pline, (term.width))
                       for pline in prompt()]),
-        u'\r\n',))
+    u'\r\n',bar))
 
 
 def prompt():
@@ -322,7 +327,13 @@ def main():
                 otxt_b = banner()
                 otxt_h = heading(sessions)
                 cur_row = len(otxt_b.splitlines()) + len(otxt_h.splitlines())
-                echo(u''.join((otxt_b, otxt, u'\r\n\r\n\r\n',otxt_h)))
+                echo(u''.join((otxt_b, '\r\n',otxt_h, u'\r\n',otxt)))
+            else:
+                echo(u''.join((
+                    u'\r\n',
+                    '-'.center(term.width).rstrip(),
+                    u'\r\n')))
+                echo(otxt)
             cur_row += olen
             dirty = None
 
