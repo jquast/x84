@@ -34,7 +34,8 @@ def describe(sessions):
     session, term = getsession(), getterminal()
     max_user = ini.CFG.getint('nua', 'max_user')
 
-    text = term.move_x((term.width/2)-40)+ u'\r\n'.join(([u''.join((
+    text = u'\r\n'.join(([u''.join((
+        term.move_x((term.width/2)-40),
         u'%*d' % (5 + slen(sessions), node),u' '*7,
         u'%4is' % (attrs.get('idle', 0),), u' ',u' '*8,
         (term.bold_green(u'%-*s' % (max_user, (
