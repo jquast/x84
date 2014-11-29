@@ -18,12 +18,6 @@ def refresh():
     # tells syncterm to change to topaz, then delete the output to avoid the code to be shown in other clients
     echo(syncterm_setfont('topaz')+u'\r'+term.clear_eol)
 
-    echo(u''.join((
-        u'\r\n\r\n',
-        term.blue(u'/'.rjust(term.width / 2)), term.bold_black(u'/ '),
-        term.bold('x'), term.bold_blue('/'), term.bold('84'), u' ',
-        'MAiN MENU',
-        u'\r\n')))
     # displays a centered main menu header in topaz encoding for utf8
     for line in showart(os.path.join(os.path.dirname(__file__),'art',artfile),'topaz'):
         echo(term.cyan+term.move_x((term.width/2)-40)+line)
@@ -80,11 +74,11 @@ def refresh():
     buf_str = u''
     for key, name in entries:
         out_str = u''.join((
-            term.bold(u'('),
-            term.bold_blue_underline(key),
-            term.bold(u')'),
-            term.bold_blue(name.split()[0]),
-            u' ', u' '.join(name.split()[1:]),
+            term.cyan(u'('),
+            term.magenta_underline(key),
+            term.cyan(u')'),
+            term.white(name.split()[0]),
+            u' ', term.bold_white(u' '.join(name.split()[1:])),
             u'  '))
         ansilen = term.length(buf_str + out_str)
         if ansilen >= (term.width * .8):
@@ -92,9 +86,9 @@ def refresh():
             buf_str = out_str
         else:
             buf_str += out_str
-    echo(term.center(buf_str) + u'\r\n')
+    echo(term.center(buf_str) + u'\r\n\r\n')
     echo(u' [%s]:' % (
-        term.blue_underline(''.join([key for key, name in entries]))))
+        term.magenta_underline(''.join([key for key, name in entries]))))
 
 
 def main():
