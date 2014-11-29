@@ -7,13 +7,17 @@ def refresh():
     """ Refresh main menu. """
     # pylint: disable=R0914
     #         Too many local variables
-    from x84.bbs import getsession, getterminal, echo, showart, ini
+    from x84.bbs import getsession, getterminal, echo, showart, ini, syncterm_setfont
     import os
     import logging
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
     session.activity = u'Main menu'
     artfile = 'main*.asc'
+
+    # tells syncterm to change to topaz, then delete the output to avoid the code to be shown in other clients
+    echo(syncterm_setfont('topaz')+u'\r'+term.clear_eol)
+
     echo(u''.join((
         u'\r\n\r\n',
         term.blue(u'/'.rjust(term.width / 2)), term.bold_black(u'/ '),
@@ -88,7 +92,7 @@ def refresh():
             buf_str = out_str
         else:
             buf_str += out_str
-    echo(term.center(buf_str) + u'\r\n\r\n')
+    echo(term.center(buf_str) + u'\r\n')
     echo(u' [%s]:' % (
         term.blue_underline(''.join([key for key, name in entries]))))
 
@@ -97,9 +101,10 @@ def main():
     """ Main procedure. """
     # pylint: disable=R0912
     #         Too many branches
-    from x84.bbs import getsession, getch, goto, gosub, ini
+    from x84.bbs import getsession, getterminal, getch, goto, gosub, ini
     from ConfigParser import Error as ConfigError
     session = getsession()
+    term = getterminal()
 
     inp = -1
     dirty = True
