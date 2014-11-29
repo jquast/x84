@@ -792,10 +792,13 @@ def main():
     #        Too many local variables
     #        Too many branches
     #        Too many statements
-    from x84.bbs import getsession, getterminal, echo, ini, getch, gosub
+    from x84.bbs import getsession, getterminal, echo, ini, getch, gosub, syncterm_setfont
     from x84.bbs import DBProxy
     session, term = getsession(), getterminal()
     pager, lightbar = get_ui(None)
+
+    # tells syncterm to change to the cp437 dos font, then delete the output to avoid the code to be shown in other clients
+    echo(syncterm_setfont('cp437')+u'\r'+term.clear_eol)
 
     echo(u'\r\n\r\n')
     thread = None

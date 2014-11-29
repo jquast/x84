@@ -16,16 +16,13 @@ def request_info(sid):
 
 def banner():
     """ Returns string suitable for displaying banner """
-    from x84.bbs import getterminal
-    term = getterminal()
-    return u''.join((
-        u''.center((term.width / 2) - 3),
-        term.green_underline('.'),
-        term.green_bold_underline('.'),
-        term.underline('.'),
-        term.bold_green(" whO'S ONliNE"),
-        u'\r\n'))
-
+    from x84.bbs import getterminal, showart, echo
+    import os
+    term = getterminal()    
+    banner = '\r\n'
+    for line in showart(os.path.join(os.path.dirname(__file__),'art','online.ans'),'topaz'):
+        banner = banner + term.move_x((term.width/2)-40) + line
+    return (banner)  
 
 def describe(sessions):
     """
@@ -36,20 +33,23 @@ def describe(sessions):
     slen = lambda sessions: len(u'%d' % (len(sessions),))
     session, term = getsession(), getterminal()
     max_user = ini.CFG.getint('nua', 'max_user')
-    return u'\r\n'.join(([u''.join((
-        u'%*d' % (4 + slen(sessions), node),
-        u'%4is' % (attrs.get('idle', 0),), u' ',
-        (term.bold_green(u'%-*s' % (max_user, (
+
+    text = u'\r\n'.join(([u''.join((
+        term.move_x((term.width/2)-40), term.green,
+        u'%*d' % (5 + slen(sessions), node), u' '*7, term.normal,
+        u'%4is' % (attrs.get('idle', 0),), u' ',u' '*8,
+        (term.bold_red(u'%-*s' % (max_user, (
         u'** diSCONNECtEd' if 'delete' in attrs
         else attrs.get('handle', u'** CONNECtiNG')),)
         ) if attrs.get('handle', u'') != session.user.handle
-            else term.green(u'%-*s' % (max_user, session.user.handle))),
-        term.green(u' - '),
-        term.bold_green((attrs.get('activity', u''))
+            else term.red(u'%-*s' % (max_user, session.user.handle))),
+        term.green(u'       '),
+        term.yellow((attrs.get('activity', u''))
                         if attrs.get('sid') != session.sid else
-                        term.bold_black(session.activity)),
+                        term.yellow(session.activity)),
     )) for node, (_sid, attrs) in get_nodes(sessions)]))
 
+    return text+'\r\n'
 
 def get_nodes(sessions):
     """ Given an array of sessions, assign an arbitrary 'node' number """
@@ -60,19 +60,19 @@ def heading(sessions):
     """
     Given an array of sessions, return string suitable for display heading.
     """
-    from x84.bbs import getterminal, ini
+    from x84.bbs import getterminal, ini, showart
+    import os
     slen = lambda sessions: len(u'%d' % (len(sessions),))
     term = getterminal()
     max_user = ini.CFG.getint('nua', 'max_user')
+
+    bar = ''
+    for line in showart(os.path.join(os.path.dirname(__file__),'art','onlinebar.ans'),'topaz'):
+        bar = bar + term.move_x((term.width/2)-40) + line
     return u'\r\n'.join((
         u'\r\n'.join([term.center(pline, (term.width))
                       for pline in prompt()]),
-        u'\r\n',
-        term.green_underline(u''.join((
-            'node'.rjust(4 + slen(sessions)),
-            'idle'.rjust(5),
-            ' handle'.ljust(max_user + 3),
-            'activity',))),))
+    u'\r\n',bar))
 
 
 def prompt():
@@ -82,8 +82,8 @@ def prompt():
     from x84.bbs import getsession, getterminal
     session, term = getsession(), getterminal()
     decorate = lambda key, desc: u''.join((
-        u'(', term.green_underline(key,),
-        u')', term.reverse_green(desc.split()[0]), u' ',
+        u'(', term.magenta_underline(key,),
+        u')', term.cyan(desc.split()[0]), u' ',
         u' '.join(desc.split()[1:]), u' ',))
     return term.wrap(u''.join((
         u' ' * 2,
@@ -226,7 +226,7 @@ def main():
     #         Too many branches
     #         Too many local variables
     #         Too many statements
-    from x84.bbs import getsession, getterminal, getch, echo
+    from x84.bbs import getsession, getterminal, getch, echo, syncterm_setfont
     session, term = getsession(), getterminal()
     ayt_lastfresh = 0
 
@@ -240,6 +240,10 @@ def main():
     sessions = dict()
     dirty = time.time()
     cur_row = 0
+
+    # tells syncterm to change to topaz, then delete the output to avoid the code to be shown in other clients
+    echo(syncterm_setfont('topaz')+u'\r'+term.clear_eol)
+
     while True:
         ayt_lastfresh = broadcast_ayt(ayt_lastfresh)
         inp = getch(POLL_KEY)
@@ -326,7 +330,7 @@ def main():
                 otxt_b = banner()
                 otxt_h = heading(sessions)
                 cur_row = len(otxt_b.splitlines()) + len(otxt_h.splitlines())
-                echo(u'\r\n'.join((u'\r\n\r\n', otxt_b, otxt_h, otxt)))
+                echo(u''.join((otxt_b, '\r\n',otxt_h, u'\r\n',otxt)))
             else:
                 echo(u''.join((
                     u'\r\n',

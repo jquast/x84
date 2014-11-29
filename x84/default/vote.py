@@ -1,7 +1,7 @@
 """ Voting booth script for x/84 bbs, https://github.com/jquast/x84 """
 
 from common import waitprompt
-from x84.bbs import getsession, getterminal, echo, getch, LineEditor, DBProxy, showart
+from x84.bbs import getsession, getterminal, echo, getch, LineEditor, DBProxy, showart, syncterm_setfont
 import os
 
 databasename = 'votingbooth' # change this for alternate database file
@@ -345,7 +345,7 @@ def main():
     session = getsession()
     session.activity = u'hanging out in voting script'
     term = getterminal()
-    echo(term.clear())
+    echo(term.clear+syncterm_setfont('topaz'))
 
     db = DBProxy(databasename)  
     if not 'questions' in db:
