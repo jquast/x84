@@ -16,7 +16,7 @@ here = os.path.dirname(__file__)
 art_file = os.path.join(here, 'art', 'callers*.ans')
 
 #: encoding used to display artfile
-art_encoding = 'cp437_art'
+art_encoding = 'topaz'
 
 #: fontset for SyncTerm emulator
 syncterm_font = 'topaz'
