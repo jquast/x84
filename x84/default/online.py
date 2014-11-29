@@ -49,7 +49,7 @@ def describe(sessions):
                         term.yellow(session.activity)),
     )) for node, (_sid, attrs) in get_nodes(sessions)]))
 
-    return text
+    return text+'\r\n'
 
 def get_nodes(sessions):
     """ Given an array of sessions, assign an arbitrary 'node' number """
