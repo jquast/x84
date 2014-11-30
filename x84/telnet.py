@@ -349,6 +349,9 @@ class TelnetClient(BaseClient):
             # Stop capturing a sub-negotiation string
             self.telnet_got_sb = False
             self._sb_decoder()
+        elif cmd == IAC:
+            # IAC, IAC is used for a literal \xff character.
+            self._recv_byte(IAC)
         elif cmd == IP:
             self.deactivate()
             self.log.info('{self.addrport} received (IAC, IP): closing.'
