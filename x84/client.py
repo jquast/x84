@@ -97,7 +97,7 @@ class BaseClient(object):
             try:
                 return self.sock.send(send_bytes)
             except socket.error as err:
-                if err.errno == errno.EDEADLK:
+                if err.errno in (errno.EDEADLK, errno.EAGAIN):
                     self.log.debug('{self.addrport}: {err} (bandwidth exceed)'
                                    .format(self=self, err=err))
                     return 0
