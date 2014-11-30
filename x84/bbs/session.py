@@ -404,7 +404,7 @@ class Session(object):
         self.close()
         return None
 
-    def write(self, ucs):
+    def write(self, ucs, encoding=None):
         """
         Write unicode data to telnet client. Take special care to encode
         as 'iso8859-1' actually intended for 'cp437'-encoded terminals.
@@ -413,9 +413,9 @@ class Session(object):
         if 0 == len(ucs):
             return
         assert isinstance(ucs, unicode)
-        if self.encoding == 'cp437':
+        if encoding is None and self.encoding == 'cp437':
             encoding = 'iso8859-1'
-            # out output terminal is cp437, so we need to take special care to
+            # our output terminal is cp437, so we need to take special care to
             # re-encode things as "iso8859-1" but really encoded for cp437.
             # For example, u'\u2591' becomes u'\xb0' (unichr(176)),
             # -- the original ansi shaded block for cp437 terminals.
@@ -433,7 +433,7 @@ class Session(object):
                                  encoding, 'replace'))
                             for (idx, glyph) in enumerate(ucs)])
         else:
-            encoding = self.encoding
+            encoding = encoding or self.encoding
         self.terminal.stream.write(ucs, encoding)
 
         if self.log.isEnabledFor(logging.DEBUG) and self.tap_output:
@@ -629,8 +629,7 @@ class Session(object):
         """
         S._event_pop (event) --> data
 
-        Returns foremost item buffered for event. When event is ``input``,
-        an artificial pause is used for decoding of MBS when received multipart
+        Returns foremost item buffered for event.
         """
         return self._buffer[event].pop()
 

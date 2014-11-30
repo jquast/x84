@@ -285,7 +285,7 @@ def init_log_ini():
                 '("' + daily_log + '", "midnight", 1, 60)')
 
     cfg_log.add_section('loggers')
-    cfg_log.set('loggers', 'keys', 'root, sqlitedict, paramiko')
+    cfg_log.set('loggers', 'keys', 'root, sqlitedict, paramiko. xmodem')
 
     cfg_log.add_section('logger_root')
     cfg_log.set('logger_root', 'level', 'INFO')
@@ -298,7 +298,6 @@ def init_log_ini():
     cfg_log.set('logger_sqlitedict', 'formatter', 'default')
     cfg_log.set('logger_sqlitedict', 'handlers', 'console, rotate_daily')
     cfg_log.set('logger_sqlitedict', 'qualname', 'sqlitedict')
-    cfg_log.set('logger_sqlitedict', 'propagate', '0')
 
     # squelch paramiko.transport info, also too verbose
     cfg_log.add_section('logger_paramiko')
@@ -306,6 +305,12 @@ def init_log_ini():
     cfg_log.set('logger_paramiko', 'formatter', 'default')
     cfg_log.set('logger_paramiko', 'handlers', 'console, rotate_daily')
     cfg_log.set('logger_paramiko', 'qualname', 'paramiko.transport')
-    cfg_log.set('logger_paramiko', 'propagate', '0')
+
+    # squelch xmodem debug, too verbose
+    cfg_log.add_section('logger_xmodem')
+    cfg_log.set('logger_debug', 'level', 'INFO')
+    cfg_log.set('logger_debug', 'formatter', 'default')
+    cfg_log.set('logger_debug', 'handlers', 'console, rotate_daily')
+    cfg_log.set('logger_debug', 'qualname', 'xmodem')
 
     return cfg_log

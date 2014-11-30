@@ -244,7 +244,7 @@ def get_session_output_fds(servers):
     return session_fds
 
 
-def client_recv(servers, log):
+def client_recv(servers, ready_fds, log):
     """
     Test all clients for recv_ready(). If any data is available, then
     socket_recv() is called, buffering the data for the session which
@@ -253,8 +253,9 @@ def client_recv(servers, log):
     from x84.bbs.exception import Disconnected
     from x84.terminal import kill_session
     for server in servers:
-        for client in server.clients.values():
-            if client.recv_ready():
+        for client_fd, client in server.clients.items():
+            if client_fd in ready_fds:
+#            if client.recv_ready():
                 try:
                     client.socket_recv()
                 except Disconnected as err:
@@ -526,16 +527,19 @@ def _loop(servers):
                            if _thread.stopped][:]:
                 server.threads.remove(thread)
 
-        server_fds = [server.server_socket.fileno() for server in servers]
-        client_fds = [fd for fd in server.client_fds() for server in servers]
-        check_r = server_fds + client_fds
+        check_r = list()
+        for server in servers:
+            check_r.append(server.server_socket.fileno())
+            check_r.extend(server.client_fds())
         if not WIN32:
+            # WIN32's IPC is not done using sockets, so it
+            # is not possible to use select.select() on them
             session_fds = get_session_output_fds(servers)
-            check_r += session_fds
+            check_r.extend(session_fds)
 
         # We'd like to use timeout 'None', but the registration of
         # a new client in terminal.start_process surprises us with new
-        # file descriptors for the session i/o. unless we loop for
+        # file descriptors for the session i/o.  Unless we loop for
         # additional `session_fds', a connecting client would block.
         ready_r, _, _ = select.select(check_r, [], [], SELECT_POLL)
 
@@ -546,7 +550,7 @@ def _loop(servers):
                 accept(log, server, check_ban)
 
         # receive new data from tcp clients.
-        client_recv(servers, log)
+        client_recv(servers, ready_r, log)
         terms = get_terminals()
 
         # receive new data from session terminals

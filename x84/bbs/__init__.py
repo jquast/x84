@@ -23,6 +23,7 @@ from x84.bbs.cp437 import from_cp437
 from x84.bbs.dbproxy import DBProxy
 from x84.bbs.pager import Pager
 from x84.bbs.door import Door, DOSDoor, Dropfile
+from x84.bbs.modem import send_modem, recv_modem
 
 
 __all__ = ['list_users', 'get_user', 'find_user', 'User', 'Group', 'list_msgs',
@@ -31,7 +32,8 @@ __all__ = ['list_users', 'get_user', 'find_user', 'User', 'Group', 'list_msgs',
            'Lightbar', 'from_cp437', 'DBProxy', 'Pager', 'Door', 'DOSDoor',
            'goto', 'disconnect', 'getsession', 'getterminal', 'getch', 'gosub',
            'ropen', 'showart', 'showcp437', 'Dropfile', 'encode_pipe',
-           'decode_pipe', 'syncterm_setfont', 'get_ini',
+           'decode_pipe', 'syncterm_setfont', 'get_ini', 'send_modem',
+           'recv_modem',
            ]
 
 
