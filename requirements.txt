@@ -6,3 +6,4 @@ paramiko
 irc
 python-dateutil
 web.py
+xmodem

@@ -9,8 +9,9 @@ def main():
 
     #return migrate_105lc()
     #return nothing()
-    return gosub('test_keyboard_keys')
+    #return gosub('test_keyboard_keys')
     #return dump_x84net_debug()
+    return send_xmodem('/bin/bash')
 
     # but this is a great way to make data manipulations,
     # exampled here is importing of a .csv import of
@@ -18,6 +19,15 @@ def main():
     #return merge_mystic()
 
     #return tygerofdantye_fix()
+
+
+def send_xmodem(filepath, protocol='xmodem1k'):
+    from x84.bbs import echo, send_modem
+    echo(u"Sending {0} using protocol {1}. \r\n"
+         u"Start your receiving program now: "
+         .format(filepath, protocol))
+    send_modem(open(filepath, 'rb'), protocol)
+
 
 def x84net_requeue():
     # a message failed to queue for delivery, but hellbeard
@@ -33,8 +43,8 @@ def x84net_requeue():
 
 
 def migrate_105lc():
-    from x84.bbs import echo, DBProxy, list_users, get_user
     # migrating lastcallers database for 1.0.5 upgrade
+    from x84.bbs import echo, DBProxy, list_users, get_user
     lc = DBProxy('lastcalls')
     for handle in list_users():
         user = get_user(handle)
@@ -48,6 +58,7 @@ def nothing():
     from x84.bbs import echo, getch
     echo(u'Nothing to do.')
     getch(3)
+
 
 def tygerofdantye_fix():
     """ This user was too long! """

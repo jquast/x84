@@ -629,8 +629,7 @@ class Session(object):
         """
         S._event_pop (event) --> data
 
-        Returns foremost item buffered for event. When event is ``input``,
-        an artificial pause is used for decoding of MBS when received multipart
+        Returns foremost item buffered for event.
         """
         return self._buffer[event].pop()
 
