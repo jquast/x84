@@ -55,9 +55,13 @@ class SshClient(BaseClient):
         """
         self.active = False
         if self.channel is not None:
-            self.channel.shutdown(how=2)
-            self.log.debug('{self.addrport}: channel shutdown '
-                           '{self.__class__.__name__}'.format(self=self))
+            try:
+                self.channel.shutdown(how=2)
+            except EOFError:
+                pass
+            finally:
+                self.log.debug('{self.addrport}: channel shutdown '
+                               '{self.__class__.__name__}'.format(self=self))
 
         if self.transport.is_active():
             self.transport.close()
@@ -91,12 +95,15 @@ class SshClient(BaseClient):
         """
         try:
             return self.channel.send(send_bytes)
+        except EOFError:
+            raise Disconnected('{self.addrport}: EOFError'
+                               .format(self=self))
         except socket.error as err:
             if err[0] == errno.EDEADLK:
                 self.log.debug('{self.addrport}: {err} (bandwidth exceed)'
                                .format(self=self, err=err))
                 return 0
-            raise Disconnected('{self.addrport}: {err}'
+            raise Disconnected('socket error: {err}'
                                .format(self=self, err=err))
 
     def send(self):

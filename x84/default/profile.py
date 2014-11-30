@@ -29,7 +29,6 @@ def process_keystroke(inp, user):
     #   refactored into smaller subroutines =)
     from x84.bbs import getsession, getterminal, echo, getch, gosub
     from x84.bbs import LineEditor, ScrollingEditor
-    from x84.default.nua import set_email, set_location
     from x84.bbs.ini import CFG
     def_timeout = CFG.getint('system', 'timeout')
     global EXIT
@@ -46,7 +45,7 @@ def process_keystroke(inp, user):
         echo(ABOUT_TERM + u'\r\n')
         echo(u'\r\ntERMiNAl tYPE: ')
         term = LineEditor(30, session.env.get('TERM')).read()
-        echo(u"\r\n\r\nset TERM to '%s'? [yn]" % (term,))
+        echo(u"\r\n\r\nSEt TERM tO '%s'? [yn]" % (term,))
         while True:
             inp2 = getch()
             if inp2 in (u'y', u'Y'):
@@ -66,7 +65,7 @@ def process_keystroke(inp, user):
         if width < 0 or width > 999:
             echo(invalid)
             return True
-        echo(u"\r\n\r\nset COLUMNS=%d? [yn]" % (width,))
+        echo(u"\r\n\r\nSEt COLUMNS=%d? [yn]" % (width,))
         while True:
             inp2 = getch()
             if inp2 in (u'y', u'Y'):
@@ -86,7 +85,7 @@ def process_keystroke(inp, user):
         if height < 0 or height > 999:
             echo(invalid)
             return True
-        echo(u"\r\n\r\nset LINES=%d? [yn]" % (height,))
+        echo(u"\r\n\r\nSEt LINES=%d? [yn]" % (height,))
         while True:
             inp2 = getch()
             if inp2 in (u'y', u'Y'):
@@ -122,16 +121,34 @@ def process_keystroke(inp, user):
             elif inp2 in (u'n', u'N'):
                 break
     elif inp in (u'p', u'P'):
-        from x84.default.nua import set_password
-        set_password(user)
-        echo(u"\r\n\r\nSEt PASSWORd ? [yn]")
+        min_pass = CFG.getint('nua', 'min_pass')
+        max_pass = CFG.getint('nua', 'max_pass')
+        echo(u'\r\nPASSWORd: ')
+        password = LineEditor(max_pass, hidden='*').read()
+        if not password:
+            echo(u'\r\n\r\nNEVER MiNd...')
+            term.inkey(1)
+            return
+        if len(password) < min_pass:
+            echo(term.bold_red(u'\r\n\r\ntOO ShORt! (MUSt bE %d+)' % min_pass,))
+            term.inkey(1)
+            return
+        echo(u'\r\n   AGAiN: ')
+        validate_password = LineEditor(max_pass, hidden='*').read()
+        if password != validate_password:
+            echo(term.bold_red(u'\r\n\r\nPASSWORdS dO NOt MAtCh!'))
+            term.inkey(1)
+            return
+        echo(u"\r\n\r\nSEt PASSWORd? [yn]")
         while True:
             inp2 = getch()
             if inp2 in (u'y', u'Y'):
+                user.password = password
                 user.save()
                 break
             elif inp2 in (u'n', u'N'):
                 break
+
     elif inp in (u'k', 'K',):
         change = True
         if user.get('pubkey', False):
@@ -190,23 +207,29 @@ def process_keystroke(inp, user):
                     elif inp2 in (u'n', u'N'):
                         break
     elif inp in (u'l', u'L'):
-        echo(term.move(term.height - 1, 0))
-        set_location(user)
-        echo(u"\r\n\r\nSEt lOCAtiON tO '%s'? [yn]" % (user.location,))
+        max_location = CFG.getint('nua', 'max_location')
+        echo(u'\r\nlOCAtiON: ')
+        location = LineEditor(max_location, str(user.location)).read()
+        echo(u"\r\n\r\nSEt lOCAtiON tO '%s'? [yn]" % (
+            location if location else 'None',))
         while True:
             inp2 = getch()
             if inp2 in (u'y', u'Y'):
+                user.location = location
                 user.save()
                 break
             elif inp2 in (u'n', u'N'):
                 break
     elif inp in (u'e', u'E'):
-        echo(term.move(term.height - 1, 0))
-        set_email(user)
-        echo(u"\r\n\r\nSEt EMAil tO '%s'? [yn]" % (user.email,))
+        max_email = CFG.getint('nua', 'max_email')
+        echo(u'\r\nEMAil: ')
+        email = LineEditor(max_email, str(user.email)).read()
+        echo(u"\r\n\r\nSEt EMAil tO '%s'? [yn]" % (
+            email if email else 'None',))
         while True:
             inp2 = getch()
             if inp2 in (u'y', u'Y'):
+                user.email = email
                 user.save()
                 break
             elif inp2 in (u'n', u'N'):
@@ -222,7 +245,7 @@ def process_keystroke(inp, user):
         if timeout < 0:
             echo(invalid)
             return True
-        echo(u"\r\n\r\nSet tiMEOUt=%s? [yn]" % (
+        echo(u"\r\n\r\nSEt tiMEOUt=%s? [yn]" % (
             timeout if timeout else 'None',))
         while True:
             inp2 = getch()

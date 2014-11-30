@@ -7,19 +7,17 @@ def refresh():
     """ Refresh main menu. """
     # pylint: disable=R0914
     #         Too many local variables
-    from x84.bbs import getsession, getterminal, echo, showart, ini
+    from x84.bbs import getsession, getterminal, echo, showart, ini, syncterm_setfont
     import os
     import logging
     logger = logging.getLogger()
     session, term = getsession(), getterminal()
     session.activity = u'Main menu'
     artfile = 'main*.asc'
-    echo(u''.join((
-        u'\r\n\r\n',
-        term.blue(u'/'.rjust(term.width / 2)), term.bold_black(u'/ '),
-        term.bold('x'), term.bold_blue('/'), term.bold('84'), u' ',
-        'MAiN MENU',
-        u'\r\n')))
+
+    # tells syncterm to change to topaz, then delete the output to avoid the code to be shown in other clients
+    echo(syncterm_setfont('topaz')+u'\r'+term.clear_eol)
+
     # displays a centered main menu header in topaz encoding for utf8
     for line in showart(os.path.join(os.path.dirname(__file__),'art',artfile),'topaz'):
         echo(term.cyan+term.move_x((term.width/2)-40)+line)
@@ -41,6 +39,7 @@ def refresh():
         ('e', 'dit PROfilE'),
         ('p', 'OSt A MSG'),
         ('r', 'EAd All MSGS'),
+        ('v', 'OTiNG bOOTH'),
         ('g', 'OOdbYE /lOGOff'),]
 
     # add LORD to menu only if enabled,
@@ -75,11 +74,11 @@ def refresh():
     buf_str = u''
     for key, name in entries:
         out_str = u''.join((
-            term.bold(u'('),
-            term.bold_blue_underline(key),
-            term.bold(u')'),
-            term.bold_blue(name.split()[0]),
-            u' ', u' '.join(name.split()[1:]),
+            term.cyan(u'('),
+            term.magenta_underline(key),
+            term.cyan(u')'),
+            term.white(name.split()[0]),
+            u' ', term.bold_white(u' '.join(name.split()[1:])),
             u'  '))
         ansilen = term.length(buf_str + out_str)
         if ansilen >= (term.width * .8):
@@ -89,16 +88,17 @@ def refresh():
             buf_str += out_str
     echo(term.center(buf_str) + u'\r\n\r\n')
     echo(u' [%s]:' % (
-        term.blue_underline(''.join([key for key, name in entries]))))
+        term.magenta_underline(''.join([key for key, name in entries]))))
 
 
 def main():
     """ Main procedure. """
     # pylint: disable=R0912
     #         Too many branches
-    from x84.bbs import getsession, getch, goto, gosub, ini
+    from x84.bbs import getsession, getterminal, getch, goto, gosub, ini
     from ConfigParser import Error as ConfigError
     session = getsession()
+    term = getterminal()
 
     inp = -1
     dirty = True
@@ -141,6 +141,8 @@ def main():
             gosub('writemsg')
         elif inp == u'r':
             gosub('readmsgs')
+        elif inp == u'v':
+            gosub('vote')
         elif inp == u'g':
             goto('logoff')
         elif inp == u'!':
