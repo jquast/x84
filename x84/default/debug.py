@@ -3,6 +3,8 @@
 
 def main():
     """ Main procedure. """
+    import os
+
     # by default, nothing is done.
     from x84.bbs import getsession, gosub
     assert 'sysop' in getsession().user.groups
@@ -11,7 +13,7 @@ def main():
     #return nothing()
     #return gosub('test_keyboard_keys')
     #return dump_x84net_debug()
-    return send_xmodem('/bin/bash')
+    return test_xmodem(os.path.join(os.path.dirname(__file__), 'debug.py'))
 
     # but this is a great way to make data manipulations,
     # exampled here is importing of a .csv import of
@@ -21,12 +23,38 @@ def main():
     #return tygerofdantye_fix()
 
 
-def send_xmodem(filepath, protocol='xmodem1k'):
-    from x84.bbs import echo, send_modem
+def test_xmodem(filepath, protocol='xmodem1k'):
+    import os
+    from x84.bbs import echo, send_modem, recv_modem, getterminal
+    term = getterminal()
+
+    echo(u"\r\n\r\n")
+
+    # test bbs sending to client
+    stream = open(filepath, 'rb')
     echo(u"Sending {0} using protocol {1}. \r\n"
-         u"Start your receiving program now: "
+         u"Start your receiving program now. \r\n"
+         u"Press ^X twice to cancel: "
          .format(filepath, protocol))
-    send_modem(open(filepath, 'rb'), protocol)
+    status = send_modem(stream, protocol)
+    if not status:
+        echo(u"\r\nThat didn't go so well.. "
+             u"status={0}; sorry!\r\n".format(status))
+        term.inkey()
+        return
+
+    # test client sending to bbs
+    echo(u"Now its your turn cowboy -- send me anything\r\n"
+         u"using the {0} protocol. really, I don't care.\r\n"
+         .format(protocol))
+    stream = open(os.devnull, 'wb')
+    if not recv_modem(stream, protocol):
+        echo(u"That didn't go so well.. sorry!\r\n")
+        term.inkey()
+        return
+
+    echo(u"fine shooting, soldier!\r\n")
+    term.inkey()
 
 
 def x84net_requeue():
