@@ -285,7 +285,7 @@ def init_log_ini():
                 '("' + daily_log + '", "midnight", 1, 60)')
 
     cfg_log.add_section('loggers')
-    cfg_log.set('loggers', 'keys', 'root, sqlitedict, paramiko. xmodem')
+    cfg_log.set('loggers', 'keys', 'root, sqlitedict, paramiko, xmodem')
 
     cfg_log.add_section('logger_root')
     cfg_log.set('logger_root', 'level', 'INFO')
