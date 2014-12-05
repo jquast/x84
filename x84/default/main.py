@@ -7,7 +7,7 @@ def refresh():
     """ Refresh main menu. """
     # pylint: disable=R0914
     #         Too many local variables
-    from x84.bbs import getsession, getterminal, echo, showart, ini, syncterm_setfont
+    from x84.bbs import getsession, getterminal, echo, showart, ini
     import os
     import logging
     logger = logging.getLogger()
@@ -15,22 +15,19 @@ def refresh():
     session.activity = u'Main menu'
     artfile = 'main*.asc'
 
-    # tells syncterm to change to topaz, then delete the output to avoid the code to be shown in other clients
-    echo(syncterm_setfont('topaz')+u'\r'+term.clear_eol)
-
     # displays a centered main menu header in topaz encoding for utf8
     for line in showart(os.path.join(os.path.dirname(__file__),'art',artfile),'topaz'):
         echo(term.cyan+term.move_x((term.width/2)-40)+line)
     echo(u'\r\n\r\n')
     entries = [
         ('$', 'rEAD bUllETiNS'),
-        ('b', 'bS NEXUS'),
+        ('bbS', ' NEXUS'),
         ('l', 'ASt CAllS'),
         ('o', 'NE liNERS'),
-        ('w', "hO'S ONliNE"),
+        ('whO', "'S ONliNE"),
         ('n', 'EWS'),
         ('c', 'hAt'),
-        ('i', 'RC chAt'),
+        ('iRC', ' chAt'),
         ('!', 'ENCOdiNG'),
         ('t', 'EtRiS'),
         ('s', 'YS. iNfO'),
@@ -48,6 +45,7 @@ def refresh():
         entries.insert(0, ('#', 'PlAY lORd!'))
 
     # add sesame doors to menu if enabled
+
     if ini.CFG.has_section('sesame'):
         from ConfigParser import NoOptionError
         for door in ini.CFG.options('sesame'):
@@ -71,47 +69,53 @@ def refresh():
                 ))
                 entries.insert(0, (key, 'PlAY {}'.format(door)))
 
+    maxwidth = term.width * .8
     buf_str = u''
     for key, name in entries:
         out_str = u''.join((
             term.cyan(u'('),
             term.magenta_underline(key),
             term.cyan(u')'),
-            term.white(name.split()[0]),
-            u' ', term.bold_white(u' '.join(name.split()[1:])),
-            u'  '))
+            term.white(name+'  ')))
         ansilen = term.length(buf_str + out_str)
-        if ansilen >= (term.width * .8):
+        if ansilen >= maxwidth:
             echo(term.center(buf_str) + u'\r\n\r\n')
             buf_str = out_str
         else:
             buf_str += out_str
     echo(term.center(buf_str) + u'\r\n\r\n')
-    echo(u' [%s]:' % (
-        term.magenta_underline(''.join([key for key, name in entries]))))
 
 
 def main():
     """ Main procedure. """
     # pylint: disable=R0912
     #         Too many branches
-    from x84.bbs import getsession, getterminal, getch, goto, gosub, ini
+    from x84.bbs import getsession, getterminal, getch, goto, gosub, ini, LineEditor, echo, syncterm_setfont
+    from common import waitprompt
     from ConfigParser import Error as ConfigError
     session = getsession()
     term = getterminal()
 
-    inp = -1
+    # tells syncterm to change to topaz, then delete the output to avoid the code to be shown in other clients
+    echo(syncterm_setfont('topaz')+u'\r'+term.clear_eol)
+
     dirty = True
     while True:
         if dirty or session.poll_event('refresh'):
             refresh()
-        inp = getch(1)
+
+        echo ('\r'+term.underline_green+session.user.handle+term.normal+term.magenta+'@'+term.cyan+'x/84 '+term.normal+'Command: ')
+        le = LineEditor(30)
+        le.colors['highlight'] = term.normal
+        inp = le.read()
+        inp = inp.lower() # makes the input indifferent to wheter you used lower case when typing in a command or not..
+
         dirty = True
         if inp == u'*':
             goto('main')  # reload main menu using hidden option '*'
         elif inp == u'$':
             gosub('bulletins')
-        elif inp == u'b':
+        elif inp == u'bbs':
             gosub('bbslist')
         elif inp == u'l':
             gosub('lc')
@@ -121,7 +125,7 @@ def main():
             gosub('si')
         elif inp == u'u':
             gosub('userlist')
-        elif inp == u'w':
+        elif inp == u'who':
             gosub('online')
         elif inp == u'n':
             gosub('news')
@@ -135,7 +139,7 @@ def main():
             gosub('tetris')
         elif inp == u'c':
             gosub('chat')
-        elif inp == u'i':
+        elif inp == u'irc':
             gosub('ircchat')
         elif inp == u'p':
             gosub('writemsg')
@@ -144,12 +148,15 @@ def main():
         elif inp == u'v':
             gosub('vote')
         elif inp == u'g':
-            goto('logoff')
+            return
         elif inp == u'!':
             gosub('charset')
         elif inp == '\x1f' and 'sysop' in session.user.groups:
             # ctrl+_, run a debug script
             gosub('debug')
+        elif inp == '':
+            echo('\n')
+            waitprompt()
         else:
             handled = False
             try:
@@ -165,4 +172,7 @@ def main():
                 pass
 
             if not handled:
-                dirty = False
+                echo('\r\n'+term.red+'No such command. Try again.\r\n')
+                waitprompt()
+
+                dirty = True
