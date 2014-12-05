@@ -148,7 +148,7 @@ def main():
         elif inp == u'v':
             gosub('vote')
         elif inp == u'g':
-            gosub('logoff')
+            goto('logoff')
         elif inp == u'!':
             gosub('charset')
         elif inp == '\x1f' and 'sysop' in session.user.groups:
