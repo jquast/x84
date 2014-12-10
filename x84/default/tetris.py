@@ -7,9 +7,11 @@ __license__ = 'Public Domain'
 
 
 def main():
-    from x84.bbs import getsession, getterminal
+    from x84.bbs import getsession, getterminal, syncterm_setfont, echo
     session, term = getsession(), getterminal()
     session.activity = 'playing tetris'
+
+    echo(syncterm_setfont('cp437')+u'\r'+term.clear_eol)
     assert term.width >= 79 and term.height >= 23
     with term.hidden_cursor():
         score = play()

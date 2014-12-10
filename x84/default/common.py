@@ -42,7 +42,7 @@ def display_banner(filepattern, encoding=None, vertical_padding=0):
 
     # show art
     art_generator = showart(filepattern, encoding=encoding,
-                            auto_mode=False, center=True)
+                            center=True)
     line_no = 0
     for line_no, txt in enumerate(art_generator):
         echo(txt)
