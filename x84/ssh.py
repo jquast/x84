@@ -56,6 +56,18 @@ class SshClient(BaseClient):
         self.active = False
         if self.channel is not None:
             try:
+                # """ only close the pipe when the user explicitly closes the
+                # channel. otherwise they will get unpleasant surprises. (and
+                # do it before checking self.closed, since the remote host may
+                # have already closed the connection.)
+                self.channel.close()
+            except Exception as err:
+                self.log.debug('{self.addrport}: channel close '
+                               '{self.__class__.__name__}: {err}'
+                               .format(self=self, err=err))
+            try:
+                # If ``how`` is 2, further sends and receives are disallowed.
+                # This closes the stream in one or both directions.
                 self.channel.shutdown(how=2)
             except EOFError:
                 pass
