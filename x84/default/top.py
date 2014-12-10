@@ -239,6 +239,39 @@ def do_intro_art(term, session):
             dirty = False
 
 
+def describe_ssh_availability(term, session):
+    from x84.bbs.ini import CFG
+    from x84.bbs import get_ini
+    if session.kind == 'ssh':
+        # what a good citizen!
+        return
+
+    elif not CFG.has_section('ssh'):
+        # ssh not enabled
+        return
+
+    ssh_port = get_ini(section='ssh', key='port')
+    description = (
+        "    {term.red}You are using {session.kind}, but ssh is available "
+        "on port {ssh_port} of this server.  If you want a secure connection "
+        "with shorter latency, we recommend instead to use ssh!  You may "
+        "even use an ssh key, which you can configure from your user "
+        "profile.  Remember: {big_msg}!"
+        .format(term=term,
+                session=session,
+                ssh_port=ssh_port,
+                big_msg=term.bold_blue("Big Brother is Watching You"))
+    )
+
+    echo(u'\r\n\r\n')
+    for txt in term.wrap(description, width=min(80, term.width)):
+        echo(term.move_x(max(0, (term.width // 2) - 40)))
+        echo(term.red(txt.rstrip() + '\r\n'))
+    echo(u'\r\n\r\n')
+    echo(term.center(term.bold_black('Press any key to continue: ')).rstrip())
+    term.inkey()
+
+
 def main(handle=None):
     """ Main procedure. """
     # pylint: disable=R0914,R0912,R0915
@@ -262,11 +295,13 @@ def main(handle=None):
 
     echo(term.move_down() * 3)
 
-    # only display news if the account has not
-    # yet read the news since last update.
-    gosub('news', quick=True)
-
     if not quick:
+        describe_ssh_availability(term, session)
+
+        # only display news if the account has not
+        # yet read the news since last update.
+        gosub('news', quick=True)
+
         # display last 10 callers, if any
         gosub('lc')
 

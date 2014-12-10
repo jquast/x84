@@ -253,15 +253,13 @@ def client_recv(servers, ready_fds, log):
     from x84.bbs.exception import Disconnected
     from x84.terminal import kill_session
     for server in servers:
-        for client_fd, client in server.clients.items():
-            if client_fd in ready_fds:
-#            if client.recv_ready():
-                try:
-                    client.socket_recv()
-                except Disconnected as err:
-                    log.debug('{client.addrport}: disconnect on recv: {err}'
-                              .format(client=client, err=err))
-                    kill_session(client, 'disconnected: {err}'.format(err=err))
+        for client in server.clients_ready(ready_fds):
+            try:
+                client.socket_recv()
+            except Disconnected as err:
+                log.debug('{client.addrport}: disconnect on recv: {err}'
+                          .format(client=client, err=err))
+                kill_session(client, 'disconnected: {err}'.format(err=err))
 
 
 def client_send(terminals, log):

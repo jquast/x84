@@ -1,6 +1,5 @@
 """ common interface module for x/84, https://github.com/jquast/x84 """
 from __future__ import division
-import math
 
 from x84.bbs import echo, showart
 from x84.bbs import getterminal, LineEditor
@@ -140,6 +139,7 @@ def prompt_input(term, key, content=u'',
     echo(u'{sep} {key:<8}: '.format(sep=sep_ok, key=key))
     return LineEditor(colors=colors, width=width).read() or u''
 
+
 def coerce_terminal_encoding(term, encoding):
     # attempt to coerce encoding of terminal to match session.
     # NOTE: duplicated in top.py
@@ -156,3 +156,16 @@ def coerce_terminal_encoding(term, encoding):
     }.get(encoding, u''))
     # remove possible artifacts, at least, %G may print a raw G
     echo(term.move_x(0) + term.clear_eol)
+
+
+def show_description(description, color='white', width=80):
+    term = getterminal()
+    wide = min(width, term.width)
+    line_no = 0
+    for line_no, txt in enumerate(term.wrap(description, width=wide)):
+        echo(term.move_x(max(0, (term.width // 2) - (width // 2))))
+        if color is not None:
+            echo(getattr(term, color))
+        echo(txt.rstrip())
+        echo(u'\r\n')
+    return line_no

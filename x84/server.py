@@ -64,3 +64,20 @@ class BaseServer(object):
         Returns a list of client file descriptors.
         """
         return [client.fileno() for client in self.clients.values()]
+
+    def clients_ready(self, ready_fds=None):
+        """
+        Return a list of clients with data ready to be receive.
+
+        :type ready_fds: list
+        :param ready_fds: file descriptors already known to be ready
+        """
+        if ready_fds is None:
+            # given no file descriptors, we must iterate them all by hand.
+            return [client for client in self.clients.values()
+                    if client.recv_ready()]
+
+        # given a list of ready_fds pairs, we return only clients with
+        # matching file descriptors.
+        return [client for client in self.clients.values()
+                if client.fileno() in ready_fds]

@@ -355,6 +355,7 @@ class SshSessionServer(paramiko.ServerInterface):
         self.client.env[name] = value
         return True
 
+
 class SshServer(BaseServer):
     """
     Poll sockets for new connections and sending/receiving data from clients.
@@ -435,3 +436,11 @@ class SshServer(BaseServer):
         return [_client.channel.fileno() for _client in self.clients.values()
                 if _client.channel is not None]
 
+    def clients_ready(self, ready_fds=None):
+        """
+        Return a list of clients with data ready to be receive.
+
+        The ``ready_fds`` parameter is ignored by the SSH Server.
+        """
+        return [client for client in self.clients.values()
+                if client.recv_ready()]
