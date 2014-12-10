@@ -16,7 +16,7 @@ def refresh():
     artfile = 'main*.asc'
 
     # tells syncterm to change to topaz, then delete the output to avoid the code to be shown in other clients
-    echo(syncterm_setfont('topaz')+u'\r'+term.clear_eol)
+    echo(syncterm_setfont('topaz')+term.move_x(0) + term.clear_eol)
 
     # displays a centered main menu header in topaz encoding for utf8
     for line in showart(os.path.join(os.path.dirname(__file__),'art',artfile),'topaz'):
@@ -136,6 +136,7 @@ def main():
         elif inp == u'#':
             gosub('lord')
         elif inp == u't':
+            echo(syncterm_setfont('cp437')+term.move_x(0) + term.clear_eol) # switch into cp437 for syncterm
             gosub('tetris')
         elif inp == u'c':
             gosub('chat')
