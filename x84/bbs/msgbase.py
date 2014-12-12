@@ -190,7 +190,8 @@ class Msg(object):
                 with db_msg:
                     db_msg['%d' % (self.idx)] = self
 
-        if send_net and new and CFG.has_option('msg', 'network_tags'):
+        if send_net and new and (CFG.has_option('msg', 'network_tags')
+                or CFG.has_option('msg', 'server_tags')):
             self.queue_for_network()
 
         log.info(
