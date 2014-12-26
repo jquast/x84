@@ -66,6 +66,9 @@ browser = {
     'flagged_files': set(),
 }
 
+# file description database
+DIZ_DB = 'filediz'
+
 
 def main():
     """
@@ -76,13 +79,16 @@ def main():
     config section of this file
     """
 
-    from x84.bbs import echo, getterminal, Lightbar, getch, getsession
+    from x84.bbs import echo, getterminal, Lightbar, getch, getsession, DBProxy
     from x84.bbs.ini import CFG
 
     session, term = getsession(), getterminal()
     session.activity = u'Browsing files'
+
     root = CFG.get('sftp', 'root')
     uploads_dir = os.path.join(root, '__uploads__')
+    # db for cached FILE_ID.DIZ descriptions
+    descriptions = DBProxy(DIZ_DB)
     # setup lightbar
     lb_colors ={
         'border': term.blue,
@@ -103,15 +109,15 @@ def main():
     def download_files(protocol='xmodem1k'):
         """ download flagged files """
 
-        from x84.bbs import send_modem, recv_modem
+        from x84.bbs import send_modem
         if not len(browser['flagged_files']):
             return False
         echo(term.clear)
         flagged = browser['flagged_files'].copy()
         for f in flagged:
             echo(term.bold_green(
-                u'Start your {} receiving program '
-                u'to begin transferring {}...\r\n'
+                u'Start your {0} receiving program '
+                u'to begin transferring {0}...\r\n'
                 .format(protocol, f[f.rfind(os.path.sep) + 1:])))
             echo(u'Press ^X twice to cancel\r\n')
             dl = open(f, 'r')
@@ -119,15 +125,39 @@ def main():
                 echo(term.bold_red(u'Transfer failed!\r\n'))
             else:
                 browser['flagged_files'].remove(f)
-                session.user['flaggedfiles']= browser['flagged_files']
+                session.user['flaggedfiles'] = browser['flagged_files']
         echo(term.bold(u'Transfer(s) finished.\r\n'))
         term.inkey()
 
 
-    def upload_files():
+    def upload_files(protocol='xmodem1k'):
         """ upload files """
 
-        pass
+        from x84.bbs import recv_modem, LineEditor
+        echo(term.clear)
+        while True:
+            echo(u'Filename (empty to quit):\r\n')
+            led = LineEditor(width=term.width - 1)
+            led.refresh()
+            inp = led.read()
+            led = None
+            if inp:
+                for illegal in (os.path.sep, u'..', u'~',):
+                    if illegal in inp:
+                        echo(term.bold_red(u'\r\nIllegal filename.\r\n'))
+                        term.inkey()
+                        return
+                echo(term.bold(u'\r\nBegin your {0} sending program now.\r\n'
+                    .format(protocol)))
+                upload = open(os.path.join(
+                    uploads_dir, inp), 'wb')
+                if not recv_modem(upload, protocol):
+                    echo(term.bold_red(u'Upload failed!\r\n'))
+                else:
+                    echo(term.bold_green(u'Transfer succeeded.\r\n'))
+                term.inkey()
+            else:
+                return
 
 
     def draw_interface():
@@ -305,31 +335,30 @@ def main():
                 else:
                     echo(lb.refresh_row(lb.vitem_idx))
                     lb.move_down()
-            # 'untag all' pressed; only works in flagged files pseudo-folder
-            elif inp in (u'-',) and \
-                    is_flagged_dir(directory):
+            # 'untag all' pressed
+            elif inp in (u'-',):
                 session.user['flaggedfiles'] = browser['flagged_files'] = set()
-                lb_files = flagged_listdir()
-                lb.update(lb_files)
+                reload_dir()
                 echo(lb.refresh())
             elif inp in (u'd',) and len(browser['flagged_files']):
                 download_files()
-                lb_files = set()
-                if is_flagged_dir(directory):
-                    lb_files = flagged_listdir()
-                else:
-                    lb_files = regular_listdir(directory, sub)
-                lb.update(lb_files)
-                echo(u''.join((term.clear, lb.border(), lb.refresh())))
+                reload_dir()
+                draw_interface()
+            elif inp in (u'u',):
+                upload_files()
+                reload_dir()
+                draw_interface()
             clear_diz()
             filename, _ = lb.selection
             # figure out file extension
             fullname = os.path.join(directory, filename)
+            relativename = fullname[len(root):]
             isdir = fullname[-1:] == os.path.sep
             ext = None
             rfind = filename.rfind('.')
             if rfind > -1:
                 ext = filename[rfind + 1:].lower()
+            save_diz = True
             # 'select' key pressed
             if lb.selected or inp in (term.KEY_LEFT, term.KEY_RIGHT,):
                 # term.KEY_LEFT backs up
@@ -348,6 +377,12 @@ def main():
                     lb.vitem_shift = shift
                     lb.vitem_idx = idx
                     echo(lb.refresh())
+            if relativename in descriptions:
+                save_diz = False
+                diz = descriptions[relativename]
+                if ext in colly_extensions and session.encoding == 'utf8':
+                    diz = [line.encode('cp437').decode(colly_decoding)
+                        for line in diz]
             # is (supported) archive
             elif ext in diz_extractors:
                 diz = diz_extractors[ext](fullname).split('\n')
@@ -367,21 +402,40 @@ def main():
                             diz = colly[:pos].decode('cp437_art').split('\n')
             # is pseudo-folder for flagged files
             elif is_flagged_dir(filename):
+                save_diz = False
                 diz = [
-                    u'Your flagged files',
+                    term.bold_blue_underline(u'Instructions'),
                     u' ',
-                    u'Press the minus (-) key while in this folder to '
-                        u'clear your list',
+                    u'{0} Un/flag file for download'
+                        .format(term.reverse(u'(SPACE)')),
+                    u'{0}  Back up'
+                        .format(term.reverse(u'(LEFT)')),
+                    term.reverse(u'(RIGHT, ENTER)'),
+                    u'        Browse subdirectory',
+                    u'{0}     Download flagged file(s)'
+                        .format(term.reverse(u'(D)')),
+                    u'{0}     Unflag all files'
+                        .format(term.reverse(u'(-)')),
+                    u'{0}     Upload file(s)'
+                        .format(term.reverse(u'(U)')),
+                    u'{0}     Quit'
+                        .format(term.reverse(u'(Q)')),
                     u' ',
-                    u'Press the spacebar while browsing to flag/unflag files '
-                        u'for download',
+                    u'Files are also available via {0}'
+                        .format(term.bold(u'SFTP')),
                 ]
             # is directory; don't give it a description
             elif isdir:
+                save_diz = False
                 diz = []
             # is normal file
             else:
+                save_diz = False
                 diz = [u'No description']
+            # write description to diz db?
+            if not uploads_dir.find(directory) and save_diz:
+                with descriptions:
+                    descriptions[relativename] = diz
             browser['last_diz_len'] = len(diz)
             describe_file(diz, directory, filename, isdir)
             echo(lb.refresh_quick())
