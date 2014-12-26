@@ -22,6 +22,7 @@ from x84.bbs.userbase import (
 from x84.terminal import spawn_client_session, on_naws
 from x84.client import BaseClient, BaseConnect
 from x84.server import BaseServer
+from x84.sftp import X84SFTPServer
 
 # 3rd-party
 import paramiko
@@ -75,7 +76,7 @@ class SshClient(BaseClient):
                 self.log.debug('{self.addrport}: channel shutdown '
                                '{self.__class__.__name__}'.format(self=self))
 
-        if self.transport.is_active():
+        if self.transport is not None and self.transport.is_active():
             self.transport.close()
             self.log.debug('{self.addrport}: transport shutdown '
                            '{self.__class__.__name__}'.format(self=self))
@@ -141,7 +142,7 @@ class SshClient(BaseClient):
         """
         Returns True if data is awaiting on the ssh channel.
         """
-        if self.channel is None:
+        if self.channel is None or self.kind == 'sftp':
             # channel has not yet been negotiated
             return False
         return self.channel.recv_ready()
@@ -199,7 +200,8 @@ class ConnectSsh(BaseConnect):
             ssh_session = SshSessionServer(client=self.client)
 
             def detected():
-                return ssh_session.shell_requested.isSet()
+                return (ssh_session.shell_requested.isSet() or
+                        ssh_session.sftp_requested.isSet())
 
             self.client.transport.start_server(server=ssh_session)
 
@@ -219,18 +221,32 @@ class ConnectSsh(BaseConnect):
                 self.client.deactivate()
                 return
 
-            self.log.debug('{client.addrport}: waiting for shell request'
-                           .format(client=self.client))
+            self.client.transport.set_subsystem_handler(
+                'sftp',
+                paramiko.SFTPServer,
+                X84SFTPServer,
+                session=ssh_session)
 
+            first_log = False
             while not detected() and self._timeleft(st_time):
+                if not first_log:
+                    self.log.debug('{client.addrport}: waiting for '
+                                   'shell or subsystem request.'
+                                   .format(client=self.client))
+                    first_log = True
+
                 if not self.client.is_active():
+                    self.log.debug('{client.addrport}: transport closed '
+                                   'while waiting for shell or subsystem '
+                                   'request.'
+                                   .format(client=self.client))
                     self.client.deactivate()
                     return
                 time.sleep(self.TIME_POLL)
 
             if detected():
                 matrix_kwargs = {attr: getattr(ssh_session, attr)
-                                 for attr in ('anonymous', 'new', 'username')}
+                                 for attr in ('anonymous', 'new', 'username',)}
                 return spawn_client_session(client=self.client,
                                             matrix_kwargs=matrix_kwargs)
 
@@ -263,6 +279,7 @@ class ConnectSsh(BaseConnect):
 class SshSessionServer(paramiko.ServerInterface):
     def __init__(self, client):
         self.shell_requested = threading.Event()
+        self.sftp_requested = threading.Event()
         self.log = logging.getLogger(__name__)
         self.client = client
 
@@ -270,9 +287,11 @@ class SshSessionServer(paramiko.ServerInterface):
         self.new = False
         self.anonymous = False
         self.username = None
+        self.sftp = False
 
     def check_channel_request(self, kind, chanid):
         if kind == 'session':
+            self.log.debug('channel request granted, kind={0}'.format(kind))
             return paramiko.OPEN_SUCCEEDED
         self.log.debug('channel request denied, kind={0}'.format(kind))
         return paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
@@ -346,8 +365,19 @@ class SshSessionServer(paramiko.ServerInterface):
         return 'password,publickey'
 
     def check_channel_shell_request(self, channel):
+        self.log.debug('ssh channel granted.')
         self.shell_requested.set()
         return True
+
+    def check_channel_subsystem_request(self, channel, name):
+        if name == 'sftp':
+            self.log.debug('sftp subsystem granted.')
+            self.client.kind = 'sftp'
+            self.sftp_requested.set()
+            self.sftp = True
+
+        return (super(SshSessionServer, self)
+                .check_channel_subsystem_request(channel, name))
 
     def check_channel_pty_request(self, channel, term, width, height, *_):
         self.client.env['TERM'] = term
@@ -409,7 +439,7 @@ class SshServer(BaseServer):
         # bind
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket.setsockopt(
-            socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
         try:
             self.server_socket.bind((self.address, self.port))
             self.server_socket.listen(self.LISTEN_BACKLOG)

@@ -169,3 +169,24 @@ def show_description(description, color='white', width=80):
         echo(txt.rstrip())
         echo(u'\r\n')
     return line_no
+
+
+def filesize(filename):
+    """ display a file's size in human-readable format """
+
+    from os import stat
+    stat = stat(filename)
+    filesize = None
+    # file is > 400 megabytes; display in gigabytes
+    if stat.st_size > 1024000 * 400:
+        filesize = '%.2fG' % (stat.st_size / 1024000000)
+    # file is > 400 kilobytes; display in megabytes
+    if stat.st_size > 1024 * 400:
+        filesize = '%.2fM' % (stat.st_size / 1024000)
+    # file is at least 1 kilobyte; display in kilobytes
+    elif stat.st_size >= 1024:
+        filesize = '%.2fK' % (stat.st_size / 1024)
+    # display in bytes
+    else:
+        filesize = '%dB' % stat.st_size
+    return filesize
