@@ -117,7 +117,7 @@ def main():
         for f in flagged:
             echo(term.bold_green(
                 u'Start your {0} receiving program '
-                u'to begin transferring {0}...\r\n'
+                u'to begin transferring {1}...\r\n'
                 .format(protocol, f[f.rfind(os.path.sep) + 1:])))
             echo(u'Press ^X twice to cancel\r\n')
             dl = open(f, 'r')
