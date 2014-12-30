@@ -94,7 +94,8 @@ def main():
     """ Main procedure. """
     # pylint: disable=R0912
     #         Too many branches
-    from x84.bbs import getsession, getterminal, getch, goto, gosub, ini, LineEditor, echo
+    from x84.bbs import getsession, getterminal, getch, goto, gosub, ini
+    from x84.bbs import LineEditor, echo, syncterm_setfont
     from common import waitprompt
     from ConfigParser import Error as ConfigError
     session = getsession()
