@@ -15,24 +15,24 @@ activate the environment at any time.
 
 1. Install virtualenvwrapper_::
 
-   pip install virtualenvwrapper
+      pip install virtualenvwrapper
 
 2. Load virtualenvwrapper_::
 
-   . `which virtualenvwrapper.sh`
+      . `which virtualenvwrapper.sh`
 
 3. And add the following to your ``~/.profile`` to make this automatic for all
   login shells::
 
-   [ ! -z `which virtualenvwrapper.sh` ] && . `which virtualenvwrapper.sh`
+      [ ! -z `which virtualenvwrapper.sh` ] && . `which virtualenvwrapper.sh`
 
 4. Finally, make a virtualenv (named 'x84') using python version 2.7::
 
-   mkvirtualenv -p `which python2.7` x84
+      mkvirtualenv -p `which python2.7` x84
 
 5. Anytime you want to develop x/84, use the command::
 
-   workon x84
+      workon x84
 
 There are techniques to automatically load the x84 virtualenv when
 you change to the project's folder. See `virtualenv tips and tricks`_
@@ -63,81 +63,6 @@ Starting x/84
 2. And Launch x/84 server::
 
    x84
-
-
-Engine and Internals
-====================
-
-x/84 is designed in three distinct parts: The Engine_, Userland_, and
-the default 'bbs board'.
-
-Userland
-````````
-
-The following are helper modules used by the internal API but are not
-published as such. Their use or documentation isn't considered very
-useful to a general audience.
-
-log.py
-------
-
-.. automodule:: x84.bbs.log
-  :members:
-
-ipc.py
-------
-
-.. automodule:: x84.bbs.ipc
-  :members:
-
-ini.py
-------
-
-.. automodule:: x84.bbs.ini
-  :members:
-
-exception.py
-------------
-
-.. automodule:: x84.bbs.exception
-   :members:
-
-Engine
-``````
-
-The engine launches the configured servers and begins the subprocess
-for connecting sessions. Its internal structure should not be of concern
-for most customizations, but contributions welcome!
-
-engine.py
----------
-
-.. automodule:: x84.engine
-   :members:
-
-terminal.py
------------
-
-.. automodule:: x84.terminal
-   :members:
-
-telnet.py
----------
-
-.. automodule:: x84.telnet
-   :members:
-
-ssh.py
----------
-
-.. automodule:: x84.telnet
-   :members:
-
-db.py
------
-
-.. automodule:: x84.db
-   :members:
 
 .. _virtualenvwrapper: https://pypi.python.org/pypi/virtualenvwrapper
 .. _`virtualenv tips and tricks`: http://virtualenvwrapper.readthedocs.org/en/latest/tips.html#automatically-run-workon-when-entering-a-directory

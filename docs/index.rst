@@ -17,8 +17,9 @@ Contents:
    install
    clients
    port23
-   developers
    others
+   developers
+   internals
    handbook/index
    api/index
 
