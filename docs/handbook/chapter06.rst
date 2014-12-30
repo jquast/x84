@@ -262,18 +262,6 @@ negotiation.
 
 .. autofunction:: x84.default.tetris.main
 
-ttyplay.py
-----------
-
-The ``default.ini`` file option, *exe*, of section *[ttyplay]*, defines path to
-external door to be used to playback ttyplay_ formatted files.
-
-If no arguments are specified, the sysop is provided a lightbar interface to
-display all recorded tty sessions for playback.
-
-.. automodule:: x84.default.ttyplay
-   :members:
-
 writemsg.py
 -----------
 
@@ -282,13 +270,3 @@ to construct and send a message to the messagebase.
 
 .. automodule:: x84.default.writemsg
    :members:
-
-.. _ttyplay: http://0xcc.net/ttyrec/index.html.en
-
-
-What's next?
-============
-
-In `chapter 7`_ you can start building your own mods!
-
-.. _chapter 7: chapter07.html
