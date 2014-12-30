@@ -1,6 +1,21 @@
-====
-x/84
-====
+.. image:: https://landscape.io/github/jquast/x84/master/landscape.svg
+    :target: https://landscape.io/github/jquast/x84/master
+    :alt: Code Health
+
+.. image:: https://img.shields.io/pypi/v/x84.svg
+    :alt: Latest Version
+    :target: https://pypi.python.org/pypi/x84
+
+.. image:: https://pypip.in/license/x84/badge.svg
+    :alt: License
+    :target: http://opensource.org/licenses/MIT
+
+.. image:: https://img.shields.io/pypi/dm/x84.svg
+    :alt: Downloads
+
+============
+Introduction
+============
 
 **An experimental python Telnet and Ssh server framework**
 
