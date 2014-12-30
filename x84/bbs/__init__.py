@@ -271,7 +271,7 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
 
 
 def showcp437(filepattern):
-    warnings.warn('showcp437() is deprecated, use show_art()')
+    warnings.warn('showcp437() is deprecated, use showart()')
     return showart(filepattern, 'cp437')
 
 

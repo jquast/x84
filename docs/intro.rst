@@ -1,23 +1,87 @@
-Introduction to x/84
-====================
+====
+x/84
+====
 
-**A python Telnet server for modern UTF-8 and classic network virtual terminals**.
+**An experimental python Telnet and Ssh server framework**
 
-x/84 supplies a scripting engine for developing **MUD** or **BBS** engines.  Technologies used in x/84 are derived from miniboa_ (Apache 2.0 Licensed) for telnet, blessed_ (MIT Licensed) for terminal capabilities, and sqlitedict_ (Public Domain) for persistent data. Recordings of sessions are stored in ttyplay_-compatible format files.
+The primary purpose of x/84 is to provide a server framework for building environments that emulate the feeling of an era that predates the world wide web.  It may be used for developing a classic bulletin-board system (of which one is provided as the 'default' scripting layer), a MUD, or a text-based game server such as done by dgamelaunch.  You may access the "default board" provided by x/84 at telnet host 1984.ws::
 
-Asynchronous inter-process communication between sessions is provided through an event queuing framework, for scripting of 'shared' experiences. Several examples of these are provided, such as *chat.py*. The default board provides several activities.
+    telnet 1984.ws
 
-A Posix operating system is required. Alternative implementations of python may work.  Portability is as equal to python, and has been tested on Raspberry Pi, Android, Mac, OpenBSD, Solaris, etc.
+You might think of x/84 as the "rails of text-mode servers".
+
+Technologies
+------------
+
+x/84 supplies a scripting_ engine for developing character-at a time telnet services, such as **MUD** or **BBS** systems.  Technologies used in x/84 are derived from miniboa_ (Apache 2.0 Licensed) for telnet, blessed_ (MIT Licensed) for terminal capabilities, sqlitedict_ (Public Domain) for persistent data, paramiko_ for ssh and sftp, web.py_ for http service.
+
+Asynchronous inter-process communication between sessions is provided through an event queuing framework, for scripting of 'shared' experiences. Several examples of these are provided, such as *chat.py*. The default board provides several demonstrating activities.
+
+All terminal types supported by curses (the termlib and terminfo) databases are allowed, with a "pythonic" framework through blessed_.
+
+Portability is as equal to python, and has been tested on Raspberry Pi, Android, Mac, OpenBSD, Solaris, etc.
 
 **ANSI Art**, such as found on ACiD_ *dark domains* DVD, is translated for reasonably accurate reproductions for both UTF-8 and IBM CP437 terminals. This allows classic DOS art to be used on modern terminals such as Terminal.app, or classic emulating terminals such as syncterm_. Artwork with Sauce_ records are also supported.
 
-Telnet to host address 1984.ws_ to preview the default board.
+See clients_ for a list of compatible clients.
+
+Quickstart
+==========
+
+1. Install python_ 2.7
+
+2. Install pip_
+
+3. Install x/84::
+
+     pip install x84
+
+Getting Started
+===============
+
+1. Launch the *x84.engine* python module::
+
+     x84
+
+   If the ``*x84`` helper script fails, try using the
+   python interpreter used by ``pip``::
+
+     python2.7 -m x84.engine
+
+
+2. Telnet to 127.0.0.1 6023, Assuming a *bsd telnet* client::
+
+     telnet localhost 6023
+
+3. All data files are written to ``~/.x84/``.  To create a custom board,
+   you might copy the ``default`` folder of the python module to your local
+   path, and point the ``scriptpath`` variable of ``~/.x84/default.ini``
+   to point to that folder.  Simply edit and save changes, and re-login to
+   see them.  Adjust the ``show_traceback`` variable to display any errors
+   directly to your telnet or ssh client.
+
+
+Further documentation
+=====================
+
+See Documentation_ for API and general tutorials.  The special *Terminal* interface is documented in blessed_.
+
+Issue Tracking & Development
+============================
+
+See the project on github_ for source tree and issue tracking.
 
 .. _miniboa: https://code.google.com/p/miniboa/
-.. _blessed: http://pypi.python.org/pypi/blessed
 .. _sqlitedict: http://pypi.python.org/pypi/sqlitedict
+.. _blessed: http://pypi.python.org/pypi/blessed
 .. _ttyplay: http://0xcc.net/ttyrec/index.html.en
 .. _ACiD: https://en.wikipedia.org/wiki/ACiD_Productions
-.. _syncterm: http://syncterm.bbsdev.net/
 .. _Sauce: https://github.com/tehmaze/sauce
-.. _1984.ws: telnet://1984.ws
+.. _syncterm: http://syncterm.bbsdev.net/
+.. _python: https://www.python.org/
+.. _pip: http://guide.python-distribute.org/installation.html#installing-pip
+.. _Documentation: http://x84.readthedocs.org/
+.. _clients: https://x84.readthedocs.org/en/latest/clients.html
+.. _scripting: https://x84.readthedocs.org/en/latest/bbs_api.html
+.. _github: https://github.com/jquast/x84
+.. _web.py: http://webpy.org/

@@ -8,14 +8,14 @@ The ``default.ini`` file option, *scriptpath*, of section *[system]*, defines fo
 
 This folder may be changed to a folder of your own chosing, and populated with your own scripts. A good start would be to copy the default/ folder, or even perform a checkout from github.
 
-By default, matrix.py_ is called on-connect, set by the ``default.ini`` file option *script* of section *[matrix]*. This script calls out to nua.py_ for new account creation, top.py_ when authenticated, and main.py_ for a main menu.
+By default, matrix.py_ is called on-connect, with variations for sftp and ssh as matrix_sftp.py and matrix_ssh.py set by the ``default.ini`` file option *script* of section *[matrix]*. This script calls out to nua.py_ for new account creation, top.py_ when authenticated, and main.py_ for a main menu.
 
 main(), gosub, and goto
 -----------------------
 
-All scripts to be called by ``goto`` or ``gosub`` must suply a ``main`` function. Keyword arguments are not allowed.
+All scripts to be called by ``goto`` or ``gosub`` must supply a ``main`` function.  Keyword and positional arguments are allowed.
 
-If a script fails due to import or runtime error, the exception is caught, optionally displayed, and the previous script is re-started.
+If a script fails due to import or runtime error, the exception is caught, (optionally displayed by ``default.ini`` option ``show_traceback``), and the previous script is re-started.
 
 If a script returns, and was called by ``gosub``, the return value is returned by ``gosub``.
 
@@ -108,19 +108,10 @@ Displays System Information, about the BBS system, and its authors.
 .. automodule:: x84.default.si
    :members:
 
-bbslist.py
-----------
-A bbs listing utility, to allow users to post, vote on, and leave comments for other bbs systems. Systems may be directly connected via gateway to other systems by a gosub routine to telnet.py_.
-
-A list of bbs's from bbs-scene_.org's API is retrieved if configured. Create a new section, *[bbs-scene]* in ``defaults.ini``, with two options, *user* and *pass*.
-
-.. automodule:: x84.default.bbslist
-   :members:
-
 weather.py
 ----------
 
-An example of using the various user interface elements to display the local weather report. Currently only reads in Fahrenheit and Celcius. Not all xml values are displayed.
+An example of using the various user interface elements to display the local weather report in an artful fashion.
 
 .. automodule:: x84.default.weather
    :members:
@@ -131,7 +122,7 @@ An example of using the various user interface elements to display the local wea
 chat.py
 -------
 
-This script demonstrates use of global broadcasts by creating a chat interface over the intra-process event system. It is anagolous to irc, and provides similar commands, */join*, */act*, */whois*, etc.
+This script demonstrates use of global broadcasts by creating a chat interface over the intra-process event system.
 
 .. automodule:: x84.default.chat
    :members:
@@ -139,7 +130,7 @@ This script demonstrates use of global broadcasts by creating a chat interface o
 debug.py
 --------
 
-This script demonstrates the ability for a sysop to run maitenance scripts or to test new code. Provided is an example of importing user records from another bbs system.
+This script demonstrates the ability for a sysop to run maintenance scripts or to test new code.
 
 .. automodule:: x84.default.debug
    :members:
@@ -161,7 +152,7 @@ By using various event subsystems, global "are you there?" pings are sent to all
 
 Each time an activity change is discovered, the display is refreshed. This provides a "waiting for callers" screen for sysops or users, with a scroll buffer indicating the previous days activities.
 
-Gosub routines are provided to page other users for chat.py_ and writemsg.py_ to online recipients. Sysops have additional functionality to disconnect sessions, or playback and watch current session recordings using ttyplay.py_.
+Gosub routines are provided to page other users for chat.py_ and writemsg.py_ to online recipients.
 
 .. automodule:: x84.default.online
    :members:
@@ -194,7 +185,7 @@ A message scanning and browsing interface. Analogous to mutt.
 telnet.py
 ---------
 
-A telnet client within the bbs. Used by bbslist.py_.
+A telnet client within the bbs, may be used to gateway to other hosts.
 
 .. automodule:: x84.default.telnet
    :members:
@@ -206,16 +197,6 @@ A terminal game of tetris with ANSI art blocks by jojo. High scores are persiste
 
 .. autofunction:: x84.default.tetris.main
 
-ttyplay.py
-----------
-
-The ``default.ini`` file option, *exe*, of section *[ttyplay]*, defines path to external door to be used to playback ttyplay_ formatted files.
-
-If no arguments are specified, the sysop is provided a lightbar interface to display all recorded tty sessions for playback.
-
-.. automodule:: x84.default.ttyplay
-   :members:
-
 writemsg.py
 -----------
 
@@ -223,5 +204,3 @@ Provides an interface to popular a Msg record, and gosub the editor.py_ script t
 
 .. automodule:: x84.default.writemsg
    :members:
-
-.. _ttyplay: http://0xcc.net/ttyrec/index.html.en

@@ -1,7 +1,9 @@
 Binding to port 23
 ==================
 
-X/84 does not require privileged access, and its basic configuration binds to port 6023. Multi-user systems do not typically allow non-root users to bind to port 23. Alternatively, you can always use port forwarding on a NAT firewall.
+x/84 does not require privileged access, and its basic configuration binds to port 6023 for telnet and 6022 for ssh. Multi-user systems do not typically allow non-root users to bind to port 23 or 22.  Below are various techniques for allowing it.
+
+Alternatively, you can always use port forwarding on a NAT firewall.
 
 Linux
 -----
@@ -27,7 +29,7 @@ redirection using pf(4)::
 Other
 -----
 
-Usingirect socat_, listen on 192.168.1.11 and for each connection, fork as 'nobody', and pipe the connection to 127.0.0.1 port 6023::
+Using socat_, listen on 192.168.1.11 and for each connection, fork as 'nobody', and pipe the connection to 127.0.0.1 port 6023::
 
   sudo socat -d -d -lmlocal2 TCP4-LISTEN:23,bind=192.168.1.11,su=nobody,fork,reuseaddr TCP4:127.0.0.1:6023
 
