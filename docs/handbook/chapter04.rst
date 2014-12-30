@@ -2,7 +2,7 @@
 Chapter 4: the kernel
 =====================
 
-x/84 is configured as a seperate 'kernel' and 'userland' scripting path to be
+x/84 is configured as a separate 'kernel' and 'userland' scripting path to be
 optionally located at two different filepaths.
 
 Any changes to engine internals bump release majors. Scripts are encouraged to
@@ -27,10 +27,6 @@ Terminal
 
 :API reference: `x84.bbs.terminal <../api/x84/bbs/terminal.html>`_
 
-All basic input and output operations from and to the client are controller
-over peudo TTY's (or PTY). It is used for cursor movement, keyboard input,
-graphics rendition and lots more.
-
 Session
 =======
 
@@ -38,10 +34,3 @@ Session
 
 The session holds information about the current user, its terminal
 capabilities and environment settings.
-
-What's next?
-------------
-
-In `chapter 5`_ we will be talking about userland.
-
-.. _chapter 5: chapter05.html

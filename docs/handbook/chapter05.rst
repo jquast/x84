@@ -32,12 +32,6 @@ Log
 :API reference: `x84.bbs.log <../api/x84/bbs/log.html>`_
 
 
-WCWidth
-=======
-
-:API reference: `x84.bbs.wcwidth <../api/x84/bbs/wcwidth.html>`_
-
-
 What's next?
 ============
 
