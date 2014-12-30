@@ -309,9 +309,9 @@ def init_log_ini():
 
     # squelch xmodem debug, too verbose
     cfg_log.add_section('logger_xmodem')
-    cfg_log.set('logger_debug', 'level', 'INFO')
-    cfg_log.set('logger_debug', 'formatter', 'default')
-    cfg_log.set('logger_debug', 'handlers', 'console, rotate_daily')
-    cfg_log.set('logger_debug', 'qualname', 'xmodem')
+    cfg_log.set('logger_xmodem', 'level', 'INFO')
+    cfg_log.set('logger_xmodem', 'formatter', 'default')
+    cfg_log.set('logger_xmodem', 'handlers', 'console, rotate_daily')
+    cfg_log.set('logger_xmodem', 'qualname', 'xmodem')
 
     return cfg_log
