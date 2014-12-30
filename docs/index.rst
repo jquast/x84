@@ -19,9 +19,9 @@ Contents:
    port23
    others
    developers
-   internals
    handbook/index
    api/index
+   internals
 
 Support
 =======
