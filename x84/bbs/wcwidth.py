@@ -181,21 +181,21 @@ def wcwidth(char):
 
     return 1 + \
         (ucs >= 0x1100 and
-        (ucs <= 0x115f or                  # Hangul Jamo init. consonants
-         ucs == 0x2329 or ucs == 0x232a or
-        (ucs >= 0x2e80 and ucs <= 0xa4cf and
-         ucs != 0x303f) or                # CJK ... Yi
-        (ucs >= 0xac00 and ucs <= 0xd7a3) or  # Hangul Syllables
-        (ucs >= 0xf900 and ucs <= 0xfaff) or  # CJK Compatibility Ideographs *
-        (ucs >= 0xfe30 and ucs <= 0xfe6f) or  # CJK Compatibility Forms
-        (ucs >= 0xff00 and ucs <= 0xff60) or  # Fullwidth Forms
-        (ucs >= 0xffe0 and ucs <= 0xffe6) or
-        (ucs >= 0x20000 and ucs <= 0x2fffd) or
-        (ucs >= 0x30000 and ucs <= 0x3fffd)))
+         (ucs <= 0x115f or                  # Hangul Jamo init. consonants
+          ucs == 0x2329 or ucs == 0x232a or
+          (ucs >= 0x2e80 and ucs <= 0xa4cf and
+           ucs != 0x303f) or                # CJK ... Yi
+          (ucs >= 0xac00 and ucs <= 0xd7a3) or  # Hangul Syllables
+          # CJK Compatibility Ideographs *
+          (ucs >= 0xf900 and ucs <= 0xfaff) or
+          (ucs >= 0xfe30 and ucs <= 0xfe6f) or  # CJK Compatibility Forms
+          (ucs >= 0xff00 and ucs <= 0xff60) or  # Fullwidth Forms
+          (ucs >= 0xffe0 and ucs <= 0xffe6) or
+          (ucs >= 0x20000 and ucs <= 0x2fffd) or
+          (ucs >= 0x30000 and ucs <= 0x3fffd)))
 
 
 def wcswidth(pwcs):
-
     """
     Return the width in character cells of the unicode string pwcs,
     or -1 if the string contains non-printable characters.

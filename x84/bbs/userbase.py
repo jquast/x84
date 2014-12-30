@@ -35,6 +35,7 @@ def find_user(handle):
 
 
 class Group(object):
+
     """
     A simple group record object with properties name', and 'members'.
     Use methods 'add' and 'remove' to add and remove users by handle,
@@ -104,6 +105,7 @@ class Group(object):
 
 
 class User(object):
+
     """
     A simple user record object with setter and getter properties, 'handle',
     'location', 'email', 'password', 'groups', 'calls', 'lastcall', and 'plan'.

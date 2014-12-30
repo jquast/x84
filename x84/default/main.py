@@ -15,12 +15,13 @@ def refresh():
     session.activity = u'Main menu'
     artfile = 'main*.asc'
 
-    # tells syncterm to change to topaz, then delete the output to avoid the code to be shown in other clients
-    echo(syncterm_setfont('topaz')+term.move_x(0) + term.clear_eol)
+    # tells syncterm to change to topaz, then delete the output to avoid the
+    # code to be shown in other clients
+    echo(syncterm_setfont('topaz') + term.move_x(0) + term.clear_eol)
 
     # displays a centered main menu header in topaz encoding for utf8
-    for line in showart(os.path.join(os.path.dirname(__file__),'art',artfile),'topaz'):
-        echo(term.cyan+term.move_x((term.width/2)-40)+line)
+    for line in showart(os.path.join(os.path.dirname(__file__), 'art', artfile), 'topaz'):
+        echo(term.cyan + term.move_x((term.width / 2) - 40) + line)
     echo(u'\r\n\r\n')
     entries = [
         ('$', 'rEAD bUllETiNS'),
@@ -40,7 +41,7 @@ def refresh():
         ('p', 'OSt A MSG'),
         ('r', 'EAd All MSGS'),
         ('v', 'OTiNG bOOTH'),
-        ('g', 'OOdbYE /lOGOff'),]
+        ('g', 'OOdbYE /lOGOff'), ]
 
     # add LORD to menu only if enabled,
     if ini.CFG.getboolean('dosemu', 'enabled') and (
@@ -79,7 +80,7 @@ def refresh():
             term.cyan(u'('),
             term.magenta_underline(key),
             term.cyan(u')'),
-            term.white(name+'  ')))
+            term.white(name + '  ')))
         ansilen = term.length(buf_str + out_str)
         if ansilen >= maxwidth:
             echo(term.center(buf_str) + u'\r\n\r\n')
@@ -104,11 +105,14 @@ def main():
         if dirty or session.poll_event('refresh'):
             refresh()
 
-        echo ('\r'+term.underline_green+session.user.handle+term.normal+term.magenta+'@'+term.cyan+'x/84 '+term.normal+'Command: ')
+        echo('\r' + term.underline_green + session.user.handle + term.normal +
+             term.magenta + '@' + term.cyan + 'x/84 ' + term.normal + 'Command: ')
         le = LineEditor(30)
         le.colors['highlight'] = term.normal
         inp = le.read()
-        inp = inp.lower() # makes the input indifferent to wheter you used lower case when typing in a command or not..
+        # makes the input indifferent to wheter you used lower case when typing
+        # in a command or not..
+        inp = inp.lower()
 
         dirty = True
         if inp == u'*':
@@ -136,7 +140,8 @@ def main():
         elif inp == u'#':
             gosub('lord')
         elif inp == u't':
-            echo(syncterm_setfont('cp437')+term.move_x(0) + term.clear_eol) # switch into cp437 for syncterm
+            # switch into cp437 for syncterm
+            echo(syncterm_setfont('cp437') + term.move_x(0) + term.clear_eol)
             gosub('tetris')
         elif inp == u'c':
             gosub('chat')
@@ -173,7 +178,7 @@ def main():
                 pass
 
             if not handled:
-                echo('\r\n'+term.red+'No such command. Try again.\r\n')
+                echo('\r\n' + term.red + 'No such command. Try again.\r\n')
                 waitprompt()
 
                 dirty = True

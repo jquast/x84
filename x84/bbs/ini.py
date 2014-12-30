@@ -116,7 +116,7 @@ def init_bbs_ini():
     # for very slow systems, you may need to increase IPC timeout for acquiring
     # locks and sending input to sub-processes -- this can happen when the
     # system is under very heavy load -- like pasting wikipedia into the editor
-    ## cfg_bbs.set('system', 'timeout_ipc', '1')  # XXX disabled
+    # cfg_bbs.set('system', 'timeout_ipc', '1')  # XXX disabled
     try:
         import bcrypt  # NOQA
     except ImportError:
@@ -232,7 +232,7 @@ def init_bbs_ini():
     cfg_bbs.set('dosemu', 'lord_path', '/DOS/X/lord')
     cfg_bbs.set('dosemu', 'lord_dropfile', 'DORINFO')
     cfg_bbs.set('dosemu', 'lord_args',
-            '-quiet -I \'$_com1 = "virtual"\' \'X:\\LORD\\START.BAT %%#\'')
+                '-quiet -I \'$_com1 = "virtual"\' \'X:\\LORD\\START.BAT %%#\'')
 
     cfg_bbs.add_section('sesame')
     cfg_bbs.set('sesame', 'CavesOfPhear', '/usr/bin/phear')
@@ -240,12 +240,13 @@ def init_bbs_ini():
     cfg_bbs.set('sesame', 'FrozenDepths', '/usr/bin/frozendepths')
     cfg_bbs.set('sesame', 'FrozenDepths_key', '@')
     cfg_bbs.set('sesame', 'DopeWars',
-        '/usr/bin/dopewars -a -P {session[handle]} --single-player -u none')
+                '/usr/bin/dopewars -a -P {session[handle]} --single-player -u none')
     cfg_bbs.set('sesame', 'DopeWars_key', '$')
     cfg_bbs.set('sesame', 'MyMan', '/usr/bin/myman')
     cfg_bbs.set('sesame', 'MyMan_key', '&')
 
     return cfg_bbs
+
 
 def init_log_ini():
     """

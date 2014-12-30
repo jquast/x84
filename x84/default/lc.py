@@ -106,4 +106,3 @@ def main(last=10):
                          'lowlight': term.cyan, },
                  width=max(term.length(txt) for txt in callers_txt),
                  breaker=None)
-

@@ -17,6 +17,7 @@ VI_KEYSET = {
 
 
 class Pager(AnsiWindow):
+
     """
     Scrolling viewer
     """

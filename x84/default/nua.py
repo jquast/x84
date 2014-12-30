@@ -52,7 +52,7 @@ invalid_usernames = get_ini(section='nua',
                             split=True
                             ) or ['new', 'apply',
                                   'exit', 'logoff', 'bye', 'quit',
-                                  'sysop', 'anonymous',]
+                                  'sysop', 'anonymous', ]
 
 #: login name validation as a regular expression
 username_re_validator = get_ini(section='nua',

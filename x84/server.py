@@ -1,4 +1,5 @@
 class BaseServer(object):
+
     '''
     Base class for server implementations.
     '''

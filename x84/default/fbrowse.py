@@ -16,7 +16,7 @@ def diz_from_zip(filename, method=zipfile.ZIP_STORED):
     try:
         myzip = zipfile.ZipFile(filename, compression=method, allowZip64=True)
         for cname in (cname for cname in myzip.namelist()
-                if cname.lower() == 'file_id.diz'):
+                      if cname.lower() == 'file_id.diz'):
             return myzip.read(cname).decode('cp437_art')
         else:
             return u'No description'
@@ -46,7 +46,7 @@ diz_extractors = {
     'bzip2': diz_from_bzip2,
 }
 # extensions for ASCII collies
-colly_extensions = ['txt', 'asc', 'ans',]
+colly_extensions = ['txt', 'asc', 'ans', ]
 # decoding to use for ASCII collies
 colly_decoding = 'amiga'
 # character to denote flagged files
@@ -90,7 +90,7 @@ def main():
     # db for cached FILE_ID.DIZ descriptions
     descriptions = DBProxy(DIZ_DB)
     # setup lightbar
-    lb_colors ={
+    lb_colors = {
         'border': term.blue,
         'highlight': term.bold_white_on_blue
     }
@@ -104,7 +104,6 @@ def main():
             if not os.path.exists(f):
                 flagged.remove(f)
         session.user['flaggedfiles'] = browser['flagged_files'] = flagged
-
 
     def download_files(protocol='xmodem1k'):
         """ download flagged files """
@@ -129,7 +128,6 @@ def main():
         echo(term.bold(u'Transfer(s) finished.\r\n'))
         term.inkey()
 
-
     def upload_files(protocol='xmodem1k'):
         """ upload files """
 
@@ -148,7 +146,7 @@ def main():
                         term.inkey()
                         return
                 echo(term.bold(u'\r\nBegin your {0} sending program now.\r\n'
-                    .format(protocol)))
+                               .format(protocol)))
                 upload = open(os.path.join(
                     uploads_dir, inp), 'wb')
                 if not recv_modem(upload, protocol):
@@ -158,7 +156,6 @@ def main():
                 term.inkey()
             else:
                 return
-
 
     def draw_interface():
         """ redraw and resize the interface """
@@ -175,7 +172,6 @@ def main():
         echo(lb.border())
         echo(lb.refresh())
 
-
     def clear_diz():
         """ clear file_id.diz area """
 
@@ -184,7 +180,6 @@ def main():
         for i in range(browser['last_diz_len'] + 2):
             echo(u''.join((
                 term.move(i, browser['diz_location']), term.clear_eol)))
-
 
     def describe_file(diz, directory, filename, isdir=None):
         """ describe a file in the diz area """
@@ -203,9 +198,9 @@ def main():
             size = filesize(fullname)
             description = u'%s: %s  %s: %s' % (
                 term.bold('Filename'),
-                filename[len(root):] \
-                    if directory == os.path.join(root, flagged_dirname) \
-                    else filename,
+                filename[len(root):]
+                if directory == os.path.join(root, flagged_dirname)
+                else filename,
                 term.bold('Size'),
                 size,
             )
@@ -220,7 +215,6 @@ def main():
             echo(term.move_x(browser['diz_location']))
             echo(u'%s\r\n' % line)
 
-
     def mark_flagged(directory, files):
         """ add marker to flagged files """
 
@@ -232,17 +226,15 @@ def main():
                 files_list.append((f, u'%s%s' % (flagged_char, f.strip())))
         return files_list
 
-
     def flagged_listdir():
         """ build listing for flagged files pseudo-folder """
 
-        files = [u'%s%s' % (flagged_char, f[f.rfind(os.path.sep) + 1:]) \
-            for f in browser['flagged_files']]
+        files = [u'%s%s' % (flagged_char, f[f.rfind(os.path.sep) + 1:])
+                 for f in browser['flagged_files']]
         zipped_files = zip(browser['flagged_files'], files)
         sorted_files = sorted(zipped_files, key=lambda x: x[1].lower())
         sorted_files.insert(0, (u'..%s' % os.path.sep, u' ..%s' % os.path.sep))
         return sorted_files
-
 
     def regular_listdir(directory, sub):
         """ build listing for regular folder """
@@ -270,7 +262,6 @@ def main():
         files = mark_flagged(directory, sorted_dirs + sorted_files)
         return files
 
-
     def browse_dir(directory, sub=False):
         """ browse a directory """
 
@@ -286,13 +277,11 @@ def main():
                 lb_files = regular_listdir(directory, sub)
             lb.update(lb_files)
 
-
         def is_flagged_dir(directory):
             """ is this our __flagged__ directory? """
 
             return directory == flagged_dirname or \
-                    directory.endswith(flagged_dirname)
-
+                directory.endswith(flagged_dirname)
 
         # build and sort directory listing
         reload_dir()
@@ -382,7 +371,7 @@ def main():
                 diz = descriptions[relativename]
                 if ext in colly_extensions and session.encoding == 'utf8':
                     diz = [line.encode('cp437').decode(colly_decoding)
-                        for line in diz]
+                           for line in diz]
             # is (supported) archive
             elif ext in diz_extractors:
                 diz = diz_extractors[ext](fullname).split('\n')
@@ -397,7 +386,8 @@ def main():
                     pos = colly.find(end)
                     if pos:
                         if session.encoding == 'utf8':
-                            diz = colly[:pos].decode(colly_decoding).split('\n')
+                            diz = colly[:pos].decode(
+                                colly_decoding).split('\n')
                         else:
                             diz = colly[:pos].decode('cp437_art').split('\n')
             # is pseudo-folder for flagged files
@@ -407,22 +397,22 @@ def main():
                     term.bold_blue_underline(u'Instructions'),
                     u' ',
                     u'{0} Un/flag file for download'
-                        .format(term.reverse(u'(SPACE)')),
+                    .format(term.reverse(u'(SPACE)')),
                     u'{0}  Back up'
-                        .format(term.reverse(u'(LEFT)')),
+                    .format(term.reverse(u'(LEFT)')),
                     term.reverse(u'(RIGHT, ENTER)'),
                     u'        Browse subdirectory',
                     u'{0}     Download flagged file(s)'
-                        .format(term.reverse(u'(D)')),
+                    .format(term.reverse(u'(D)')),
                     u'{0}     Unflag all files'
-                        .format(term.reverse(u'(-)')),
+                    .format(term.reverse(u'(-)')),
                     u'{0}     Upload file(s)'
-                        .format(term.reverse(u'(U)')),
+                    .format(term.reverse(u'(U)')),
                     u'{0}     Quit'
-                        .format(term.reverse(u'(Q)')),
+                    .format(term.reverse(u'(Q)')),
                     u' ',
                     u'Files are also available via {0}'
-                        .format(term.bold(u'SFTP')),
+                    .format(term.bold(u'SFTP')),
                 ]
             # is directory; don't give it a description
             elif isdir:
@@ -441,7 +431,6 @@ def main():
             echo(lb.refresh_quick())
             echo(lb.fixate())
             inp = None
-
 
     # fire it up!
     draw_interface()

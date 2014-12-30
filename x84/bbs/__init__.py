@@ -65,11 +65,11 @@ for page in (
 ):
     codec = 'cp%s' % (page,)
     SAUCE_FONT_MAP.update({
-        'IBM EGA43 %s'  % (page,): codec,
-        'IBM EGA %s'    % (page,): codec,
+        'IBM EGA43 %s' % (page,): codec,
+        'IBM EGA %s' % (page,): codec,
         'IBM VGA25g %s' % (page,): codec,
-        'IBM VGA50 %s'  % (page,): codec,
-        'IBM VGA %s'    % (page,): codec,
+        'IBM VGA50 %s' % (page,): codec,
+        'IBM VGA %s' % (page,): codec,
     })
 
 

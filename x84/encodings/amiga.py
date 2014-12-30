@@ -11,9 +11,11 @@ import codecs
 import encodings
 import encodings.aliases
 
-### Codec APIs
+# Codec APIs
+
 
 class Codec(codecs.Codec):
+
     def decode(self, input, errors='strict'):
         return codecs.charmap_decode(input, errors, decoding_table)
 
@@ -22,11 +24,13 @@ class Codec(codecs.Codec):
 
 
 class IncrementalEncoder(codecs.IncrementalEncoder):
+
     def encode(self, input, final=False):
         raise NotImplementedError()
 
 
 class IncrementalDecoder(codecs.IncrementalDecoder):
+
     def decode(self, input, final=False):
         return codecs.charmap_decode(input, self.errors, decoding_table)[0]
 
@@ -39,7 +43,7 @@ class StreamWriter(Codec, codecs.StreamWriter):
     pass
 
 
-### encodings module API
+# encodings module API
 
 def getaliases():
     return (
@@ -67,10 +71,10 @@ def getregentry():
     )
 
 
-encodings._cache['topaz']  = getregentry()
+encodings._cache['topaz'] = getregentry()
 
 
-### Decoding Table
+# Decoding Table
 
 decoding_map = codecs.make_identity_dict(range(256))
 decoding_map.update({
@@ -164,7 +168,8 @@ decoding_table = (
     u','        # 0x002c -> COMMA
     u'\u2500'   # 0x002d -> BOX DRAWINGS LIGHT HORIZONTAL
     u'.'        # 0x002e -> FULL STOP
-    u'\u2571'   # 0x002f -> BOX DRAWINGS LIGHT DIAGONAL UPPER RIGHT TO LOWER LEFT
+    # 0x002f -> BOX DRAWINGS LIGHT DIAGONAL UPPER RIGHT TO LOWER LEFT
+    u'\u2571'
     u'0'        # 0x0030 -> DIGIT ZERO
     u'1'        # 0x0031 -> DIGIT ONE
     u'2'        # 0x0032 -> DIGIT TWO
@@ -209,7 +214,8 @@ decoding_table = (
     u'Y'        # 0x0059 -> LATIN CAPITAL LETTER Y
     u'Z'        # 0x005a -> LATIN CAPITAL LETTER Z
     u'['        # 0x005b -> LEFT SQUARE BRACKET
-    u'\u2572'   # 0x005c -> BOX DRAWINGS LIGHT DIAGONAL UPPER LEFT TO LOWER RIGHT
+    # 0x005c -> BOX DRAWINGS LIGHT DIAGONAL UPPER LEFT TO LOWER RIGHT
+    u'\u2572'
     u']'        # 0x005d -> RIGHT SQUARE BRACKET
     u'^'        # 0x005e -> CIRCUMFLEX ACCENT
     u'\u2581'   # 0x005f -> LOWER ONE EIGHTH BLOCK

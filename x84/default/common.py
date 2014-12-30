@@ -10,8 +10,8 @@ def waitprompt():
     from x84.bbs import echo, getch, getterminal
     term = getterminal()
 
-    echo (term.normal+'\n\r'+term.magenta+'('+term.green+'..'+term.white+
-          ' press any key to continue '+term.green+'..'+term.magenta+')')
+    echo(term.normal + '\n\r' + term.magenta + '(' + term.green + '..' + term.white +
+         ' press any key to continue ' + term.green + '..' + term.magenta + ')')
     getch()
     echo(term.normal_cursor)
     return

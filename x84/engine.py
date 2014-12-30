@@ -493,7 +493,7 @@ def _loop(servers):
     from x84.bbs.ini import CFG
     from x84.fail2ban import get_fail2ban_function
 
-    SELECT_POLL = 0.02 # polling time is 20ms
+    SELECT_POLL = 0.02  # polling time is 20ms
 
     # WIN32 has no session_fds (multiprocess queues are not polled using
     # select), use a persistently empty set; for WIN32, sessions are always

@@ -26,8 +26,8 @@ def main(host, port=None, encoding='cp437'):
     session.activity = 'connecting to %s' % (host,)
     port = int(port) if port is not None else 23
     telnet_client = telnetlib.Telnet()
-    telnet_client.set_option_negotiation_callback(partial(telnet.callback_cmdopt
-        , env_term=session.env['TERM'], height=term.height, width=term.width))
+    telnet_client.set_option_negotiation_callback(partial(
+        telnet.callback_cmdopt, env_term=session.env['TERM'], height=term.height, width=term.width))
     echo(u"\r\n\r\nEscape character is 'ctrl-^.'")
     if not session.user.get('expert', False):
         getch(3)
@@ -52,7 +52,7 @@ def main(host, port=None, encoding='cp437'):
             if encoding == 'cp437':
                 try:
                     unistring = from_cp437(
-                            telnet_client.read_very_eager().decode('iso8859-1'))
+                        telnet_client.read_very_eager().decode('iso8859-1'))
                 except EOFError:
                     break
             else:
@@ -77,7 +77,7 @@ def main(host, port=None, encoding='cp437'):
             inp = session.read_event('input', timeout=KEY_POLL)
     echo(u'\r\nConnection closed.\r\n')
     echo(u''.join(('\r\n\r\n', term.clear_el, term.normal, 'press any key')))
-    echo(u'\x1b[r') # unset 'set scrolling region', sometimes set by BBS's
+    echo(u'\x1b[r')  # unset 'set scrolling region', sometimes set by BBS's
     session.flush_event('input')
     getch()
     return

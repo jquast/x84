@@ -124,7 +124,8 @@ def main(channel=None, caller=None):
         return u''.join((
             u''.join((u'\r\n', term.clear_eol,
                       u'\r\n', term.clear_eol,
-                      term.bright_blue(u' mULTi USER nOTEPAD!'.center(term.width).rstrip()),
+                      term.bright_blue(
+                          u' mULTi USER nOTEPAD!'.center(term.width).rstrip()),
                       term.clear_eol,
                        (u'\r\n' + term.clear_eol) * (pager.height + 2),
                       pager.border())) if init else u'',
@@ -252,7 +253,8 @@ def main(channel=None, caller=None):
         c.available = False
 
     def on_endofnames(c, event):
-        pager.append(format_server('%s end of names list' % event.arguments[0]))
+        pager.append(
+            format_server('%s end of names list' % event.arguments[0]))
         c.dirty = time.time()
 
     def on_join(c, event):
@@ -266,10 +268,12 @@ def main(channel=None, caller=None):
         nicks = []
         for nick in event.arguments[2].split():
             if nick[0] in '@+%!':
-                nicks.append(term.bold_red(nick[0]) + term.bold_white('%-9s' % nick[1:]))
+                nicks.append(
+                    term.bold_red(nick[0]) + term.bold_white('%-9s' % nick[1:]))
             else:
                 nicks.append(term.bold_white('%-9s' % nick))
-        pager.append(format_server('%s %s' % (event.arguments[1], u' '.join(nicks))))
+        pager.append(
+            format_server('%s %s' % (event.arguments[1], u' '.join(nicks))))
         c.dirty = time.time()
 
     def on_nick(c, event):

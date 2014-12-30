@@ -14,7 +14,8 @@
 __author__ = 'megagumbo'
 __version__ = 1.0
 
-def lb_init(position=None,menu_index=None):
+
+def lb_init(position=None, menu_index=None):
     """ Initialize Lightbar Main Menu """
     from x84.bbs import getsession, getterminal, echo, showart, ini, Lightbar
     import os
@@ -53,7 +54,7 @@ def lb_init(position=None,menu_index=None):
         ('!', 'ENCOdiNG'),
         ('s', 'sYS. iNfO'),
         ('u', 'uSER LiST'),
-        ('e', 'edit PROfilE'),]
+        ('e', 'edit PROfilE'), ]
 
     if ini.CFG.getboolean('dosemu', 'enabled') and (
             ini.CFG.get('dosemu', 'lord_path') != 'no'):
@@ -88,21 +89,21 @@ def lb_init(position=None,menu_index=None):
 
     entries += (('g', 'gOOdbYE /lOGOff'),)
 
-    lightbar.update( entries )
+    lightbar.update(entries)
 
     if menu_index is not None:
-        lightbar.goto(menu_index)    
+        lightbar.goto(menu_index)
 
     # set up some nice colors
     lightbar.colors['highlight'] = term.bold_cyan_reverse
     lightbar.colors['border'] = term.bold_blue
     lightbar.xpadding, lightbar.ypadding = 2, 1
     lightbar.alignment = 'center'
- 
-    # set lightbar theme
-    #lightbar.init_theme()
 
-    ## re-select previous selection
+    # set lightbar theme
+    # lightbar.init_theme()
+
+    # re-select previous selection
     if position is not None:
         lightbar.position = position
     return (lightbar)
@@ -113,9 +114,9 @@ def lb_refresh(lb_pager=None):
     from x84.bbs import echo
 
     if lb_pager is None:
-       lb_pager = lb_init()
-  
-    lb_pager.goto(lb_pager.index) 
+        lb_pager = lb_init()
+
+    lb_pager.goto(lb_pager.index)
     echo(lb_pager.refresh())
     echo(lb_pager.border())
     return (lb_pager)
@@ -130,7 +131,7 @@ def show_banner():
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'main.ans')
 
     # displays a centered main menu header in topaz encoding for utf8
-    for line in showart(artfile,'topaz',center=True):
+    for line in showart(artfile, 'topaz', center=True):
         echo(line)
 
 
@@ -197,19 +198,19 @@ def main():
             echo(lb.process_keystroke(inp))
 
             if lb.selected and lb.selection[0] is not None:
-                 script = key_map.get(lb.selection[0])
+                script = key_map.get(lb.selection[0])
 
-                 if script:
-                      if script == u'x':
-                         goto('main')
-                      elif script == u'v' and 'sysop' in session.user.groups:
-                         gosub('ttyplay')
-                      else:
-                         echo(term.clear)
-                         gosub(script)
+                if script:
+                    if script == u'x':
+                        goto('main')
+                    elif script == u'v' and 'sysop' in session.user.groups:
+                        gosub('ttyplay')
+                    else:
+                        echo(term.clear)
+                        gosub(script)
 
-                      echo(term.clear)
-                      show_banner()
+                    echo(term.clear)
+                    show_banner()
 
             else:
                 handled = False
@@ -224,6 +225,6 @@ def main():
                                 break
                 except ConfigError:
                     pass
-    
+
                 if not handled:
                     dirty = False

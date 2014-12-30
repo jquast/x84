@@ -264,7 +264,7 @@ class Dropfile(object):
                 u'0\r\n'                  # ptr to new msgs?
                 u'0\r\n'                  # total u/l
                 u'0\r\n'                  # total d/l
-                u'8  { Databits }\r\n'    #  ?? like 8,N,1 ??
+                u'8  { Databits }\r\n'  # ?? like 8,N,1 ??
                 u'REMOTE\r\n'             # local or remote?
                 u'{s.comport}\r\n'
                 u'{s.comspeed}\r\n'
@@ -293,6 +293,7 @@ class Dropfile(object):
 
 
 class Door(object):
+
     """
     Spawns a subprocess and pipes input and output over bbs session.
     """
@@ -324,7 +325,7 @@ class Door(object):
         if type(args) is tuple:
             self.args = (self.cmd,) + args
         elif type(args) is list:
-            self.args = [self.cmd,] + args
+            self.args = [self.cmd, ] + args
         else:
             raise ValueError('args must be tuple or list')
         self.env_lang = env_lang
@@ -508,7 +509,9 @@ class Door(object):
                         # behavior. Please report, should be ok ..
                         logger.warn('buffer_input(%r)!', data[n_written:])
 
+
 class DOSDoor(Door):
+
     """ This Door-derived class removes the "report cursor position" query
     sequence, which is sent by DOSEMU on startup. It also removes the "switch
     to alternate screen mode" set and reset (blessings terminals provide this

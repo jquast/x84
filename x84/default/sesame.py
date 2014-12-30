@@ -2,6 +2,7 @@ import ConfigParser
 import shlex
 import os
 
+
 def main(name):
     from x84.bbs import getsession, getterminal, echo, ini
     from x84.bbs import Door
@@ -18,15 +19,15 @@ def main(name):
             echo(u'\x1b[8;%d;%dt' % (want_rows, want_cols,))
         disp = 1
         while not (term.width == want_cols
-                and term.height == want_cols):
+                   and term.height == want_cols):
             if disp:
                 echo(term.bold_blue('\r\n^\r\n'))
                 echo(term.bold_blue('\r\n'.join([u'|'] * (want_rows - 3))))
                 echo(u'\r\n')
                 echo(term.bold_blue(u'|' + (u'=' * 78) + u'|\r\n'))
                 echo(u'for best "screen output", please '
-                    'resize window to %s x %s (or press return).' % (
-                        want_cols, want_rows,))
+                     'resize window to %s x %s (or press return).' % (
+                         want_cols, want_rows,))
                 disp = 0
             ret = term.inkey(2)
             if ret in (term.KEY_ENTER, u'\r', u'\n'):
@@ -37,7 +38,7 @@ def main(name):
                 term.width, term.height, want_cols, want_rows,))
             # hand-hack, its ok ... really
             store_cols, store_rows = term.width, term.height
-            term.columns, term.rows= want_cols, want_rows
+            term.columns, term.rows = want_cols, want_rows
             term.inkey(1)
 
     except ConfigParser.NoOptionError:

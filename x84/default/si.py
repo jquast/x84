@@ -59,7 +59,7 @@ def main():
     stars = dict([(n, (random.choice('\\|/-'),
                        float(random.choice(range(term.width))),
                        float(random.choice(range(term.height)))))
-                       for n in range(num_stars)])
+                  for n in range(num_stars)])
     melting = {}
     show_star = False
     tm_out, tm_min, tm_max, tm_step = 0.08, 0.01, 2.0, .01
@@ -94,7 +94,7 @@ def main():
             term.normal,
             (u'\r\n' + term.clear_eol) * term.height,
             u''.join([term.move(yloc + abs_y, xloc) + line
-            for abs_y, line in enumerate(otxt)]),)))
+                      for abs_y, line in enumerate(otxt)]),)))
         return xloc, yloc
 
     txt_x, txt_y = refresh()
@@ -138,12 +138,12 @@ def main():
             xloc = (1.0 if xloc > term.width
                     else float(term.width))
             yloc = (float(random.choice
-                   (range(term.height))))
+                          (range(term.height))))
         if yloc < 1 or yloc > term.height:
             yloc = (1.0 if yloc > term.height
                     else float(term.height))
             xloc = (float(random.choice
-                   (range(term.width))))
+                          (range(term.width))))
         return char, xloc, yloc
 
     def erase(star_idx):
@@ -151,7 +151,7 @@ def main():
         if show_star:
             _char, xloc, yloc = stars[star_idx]
             echo(u''.join((term.move(int(yloc), int(xloc)), term.normal,
-                          char_at_pos(int(yloc), int(xloc), txt_y, txt_x),)))
+                           char_at_pos(int(yloc), int(xloc), txt_y, txt_x),)))
 
     def melt():
         """ Iterate through all stars and phase through melt sequence. """
@@ -162,7 +162,7 @@ def main():
                 del melting[(yloc, xloc)]
         for (yloc, xloc), phase in melting.items():
             echo(u''.join((term.move(yloc, xloc), melt_colors[phase - 1],
-                          char_at_pos(yloc, xloc, txt_y, txt_x),)))
+                           char_at_pos(yloc, xloc, txt_y, txt_x),)))
             melted(yloc, xloc)
 
     def draw_star(star, xloc, yloc):
@@ -186,7 +186,7 @@ def main():
                     while num > len(otxt):
                         otxt += [u'', ]
                     otxt[num] = (otxt[num][:int(term.width / 2.5)]
-                            + u' ' + line)
+                                 + u' ' + line)
                 txt_x, txt_y = refresh()
                 continue
             inp = getch(tm_out)
@@ -200,16 +200,16 @@ def main():
                 if num_stars > 2:
                     num_stars = int(num_stars * .5)
                     stars = dict([(n, (random.choice('\\|/-'),
-                        float(random.choice(range(term.width))),
-                        float(random.choice(range(term.height)))))
-                        for n in range(num_stars)])
+                                       float(random.choice(range(term.width))),
+                                       float(random.choice(range(term.height)))))
+                                  for n in range(num_stars)])
             elif inp in (term.KEY_RIGHT, 'l'):
                 if num_stars < (term.width * term.height) / 4:
                     num_stars = int(num_stars * 1.5)
                     stars = dict([(n, (random.choice('\\|/-'),
-                        float(random.choice(range(term.width))),
-                        float(random.choice(range(term.height)))))
-                        for n in range(num_stars)])
+                                       float(random.choice(range(term.width))),
+                                       float(random.choice(range(term.height)))))
+                                  for n in range(num_stars)])
             elif inp in (u'*',) and not show_star:
                 show_star = True
             elif inp in (u'*',) and show_star:

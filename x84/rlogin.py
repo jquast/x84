@@ -25,6 +25,7 @@ from x84.terminal import spawn_client_session
 
 
 class RLoginClient(BaseClient):
+
     '''
     rlogin protocol client handler.
     '''
@@ -73,6 +74,7 @@ class RLoginClient(BaseClient):
 
 
 class ConnectRLogin(BaseConnect):
+
     '''
     rlogin protocol connection handler.
 
@@ -275,6 +277,7 @@ class ConnectRLogin(BaseConnect):
 
 
 class RLoginServer(BaseServer):
+
     '''
     RLogin/RSH protocol server.
     '''

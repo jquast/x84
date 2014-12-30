@@ -135,11 +135,13 @@ def init_term(writer, env):
 
 
 class TerminalProcess(object):
+
     """
     Class record for tracking global processes and their
     various attributes. These are stored using register_tty()
     and unregister_tty(), and retrieved using terminals().
     """
+
     def __init__(self, client, sid, master_pipes):
         from x84.bbs.ini import CFG
         self.client = client

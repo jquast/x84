@@ -14,6 +14,7 @@ VI_KEYSET = {
 
 
 class Selector(AnsiWindow):
+
     """
     A two-state horizontal lightbar interface.
     """
