@@ -58,6 +58,7 @@ def parse_auth(request_data):
 
 
 class MessageApi(object):
+
     " message network web API endpoint "
 
     # todo: validate messages much earlier (here, not below the scissor-line)
@@ -142,7 +143,7 @@ def serve_messages_for(board_id, request_data, db_source):
     from x84.bbs import DBProxy, msgbase
     from x84.bbs.msgbase import to_utctime
     log = logging.getLogger(__name__)
-    #log.error(msg)
+    # log.error(msg)
     db_tags = DBProxy(msgbase.TAGDB, use_session=False)
     db_messages = DBProxy(msgbase.MSGDB, use_session=False)
 

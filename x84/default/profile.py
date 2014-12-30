@@ -130,7 +130,8 @@ def process_keystroke(inp, user):
             term.inkey(1)
             return
         if len(password) < min_pass:
-            echo(term.bold_red(u'\r\n\r\ntOO ShORt! (MUSt bE %d+)' % min_pass,))
+            echo(
+                term.bold_red(u'\r\n\r\ntOO ShORt! (MUSt bE %d+)' % min_pass,))
             term.inkey(1)
             return
         echo(u'\r\n   AGAiN: ')
@@ -347,7 +348,7 @@ def main(handle=None):
     from x84.bbs import get_user
     session, term = getsession(), getterminal()
     user = session.user if ('sysop' not in session.user.groups
-            ) or (handle is None) else get_user(handle)
+                            ) or (handle is None) else get_user(handle)
     global EXIT
     while not EXIT:
         session.activity = 'User profile editor'

@@ -14,7 +14,6 @@ Contents:
    :maxdepth: 4
 
    intro
-   install
    clients
    port23
    others

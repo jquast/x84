@@ -18,6 +18,7 @@ from x84.db import (
 
 
 class DBProxy(object):
+
     """
     Provide dictionary-like object interface to a database. a database call,
     such as __len__() or keys() is issued as a command to the main engine,

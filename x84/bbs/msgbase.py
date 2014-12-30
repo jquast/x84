@@ -75,6 +75,7 @@ def list_tags():
 
 
 class Msg(object):
+
     """
     the Msg object is record spec for messages held in the msgbase.
     It contains many default properties to describe a conversation:
@@ -191,7 +192,7 @@ class Msg(object):
                     db_msg['%d' % (self.idx)] = self
 
         if send_net and new and (CFG.has_option('msg', 'network_tags')
-                or CFG.has_option('msg', 'server_tags')):
+                                 or CFG.has_option('msg', 'server_tags')):
             self.queue_for_network()
 
         log.info(

@@ -19,11 +19,11 @@ msg_productivity = (
 
 # productive times by week and starting & ending hour
 p_time = {
-    0: {'h_start':9, 'h_end':18},
-    1: {'h_start':9, 'h_end':18},
-    2: {'h_start':9, 'h_end':18},
-    3: {'h_start':9, 'h_end':18},
-    4: {'h_start':9, 'h_end':18}
+    0: {'h_start': 9, 'h_end': 18},
+    1: {'h_start': 9, 'h_end': 18},
+    2: {'h_start': 9, 'h_end': 18},
+    3: {'h_start': 9, 'h_end': 18},
+    4: {'h_start': 9, 'h_end': 18}
 }
 
 tgt = now = datetime.now()

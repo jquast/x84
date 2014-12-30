@@ -12,6 +12,7 @@ PC_KEYSET = {'refresh': [unichr(12), ],
 
 
 class LineEditor(object):
+
     """
     This unicode line editor is unaware of its (x, y) position and is great
     for prompting a quick phrase on any terminal, such as a login: prompt.
@@ -191,6 +192,7 @@ class LineEditor(object):
 
 
 class ScrollingEditor(AnsiWindow):
+
     """
     A single line Editor fully aware of its (y, x).
     Infinite horizontal scrolling is enabled with the enable_scrolling
@@ -219,7 +221,7 @@ class ScrollingEditor(AnsiWindow):
 
         self.init_keystrokes(keyset=kwargs.pop('keyset', PC_KEYSET.copy()))
 
-        #height = 3  # TODO: 2 of 3 for top and bottom border
+        # height = 3  # TODO: 2 of 3 for top and bottom border
         # (optionally displayed .. is this best x/y coord?
         #   once working, lets set default as borderless!)
         AnsiWindow.__init__(self, *args, **kwargs)
@@ -458,8 +460,8 @@ class ScrollingEditor(AnsiWindow):
         if self._horiz_shift > 0:
             self._horiz_shift += len(self.glyphs['strip'])
             prnt = u''.join((
-                    self.glyphs['strip'],
-                    self.content[self._horiz_shift:],))
+                self.glyphs['strip'],
+                self.content[self._horiz_shift:],))
         else:
             prnt = self.content
         return u''.join((

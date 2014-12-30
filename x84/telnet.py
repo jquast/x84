@@ -90,7 +90,7 @@ UNSUPPORTED_WILL = (LINEMODE, LFLOW, TSPEED, ENCRYPT, AUTHENTICATION)
 # If a party receives a request to enter a mode that it is already in, the
 # request should not be acknowledged.
 
-## Where you see DE in my comments I mean 'Distant End', e.g. the client.
+# Where you see DE in my comments I mean 'Distant End', e.g. the client.
 
 UNKNOWN = -1
 
@@ -98,6 +98,7 @@ UNKNOWN = -1
 
 
 class TelnetOption(object):
+
     """
     Simple class used to track the status of an extended Telnet option.
     Attributes and values:
@@ -107,6 +108,7 @@ class TelnetOption(object):
     """
     # pylint: disable=R0903
     #         Too few public methods (0/2)
+
     def __init__(self):
         """
         Set attribute defaults on init.
@@ -151,6 +153,7 @@ def debug_option(func):
 #------------------------------------------------------------------------Telnet
 
 class TelnetClient(BaseClient):
+
     """
     Represents a remote Telnet Client, instantiated from TelnetServer.
     """
@@ -817,6 +820,7 @@ class TelnetClient(BaseClient):
 
 
 class ConnectTelnet(BaseConnect):
+
     """
     Accept new Telnet Connection and negotiate options.
     """
@@ -1002,6 +1006,7 @@ class ConnectTelnet(BaseConnect):
 
 
 class TelnetServer(BaseServer):
+
     """
     Poll sockets for new connections and sending/receiving data from clients.
     """

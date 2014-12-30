@@ -58,6 +58,7 @@ import os
 
 
 class Favicon:
+
     """ Dummy class for preventing /favicon.ico 404 errors """
 
     def GET(self):
@@ -215,7 +216,8 @@ def server(urls, funcs):
 
     web.config.debug = False
 
-    log.info('https listening on {addr}:{port}/tcp'.format(addr=addr, port=port))
+    log.info(
+        'https listening on {addr}:{port}/tcp'.format(addr=addr, port=port))
 
     # Runs CherryPy WSGI server hosting WSGI app.wsgifunc().
     web.httpserver.runsimple(app.wsgifunc(), (addr, port))  # blocking

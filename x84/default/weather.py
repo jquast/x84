@@ -157,7 +157,7 @@ def do_search(search):
         echo(u'\r\n\r\n' + 'Press any key')
         getch()
     else:
-        #print resp.content
+        # print resp.content
         xml_stream = StringIO.StringIO(resp.content)
         locations = list([dict(elem.attrib.items())
                           for _event, elem in ET.iterparse(xml_stream)

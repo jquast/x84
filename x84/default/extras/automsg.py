@@ -1,4 +1,4 @@
-""" Automsg script for x/84 bbs, https://github.com/jquast/x84 """
+""" Automsg script for x/84 bbs, https://github.com/jquast/x84
 
  Classic /X style script that enables the user to leave a message/statement
  for the next users logging in.
@@ -35,7 +35,7 @@ def banner():
     session, term = getsession(), getterminal()
     art_file = os.path.join(os.path.dirname(__file__), 'art', 'automsg.ans')
     echo(term.clear)
-    for line in showart(art_file,'topaz'):
+    for line in showart(art_file, 'topaz'):
         echo(line)
 
     if not os.path.exists(get_datafile_path()):
@@ -73,12 +73,12 @@ def main():
             echo((u' ' * 7))
 
             echo(term.move(21, 0) + term.clear_eol)
-            for row in range (1, 4):
+            for row in range(1, 4):
                 echo(term.move(15 + row, 5))
                 echo(u' ' * 57)
 
             msg = []
-            for row in range (1, 4):
+            for row in range(1, 4):
                 echo(term.move(15 + row, 5))
                 le = LineEditor(70)
                 le.colors['highlight'] = term.white

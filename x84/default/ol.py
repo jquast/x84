@@ -39,6 +39,7 @@ def _sort_oneliner(a, b):
 
 
 class FetchUpdates(threading.Thread):
+
     """ Fetch bbs-scene.org oneliners as a background thread. """
     ident = 'bbs-scene.org'
     url = 'http://bbs-scene.org/api/onelinerz?limit=%d' % (XML_HISTORY,)
@@ -89,6 +90,7 @@ class FetchUpdates(threading.Thread):
 
 
 class FetchUpdatesShrooMs(threading.Thread):
+
     """ Fetch shroo.ms onliners as a background thread. """
     ident = 'shroo.ms'
     url = 'https://api.parse.com'
@@ -107,7 +109,7 @@ class FetchUpdatesShrooMs(threading.Thread):
         log.debug('fetching %r ..', self.url)
 
         stime = time.time()
-        params = {'limit':1000,'order':'createdAt'}
+        params = {'limit': 1000, 'order': 'createdAt'}
         headers = {
             'X-Parse-Application-Id': idkey,
             'X-Parse-REST-API-Key': restkey,
@@ -140,7 +142,8 @@ class FetchUpdatesShrooMs(threading.Thread):
                 dict(
                     oneliner=item['bbstagline'],
                     alias=item['bbsuser'],
-                    bbsname=aliases.get(item['bbsname'].lower(), item['bbsname']),
+                    bbsname=aliases.get(
+                        item['bbsname'].lower(), item['bbsname']),
                     fake=item['bbsfakeuser'],
                     timestamp=self.parse_timestamp(item['createdAt']),
                 )
@@ -152,7 +155,7 @@ class FetchUpdatesShrooMs(threading.Thread):
         '''
         Converts a parse.com object ID to int.
         '''
-        return int(object_id, 36) # lulz
+        return int(object_id, 36)  # lulz
 
     def parse_timestamp(self, timestamp):
         '''
@@ -289,15 +292,18 @@ def banner():
     output = u''
     output += u'\r\n\r\n' + term.normal
     if term.width >= 78:
-        artfile = os.path.join(os.path.dirname(__file__), 'art', 'oneliner.ans')
+        artfile = os.path.join(
+            os.path.dirname(__file__), 'art', 'oneliner.ans')
         artfilewidth = 80
     if term.width >= 100:
-        artfile = os.path.join(os.path.dirname(__file__), 'art', 'oneliner100.ans')
+        artfile = os.path.join(
+            os.path.dirname(__file__), 'art', 'oneliner100.ans')
         artfilewidth = 100
 
     output += term.home + term.normal + term.clear
-    for line in showart(artfile,'topaz'):
-        output = output + term.move_x((term.width/2)-artfilewidth/2)+line
+    for line in showart(artfile, 'topaz'):
+        output = output + \
+            term.move_x((term.width / 2) - artfilewidth / 2) + line
     return output + term.normal
 
 
