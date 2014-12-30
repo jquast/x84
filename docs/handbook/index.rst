@@ -10,5 +10,5 @@ language.
    :maxdepth: 1
    :glob:
 
-   intro
    chapter*
+   history
