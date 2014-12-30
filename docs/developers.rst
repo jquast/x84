@@ -69,7 +69,8 @@ Engine and Internals
 ====================
 
 x/84 is designed in three distinct parts: The Engine_, Userland_, and
-the default 'bbs board'.
+the default 'bbs board'.  You are encouraged to extend and modify any
+component of the system, it is all authored in the python language.
 
 Userland
 ````````

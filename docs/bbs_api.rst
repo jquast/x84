@@ -24,7 +24,16 @@ General functions
 Terminal
 ````````
 
+Please see the general documentation for blessed at
+https://pypi.python.org/pypi/blessed
+
 .. autofunction:: x84.bbs.getterminal
+.. autofunction:: x84.bbs.showart
+.. autofunction:: x84.bbs.encode_pipe
+.. autofunction:: x84.bbs.decode_pipe
+.. autofunction:: x84.bbs.syncterm_setfont
+.. autofunction:: x84.bbs.output.ansiwrap
+.. autoclass: x84.bbs.Ansi
 .. autoclass: blessed.Terminal
 
 Session
@@ -49,6 +58,17 @@ Database
 ````````
 
 .. autoclass:: x84.bbs.DBProxy
+
+Configuration
+`````````````
+
+.. autofunction:: x84.bbs.get_ini
+
+File Transfers
+``````````````
+
+.. autofunction:: x84.bbs.send_modem
+.. autofunction:: x84.bbs.recv_modem
 
 Ansi UI Elements
 ````````````````
@@ -88,22 +108,3 @@ Doors
 
 .. automodule:: x84.bbs.door
    :members:
-
-CP437 and ANSI
-``````````````
-
-.. autofunction:: x84.bbs.showcp437
-.. autofunction:: x84.bbs.from_cp437
-.. autofunction:: x84.bbs.ropen
-.. autoclass: x84.bbs.Ansi
-.. autofunction:: x84.bbs.output.ansiwrap
-
-
-Keysets, Themes
-```````````````
-
-.. autoattribute:: x84.bbs.editor.PC_KEYSET
-.. autoattribute:: x84.bbs.pager.VI_KEYSET
-.. autoattribute:: x84.bbs.selector.VI_KEYSET
-.. autoattribute:: x84.bbs.lightbar.NETHACK_KEYSET
-.. autoattribute:: x84.bbs.ansiwin.GLYPHSETS
