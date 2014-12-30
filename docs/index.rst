@@ -16,10 +16,11 @@ Contents:
    intro
    clients
    port23
-   developers
    others
+   developers
    handbook/index
    api/index
+   internals
 
 Support
 =======

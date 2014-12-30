@@ -30,18 +30,3 @@ Log
 ===
 
 :API reference: `x84.bbs.log <../api/x84/bbs/log.html>`_
-
-
-WCWidth
-=======
-
-:API reference: `x84.bbs.wcwidth <../api/x84/bbs/wcwidth.html>`_
-
-
-What's next?
-============
-
-In `chapter 6`_ we will be looking at the mods that come shipped with the
-default x/84 installation.
-
-.. _chapter 6: chapter06.html
