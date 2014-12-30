@@ -1,4 +1,4 @@
-""" Automsg script for x/84 bbs, https://github.com/jquast/x84 """
+""" Automsg script for x/84 bbs, https://github.com/jquast/x84
 
  Classic /X style script that enables the user to leave a message/statement
  for the next users logging in.
