@@ -1,6 +1,6 @@
-.. image:: https://landscape.io/github/jquast/x84/2.0-docfixing/landscape.svg
-   :target: https://landscape.io/github/jquast/x84/2.0-docfixing
-   :alt: Code Health
+.. image:: https://landscape.io/github/jquast/x84/master/landscape.svg
+    :target: https://landscape.io/github/jquast/x84/master
+    :alt: Code Health
 
 .. image:: https://img.shields.io/pypi/v/x84.svg
     :alt: Latest Version
