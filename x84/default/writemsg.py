@@ -2,6 +2,7 @@
 Write public or private posts for x/84, https://github.com/jquast/x84/
 """
 
+
 def getstyle():
     """ Returns a dictionary providing various terminal styles """
     from x84.bbs import getterminal
@@ -170,8 +171,8 @@ def prompt_tags(msg):
                 echo(u'None !'.center(term.width / 2))
             else:
                 echo(u', '.join((term.wrap([u'%s(%d)' % (_key, len(_value),)
-                                       for (_key, _value) in all_tags]))
-                          ), term.width - 2)
+                                            for (_key, _value) in all_tags]))
+                                ), term.width - 2)
             continue
         echo(u'\r\n')
 
@@ -204,7 +205,7 @@ def prompt_public(msg):
 
     if 'public' in msg.tags:
         # msg is addressed to None, and is tagged as 'public',
-        return True # quit/escape
+        return True  # quit/escape
 
     if msg.recipient is None:
         # msg is addressed to nobody, force tag as 'public' or cancel,
@@ -220,7 +221,7 @@ def prompt_public(msg):
         if selection == u'Ok':
             msg.tags.add(u'public')
             return True
-        return False # quit/escape
+        return False  # quit/escape
 
     # not specified; you don't want this msg public? confirm,
     inp = Selector(yloc=term.height - 1,
@@ -239,7 +240,7 @@ def prompt_public(msg):
         if u'public' in msg.tags:
             msg.tags.remove(u'public')
         return True
-    return False # quit/escape
+    return False  # quit/escape
 
 
 def prompt_body(msg):
@@ -340,10 +341,9 @@ def prompt_network(msg, network_tags):
     lb = Lightbar(20, 20, term.height / 2 - 10, term.width / 2 - 10)
     lb.update([(tag, tag,) for tag in network_tags])
     echo(u''.join((
-        term.clear
-        , term.move(term.height / 2 - 11, term.width / 2 - 9)
-        , term.bold_white(u'ChOOSE YOUR NEtWORk')
-        )))
+        term.clear, term.move(
+            term.height / 2 - 11, term.width / 2 - 9), term.bold_white(u'ChOOSE YOUR NEtWORk')
+    )))
     network = lb.read()
 
     if network is not None:

@@ -317,13 +317,13 @@ def main(handle=None):
     #session.activity = 'top'
 
     # 8. one-liners
-    #gosub('ol')
+    # gosub('ol')
     #session.activity = 'top'
 
     # 9. weather
-    #if session.user.get('location', None):
+    # if session.user.get('location', None):
     #    gosub('weather')
     #session.activity = 'top'
 
     # 10. automsg
-    #gosub('automsg')
+    # gosub('automsg')

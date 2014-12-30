@@ -15,6 +15,7 @@ def make_root_logger(out_queue):
 
 
 class IPCLogHandler(logging.Handler):
+
     """
     Log handler that sends the log up the 'event pipe'. This is a rather novel
     solution that seems overlooked in documentation or exisiting code, try it!
@@ -55,6 +56,7 @@ class IPCLogHandler(logging.Handler):
 
 
 class IPCStream(object):
+
     """
     Connect blessed.Terminal argument 'stream' to 'writer' queue, a
     ``multiprocessing.Pipe`` whose master-side is polled for output
@@ -62,6 +64,7 @@ class IPCStream(object):
 
     Only the write() method of this "stream" is called by blessed.
     """
+
     def __init__(self, writer):
         self.writer = writer
         self.is_a_tty = True

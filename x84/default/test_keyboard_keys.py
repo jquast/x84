@@ -24,7 +24,7 @@ def main():
                 term.normal)))
             bottom = max(bottom, attr['row'])
         echo(term.move(term.height, 0)
-                         + 'level: %s score: %s' % (level, score,))
+             + 'level: %s score: %s' % (level, score,))
 
         if bottom >= (term.height - 5):
             echo(
@@ -36,7 +36,7 @@ def main():
             term.inkey()
             return
         for row, inp in enumerate(inps[(term.height - (bottom + 2)) * -1:]):
-            echo(term.move(bottom + row+1))
+            echo(term.move(bottom + row + 1))
             disp_inp = inp
             if inp.is_sequence:
                 disp_inp = inp.__str__()

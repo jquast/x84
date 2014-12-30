@@ -26,6 +26,7 @@ UNDOLEVELS = 9
 
 here = os.path.dirname(__file__)
 
+
 def save_draft(key, ucs):
     """
     Persist draft to database and stack changes to UNDO buffer
@@ -461,7 +462,7 @@ def main(save_key=None, continue_draft=False):
         elif not edit and inp in keyset['insert']:
             for _ in count_repeat():
                 lightbar.content.insert(lightbar.index,
-                                       (lightbar.index, HARDWRAP,))
+                                        (lightbar.index, HARDWRAP,))
                 set_lbcontent(lightbar, get_lbcontent(lightbar))
             save_draft(save_key, get_lbcontent(lightbar))
             dirty = True
@@ -477,7 +478,7 @@ def main(save_key=None, continue_draft=False):
         # command mode; insert-before (switch to edit mode)
         elif not edit and inp in keyset['insert-before']:
             lightbar.content.insert(lightbar.index,
-                                   (lightbar.index, HARDWRAP,))
+                                    (lightbar.index, HARDWRAP,))
             set_lbcontent(lightbar, get_lbcontent(lightbar))
             edit = dirty = True
             # switched to edit mode, save draft,
@@ -489,7 +490,7 @@ def main(save_key=None, continue_draft=False):
         # command mode; insert-after (switch to edit mode)
         elif not edit and inp in keyset['insert-after']:
             lightbar.content.insert(lightbar.index + 1,
-                                   (lightbar.index + 1, HARDWRAP,))
+                                    (lightbar.index + 1, HARDWRAP,))
             set_lbcontent(lightbar, get_lbcontent(lightbar))
             edit = dirty = True
             # switched to edit mode, save draft,
@@ -515,9 +516,10 @@ def main(save_key=None, continue_draft=False):
                 if lightbar.index + 1 < len(lightbar.content):
                     idx = lightbar.index
                     lightbar.content[idx] = (idx,
-                            WHITESPACE.join((
-                                lightbar.content[idx][1].rstrip(),
-                                lightbar.content[idx + 1][1].lstrip(),)))
+                                             WHITESPACE.join((
+                                                 lightbar.content[
+                                                     idx][1].rstrip(),
+                                                 lightbar.content[idx + 1][1].lstrip(),)))
                     del lightbar.content[idx + 1]
                     prior_length = len(lightbar.content)
                     set_lbcontent(lightbar, get_lbcontent(lightbar))
@@ -553,18 +555,18 @@ def main(save_key=None, continue_draft=False):
             elif inp in (u'?',):
                 show_help(term)
                 term.inkey()
-                #pager = Pager(lightbar.height, lightbar.width,
+                # pager = Pager(lightbar.height, lightbar.width,
                 #              lightbar.yloc, lightbar.xloc)
-                #pager.update(get_help())
+                # pager.update(get_help())
                 #pager.colors['border'] = term.bold_blue
-                #echo(pager.border() + pager.title(u''.join((
+                # echo(pager.border() + pager.title(u''.join((
                 #    term.bold_blue(u'-( '),
                 #    term.white_on_blue(u'r'), u':', term.bold(u'eturn'),
                 #    u' ',
                 #    term.bold_blue(u' )-'),))))
                 #pager.keyset['exit'].extend([u'r', u'R'])
-                #pager.read()
-                #echo(pager.erase_border())
+                # pager.read()
+                # echo(pager.erase_border())
                 dirty = True
             else:
                 moved = False

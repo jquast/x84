@@ -98,7 +98,7 @@ def get_fail2ban_function():
                 ATTEMPTED_LOGINS[ip] = {
                     'attempts': 1,
                     'expiry': now + max_attempted_logins_window
-                    }
+                }
                 log.debug('Banned IP expired: {ip}'.format(ip=ip))
             else:
                 # increase the expiry and kick them out
@@ -136,10 +136,7 @@ def get_fail2ban_function():
             ATTEMPTED_LOGINS[ip] = {
                 'attempts': 1,
                 'expiry': now + max_attempted_logins_window,
-                }
+            }
         return True
 
     return wrapper
-
-
-

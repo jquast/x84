@@ -38,6 +38,7 @@ def getnode():
 
 
 class Session(object):
+
     """
     A BBS Session engine. Workflow begins in the ``run()`` method.
     """

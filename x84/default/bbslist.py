@@ -48,6 +48,7 @@ def fancy_green(char, blurb=u''):
 
 
 class FetchUpdates(threading.Thread):
+
     """ Fetch bbs-scene.org bbs list as thread. """
     url = 'http://bbs-scene.org/api/bbslist.php'
     content = list()
@@ -76,9 +77,9 @@ class FetchUpdates(threading.Thread):
         for node in xml.etree.ElementTree.XML(buf).findall('node'):
             bbs_id = node.find('id').text.strip()
             record = dict([(key,
-                ((node.find(key).text or u'').strip()
-                    if node.find(key) is not None else u''))
-                for key in DB_KEYS])
+                            ((node.find(key).text or u'').strip()
+                             if node.find(key) is not None else u''))
+                           for key in DB_KEYS])
             self.content.append((bbs_id, record))
 
 
@@ -164,6 +165,7 @@ def get_bbslist(max_len=23):
                 continue
             by_group[grp].append((key, bbs))
         return by_group.items()
+
     def strip_name(key):
         if len(key) >= max_len:
             key = key[:(max_len - 2)] + ' $'
@@ -310,20 +312,22 @@ def get_swinfo(entry, pager):
             "a popular BBS software application for the Commodore Amiga "
             "line of computers. AmiExpress was extremely popular among the"
             "warez scene for trading (exchanging) software."
-            "  " + term.bold_blue('http://www.amiexpress.co.uk\r\n') + "\r\n\r\n"
+            "  " +
+            term.bold_blue('http://www.amiexpress.co.uk\r\n') + "\r\n\r\n"
             "Author: Synthetic technologies\r\n")
         output += pager.title(u'- about ' + style('amiexpress') + u' -')
     elif entry.startswith('c*base') or entry.startswith('cbase'):
         output = pager.update(
             "C*Base is a popular bulletin board system software for the"
-            "Commodore 64/128 range of computers."     
-            "  " + term.bold_blue('http://www.acc.umu.se/~tao/cbase\r\n') + "\r\n\r\n"
+            "Commodore 64/128 range of computers."
+            "  " +
+            term.bold_blue('http://www.acc.umu.se/~tao/cbase\r\n') + "\r\n\r\n"
             "Authors: Various\r\n")
         output += pager.title(u'- about ' + style('c*base') + u' -')
     elif entry.startswith('bbbs'):
         output = pager.update(
             "BBBS is an odd featured and experimental BBS system from"
-            "Finland." 
+            "Finland."
             "  " + term.bold_blue('http://www.bbbs.net\r\n') + "\r\n\r\n"
             "Authors: Kim 'B' Heino & Tapani T. 'Z' Salmi\r\n")
         output += pager.title(u'- about ' + style('c*base') + u' -')
@@ -381,7 +385,8 @@ def get_swinfo(entry, pager):
         output += pager.title(u'- about ' + style('X/84') + u' -')
     else:
         output = pager.update(u' no information about ' + entry + ' !\r\n')
-        output += pager.title(u'- about ' + style(entry.title() or u'') + u' -')
+        output += pager.title(u'- about ' +
+                              style(entry.title() or u'') + u' -')
     return output
 
 
@@ -406,9 +411,9 @@ def get_ui(position=None):
     pager.ypadding = 2
     pager.xpadding = 2
     lightbar.update(get_bbslist(max_len=lightbar.visible_width))
-    ## pressing Return is same as 't'elnet
+    # pressing Return is same as 't'elnet
     lightbar.keyset['enter'].extend((u't', u'T'))
-    ## re-select previous selection
+    # re-select previous selection
     if position is not None:
         lightbar.position = position
     return (pager, lightbar)
@@ -797,8 +802,9 @@ def main():
     session, term = getsession(), getterminal()
     pager, lightbar = get_ui(None)
 
-    # tells syncterm to change to the cp437 dos font, then delete the output to avoid the code to be shown in other clients
-    echo(syncterm_setfont('cp437')+u'\r'+term.clear_eol)
+    # tells syncterm to change to the cp437 dos font, then delete the output
+    # to avoid the code to be shown in other clients
+    echo(syncterm_setfont('cp437') + u'\r' + term.clear_eol)
 
     echo(u'\r\n\r\n')
     thread = None

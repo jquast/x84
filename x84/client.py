@@ -16,6 +16,7 @@ from .terminal import spawn_client_session
 
 
 class BaseClient(object):
+
     '''
     Base class for remote client implementations, instantiated from the
     corresponding server class.
@@ -48,7 +49,7 @@ class BaseClient(object):
         self.connect_time = time.time()
         self.last_input_time = time.time()
 
-    ## low level I/O
+    # low level I/O
 
     def close(self):
         '''
@@ -150,7 +151,7 @@ class BaseClient(object):
         self.recv_buffer.fromstring(data)
         return recv
 
-    ## high level I/O
+    # high level I/O
 
     def get_input(self):
         """
@@ -171,11 +172,11 @@ class BaseClient(object):
         """
         Buffer unicode string, encoded for client as 'encoding'.
         """
-        ## Must be escaped 255 (IAC + IAC) to avoid IAC intepretation
+        # Must be escaped 255 (IAC + IAC) to avoid IAC intepretation
         self.send_str(ucs.encode(encoding, 'replace')
                       .replace(chr(255), 2 * chr(255)))
 
-    ## activity
+    # activity
 
     def is_active(self):
         """
@@ -203,7 +204,7 @@ class BaseClient(object):
         """
         return time.time() - self.connect_time
 
-    ## client information
+    # client information
 
     @property
     def addrport(self):
@@ -214,6 +215,7 @@ class BaseClient(object):
 
 
 class BaseConnect(threading.Thread):
+
     '''
     Base class for client connect factories.
     '''

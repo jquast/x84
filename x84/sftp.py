@@ -35,14 +35,12 @@ class X84SFTPHandle (SFTPHandle):
         self.user = kwargs.pop('user')
         super(X84SFTPHandle, self).__init__(*args, **kwargs)
 
-
     def stat(self):
         self.log.debug('stat')
         try:
             return SFTPAttributes.from_stat(os.fstat(self.readfile.fileno()))
         except OSError as err:
             return SFTPServer.convert_errno(err.errno)
-
 
     def chattr(self, attr):
         if not self.user.is_sysop:
@@ -75,16 +73,14 @@ class X84SFTPServer (SFTPServerInterface):
             self.user = userdb[username]
         self.flagged = self.user.get('flaggedfiles', set())
         self.log = logging.getLogger('x84.engine')
-        super(X84SFTPServer, self).__init__(*args) #, **kwargs)
-
+        super(X84SFTPServer, self).__init__(*args)  # , **kwargs)
 
     def _dummy_dir_stat(self):
         self.log.debug('_dummy_dir_stat')
         attr = SFTPAttributes.from_stat(
-                os.stat(self.ROOT))
+            os.stat(self.ROOT))
         attr.filename = flagged_dirname
         return attr
-
 
     def _realpath(self, path):
         self.log.debug('_realpath({0!r})'.format(path))
@@ -101,10 +97,8 @@ class X84SFTPServer (SFTPServerInterface):
                     return f
         return self.ROOT + self.canonicalize(path)
 
-
     def _is_uploaddir(self, path):
         return ('/{0}'.format(path) == uploads_dirname)
-
 
     def list_folder(self, path):
         self.log.debug('list_folder({0!r})'.format(path))
@@ -132,7 +126,6 @@ class X84SFTPServer (SFTPServerInterface):
         except OSError as err:
             return SFTPServer.convert_errno(err.errno)
 
-
     def stat(self, path):
         self.log.debug('stat({0!r})'.format(path))
         if path.endswith(flagged_dirname):
@@ -149,7 +142,6 @@ class X84SFTPServer (SFTPServerInterface):
             return SFTPAttributes.from_stat(os.stat(path))
         except OSError as err:
             return SFTPServer.convert_errno(err.errno)
-
 
     def lstat(self, path):
         self.log.debug('lstat({0!r})'.format(path))
@@ -168,13 +160,12 @@ class X84SFTPServer (SFTPServerInterface):
         except OSError as err:
             return SFTPServer.convert_errno(err.errno)
 
-
     def open(self, path, flags, attr):
         self.log.debug('lstat({0!r}, {1!r}, {2!r})'
                        .format(path, flags, attr))
         path = self._realpath(path)
-        if flags & os.O_CREAT and (uploads_dirname not in path and \
-                not self.user.is_sysop) or \
+        if flags & os.O_CREAT and (uploads_dirname not in path and
+                                   not self.user.is_sysop) or \
                 (uploads_dirname in path and os.path.exists(path)):
             return SFTP_PERMISSION_DENIED
         try:
@@ -213,7 +204,6 @@ class X84SFTPServer (SFTPServerInterface):
             self.user['flaggedfiles'] = self.flagged
         return fobj
 
-
     def remove(self, path):
         if not self.user.is_sysop or flagged_dirname in path:
             return SFTP_PERMISSION_DENIED
@@ -224,7 +214,6 @@ class X84SFTPServer (SFTPServerInterface):
         except OSError as err:
             return SFTPServer.convert_errno(err.errno)
         return SFTP_OK
-
 
     def rename(self, oldpath, newpath):
         if not self.user.is_sysop or flagged_dirname in path:
@@ -237,7 +226,6 @@ class X84SFTPServer (SFTPServerInterface):
         except OSError as err:
             return SFTPServer.convert_errno(err.errno)
         return SFTP_OK
-
 
     def mkdir(self, path, attr):
         if not self.user.is_sysop or flagged_dirname in path:
@@ -252,7 +240,6 @@ class X84SFTPServer (SFTPServerInterface):
             return SFTPServer.convert_errno(err.errno)
         return SFTP_OK
 
-
     def rmdir(self, path):
         if not self.user.is_sysop or flagged_dirname in path:
             return SFTP_PERMISSION_DENIED
@@ -263,7 +250,6 @@ class X84SFTPServer (SFTPServerInterface):
         except OSError as err:
             return SFTPServer.convert_errno(err.errno)
         return SFTP_OK
-
 
     def chattr(self, path, attr):
         if self._is_uploaddir(path):
@@ -279,7 +265,6 @@ class X84SFTPServer (SFTPServerInterface):
         except OSError as err:
             return SFTPServer.convert_errno(err.errno)
         return SFTP_OK
-
 
     def symlink(self, target_path, path):
         if not self.user.is_sysop or flagged_dirname in path:
@@ -304,7 +289,6 @@ class X84SFTPServer (SFTPServerInterface):
         except OSError as err:
             return SFTPServer.convert_errno(err.errno)
         return SFTP_OK
-
 
     def readlink(self, path):
         self.log.debug('readlink({0!r})'.format(path))

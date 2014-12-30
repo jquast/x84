@@ -197,7 +197,7 @@ setup(name='x84',
           'wcwidth >=0.1.1',
           'python-dateutil >=2.2',
           'irc >=8.9.1',
-          'xmodem >= 0.3.3',
+          'xmodem >= 0.3.2',
       ] + get_maybe_requires(),
       scripts=['bin/x84'],
       classifiers=[

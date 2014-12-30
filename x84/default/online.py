@@ -18,11 +18,12 @@ def banner():
     """ Returns string suitable for displaying banner """
     from x84.bbs import getterminal, showart, echo
     import os
-    term = getterminal()    
+    term = getterminal()
     banner = '\r\n'
-    for line in showart(os.path.join(os.path.dirname(__file__),'art','online.ans'),'topaz'):
-        banner = banner + term.move_x((term.width/2)-40) + line
-    return (banner)  
+    for line in showart(os.path.join(os.path.dirname(__file__), 'art', 'online.ans'), 'topaz'):
+        banner = banner + term.move_x((term.width / 2) - 40) + line
+    return (banner)
+
 
 def describe(sessions):
     """
@@ -35,21 +36,22 @@ def describe(sessions):
     max_user = ini.CFG.getint('nua', 'max_user')
 
     text = u'\r\n'.join(([u''.join((
-        term.move_x((term.width/2)-40), term.green,
-        u'%*d' % (5 + slen(sessions), node), u' '*7, term.normal,
-        u'%4is' % (attrs.get('idle', 0),), u' ',u' '*8,
+        term.move_x((term.width / 2) - 40), term.green,
+        u'%*d' % (5 + slen(sessions), node), u' ' * 7, term.normal,
+        u'%4is' % (attrs.get('idle', 0),), u' ', u' ' * 8,
         (term.bold_red(u'%-*s' % (max_user, (
-        u'** diSCONNECtEd' if 'delete' in attrs
-        else attrs.get('handle', u'** CONNECtiNG')),)
+            u'** diSCONNECtEd' if 'delete' in attrs
+            else attrs.get('handle', u'** CONNECtiNG')),)
         ) if attrs.get('handle', u'') != session.user.handle
             else term.red(u'%-*s' % (max_user, session.user.handle))),
         term.green(u'       '),
         term.yellow((attrs.get('activity', u''))
-                        if attrs.get('sid') != session.sid else
-                        term.yellow(session.activity)),
+                    if attrs.get('sid') != session.sid else
+                    term.yellow(session.activity)),
     )) for node, (_sid, attrs) in get_nodes(sessions)]))
 
-    return text+'\r\n'
+    return text + '\r\n'
+
 
 def get_nodes(sessions):
     """ Given an array of sessions, assign an arbitrary 'node' number """
@@ -67,12 +69,12 @@ def heading(sessions):
     max_user = ini.CFG.getint('nua', 'max_user')
 
     bar = ''
-    for line in showart(os.path.join(os.path.dirname(__file__),'art','onlinebar.ans'),'topaz'):
-        bar = bar + term.move_x((term.width/2)-40) + line
+    for line in showart(os.path.join(os.path.dirname(__file__), 'art', 'onlinebar.ans'), 'topaz'):
+        bar = bar + term.move_x((term.width / 2) - 40) + line
     return u'\r\n'.join((
         u'\r\n'.join([term.center(pline, (term.width))
                       for pline in prompt()]),
-    u'\r\n',bar))
+        u'\r\n', bar))
 
 
 def prompt():
@@ -91,12 +93,12 @@ def prompt():
         decorate('c', 'hAt USR'),
         decorate('s', 'ENd MSG'),
         (u''.join((
-        decorate('p', 'lAYbACk REC'),
-        decorate('w', 'AtCh liVE'),
-        decorate('d', 'iSCONNECt SiD'),
-        decorate('e', 'diT USR'),
-        decorate('v', 'iEW SiD AttRS'),
-        u' ',)) if 'sysop' in session.user.groups else u''),
+            decorate('p', 'lAYbACk REC'),
+            decorate('w', 'AtCh liVE'),
+            decorate('d', 'iSCONNECt SiD'),
+            decorate('e', 'diT USR'),
+            decorate('v', 'iEW SiD AttRS'),
+            u' ',)) if 'sysop' in session.user.groups else u''),
         decorate('Escape/q', 'Uit'),
         decorate('Spacebar', 'REfRESh'),
     )), int(term.width * .8), subsequent_indent=u' ' * 8)
@@ -241,8 +243,9 @@ def main():
     dirty = time.time()
     cur_row = 0
 
-    # tells syncterm to change to topaz, then delete the output to avoid the code to be shown in other clients
-    echo(syncterm_setfont('topaz')+u'\r'+term.clear_eol)
+    # tells syncterm to change to topaz, then delete the output to avoid the
+    # code to be shown in other clients
+    echo(syncterm_setfont('topaz') + u'\r' + term.clear_eol)
 
     while True:
         ayt_lastfresh = broadcast_ayt(ayt_lastfresh)
@@ -330,7 +333,7 @@ def main():
                 otxt_b = banner()
                 otxt_h = heading(sessions)
                 cur_row = len(otxt_b.splitlines()) + len(otxt_h.splitlines())
-                echo(u''.join((otxt_b, '\r\n',otxt_h, u'\r\n',otxt)))
+                echo(u''.join((otxt_b, '\r\n', otxt_h, u'\r\n', otxt)))
             else:
                 echo(u''.join((
                     u'\r\n',

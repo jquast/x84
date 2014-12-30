@@ -125,6 +125,7 @@ def decode_pipe(ucs):
     return u''.join((outp, term.normal))
 _decode_pipe = decode_pipe
 
+
 def encode_pipe(ucs):
     """
     encode_pipe(ucs) -> unicode
@@ -153,7 +154,7 @@ def encode_pipe(ucs):
             outp += ucs[idx]
             # point beyond next sequence, if any,
             # otherwise point to next character
-            nxt = idx + 1 #measure_length(ucs[idx:], term) + 1
+            nxt = idx + 1  # measure_length(ucs[idx:], term) + 1
     return outp
 _encode_pipe = encode_pipe
 
@@ -170,6 +171,7 @@ def ansiwrap(ucs, width=70, **kwargs):
 
 
 class Ansi(Sequence):
+
     def __new__(cls, object):
         warnings.warn('Ansi() deprecated, getterminal() now provides '
                       '.length(), .rjust(), .wrap(), etc.')

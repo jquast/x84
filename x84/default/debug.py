@@ -9,18 +9,18 @@ def main():
     from x84.bbs import getsession, gosub
     assert 'sysop' in getsession().user.groups
 
-    #return migrate_105lc()
-    #return nothing()
-    #return gosub('test_keyboard_keys')
-    #return dump_x84net_debug()
+    # return migrate_105lc()
+    # return nothing()
+    # return gosub('test_keyboard_keys')
+    # return dump_x84net_debug()
     return test_xmodem(os.path.join(os.path.dirname(__file__), 'debug.py'))
 
     # but this is a great way to make data manipulations,
     # exampled here is importing of a .csv import of
     # a mystic recordbase.
-    #return merge_mystic()
+    # return merge_mystic()
 
-    #return tygerofdantye_fix()
+    # return tygerofdantye_fix()
 
 
 def test_xmodem(filepath, protocol='xmodem1k'):
@@ -78,7 +78,7 @@ def migrate_105lc():
         user = get_user(handle)
         lc[(handle)] = (user.lastcall, user.calls, user.location)
         echo(u'\r\n' + user.handle + '.')
-    echo ('\r\n\r\nlast callers db rebuilt!')
+    echo('\r\n\r\nlast callers db rebuilt!')
 
 
 def nothing():

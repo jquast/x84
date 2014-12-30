@@ -91,6 +91,7 @@ def log_db_cmd(log, schema, cmd, args):
 
 
 class DBHandler(threading.Thread):
+
     """
     This handler receives a "database command", in the form of a dictionary
     method name and its arguments, and the return value is sent to the session

@@ -27,6 +27,7 @@ GLYPHSETS = {
 
 
 class AnsiWindow(object):
+
     """
     The AnsiWindow base class provides position-relative window drawing
     routines to terminal interfaces, such as pager windows, editors, and
