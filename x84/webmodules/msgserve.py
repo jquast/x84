@@ -46,7 +46,8 @@ VALIDATE_MSG_KEYS = (u'author', u'recipient', u'subject',
 def parse_auth(request_data):
     """
     Parse and return tuple of 'auth' token if valid.
-    Otherwise, throw ValueError.
+
+    :raises ValueError:  token is too far from future or past.
     """
     board_id, token, when = request_data.get('auth', '').split('|')
     when = int(when)

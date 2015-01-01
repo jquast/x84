@@ -89,6 +89,7 @@ def main():
             for key, client in server.clients.items()[:]:
                 kill_session(client, 'server shutdown')
                 del server.clients[key]
+    return 0
 
 
 def parse_args():

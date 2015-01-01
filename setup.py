@@ -6,6 +6,7 @@ from __future__ import print_function
 import subprocess
 import warnings
 import platform
+import pipes
 import errno
 import sys
 import os
@@ -18,9 +19,9 @@ from setuptools.command.develop import develop as _develop
 from setuptools import Command
 
 
-here = os.path.dirname(__file__)
-readme = 'README.rst'
-doc_url = 'http://x84.rtfd.org'
+HERE = os.path.dirname(__file__)
+README = 'README.rst'
+DOC_URL = 'http://x84.rtfd.org'
 maybe_requires = [
     # These are installed only if a C compiler is available,
     # otherwise a warning is emitted and they are excluded.
@@ -50,27 +51,34 @@ def check_virtualenv():
     if not os.getenv('VIRTUAL_ENV'):
         print('You must be in a virtualenv, See developer documentation '
               'at filepath docs/developers.rst or online at {0}'
-              .format(doc_url), file=sys.stderr)
+              .format(DOC_URL), file=sys.stderr)
+        exit(1)
 
 
 class develop(_develop):
-    """
-    This derived develop command class ensures a virtualenv is used.
-    """
+    """ This derived develop command class ensures virtualenv and requirements. """
     def finalize_options(self):
         check_virtualenv()
         _develop.finalize_options(self)
 
+    def run(self):
+        for req in ('requirements-dev.txt',
+                    'requirements.txt',
+                    'requirements-crypto.txt',):
+            req_path = os.path.join(HERE, req)
+            cargs = ['pip', 'install', '--upgrade', '--requirement', req_path]
+            print('>>', ' '.join(map(pipes.quote, list(cargs))))
+            subprocess.check_call(cargs)
+        _develop.run(self)
+
 
 class build_docs(Command):
-    """
-    Build documentation using sphinx.
-    """
+    """ Build documentation using sphinx. """
     #: path to source documentation folder.
-    DOCS_SRC = os.path.join(here, 'docs')
+    DOCS_SRC = os.path.join(HERE, 'docs')
 
     #: path to output html documentation folder.
-    DOCS_DST = os.path.join(here, 'build', 'docs')
+    DOCS_DST = os.path.join(HERE, 'build', 'docs')
 
     user_options = []
 
@@ -113,8 +121,8 @@ def get_maybe_requires():
     bin_cc = UnixCCompiler.executables.get('compiler', ['cc'])[0]
     has_cc = False
     try:
-        has_cc = bool(0 == subprocess.call(('which', bin_cc),
-                                           stdout=open(os.devnull, 'w')))
+        has_cc = bool(0 == subprocess.call(
+            ('which', bin_cc), stdout=open(os.devnull, 'w')))
     except WindowsError:
         pass
 
@@ -154,7 +162,7 @@ def get_maybe_requires():
         elif sys.platform.lower() == 'win32':
             suggest_cmd = " Try using linux or osx."
         warnings.warn("No C compiler found ({0}). {1}{2}"
-                      .format(cc, msg_nosupport, suggest_cmd))
+                      .format(bin_cc, msg_nosupport, suggest_cmd))
         return maybe_requires
 
     elif not has_libffi:
@@ -187,15 +195,15 @@ setup(name='x84',
       version='1.2.0',
       description=("Framework for Telnet and SSH BBS or MUD server "
                    "development with example default bbs board"),
-      long_description=open(os.path.join(here, readme)).read(),
+      long_description=open(os.path.join(HERE, README)).read(),
       author='Jeff Quast',
       author_email='contact@jeffquast.com',
-      url='http://x84.rtfd.org/',
+      url=DOC_URL,
       keywords="telnet ssh terminal server ansi bbs mud curses utf8 cp437",
       license='ISC',
       packages=['x84', 'x84.default', 'x84.default.art', 'x84.bbs'],
       package_data={
-          '': [readme],
+          '': [README],
           'x84.default': ['*.ans', '*.txt', ],
           'x84.default.art': ['*.asc', '*.ans', '*.txt',
                               'weather/*',
@@ -203,21 +211,23 @@ setup(name='x84',
                               ],
       },
       install_requires=[
-         'blessed==1.9.4',
-         'requests==2.5.1',
-         'irc==9.0',
-         'sqlitedict==1.1.0',
-         'wcwidth==0.1.4',
-         'python-dateutil==2.3',
-         'jaraco.timing==1.1',
-         'jaraco.util==10.6',
-         'more-itertools==2.2',
-         'sauce==1.1',
-         'six==1.8.0',
-         'wsgiref==0.1.2',
-         'xmodem==0.3.2',
+          'blessed==1.9.4',
+          'requests==2.5.1',
+          'irc==9.0',
+          'sqlitedict==1.1.0',
+          'wcwidth==0.1.4',
+          'python-dateutil==2.3',
+          'jaraco.timing==1.1',
+          'jaraco.util==10.6',
+          'more-itertools==2.2',
+          'sauce==1.1',
+          'six==1.8.0',
+          'wsgiref==0.1.2',
+          'xmodem==0.3.2',
       ] + get_maybe_requires(),
-      scripts=['bin/x84'],
+      entry_points = {
+          'console_scripts': ['x84=x84.engine:main'],
+      },
       classifiers=[
           'Environment :: Console :: Curses',
           'Environment :: Console',
