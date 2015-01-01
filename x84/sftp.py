@@ -60,15 +60,13 @@ class X84SFTPHandle (SFTPHandle):
 
 class X84SFTPServer (SFTPServerInterface):
     def __init__(self, *args, **kwargs):
-        from x84.bbs import DBProxy
-        root = get_ini(section='sftp', key='root')
-        umask = get_ini(section='sftp', key='umask') or 0o644
-        self.ssh_session = kwargs.pop('session')
-        username = self.ssh_session.username
-        userdb = DBProxy('userbase', use_session=False)
-        self.user = None
-        with userdb:
-            self.user = userdb[username]
+        from x84.bbs.userbase import check_anonymous_user, get_user, User
+        self.root = get_ini(section='sftp', key='root')
+        self.umask = get_ini(section='sftp', key='umask') or 0o644
+        ssh_session = kwargs.pop('session')
+        self.user = (User(u'anonymous')
+                     if check_anonymous_user(ssh_session.username)
+                     else get_user(ssh_session.username))
         self.flagged = self.user.get('flaggedfiles', set())
         self.log = logging.getLogger('x84.engine')
         super(X84SFTPServer, self).__init__(*args)  # , **kwargs)
