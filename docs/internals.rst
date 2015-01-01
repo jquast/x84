@@ -11,12 +11,6 @@ The following are helper modules used by the internal API but are not
 published as such. Their use or documentation isn't considered very
 useful to a general audience.
 
-log.py
-------
-
-.. automodule:: x84.bbs.log
-  :members:
-
 ipc.py
 ------
 
