@@ -1,5 +1,5 @@
-Before you get started
-======================
+Developers
+==========
 
 The x/84 telnet system is written in the Python_ programming language. With
 prior programming experience you should be able to pick up the language quickly
@@ -11,29 +11,27 @@ language, like provided by the free `Dive Into Python`_ book by Mark Pilgrim.
 .. _Dive Into Python: http://www.diveintopython.net/
 
 Requirements
-============
+------------
 
 The following is step-by-step instructions for creating a developer environment
 for making your own customizations of x/84's engine and api and building your
 own ``'scriptpath'`` (defined by ``~/.x84/default.ini``).  You may also simply
 install x/84 using pip_ or easy_install_.
 
-Debian / Ubuntu
----------------
+**Debian / Ubuntu**
 
 You should install the following packages::
 
     $ sudo apt-get install git python python-pip python-virtualenv virtualenvwrapper
 
-Arch Linux
-----------
+**Arch Linux**
 
 You should install the following packages::
 
     $ sudo pacman -S git python2 python2-pip python2-virtualenv python2-virtualenvwrapper
 
 Virtualenv
-----------
+``````````
 
 Optional but recommended, using virtualenv and virtualenvwrapper_ ensures
 you can install x/84 and its dependencies without root access and quickly
@@ -79,7 +77,7 @@ Starting x/84
    x84
 
 Contributing using git
-======================
+----------------------
 
 If you intend to contribute patches or new mods to the x/84 telnet system, you
 should `fork the repository <https://help.github.com/articles/fork-a-repo>`_
