@@ -46,8 +46,13 @@ def main():
     from x84.bbs.ini import CFG
 
     if sys.maxunicode == 65535:
+        # apple is the only known bastardized variant that does this;
+        # presumably for memory/speed savings (UCS-2 strings are faster
+        # than UCS-4).  Python 3 dynamically allocates string types by
+        # their widest content, so such things aren't necessary ...
         import warnings
-        warnings.warn('Python not built with wide unicode support!')
+        warnings.warn('This python is built without wide unicode support. '
+                      'some internationalized languages will not be possible.')
 
     # retrieve list of managed servers
     servers = get_servers(CFG)
