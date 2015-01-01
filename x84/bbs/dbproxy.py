@@ -184,3 +184,9 @@ class DBProxy(object):
     def popitem(self):
         return self.proxy_method('popitem')
     popitem.__doc__ = dict.popitem.__doc__
+
+    def copy(self):
+        # https://github.com/piskvorky/sqlitedict/issues/20
+        # should we have a .copy() method? @jquast
+        return dict(self.proxy_method('items'))
+    copy.__doc__ = dict.copy.__doc__
