@@ -41,8 +41,7 @@ def display_banner(filepattern, encoding=None, vertical_padding=0):
     echo(term.home + (u'\r\n' * vertical_padding))
 
     # show art
-    art_generator = showart(filepattern, encoding=encoding,
-                            center=True)
+    art_generator = showart(filepattern, encoding=encoding, center=True)
     line_no = 0
     for line_no, txt in enumerate(art_generator):
         echo(txt)
