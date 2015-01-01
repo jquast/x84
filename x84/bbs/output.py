@@ -83,8 +83,10 @@ def decode_pipe(ucs):
     """
     decode_pipe(ucs) -> unicode
 
-    Return new terminal sequence, replacing 'pipe codes', such as u'|03'
-    with this terminals equivalent attribute sequence.
+    Return new terminal sequence, replacing 'pipe codes',
+    such as ``u'|03'`` with this terminals equivalent attribute
+    sequence.  These are sometimes known as LORD codes, as they
+    were used in the DOS Door game of the same name.
     """
     # simple optimization, no '|' ? exit early!
     if u'|' not in ucs:

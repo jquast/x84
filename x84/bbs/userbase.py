@@ -468,7 +468,7 @@ def get_digestpw():
 
 
 def check_new_user(username):
-    """ Boolean return when username matches `newcmds' ini cfg. """
+    """ Boolean return when username matches ``newcmds`` ini cfg. """
     from x84.bbs import get_ini
     matching = get_ini(section='matrix',
                        key='newcmds',
@@ -480,7 +480,7 @@ def check_new_user(username):
 
 
 def check_bye_user(username):
-    """ Boolean return when username matches `byecmds' in ini cfg. """
+    """ Boolean return when username matches ``byecmds`` in ini cfg. """
     from x84.bbs import get_ini
     matching = get_ini(section='matrix', key='byecmds', split=True)
     return matching and username in matching

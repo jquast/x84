@@ -290,6 +290,9 @@ def get_ini(section=None, key=None, getter='get', split=False, splitsep=None):
     from x84.bbs.ini import CFG
     assert section is not None, section
     assert key is not None, key
+    if CFG is None:
+        warnings.warn('ini system not initialized (maybe you are building docs?)')
+        return
     if CFG.has_option(section, key):
         getter = getattr(CFG, getter)
         value = getter(section, key)
