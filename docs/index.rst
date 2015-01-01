@@ -21,6 +21,7 @@ Contents:
    api/index
    internals
    future_direction
+   history
 
 Support
 =======

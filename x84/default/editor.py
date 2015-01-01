@@ -69,7 +69,7 @@ def show_help(term, center=True):
 
 def wrap_rstrip(value):
     """
-    Remove hardwrap u'\r\n' and softwrap u'\n' from value
+    Remove hardwrap ``u'\r\n'`` and softwrap ``u'\n'`` from value
     """
     if value[-len(HARDWRAP):] == HARDWRAP:
         value = value[:-len(HARDWRAP)]
@@ -80,21 +80,21 @@ def wrap_rstrip(value):
 
 def softwrap_join(value):
     """
-    Return whitespace-joined string from value split by softwrap '\n'.
+    Return whitespace-joined string from value split by softwrap ``'\n'``.
     """
     return WHITESPACE.join(value.split(SOFTWRAP))
 
 
 def is_hardwrapped(ucs):
     """
-    Returns true if string is hardwrapped with '\r\n'.
+    Returns true if string is hardwrapped with ``'\r\n'``.
     """
     return ucs[-(len(HARDWRAP)):] == HARDWRAP
 
 
 def is_softwrapped(ucs):
     """
-    Returns true if string is softwrapped with '\n'.
+    Returns true if string is softwrapped with ``'\n'``.
     """
     return ucs[-(len(SOFTWRAP)):] == SOFTWRAP
 
