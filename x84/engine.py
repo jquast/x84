@@ -58,17 +58,15 @@ def main():
     servers = get_servers(CFG)
 
     # begin unmanaged servers
-    if get_ini(section='web', key='modules'):
+    if (CFG.has_section('web') and
+            not CFG.has_option('web', 'enabled')
+            or CFG.getboolean('web', 'enabled')):
         # start https server for one or more web modules.
-        #
-        # may raise an ImportError for systems where pyOpenSSL and etc. could
-        # not be installed (due to any issues with missing python-dev, libffi,
-        # cc, etc.).  Allow it to raise naturally, the curious user should
-        # either discover and resolve the root issue, or disable web modules if
-        # it cannot be resolved.
         from x84 import webserve
         webserve.main()
 
+    # 3.0: This should be a separate section all together
+    #      with an enables = yes option.
     if get_ini(section='msg', key='network_tags'):
         # start background timer to poll for new messages
         # of message networks we may be a member of.
