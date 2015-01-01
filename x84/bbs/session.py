@@ -558,7 +558,6 @@ class Session(object):
                'logger': Data is logging record, used by IPCLogHandler.
                'output': Unicode data to write to client.
                'global': Broadcast event to other sessions.
-               XX 'pos': Request cursor position.
                'db-<schema>': Request sqlite dict method result.
                'db=<schema>': Request sqlite dict method result as iterable.
                'lock-<name>': Fine-grained global bbs locking.
