@@ -38,7 +38,7 @@ maybe_requires = [
     # of webserver, that is, only https webservers are
     # supported for the moment.
     'web.py==0.37',
-    'CherryPy==3.6.0',
+    'cherrypy==3.6.0',
 ]
 
 
