@@ -246,4 +246,5 @@ setup(name='x84',
           'develop': develop,
           'docs': build_docs,
       },
+      zip_safe=False,
       )

@@ -23,6 +23,9 @@ from paramiko import (
     SFTP_PERMISSION_DENIED,
 )
 
+# local
+from x84.bbs import get_ini
+
 # directory name for flagged files
 flagged_dirname = '__flagged__'
 uploads_dirname = '__uploads__'
@@ -56,15 +59,14 @@ class X84SFTPHandle (SFTPHandle):
 
 
 class X84SFTPServer (SFTPServerInterface):
-    from x84.bbs.ini import CFG
-    ROOT = CFG.get('sftp', 'root')
-    UMASK = 0o644
+    ROOT = get_ini(section='sftp',
+                   key='root')
+    UMASK = get_ini(section='sftp',
+                         key='umask'
+                    ) or 0o644
 
     def __init__(self, *args, **kwargs):
         from x84.bbs import DBProxy
-        from x84.bbs.ini import CFG
-        if CFG.has_option('sftp', 'umask'):
-            self.UMASK = int('0o{0}'.format(CFG.get('sftp', 'umask')), 8)
         self.ssh_session = kwargs.pop('session')
         username = self.ssh_session.username
         userdb = DBProxy('userbase', use_session=False)
@@ -164,9 +166,9 @@ class X84SFTPServer (SFTPServerInterface):
         self.log.debug('lstat({0!r}, {1!r}, {2!r})'
                        .format(path, flags, attr))
         path = self._realpath(path)
-        if flags & os.O_CREAT and (uploads_dirname not in path and
-                                   not self.user.is_sysop) or \
-                (uploads_dirname in path and os.path.exists(path)):
+        if (flags & os.O_CREAT and (uploads_dirname not in path and
+                                    not self.user.is_sysop) or
+                (uploads_dirname in path and os.path.exists(path))):
             return SFTP_PERMISSION_DENIED
         try:
             binary_flag = getattr(os, 'O_BINARY',  0)

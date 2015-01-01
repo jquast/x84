@@ -58,7 +58,7 @@ Servers
    :members:
 .. automodule:: x84.ssh
    :members:
-.. automodule:: x84.web
+.. automodule:: x84.webserve
    :members:
 .. automodule:: x84.sftp
    :members:
