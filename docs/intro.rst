@@ -16,11 +16,19 @@
 Introduction
 ============
 
-**An experimental python Telnet and Ssh server framework**
+**An experimental python Telnet and SSH server framework**
 
-The primary purpose of x/84 is to provide a server framework for building environments that emulate the feeling of an era that predates the world wide web.  It may be used for developing a classic bulletin-board system (of which one is provided as the 'default' scripting layer), a MUD, or a text-based game server such as done by dgamelaunch.  You may access the "default board" provided by x/84 at telnet host 1984.ws::
+The primary purpose of x/84 is to provide a server framework for building environments that emulate the feeling of an era that predates the world wide web.  It may be used for developing a classic bulletin board system (BBS) -- one is provided as the 'default' scripting layer -- a MUD, or a text-based game or game hosting server such as done by dgamelaunch.
+
+You may access the "default board" provided by x/84 at telnet host 1984.ws::
 
     telnet 1984.ws
+
+    # or
+    ssh anonymous@1984.ws
+
+    # or
+    rlogin 1984.ws
 
 You might think of x/84 as the "rails of text-mode servers".
 
@@ -56,8 +64,8 @@ Note that only Linux, BSD, or OSX is supported, due to the blessed_ dependency o
 
      x84
 
-   If the ``*x84`` helper script fails, try using the
-   python interpreter used by ``pip``::
+   If the *x84* helper script fails, try using the
+   python interpreter used by *pip*::
 
      python2.7 -m x84.engine
 
@@ -67,11 +75,13 @@ Note that only Linux, BSD, or OSX is supported, due to the blessed_ dependency o
      telnet localhost 6023
 
 All data files are written to ``~/.x84/``.  To create a custom board,
-you might copy the ``default`` folder of the python module to your local
-path, and point the ``scriptpath`` variable of ``~/.x84/default.ini``
-to point to that folder.  Simply edit and save changes, and re-login to
-see them.  Adjust the ``show_traceback`` variable to display any errors
-directly to your telnet or ssh client.
+you might copy the ``default`` folder of the *x/84* python module to your
+local path, and point the ``scriptpath`` variable of ``~/.x84/default.ini``
+to point to that folder.
+
+Simply edit and save changes, and re-login to see them.  Adjust the
+``show_traceback`` variable to display any errors directly to your
+telnet or ssh client.
 
 Documentation, Support, Issue Tracking
 --------------------------------------
