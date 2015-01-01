@@ -112,10 +112,7 @@ def init_bbs_ini():
     cfg_bbs.set('system', 'datapath', os.path.expanduser(os.path.join(
         os.path.join('~', '.x84', 'data'))))
     cfg_bbs.set('system', 'timeout', '1984')
-    # for very slow systems, you may need to increase IPC timeout for acquiring
-    # locks and sending input to sub-processes -- this can happen when the
-    # system is under very heavy load -- like pasting wikipedia into the editor
-    # cfg_bbs.set('system', 'timeout_ipc', '1')  # XXX disabled
+
     try:
         import bcrypt  # NOQA
     except ImportError:
@@ -137,7 +134,7 @@ def init_bbs_ini():
     # change 'unknown' termcaps to 'ansi': for dumb terminals
     cfg_bbs.set('system', 'termcap-unknown', 'ansi')
     # could be information leak to sensitive sysops
-    cfg_bbs.set('system', 'show_traceback', 'no')
+    cfg_bbs.set('system', 'show_traceback', 'yes')
     # store passwords in uppercase, facebook and mystic bbs does this ..
     cfg_bbs.set('system', 'pass_ucase', 'no')
     # default encoding for the showart function on UTF-8 capable terminals
@@ -159,15 +156,12 @@ def init_bbs_ini():
     cfg_bbs.set('ssh', 'port', '6022')
     cfg_bbs.set('ssh', 'hostkey', os.path.expanduser(
         os.path.join('~', '.x84', 'ssh_host_rsa_key')))
-
-    # 4096 took quite a while on my machine, so, if you're paranoid enough
-    # for something longer, then you can buy your own patience !
     cfg_bbs.set('ssh', 'hostkeybits', '2048')
 
+    # rlogin realisticly only works on port 513
     cfg_bbs.add_section('rlogin')
     cfg_bbs.set('rlogin', 'enabled', 'no')
     cfg_bbs.set('rlogin', 'addr', '127.0.0.1')
-    # rlogin realisticly only works on port 513
     cfg_bbs.set('rlogin', 'port', '513')
 
     # default path if cmd argument is not absolute,
@@ -198,10 +192,10 @@ def init_bbs_ini():
     cfg_bbs.set('irc', 'channel', '#1984')
     cfg_bbs.set('irc', 'ssl', 'no')
 
-    cfg_bbs.add_section('nethack')
-    cfg_bbs.set('nethack', 'enabled', 'yes')
-    cfg_bbs.set('nethack', 'path', '/nh343/nethack.343-nao')
-    cfg_bbs.set('nethack', 'logfile', '/nh343/var/xlogfile')
+    cfg_bbs.add_section('shroo-ms')
+    cfg_bbs.set('shroo-ms', 'enabled', 'no')
+    cfg_bbs.set('shroo-ms', 'idkey', '')
+    cfg_bbs.set('shroo-ms', 'restkey', '')
 
     cfg_bbs.add_section('nua')
     cfg_bbs.set('nua', 'script', 'nua')
