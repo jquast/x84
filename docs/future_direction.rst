@@ -1,4 +1,7 @@
-v3.0 roadmap:
+Future Directions
+=================
+
+basic v3.0 roadmap:
 
 * python3 using async i/o
 * windows support, requires ansi.sys support emulation for PDCurses in blessed
