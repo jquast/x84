@@ -106,6 +106,7 @@ def articlereader(article):
 
 def main():
     session, term = getsession(), getterminal()
+    session.activity = 'reading news from ycombinator.com'
     echo(term.clear+term.yellow+'firing up hACKER nEWS! *')
 
     feed = feedparser.parse('https://news.ycombinator.com/rss')
