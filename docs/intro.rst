@@ -13,7 +13,6 @@
 .. image:: https://img.shields.io/pypi/dm/x84.svg
     :alt: Downloads
 
-============
 Introduction
 ============
 
@@ -41,7 +40,7 @@ Portability is as equal to python, and has been tested on Raspberry Pi, Android,
 See clients_ for a list of compatible clients.
 
 Quickstart
-==========
+----------
 
 Note that only Linux, BSD, or OSX is supported, due to the blessed_ dependency on curses.
 
@@ -53,10 +52,7 @@ Note that only Linux, BSD, or OSX is supported, due to the blessed_ dependency o
 
      pip install x84
 
-Getting Started
-===============
-
-1. Launch the *x84.engine* python module::
+4. Launch the *x84.engine* python module::
 
      x84
 
@@ -66,7 +62,7 @@ Getting Started
      python2.7 -m x84.engine
 
 
-2. Telnet to 127.0.0.1 6023, Assuming a *bsd telnet* client::
+5. Telnet to 127.0.0.1 6023, Assuming a *bsd telnet* client::
 
      telnet localhost 6023
 
@@ -78,7 +74,7 @@ see them.  Adjust the ``show_traceback`` variable to display any errors
 directly to your telnet or ssh client.
 
 Documentation, Support, Issue Tracking
-======================================
+--------------------------------------
 
 See Documentation_ for API and general tutorials, especially the developers_
 section for preparing a developer's environment.  Of note, the *Terminal*
