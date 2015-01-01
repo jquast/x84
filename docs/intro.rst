@@ -43,6 +43,8 @@ See clients_ for a list of compatible clients.
 Quickstart
 ==========
 
+Note that only Linux, BSD, or OSX is supported, due to the blessed_ dependency on curses.
+
 1. Install python_ 2.7
 
 2. Install pip_
@@ -68,23 +70,27 @@ Getting Started
 
      telnet localhost 6023
 
-3. All data files are written to ``~/.x84/``.  To create a custom board,
-   you might copy the ``default`` folder of the python module to your local
-   path, and point the ``scriptpath`` variable of ``~/.x84/default.ini``
-   to point to that folder.  Simply edit and save changes, and re-login to
-   see them.  Adjust the ``show_traceback`` variable to display any errors
-   directly to your telnet or ssh client.
+All data files are written to ``~/.x84/``.  To create a custom board,
+you might copy the ``default`` folder of the python module to your local
+path, and point the ``scriptpath`` variable of ``~/.x84/default.ini``
+to point to that folder.  Simply edit and save changes, and re-login to
+see them.  Adjust the ``show_traceback`` variable to display any errors
+directly to your telnet or ssh client.
 
+Documentation, Support, Issue Tracking
+======================================
 
-Further documentation
-=====================
+See Documentation_ for API and general tutorials, especially the developers_
+section for preparing a developer's environment.  Of note, the *Terminal*
+interface is used for input and output and well-documented in blessed_.
 
-See Documentation_ for API and general tutorials.  The special *Terminal* interface is documented in blessed_.
+This project isn't terribly serious (for example, there are no tests), though
+contributions (especially fixes and documentation) are welcome.  See the
+project on github_ for source tree and issue tracking.  If there is some
+feature or change you would like to see, or something doesn't work, feel
+free to open an issue.
 
-Issue Tracking & Development
-============================
-
-See the project on github_ for source tree and issue tracking.
+If you would like to chat with developers of x/84, channel *#1984* on *irc.efnet.org*.
 
 .. _miniboa: https://code.google.com/p/miniboa/
 .. _sqlitedict: http://pypi.python.org/pypi/sqlitedict
@@ -96,6 +102,7 @@ See the project on github_ for source tree and issue tracking.
 .. _python: https://www.python.org/
 .. _pip: http://guide.python-distribute.org/installation.html#installing-pip
 .. _Documentation: http://x84.readthedocs.org/
+.. _developers: https://x84.readthedocs.org/en/latest/developers.html
 .. _clients: https://x84.readthedocs.org/en/latest/clients.html
 .. _scripting: https://x84.readthedocs.org/en/latest/bbs_api.html
 .. _github: https://github.com/jquast/x84

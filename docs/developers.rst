@@ -1,16 +1,42 @@
-Developer Environment
-=====================
+Before you get started
+======================
 
-If you're new to python, the following is step-by-step instructions for
-creating a developer environment for making your own customizations of
-x/84's engine and api.  You may also simply install x/84 using pip_ or
-easy_install_.
+The x/84 telnet system is written in the Python_ programming language. With
+prior programming experience you should be able to pick up the language quickly
+by looking at the provided sample mods in the ``x84/default`` folder. If you
+are completely new to Python_, it's recommended to read more about the
+language, like provided by the free `Dive Into Python`_ book by Mark Pilgrim.
+
+.. _Python: http://www.python.org/
+.. _Dive Into Python: http://www.diveintopython.net/
+
+Requirements
+============
+
+The following is step-by-step instructions for creating a developer environment
+for making your own customizations of x/84's engine and api and building your
+own ``'scriptpath'`` (defined by ``~/.x84/default.ini``).  You may also simply
+install x/84 using pip_ or easy_install_.
+
+Debian / Ubuntu
+---------------
+
+You should install the following packages::
+
+    $ sudo apt-get install git python python-pip python-virtualenv virtualenvwrapper
+
+Arch Linux
+----------
+
+You should install the following packages::
+
+    $ sudo pacman -S git python2 python2-pip python2-virtualenv python2-virtualenvwrapper
 
 Virtualenv
-``````````
+----------
 
-Optional but recommended. Using virtualenv and virtualenvwrapper_ ensures
-you can install x/84 and its dependencies without root access, and quickly
+Optional but recommended, using virtualenv and virtualenvwrapper_ ensures
+you can install x/84 and its dependencies without root access and quickly
 activate the environment at any time.
 
 1. Install virtualenvwrapper_::
@@ -21,40 +47,28 @@ activate the environment at any time.
 
       . `which virtualenvwrapper.sh`
 
-3. And add the following to your ``~/.profile`` to make this automatic for all
-  login shells::
+   There are techniques to automatically load virtualenvwrapper
+   from your shell profile, or to active a virtualenv when
+   you change to a project folder. See `virtualenv tips and tricks`_
+   if you're interested.
 
-      [ ! -z `which virtualenvwrapper.sh` ] && . `which virtualenvwrapper.sh`
-
-4. Finally, make a virtualenv (named 'x84') using python version 2.7::
+3. Finally, make a virtualenv (named 'x84') using python version 2.7::
 
       mkvirtualenv -p `which python2.7` x84
 
-5. Anytime you want to develop x/84, use the command::
+4. Anytime later that you want to load the x/84 environment, use command::
 
       workon x84
 
-There are techniques to automatically load the x84 virtualenv when
-you change to the project's folder. See `virtualenv tips and tricks`_
-if you're interested.
-
-Clone from Github
-`````````````````
-
-Clone the latest master branch from the github repository::
-
-  git clone 'https://github.com/jquast/x84.git'``
-  cd x84
-
 Run setup.py develop
-````````````````````
+--------------------
 
-Run 'setup.py develop'::
+::
 
    ./setup.py develop
 
 Starting x/84
-`````````````
+-------------
 
 1. Active your virtualenv if you haven't already::
 
@@ -64,6 +78,19 @@ Starting x/84
 
    x84
 
+Contributing using git
+======================
+
+If you intend to contribute patches or new mods to the x/84 telnet system, you
+should `fork the repository <https://help.github.com/articles/fork-a-repo>`_
+and clone over ssh.
+
+Features should be developed into a branch, pushed to github, and when satisfied
+with your changes and you wish to have them included in the base distribution,
+you should
+`create a pull request <https://help.github.com/articles/creating-a-pull-request>`_.
+
+.. _git: http://git-scm.org/
 .. _virtualenvwrapper: https://pypi.python.org/pypi/virtualenvwrapper
 .. _`virtualenv tips and tricks`: http://virtualenvwrapper.readthedocs.org/en/latest/tips.html#automatically-run-workon-when-entering-a-directory
 .. _pip: https://pypi.python.org/pypi/pip
