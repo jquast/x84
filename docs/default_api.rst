@@ -178,7 +178,6 @@ readmsgs.py
 
 A message scanning and browsing interface. Analogous to mutt.
 
-.. autoattribute:: x84.default.readmsgs.TIME_FMT
 .. automodule:: x84.default.readmsgs
    :members:
 

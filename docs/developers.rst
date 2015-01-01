@@ -67,11 +67,11 @@ Starting x/84
 
 1. Active your virtualenv if you haven't already::
 
-   workon x84
+      workon x84
 
 2. And Launch x/84 server::
 
-   x84
+      x84
 
 x84 Usage
 `````````
