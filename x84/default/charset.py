@@ -34,7 +34,7 @@ prompt_text = (u"Chose an encoding and set font until artwork "
                u"will appear as '?'.  "
 
                u"OSX Clients should chose an Andale Mono font. Linux "
-               u"fonts should chose an <...> font. ")
+               u"fonts should chose an Deja Vu Sans Mono font. ")
 
 prompt_padding = 10
 
