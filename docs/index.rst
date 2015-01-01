@@ -20,6 +20,7 @@ Contents:
    developers
    api/index
    internals
+   future_direction
 
 Support
 =======

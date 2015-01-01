@@ -3,12 +3,12 @@
 Distribution file for x/84
 """
 from __future__ import print_function
+import subprocess
 import warnings
 import platform
+import errno
 import sys
 import os
-import subprocess
-import errno
 
 from distutils.core import setup
 from distutils.sysconfig import get_python_inc
@@ -24,17 +24,21 @@ doc_url = 'http://x84.rtfd.org'
 maybe_requires = [
     # These are installed only if a C compiler is available,
     # otherwise a warning is emitted and they are excluded.
-    'bcrypt >= 1.0.1',
-    'paramiko >=1.14.0',
-    'ecdsa >=0.11',
-    'pycrypto >= 2.6.1',
-    'cryptography >=0.4',
-    'pyOpenSSL >=0.14',
+    'bcrypt==1.1.0',
+    'cffi==0.8.6',
+    'cryptography==0.7.1',
+    'ecdsa==0.11',
+    'enum34==1.0.4',
+    'paramiko==1.15.2',
+    'pyOpenSSL==0.14',
+    'pyasn1==0.1.7',
+    'pycparser==2.10',
+    'pycrypto==2.6.1',
     # currently, ssl (from above) is required to run any kind
     # of webserver, that is, only https webservers are
     # supported for the moment.
-    'web.py >=0.37',
-    'cherrypy >=3.6.0',
+    'web.py==0.37',
+    'CherryPy==3.6.0',
 ]
 
 
@@ -82,7 +86,7 @@ class build_docs(Command):
             subprocess.call(
                 ('sphinx-build', '-E', self.DOCS_SRC, self.DOCS_DST),
                 stdout=sys.stdout, stderr=sys.stderr)
-        except OSError, err:
+        except OSError as err:
             if err.errno != errno.ENOENT:
                 raise
             print("You must install 'sphinx' to build documentation.",
@@ -99,7 +103,7 @@ def get_maybe_requires():
 
     This list extends ``install_requires`` of the call to setup().
     """
-    msg_nosupport = ('This installation will not support ssh, ssl '
+    msg_nosupport = ('This installation may not support ssh, ssl '
                      'web server, or fast encryption of passwords '
                      'using bcrypt.')
 
@@ -119,7 +123,7 @@ def get_maybe_requires():
         has_libffi = bool(
             0 == subprocess.call(('pkg-config', '--exists', 'libffi',),
                                  stdout=open(os.devnull, 'w')))
-    except OSError, err:
+    except OSError as err:
         if err.errno != errno.ENOENT:
             raise
         warnings.warn("pkg-config was not found. {0}".format(msg_nosupport))
@@ -127,7 +131,8 @@ def get_maybe_requires():
         pass
 
     if not has_python_h:
-        suggest_cmd = ''
+        suggest_cmd = (' Make sure the "development" version '
+                       'of Python is installed.')
         if sys.platform.lower() == 'linux':
             dist = platform.linux_distribution()[0]
             if dist in ('debian', 'ubuntu',):
@@ -137,22 +142,8 @@ def get_maybe_requires():
         warnings.warn("header files for Python not found (Python.h). "
                       "{0}{1}".format(msg_nosupport, suggest_cmd))
 
-    elif not has_libffi:
-        suggest_cmd = ''
-        if sys.platform.lower() == 'darwin':
-            suggest_cmd = (" Try `brew install libffi' followed by "
-                           "`brew link --force libffi' (requires homebrew)")
-        elif sys.platform.lower() == 'linux':
-            dist = platform.linux_distribution()[0]
-            if dist in ('debian', 'ubuntu',):
-                suggest_cmd = (" Try `apt-get install libffi'.")
-        elif sys.platform.lower() == 'win32':
-            suggest_cmd = " Try using linux or osx."
-        warnings.warn("Foreign Function Interface library not found (libffi). "
-                      "{0}{1}".format(msg_nosupport, suggest_cmd))
-
     elif not has_cc:
-        suggest_cmd = ''
+        suggest_cmd = (' Try installing gcc.')
         if sys.platform.lower() == 'darwin':
             xcode_url = "https://developer.apple.com/xcode/downloads/"
             suggest_cmd = " Install XCode from {0}".format(xcode_url)
@@ -164,6 +155,29 @@ def get_maybe_requires():
             suggest_cmd = " Try using linux or osx."
         warnings.warn("No C compiler found ({0}). {1}{2}"
                       .format(cc, msg_nosupport, suggest_cmd))
+        return maybe_requires
+
+    elif not has_libffi:
+        suggest_cmd = (" We're going to try to build anyway; if it continues "
+                       "to fail -- install libffi. ")
+        if sys.platform.lower() == 'darwin':
+            suggest_cmd = (" Try `brew install libffi' followed by "
+                           "`brew link --force libffi' (requires homebrew)")
+        elif sys.platform.lower() == 'linux':
+            dist = platform.linux_distribution()[0]
+            if dist in ('debian', 'ubuntu',):
+                suggest_cmd = (" We're going to try to build anyway; "
+                               "if it continues to fail, try "
+                               "`apt-get install libffi'.")
+        elif sys.platform.lower() == 'win32':
+            suggest_cmd = " Try using linux or osx."
+        warnings.warn("Foreign Function Interface library not found (libffi). "
+                      "{0}{1}".format(msg_nosupport, suggest_cmd))
+
+        # it appears linux doesn't have any trouble without libffi anyway
+        # (according to reports).  So, we still return maybe_requires ..
+        return maybe_requires
+
     else:
         return maybe_requires
 
@@ -189,15 +203,19 @@ setup(name='x84',
                               ],
       },
       install_requires=[
-          # NOTE: do a pip freeze on release!
-          'requests >=1.1.0',
-          'sauce >=1.0',
-          'sqlitedict >=1.0.8',
-          'blessed >=1.9.4',
-          'wcwidth >=0.1.1',
-          'python-dateutil >=2.2',
-          'irc >=8.9.1',
-          'xmodem >= 0.3.2',
+         'blessed==1.9.4',
+         'requests==2.5.1',
+         'irc==9.0',
+         'sqlitedict==1.1.0',
+         'wcwidth==0.1.4',
+         'python-dateutil==2.3',
+         'jaraco.timing==1.1',
+         'jaraco.util==10.6',
+         'more-itertools==2.2',
+         'sauce==1.1',
+         'six==1.8.0',
+         'wsgiref==0.1.2',
+         'xmodem==0.3.2',
       ] + get_maybe_requires(),
       scripts=['bin/x84'],
       classifiers=[

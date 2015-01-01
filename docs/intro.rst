@@ -113,3 +113,4 @@ If you would like to chat with developers of x/84, channel *#1984* on *irc.efnet
 .. _scripting: https://x84.readthedocs.org/en/latest/bbs_api.html
 .. _github: https://github.com/jquast/x84
 .. _web.py: http://webpy.org/
+.. _paramiko: http://www.lag.net/paramiko/

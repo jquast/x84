@@ -7,16 +7,13 @@ by looking at the provided sample mods in the ``x84/default`` folder. If you
 are completely new to Python_, it's recommended to read more about the
 language, like provided by the free `Dive Into Python`_ book by Mark Pilgrim.
 
-.. _Python: http://www.python.org/
-.. _Dive Into Python: http://www.diveintopython.net/
-
 Requirements
 ------------
 
 The following is step-by-step instructions for creating a developer environment
 for making your own customizations of x/84's engine and api and building your
 own ``'scriptpath'`` (defined by ``~/.x84/default.ini``).  You may also simply
-install x/84 using pip_ or easy_install_.
+install x/84 using pip_.
 
 **Debian / Ubuntu**
 
@@ -76,6 +73,15 @@ Starting x/84
 
    x84
 
+x84 Usage
+`````````
+
+Optional command line arguments,
+
+    ``--config=`` alternate bbs configuration filepath
+
+    ``--logger=`` alternate logging configuration filepath
+
 Contributing using git
 ----------------------
 
@@ -91,5 +97,6 @@ you should
 .. _git: http://git-scm.org/
 .. _virtualenvwrapper: https://pypi.python.org/pypi/virtualenvwrapper
 .. _`virtualenv tips and tricks`: http://virtualenvwrapper.readthedocs.org/en/latest/tips.html#automatically-run-workon-when-entering-a-directory
-.. _pip: https://pypi.python.org/pypi/pip
-.. _easy_install: https://pypi.python.org/pypi/setuptools
+.. _pip: http://guide.python-distribute.org/installation.html#installing-pip
+.. _Python: http://www.python.org/
+.. _Dive Into Python: http://www.diveintopython.net/
