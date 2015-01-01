@@ -404,6 +404,7 @@ def do_prompt(term, session):
     top_margin = bot_margin = 0
     offset = 0
 
+    thread = None
     if shroo_ms_enabled:
         # fetch shroo-ms api oneliners
         thread = FetchUpdatesShrooMs()
