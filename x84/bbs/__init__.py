@@ -235,28 +235,26 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
     if center and term.width > 81:
         padding = term.move_x((term.width / 2) - 40)
 
-    msg_cancel = msg_cancel or u''.join(
-        (term.normal,
-         term.bold_black(u'-- '),
-         u'cancelled {0} by input'.format(filename),
-         term.bold_black(u' --'),
-         ))
-
-    msg_too_wide = u''.join(
-        (term.normal,
-         term.bold_black(u'-- '),
-         u'cancelled {0}, too wide:: {{0}}'.format(filename),
-         term.bold_black(u' --'),
-         ))
-
     lines = _decode(parsed.data).splitlines()
     for idx, line in enumerate(lines):
         # Allow slow terminals to cancel by pressing a keystroke
         if poll_cancel is not False and term.inkey(poll_cancel):
+            msg_cancel = msg_cancel or u''.join(
+                (term.normal,
+                 term.bold_black(u'-- '),
+                 u'canceled {0} by input'.format(os.path.basename(filename)),
+                 term.bold_black(u' --'),
+                 ))
             yield u'\r\n' + term.center(msg_cancel) + u'\r\n'
             return
         line_length = term.length(line.rstrip())
         if not padding and term.width < line_length:
+            msg_too_wide = u''.join(
+                (term.normal,
+                 term.bold_black(u'-- '),
+                 u'cancelled {0}, too wide:: {{0}}'.format(os.path.basename(filename)),
+                 term.bold_black(u' --'),
+                 ))
             yield (u'\r\n' +
                    term.center(msg_too_wide.format(line_length)) +
                    u'\r\n')
@@ -291,9 +289,16 @@ def get_ini(section=None, key=None, getter='get', split=False, splitsep=None):
     assert section is not None, section
     assert key is not None, key
     if CFG is None:
-        warnings.warn('ini system not initialized (maybe you are building docs?)')
-        return
-    if CFG.has_option(section, key):
+        # when building documentation, 'get_ini' at module-level
+        # imports is not really an error.  However, if you're importing
+        # a module that calls get_ini before the config system is
+        # initialized, then you're going to get an empty value! warning!!
+        import inspect
+        stack = inspect.stack()
+        caller_mod, caller_func = stack[2][1], stack[2][3]
+        warnings.warn('ini system not (yet) initialized, '
+                      'caller = {0}:{1}'.format(caller_mod, caller_func))
+    elif CFG.has_option(section, key):
         getter = getattr(CFG, getter)
         value = getter(section, key)
         if split and hasattr(value, 'split'):
