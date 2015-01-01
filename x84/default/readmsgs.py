@@ -412,8 +412,8 @@ def read_messages(msgs, new):
                 term.bold_black(':'),)
             msg_list.append((head(msg), idx, row_txt, subj))
         msg_list.sort(reverse=True)
-        return [(idx, row_txt + thread_indent(depth) + subj)
-                for (_threadid, depth), idx, row_txt, subj in msg_list]
+        return [(idx, _row_txt + thread_indent(depth) + subj)
+                for (_threadid, depth), idx, _row_txt, subj in msg_list]
 
     def get_selector(mailbox, prev_sel=None):
         """
@@ -543,9 +543,6 @@ def read_messages(msgs, new):
         """
         Returns unicode string suitable for refreshing the screen.
         """
-        from x84.bbs import getsession
-        session = getsession()
-
         if READING:
             reader.colors['border'] = term.bold_yellow
             selector.colors['border'] = term.bold_black

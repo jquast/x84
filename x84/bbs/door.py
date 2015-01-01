@@ -786,7 +786,7 @@ def launch(dos=None, cp437=True, drop_type=None,
             if dos is not None:
                 cmd = None
 
-                if command != None:
+                if command is not None:
                     cmd = command
                 else:
                     cmd = dosbin
@@ -800,10 +800,8 @@ def launch(dos=None, cp437=True, drop_type=None,
                             env_term=env_term)
 
             door.run()
-        except:
-            raise
         finally:
-            if store_rows != None and store_cols != None:
+            if store_rows is not None and store_cols is not None:
                 term.rows, term.columns = store_rows, store_cols
                 echo(u'\x1b[8;%d;%dt' % (store_rows, store_cols,))
                 term.inkey(timeout=0.25)

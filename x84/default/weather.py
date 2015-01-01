@@ -30,7 +30,7 @@ def temp_conv(val, centigrade):
     """
     try:
         val = int(val)
-    except:
+    except ValueError:
         return '', ''
     if not centigrade:
         return val, u'F'
@@ -49,7 +49,7 @@ def speed_conv(val, centigrade):
     # we simply use the 'centigrade' measurement as imperial vs. metric
     try:
         val = int(val)
-    except:
+    except ValueError:
         return '', ''
     if not centigrade:
         return val, u'MPH'

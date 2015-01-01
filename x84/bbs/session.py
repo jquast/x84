@@ -334,7 +334,7 @@ class Session(object):
         if 0 != len(self._script_stack):
             # recover from exception
             fault = self._script_stack.pop()
-            stop = False
+            prefix = u'stop'
             if len(self._script_stack):
                 # scripts remaining on the script_stack, resume the script that
                 # called us. Make sure your calling script queries for input or
@@ -342,9 +342,6 @@ class Session(object):
                 # end up in an infinite loop of gosub() followed by a crash (!)
                 resume = self.current_script
                 prefix = u'resume {resume.name}'.format(resume=resume)
-            else:
-                stop = True
-                prefix = u'stop'
 
             # display error to local log handler and to the user,
             msg = (u'{prefix} after general exception in {fault.name}'

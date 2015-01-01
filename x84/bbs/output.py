@@ -6,7 +6,7 @@ import re
 
 from x84.bbs.session import getterminal, getsession
 
-from blessed.sequences import Sequence, measure_length
+from blessed.sequences import Sequence
 
 __all__ = ['echo', 'timeago', 'encode_pipe', 'decode_pipe']
 
@@ -145,7 +145,6 @@ def encode_pipe(ucs):
             # at sequence, point beyond it,
             match = ANSI_COLOR.match(ucs[idx:])
             if match:
-                #nxt = idx + measure_length(ucs[idx:], term)
                 nxt = idx + len(match.group(0))
                 # http://wiki.mysticbbs.com/mci_codes
                 value = int(match.group(1)) - 30
@@ -156,7 +155,7 @@ def encode_pipe(ucs):
             outp += ucs[idx]
             # point beyond next sequence, if any,
             # otherwise point to next character
-            nxt = idx + 1  # measure_length(ucs[idx:], term) + 1
+            nxt = idx + 1
     return outp
 _encode_pipe = encode_pipe
 

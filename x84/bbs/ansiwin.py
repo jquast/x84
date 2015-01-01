@@ -1,7 +1,7 @@
 """
 Ansi Windowing package for x/84, http://github.com/jquast/x84
 """
-from x84.bbs.session import getterminal, getsession
+from x84.bbs.session import getterminal
 
 GLYPHSETS = {
     'ascii': {

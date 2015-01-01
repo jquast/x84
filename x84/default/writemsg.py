@@ -321,7 +321,6 @@ def prompt_abort():
 def prompt_network(msg, network_tags):
     """ Prompt for network message """
     from x84.bbs import getterminal, echo, Lightbar, Selector
-    from x84.bbs.ini import CFG
 
     term = getterminal()
     inp = Selector(yloc=term.height - 1,

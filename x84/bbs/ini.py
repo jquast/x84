@@ -23,7 +23,6 @@ def init(lookup_bbs, lookup_log):
     tuple is created.
     """
     import ConfigParser
-    root = logging.getLogger()
     log = logging.getLogger(__name__)
 
     def write_cfg(cfg, filepath):
@@ -145,26 +144,31 @@ def init_bbs_ini():
     cfg_bbs.set('system', 'art_utf8_codec', 'cp437')
 
     cfg_bbs.add_section('telnet')
+    cfg_bbs.set('telnet', 'enabled', 'yes')
     cfg_bbs.set('telnet', 'addr', '127.0.0.1')
     cfg_bbs.set('telnet', 'port', '6023')
 
+    cfg_bbs.add_section('ssh')
     try:
-        import ssh  # NOQA
+        import x84.ssh  # NOQA
+        cfg_bbs.set('ssh', 'enabled', 'yes')
     except ImportError:
+        cfg_bbs.set('ssh', 'enabled', 'no')
         pass
-    else:
-        cfg_bbs.add_section('ssh')
-        cfg_bbs.set('ssh', 'addr', '127.0.0.1')
-        cfg_bbs.set('ssh', 'port', '6022')
-        cfg_bbs.set('ssh', 'hostkey', os.path.expanduser(
-            os.path.join('~', '.x84', 'ssh_host_rsa_key')))
-        # 4096 took quite a while on my machine, so, if you're paranoid enough
-        # for something longer, then you can buy your own patience !
-        cfg_bbs.set('ssh', 'hostkeybits', '2048')
+    cfg_bbs.set('ssh', 'addr', '127.0.0.1')
+    cfg_bbs.set('ssh', 'port', '6022')
+    cfg_bbs.set('ssh', 'hostkey', os.path.expanduser(
+        os.path.join('~', '.x84', 'ssh_host_rsa_key')))
+
+    # 4096 took quite a while on my machine, so, if you're paranoid enough
+    # for something longer, then you can buy your own patience !
+    cfg_bbs.set('ssh', 'hostkeybits', '2048')
 
     cfg_bbs.add_section('rlogin')
+    cfg_bbs.set('rlogin', 'enabled', 'no')
     cfg_bbs.set('rlogin', 'addr', '127.0.0.1')
-    cfg_bbs.set('rlogin', 'port', '6513')
+    # rlogin realisticly only works on port 513
+    cfg_bbs.set('rlogin', 'port', '513')
 
     # default path if cmd argument is not absolute,
     cfg_bbs.add_section('door')
@@ -192,6 +196,7 @@ def init_bbs_ini():
     cfg_bbs.set('irc', 'server', 'irc.efnet.org')
     cfg_bbs.set('irc', 'port', '6667')
     cfg_bbs.set('irc', 'channel', '#1984')
+    cfg_bbs.set('irc', 'ssl', 'no')
 
     cfg_bbs.add_section('nethack')
     cfg_bbs.set('nethack', 'enabled', 'yes')

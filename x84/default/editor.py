@@ -2,12 +2,11 @@
 editor script for X/84, https://github.com/jquast/x84
 """
 # std
-import codecs
 import os
 
 # local
 from x84.bbs import getsession, getterminal, encode_pipe, echo, getch
-from x84.bbs import Pager, Lightbar, Selector, ScrollingEditor, showart
+from x84.bbs import Lightbar, Selector, ScrollingEditor, showart
 
 # This is probably the fourth or more ansi multi-line editor
 # I've written for python. I did the least-effort this time.

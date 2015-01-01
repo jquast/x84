@@ -3,7 +3,7 @@
 # More to be added as soon as we get a filebase going.
 
 from x84.bbs import getsession, getterminal, echo, list_users, get_user
-from x84.bbs import LineEditor, gosub, showart, getch
+from x84.bbs import gosub, showart, getch
 import os
 
 __author__ = 'Hellbeard'

@@ -16,7 +16,7 @@ def request_info(sid):
 
 def banner():
     """ Returns string suitable for displaying banner """
-    from x84.bbs import getterminal, showart, echo
+    from x84.bbs import getterminal, showart
     import os
     term = getterminal()
     banner = '\r\n'
@@ -64,10 +64,7 @@ def heading(sessions):
     """
     from x84.bbs import getterminal, ini, showart
     import os
-    slen = lambda sessions: len(u'%d' % (len(sessions),))
     term = getterminal()
-    max_user = ini.CFG.getint('nua', 'max_user')
-
     bar = ''
     for line in showart(os.path.join(os.path.dirname(__file__), 'art', 'onlinebar.ans'), 'topaz'):
         bar = bar + term.move_x((term.width / 2) - 40) + line
@@ -169,7 +166,7 @@ def chat(sessions):
         # page other user,
         channel = tgt_session['sid']
         sender = (session.user.handle
-                  if not 'sysop' in session.user.groups else -1)
+                  if 'sysop' not in session.user.groups else -1)
         session.send_event('route', (
             tgt_session['sid'], 'page', channel, sender))
         gosub('chat', channel)

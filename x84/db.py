@@ -45,7 +45,6 @@ def get_db_filepath(schema):
 
 
 def get_db_lock(schema, table):
-    log = logging.getLogger(__name__)
     key = (schema, table)
     global DATALOCK, FILELOCK
     with FILELOCK:

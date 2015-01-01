@@ -17,7 +17,7 @@ __version__ = 1.0
 
 def lb_init(position=None, menu_index=None):
     """ Initialize Lightbar Main Menu """
-    from x84.bbs import getsession, getterminal, echo, showart, ini, Lightbar
+    from x84.bbs import getsession, getterminal, ini, Lightbar
     import os
     import logging
 
@@ -124,10 +124,9 @@ def lb_refresh(lb_pager=None):
 
 def show_banner():
     """ Display main menu banner """
-    from x84.bbs import showart, echo, getterminal, getsession
+    from x84.bbs import showart, echo, getterminal
     import os
 
-    session, term = getsession(), getterminal()
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'main.ans')
 
     # displays a centered main menu header in topaz encoding for utf8
@@ -140,8 +139,6 @@ def main():
     from x84.bbs import getterminal, getsession, getch, goto, gosub
     from x84.bbs import ini, echo
     from ConfigParser import Error as ConfigError
-    import os
-    import logging
 
     key_map = {
         '$': 'bulletins',
@@ -165,7 +162,6 @@ def main():
         '#': 'lord'}
 
     # add LORD to menu only if enabled,
-    logger = logging.getLogger()
     session, term = getsession(), getterminal()
     session.activity = u'Lightbar Main menu'
 

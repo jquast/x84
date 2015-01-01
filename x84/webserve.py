@@ -184,7 +184,7 @@ def server(urls, funcs):
 
     try:
         CherryPyWSGIServer.ssl_adapter.context.use_certificate_file(cert)
-    except:
+    except Exception:
         # wrap exception to contain filepath to 'cert' file, which will
         # hopefully help the user better understand what otherwise be very
         # obscure.
@@ -197,7 +197,7 @@ def server(urls, funcs):
 
     try:
         CherryPyWSGIServer.ssl_adapter.context.use_privatekey_file(key)
-    except:
+    except Exception:
         # also wrap exception to contain filepath to 'key' file.
         error = ''.join(
             traceback.format_exception_only(

@@ -222,7 +222,7 @@ def kill_session(client, reason='killed'):
     if tty is not None:
         try:
             tty.master_write.send(('exception', Disconnected(reason),))
-        except (EOFError, IOError) as err:
+        except (EOFError, IOError):
             pass
         unregister_tty(tty)
 
@@ -323,7 +323,6 @@ def on_naws(client):
     that a new window size is read in interfaces where they may be changed
     accordingly.
     """
-    log = logging.getLogger(__name__)
     for _sid, tty in get_terminals():
         if client == tty.client:
             columns = int(client.env['COLUMNS'])

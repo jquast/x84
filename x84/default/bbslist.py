@@ -607,14 +607,12 @@ def add_bbs():
     # pylint: disable=R0914,R0915
     #        Too many local variables
     #        Too many statements
-    from x84.bbs import getsession, getterminal, echo, LineEditor, DBProxy, ini
-    from x84.bbs import getch
+    from x84.bbs import getsession, getterminal, echo, LineEditor, DBProxy
     session, term = getsession(), getterminal()
     echo(term.move(term.height, 0))
     empty_msg = u'\r\n\r\nVAlUE iS NOt OPtiONAl.'
     cancel_msg = u"\r\n\r\nENtER 'quit' tO CANCEl."
     saved_msg = u'\r\n\r\nSAVED AS RECORd id %s.'
-    logger = logging.getLogger()
     bbs = dict()
     for bkey in DB_KEYS:
         if bkey == 'timestamp':
@@ -655,35 +653,6 @@ def add_bbs():
     echo(u'\r\n\r\n' + saved_msg % (key) + '\r\n')
     session.send_event('global', ('bbslist_update', None,))
     session.buffer_event('bbslist_update')
-    if ini.CFG.has_section('bbs-scene'):
-        # post to bbs-scene.org
-        posturl = 'http://bbs-scene.org/api/bbslist.xml'
-        usernm = ini.CFG.get('bbs-scene', 'user')
-        passwd = ini.CFG.get('bbs-scene', 'pass')
-        data = {'name': bbs['bbsname'],
-                'sysop': bbs['sysop'],
-                'software': bbs['software'],
-                'address': bbs['address'],
-                'port': bbs['port'],
-                'location': bbs['location'],
-                'notes': bbs['notes'],
-                }
-        req = requests.post(posturl, auth=(usernm, passwd), data=data)
-        if req.status_code != 200:
-            echo(u'\r\n\r\nrequest failed,\r\n')
-            echo(u'%r' % (req.content,))
-            echo(u'\r\n\r\n(code : %s).\r\n' % (req.status_code,))
-            echo(u'\r\nPress any key ..')
-            logger.warn('bbs post failed: %s' % (posturl,))
-            getch()
-            return
-        logger.info('bbs-scene.org api (%d): %r/%r',
-                    req.status_code, session.user.handle, bbs)
-        # spawn a thread to re-fetch bbs entries,
-        thread = FetchUpdates()
-        thread.start()
-        wait_for(thread)
-        return chk_thread(thread)
 
 
 def process_keystroke(inp, key=None):
@@ -808,13 +777,7 @@ def main():
 
     echo(u'\r\n\r\n')
     thread = None
-    if ini.CFG.has_section('bbs-scene'):
-        thread = FetchUpdates()
-        thread.start()
-        session.activity = u'bbs lister [bbs-scene.org]'
-        echo(u'fetching bbs-scene.org updates ...')
-    else:
-        session.activity = u'bbs lister'
+    session.activity = u'bbs lister'
 
     dirty = True
     # session.buffer_event('refresh', ('init',))

@@ -286,6 +286,7 @@ def main():
         # build and sort directory listing
         reload_dir()
         echo(lb.refresh())
+        filename, _ = lb.selection
         browser['last_diz_len'] = 0
         diz = ''
         # force it to describe the very first file when browser loads

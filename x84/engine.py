@@ -131,16 +131,18 @@ def get_servers(CFG):
     Given a configuration file, instantiate and return a list of enabled
     servers.
     """
-    log = logging.getLogger('x84.engine')
-
     servers = []
 
-    if CFG.has_section('telnet'):
+    if (CFG.has_section('telnet') and
+            not CFG.has_option('telnet', 'enabled')
+            or CFG.getboolean('telnet', 'enabled')):
         # start telnet server instance
         from x84.telnet import TelnetServer
         servers.append(TelnetServer(config=CFG))
 
-    if CFG.has_section('ssh'):
+    if (CFG.has_section('ssh') and
+            not CFG.has_option('ssh', 'enabled')
+            or CFG.getboolean('ssh', 'enabled')):
         # start ssh server instance
         #
         # may raise an ImportError for systems where pyOpenSSL and etc. could
@@ -151,7 +153,9 @@ def get_servers(CFG):
         from x84.ssh import SshServer
         servers.append(SshServer(config=CFG))
 
-    if CFG.has_section('rlogin'):
+    if (CFG.has_section('rlogin') and
+            not CFG.has_option('rlogin', 'enabled')
+            or CFG.getboolean('rlogin', 'enabled')):
         # start rlogin server instance
         from x84.rlogin import RLoginServer
         servers.append(RLoginServer(config=CFG))
@@ -486,7 +490,6 @@ def _loop(servers):
     """
     # pylint: disable=R0912,R0914,R0915
     #         Too many local variables (24/15)
-    import logging
     import select
     import sys
     from x84.terminal import get_terminals, kill_session
@@ -555,7 +558,7 @@ def _loop(servers):
         if WIN32 or set(session_fds) & set(ready_r):
             try:
                 session_recv(locks, terms, log, tap_events)
-            except IOError, err:
+            except IOError as err:
                 # if the ipc closes while we poll, warn and continue
                 log.warn(err)
 

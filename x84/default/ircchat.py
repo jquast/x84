@@ -102,19 +102,19 @@ def main(channel=None, caller=None):
         channel = '#' + channel
     try:
         host = ini.CFG.get('irc', 'server')
-    except:
+    except Exception:
         host = 'irc.efnet.org'
     try:
         port = ini.CFG.getint('irc', 'port')
-    except:
+    except Exception:
         port = 6667
     try:
         host_ssl = ini.CFG.getboolean('irc', 'ssl')
-    except:
+    except Exception:
         host_ssl = False
     try:
         swag = ini.CFG.get('irc', 'swag')
-    except:
+    except Exception:
         swag = 'x/84 BBS %s' % ini.CFG.get('system', 'bbsname')
 
     def refresh(pager, ipb, init=False):
@@ -393,9 +393,10 @@ def main(channel=None, caller=None):
         elif cmd.lower() == '/quit':
             EXIT = True
             server.quit(' '.join(args))
-        elif cmd.lower() == '/users':
-            queue.put('NAMES %s' % CHANNEL)
-            return True
+# ???
+#        elif cmd.lower() == '/users':
+#            queue.put('NAMES %s' % CHANNEL)
+#            return True
         else:
             pager.append(format_server(u''.join((
                 term.bold_red('syntax error '),

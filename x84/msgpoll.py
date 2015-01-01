@@ -200,7 +200,7 @@ def get_last_msg_id(last_file):
         with open(last_file, 'r') as last_fp:
             last_msg_id = int(last_fp.read().strip())
 
-    except IOError as err:
+    except IOError:
         # So, create it; but this too, may raise an
         # OSError (Permission Denied), handled by caller.
         with open(last_file, 'w') as last_fp:

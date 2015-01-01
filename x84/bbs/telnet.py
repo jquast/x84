@@ -1,9 +1,6 @@
 """
 telnet extras for x/x84 bbs, https://github.com/jquast/x84
 """
-# std imports
-import threading
-
 # local
 from x84.telnet import SEND
 

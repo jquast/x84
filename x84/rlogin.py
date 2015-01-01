@@ -10,7 +10,6 @@ import logging
 import select
 import socket
 import array
-import errno
 import time
 
 # local

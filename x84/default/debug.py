@@ -6,7 +6,7 @@ def main():
     import os
 
     # by default, nothing is done.
-    from x84.bbs import getsession, gosub
+    from x84.bbs import getsession
     assert 'sysop' in getsession().user.groups
 
     # return migrate_105lc()
