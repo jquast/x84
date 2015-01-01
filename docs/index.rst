@@ -18,7 +18,6 @@ Contents:
    port23
    others
    developers
-   handbook/index
    api/index
    internals
 
