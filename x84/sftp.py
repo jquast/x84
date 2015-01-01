@@ -59,14 +59,10 @@ class X84SFTPHandle (SFTPHandle):
 
 
 class X84SFTPServer (SFTPServerInterface):
-    ROOT = get_ini(section='sftp',
-                   key='root')
-    UMASK = get_ini(section='sftp',
-                         key='umask'
-                    ) or 0o644
-
     def __init__(self, *args, **kwargs):
         from x84.bbs import DBProxy
+        root = get_ini(section='sftp', key='root')
+        umask = get_ini(section='sftp', key='umask') or 0o644
         self.ssh_session = kwargs.pop('session')
         username = self.ssh_session.username
         userdb = DBProxy('userbase', use_session=False)
@@ -80,7 +76,7 @@ class X84SFTPServer (SFTPServerInterface):
     def _dummy_dir_stat(self):
         self.log.debug('_dummy_dir_stat')
         attr = SFTPAttributes.from_stat(
-            os.stat(self.ROOT))
+            os.stat(self.root))
         attr.filename = flagged_dirname
         return attr
 
@@ -88,7 +84,7 @@ class X84SFTPServer (SFTPServerInterface):
         self.log.debug('_realpath({0!r})'.format(path))
         if path.endswith(flagged_dirname):
             self.log.debug('fake dir path: {0!r}'.format(path))
-            return self.ROOT + path
+            return self.root + path
         elif path.find(flagged_dirname) > -1:
             self.log.debug('fake file path: {0!r}'.format(path))
             for f in self.flagged:
@@ -97,7 +93,7 @@ class X84SFTPServer (SFTPServerInterface):
                 if fstripped == pstripped:
                     self.log.debug('file is actually {0}'.format(f))
                     return f
-        return self.ROOT + self.canonicalize(path)
+        return self.root + self.canonicalize(path)
 
     def _is_uploaddir(self, path):
         return ('/{0}'.format(path) == uploads_dirname)
@@ -173,7 +169,7 @@ class X84SFTPServer (SFTPServerInterface):
         try:
             binary_flag = getattr(os, 'O_BINARY',  0)
             flags |= binary_flag
-            fd = os.open(path, flags, self.UMASK)
+            fd = os.open(path, flags, self.umask)
         except OSError as err:
             return SFTPServer.convert_errno(err.errno)
         if (flags & os.O_CREAT) and (attr is not None):
@@ -275,14 +271,14 @@ class X84SFTPServer (SFTPServerInterface):
         path = self._realpath(path)
         if (len(target_path) > 0) and (target_path[0] == '/'):
             # absolute symlink
-            target_path = os.path.join(self.ROOT, target_path[1:])
+            target_path = os.path.join(self.root, target_path[1:])
             if target_path[:2] == '//':
                 # bug in os.path.join
                 target_path = target_path[1:]
         else:
             # compute relative to path
             abspath = os.path.join(os.path.dirname(path), target_path)
-            if abspath[:len(self.ROOT)] != self.ROOT:
+            if abspath[:len(self.root)] != self.root:
                 # this symlink isn't going to work anyway
                 # -- just break it immediately
                 target_path = '<error>'
@@ -301,8 +297,8 @@ class X84SFTPServer (SFTPServerInterface):
             return SFTPServer.convert_errno(err.errno)
         # if it's absolute, remove the root
         if os.path.isabs(symlink):
-            if symlink[:len(self.ROOT)] == self.ROOT:
-                symlink = symlink[len(self.ROOT):]
+            if symlink[:len(self.root)] == self.root:
+                symlink = symlink[len(self.root):]
                 if (len(symlink) == 0) or (symlink[0] != '/'):
                     symlink = '/' + symlink
             else:
