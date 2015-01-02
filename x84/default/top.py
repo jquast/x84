@@ -183,6 +183,9 @@ def login(session, user):
     user.calls += 1
     user.lastcall = time.time()
 
+    # store "from" (session id, telnet-<host>:<port>, fe.)
+    user['last_from'] = session.sid
+
     # save user record
     if user.handle != u'anonymous':
         user.save()
