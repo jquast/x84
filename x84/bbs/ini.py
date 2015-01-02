@@ -168,6 +168,12 @@ def init_bbs_ini():
         os.path.join('~', '.x84', 'ssh_host_rsa_key')))
     cfg_bbs.set('ssh', 'hostkeybits', '2048')
 
+    cfg_bbs.add_section('sftp')
+    cfg_bbs.set('sftp', 'enabled', 'no')
+    cfg_bbs.set('sftp', 'root', os.path.expanduser(
+        os.path.join('~', 'x84-sftp_root')))
+    cfg_bbs.set('sftp', 'uploads_filemode', '644')
+
     # rlogin only works on port 513
     cfg_bbs.add_section('rlogin')
     cfg_bbs.set('rlogin', 'enabled', 'no')
@@ -197,6 +203,7 @@ def init_bbs_ini():
     cfg_bbs.set('matrix', 'script', 'matrix')
     cfg_bbs.set('matrix', 'script_telnet', 'matrix')
     cfg_bbs.set('matrix', 'script_ssh', 'matrix_ssh')
+    cfg_bbs.set('matrix', 'script_sftp', 'matrix_sftp')
     cfg_bbs.set('matrix', 'topscript', 'top')
     cfg_bbs.set('matrix', 'enable_anonymous', 'no')
     cfg_bbs.set('matrix', 'enable_pwreset', 'yes')
