@@ -89,7 +89,6 @@ class SshClient(BaseClient):
         """
         Returns True if channel and transport is active.
         """
-        return True
         if (self.transport is None or self.channel is None):
             # still connecting/negotiating, return our static
             # value (which is True, unless shutdown was called)
@@ -100,7 +99,6 @@ class SshClient(BaseClient):
         """
         Return True if any data is buffered for sending (screen output).
         """
-        return True
         if self.channel is None:
             # channel has not yet been negotiated
             return False
