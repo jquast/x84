@@ -233,7 +233,7 @@ def init_bbs_ini():
     cfg_bbs.set('nua', 'min_pass', '4')
     cfg_bbs.set('nua', 'max_user', '11')
     cfg_bbs.set('nua', 'max_pass', '16')
-    cfg_bbs.set('nua', 'max_email', '50')
+    cfg_bbs.set('nua', 'max_email', '30')
     cfg_bbs.set('nua', 'max_location', '24')
     cfg_bbs.set('nua', 'allow_apply', 'yes')
     cfg_bbs.set('nua', 'invalid_handles', ' '.join(
