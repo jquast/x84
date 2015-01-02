@@ -8,7 +8,7 @@ from x84.bbs.session import getterminal, getsession
 
 from blessed.sequences import Sequence
 
-__all__ = ['echo', 'timeago', 'encode_pipe', 'decode_pipe']
+__all__ = ('echo', 'timeago', 'encode_pipe', 'decode_pipe')
 
 #: A mapping of SyncTerm fonts/code pages to their sequence value.
 #: Where matching, their python-standard encoding value is used, (fe. 'cp437').
