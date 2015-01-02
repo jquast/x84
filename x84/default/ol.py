@@ -16,58 +16,74 @@ more than likely found on telnet://bbs.shroo.ms.
 import threading
 import logging
 import time
-import os
 
 from x84.bbs import getsession, getterminal, echo, syncterm_setfont, LineEditor
 from x84.bbs import timeago, decode_pipe
 from x84.bbs import DBProxy, get_ini
 from common import display_banner
 
-#: filepath to folder containing this script
-here = os.path.dirname(__file__)
+#: maximum username length of bbs
+username_max_length = get_ini(
+    section='nua', key='max_user', getter='getint'
+) or 10
 
 #: filepath to artfile displayed for this script
-art_file = os.path.join(here, 'art', 'oneliner.ans')
+art_file = get_ini(
+    section='oneliners', key='art_file'
+) or 'art/oneliner.ans'
 
 #: encoding used to display artfile
-art_encoding = 'cp437_art'
+art_encoding = get_ini(
+    section='oneliners', key='art_file'
+) or 'cp437'
 
 #: fontset for SyncTerm emulator
-syncterm_font = 'cp437'
+syncterm_font = get_ini(
+    section='oneliners', key='syncterm_font'
+) or 'cp437'
 
 #: alternating colors for oneliners text
-color_palette = ['bright_white', 'bright_cyan', 'bright_magenta']
+color_palette = get_ini(
+    section='oneliners', key='color_palette', split=True
+) or ['bright_white', 'bright_cyan', 'bright_magenta']
 
 #: maximum length of message posting
-MAX_MSGLEN = 50
+MAX_MSGLEN = get_ini(
+    section='oneliners', key='max_msglen', getter='getint'
+) or 50
 
 #: minimum seconds elapsed between posts, 0 to disable
-MIN_ELAPSED = 0
+MIN_ELAPSED = get_ini(
+    section='oneliners', key='min_elapsed', getter='getint'
+) or 0
 
 #: maximum records to display, no matter the screen size
-MAX_HISTORY = 1000
+MAX_HISTORY = get_ini(
+    section='oneliners', key='max_history', getter='getint'
+) or 1000
 
 #: whether shroo.ms api is enabled
 shroo_ms_enabled = get_ini(
     section='shroo-ms', key='enabled', getter='getboolean')
 
+#: shroo.ms api url
 shroo_ms_api_url = get_ini(
     section='shroo-ms', key='api_url'
 ) or 'https://api.parse.com/1/classes/wall'
 
+#: shroo.ms api key
 shroo_ms_api_key = get_ini(
     section='shroo-ms', key='idkey')
+
+#: shroo.ms rest key
 shroo_ms_restkey = get_ini(
     section='shroo-ms', key='restkey')
 
+#: shroo.ms named bbs for posts
 system_bbsname = get_ini(
     section='system', key='bbsname')
 
-username_max_length = get_ini(section='nua',
-                              key='max_user',
-                              getter='getint'
-                              ) or 10
-
+#: returns time of given timestamp for keysort
 keysort_by_datetime = lambda oneliner: (
     time.strptime(oneliner['timestamp'], '%Y-%m-%d %H:%M:%S'))
 
