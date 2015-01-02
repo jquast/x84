@@ -1,6 +1,6 @@
-'''
+"""
 Base classes for clients and connections.
-'''
+"""
 
 import array
 import errno
