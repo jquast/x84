@@ -23,9 +23,6 @@ from paramiko import (
     SFTP_PERMISSION_DENIED,
 )
 
-# local
-from x84.bbs import get_ini
-
 # directory name for flagged files
 flagged_dirname = '__flagged__'
 uploads_dirname = '__uploads__'
@@ -34,7 +31,7 @@ uploads_dirname = '__uploads__'
 class X84SFTPHandle (SFTPHandle):
 
     def __init__(self, *args, **kwargs):
-        self.log = logging.getLogger('x84.engine')
+        self.log = logging.getLogger(__name__)
         self.user = kwargs.pop('user')
         super(X84SFTPHandle, self).__init__(*args, **kwargs)
 
@@ -60,16 +57,27 @@ class X84SFTPHandle (SFTPHandle):
 
 class X84SFTPServer (SFTPServerInterface):
     def __init__(self, *args, **kwargs):
-        from x84.bbs.userbase import check_anonymous_user, get_user, User
+        from x84.bbs import get_ini
+        self.log = logging.getLogger(__name__)
+
+        # root file folder,
         self.root = get_ini(section='sftp', key='root')
-        self.umask = get_ini(section='sftp', key='umask') or 0o644
-        ssh_session = kwargs.pop('session')
-        self.user = (User(u'anonymous')
-                     if check_anonymous_user(ssh_session.username)
-                     else get_user(ssh_session.username))
+
+        # default file mode for uploaded files,
+        self.mode = int('0o{0}'.format(
+            get_ini(section='sftp', key='uploads_filemode') or '644'))
+
+        # allow anonymous login where enabled, otherwise use the
+        # given `username' authenticated by ssh
+        from x84.bbs.userbase import get_user, User
+        self.user = (User(u'anonymous') if kwargs.get('anonymous')
+                     else get_user(kwargs.get('username')))
+
+        # XXX this means if a user interactively flags files, they have to
+        # re-sftp login to see them, we should fix this
         self.flagged = self.user.get('flaggedfiles', set())
-        self.log = logging.getLogger('x84.engine')
-        super(X84SFTPServer, self).__init__(*args)  # , **kwargs)
+
+        super(X84SFTPServer, self).__init__(*args)
 
     def _dummy_dir_stat(self):
         self.log.debug('_dummy_dir_stat')
@@ -167,7 +175,7 @@ class X84SFTPServer (SFTPServerInterface):
         try:
             binary_flag = getattr(os, 'O_BINARY',  0)
             flags |= binary_flag
-            fd = os.open(path, flags, self.umask)
+            fd = os.open(path, flags, self.mode)
         except OSError as err:
             return SFTPServer.convert_errno(err.errno)
         if (flags & os.O_CREAT) and (attr is not None):
