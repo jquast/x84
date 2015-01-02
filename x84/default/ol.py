@@ -185,8 +185,7 @@ def post_shroo_ms(message, username):
             log.error('[shroo.ms] returned %d:', result.status_code)
             log.error(result.content)
             return False
-        log.info('(%d) OK [shroo.ms]: %s', result.status_code,
-                 payload['bbstagline'])
+        log.info('(%d) OK [shroo.ms]: %s', result.status_code, message)
 
         # fetch our own post on shroo-ms in background
         thread = FetchUpdatesShrooMs()
