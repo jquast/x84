@@ -345,6 +345,7 @@ def generate_recent_oneliners(term, n_liners, offset):
 
     # decide the start/end by given offset, to allow paging, bounds check to
     # ensure that it does not scroll out of range
+    offset = min(offset, len(oneliners))
     start, end = len(oneliners) - (n_liners + offset), len(oneliners) - offset
     if start < 0:
         offset += start
