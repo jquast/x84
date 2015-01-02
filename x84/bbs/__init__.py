@@ -26,7 +26,7 @@ from x84.bbs.door import Door, DOSDoor, Dropfile
 from x84.bbs.modem import send_modem, recv_modem
 
 
-__all__ = ['list_users', 'get_user', 'find_user', 'User', 'Group', 'list_msgs',
+__all__ = ('list_users', 'get_user', 'find_user', 'User', 'Group', 'list_msgs',
            'get_msg', 'list_tags', 'Msg', 'LineEditor', 'ScrollingEditor',
            'echo', 'timeago', 'Ansi', 'ansiwrap', 'AnsiWindow', 'Selector',
            'Lightbar', 'from_cp437', 'DBProxy', 'Pager', 'Door', 'DOSDoor',
@@ -34,7 +34,7 @@ __all__ = ['list_users', 'get_user', 'find_user', 'User', 'Group', 'list_msgs',
            'ropen', 'showart', 'showcp437', 'Dropfile', 'encode_pipe',
            'decode_pipe', 'syncterm_setfont', 'get_ini', 'send_modem',
            'recv_modem',
-           ]
+           )
 
 
 # Translation map for embedded font hints in SAUCE records as documented at
