@@ -472,7 +472,7 @@ def do_prompt(term, session):
             echo(inp + u'\r\n')
             break
         elif len(inp):
-            # maybe scroll
+            # maybe scroll, a bit convoluted ...
             height = bot_margin - top_margin
             sequence_keymap, vanilla_keymap = get_keymap(term, offset, height)
             if ((inp.is_sequence and inp.code in sequence_keymap) or
@@ -490,10 +490,6 @@ def main():
 
     echo(u'\r\n')
 
-#    udb = DBProxy('oneliner')
-#    with udb:
-#        for key in udb.keys():
-#            del udb[key]
     maybe_expunge_records()
 
     # set syncterm font, if any
