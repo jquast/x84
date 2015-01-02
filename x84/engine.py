@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Command-line launcher and main event loop for x/84
+Command-line launcher and event loop for x/84, https://github.com/jquast/x84
 """
 # Place ALL metadata in setup.py, except where not suitable, place here.
 # For any contributions, feel free to tag __author__ etc. at top of such file.
@@ -59,8 +59,8 @@ def main():
 
     # begin unmanaged servers
     if (CFG.has_section('web') and
-            not CFG.has_option('web', 'enabled')
-            or CFG.getboolean('web', 'enabled')):
+            (not CFG.has_option('web', 'enabled')
+             or CFG.getboolean('web', 'enabled'))):
         # start https server for one or more web modules.
         from x84 import webserve
         webserve.main()
@@ -138,8 +138,8 @@ def get_servers(CFG):
     servers = []
 
     if (CFG.has_section('telnet') and
-            not CFG.has_option('telnet', 'enabled')
-            or CFG.getboolean('telnet', 'enabled')):
+            (not CFG.has_option('telnet', 'enabled')
+             or CFG.getboolean('telnet', 'enabled'))):
         # start telnet server instance
         from x84.telnet import TelnetServer
         servers.append(TelnetServer(config=CFG))
@@ -158,8 +158,8 @@ def get_servers(CFG):
         servers.append(SshServer(config=CFG))
 
     if (CFG.has_section('rlogin') and
-            not CFG.has_option('rlogin', 'enabled')
-            or CFG.getboolean('rlogin', 'enabled')):
+            (not CFG.has_option('rlogin', 'enabled')
+             or CFG.getboolean('rlogin', 'enabled'))):
         # start rlogin server instance
         from x84.rlogin import RLoginServer
         servers.append(RLoginServer(config=CFG))
@@ -508,7 +508,7 @@ def _loop(servers):
     WIN32 = sys.platform.lower().startswith('win32')
     session_fds = set()
 
-    log = logging.getLogger('x84.engine')
+    log = logging.getLogger(__name__)
 
     if not len(servers):
         raise ValueError("No servers configured for event loop! (ssh, telnet)")
