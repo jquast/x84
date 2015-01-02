@@ -70,26 +70,81 @@ location_max_length = get_ini(section='nua',
 email_max_length = get_ini(section='nua',
                            key='max_email',
                            getter='getint'
-                           ) or 40
+                           ) or 30
 
 #: maximum length of password
 password_max_length = get_ini(section='nua',
                               key='max_pass',
                               getter='getint'
                               ) or 15
+
+#: minimum length of password
 password_min_length = get_ini(section='nua',
                               key='min_pass',
                               getter='getint'
                               ) or 4
 
 #: primary color (highlight)
-color_primary = 'magenta'
+color_primary = get_ini(
+    section='nua', key='color_primary'
+) or 'magenta'
 
 #: secondary color (lowlight)
-color_secondary = 'red'
+color_secondary = get_ini(
+    section='nua', key='color_secondary'
+) or 'red'
 
 #: password hidden character
-hidden_char = u'\u00f7'
+hidden_char = get_ini(
+    section='nua', key='hidden_char'
+) or u'\u00f7'
+
+
+def validate_handle(user, handle):
+    """ Validate setting ``handle`` for ``user``. """
+    errmsg = None
+    if find_user(handle):
+        errmsg = u'User by this name already exists.'
+
+    elif len(handle) < username_min_length:
+        errmsg = (u'Username too short, must be at least {0} characters.'
+                  .format(username_min_length))
+
+    elif handle.lower() in invalid_usernames:
+        errmsg = u'Username is not legal form: reserved.'
+
+    elif os.path.sep in handle:
+        errmsg = u'Username is not legal form: contains OS path separator.'
+
+    elif not re.match(username_re_validator, handle):
+        errmsg = (u'Username fails validation of regular expression, '
+                  u'{0!r}.'.format(username_re_validator))
+
+    # No validation error
+    return errmsg, 0
+
+
+def validate_password(user, password):
+    """ Validate setting ``password`` for ``user``. """
+    errmsg = None
+    if password == u'':
+        errmsg = u'Password is required.'
+    elif len(password) < password_min_length:
+        errmsg = (u'Password too short, must be at least {0} characters.'
+                  .format(password_min_length))
+
+    # No validation error
+    return errmsg, 0
+
+
+def validate_password_again(user, password):
+    """ Validate 2nd round of ``password`` for ``user``. """
+    errmsg = None
+    if not user.auth(password):
+        errmsg = u'Password does not match, try again!'
+
+    # returns -1 as modifier, to return to password prompt.
+    return errmsg, -1
 
 #: structure for prompting input/validation
 vfield = collections.namedtuple('input_validation', [
@@ -110,6 +165,47 @@ vfield = collections.namedtuple('input_validation', [
     # its purpose to the user
     'description',
 ])
+
+#: user record fields prompted by do_nua() loop
+validation_fields = (
+    vfield(name='handle',
+           prompt_key='Username',
+           kwargs={'width': username_max_length},
+           validation_function=validate_handle,
+           getter=lambda: getattr(user, 'handle', None),
+           description=u'Handle or Alias that you will be known '
+           u'by on this board.'),
+    vfield(name='location',
+           prompt_key='Origin (optional)',
+           kwargs={'width': location_max_length},
+           validation_function=None,
+           getter=lambda: getattr(user, 'location', None),
+           description=u'Group of affiliation, geographic location, '
+           u'or other moniker which other members will '
+           u'know as your place or origin.'),
+    vfield(name='email',
+           prompt_key='E-mail (optional)',
+           kwargs={'width': email_max_length},
+           validation_function=None,
+           getter=lambda: getattr(user, 'email', None),
+           description=u'E-mail address is both private and optional, '
+           u'allowing the ability to reset your password '
+           u'should it ever be forgotten.'),
+    vfield(name='password',
+           prompt_key='Password',
+           kwargs={'width': password_max_length,
+                   'hidden': hidden_char},
+           validation_function=validate_password,
+           getter=lambda: None,
+           description=None),
+    vfield(name=None,
+           prompt_key='Again',
+           kwargs={'width': password_max_length,
+                   'hidden': hidden_char},
+           validation_function=validate_password_again,
+           getter=lambda: None,
+           description=None),
+)
 
 
 #: positions next prompt 40 pixels minus center of screen
@@ -206,47 +302,6 @@ def do_nua(user):
     session, term = getsession(), getterminal()
     session.activity = u'Applying for an account'
 
-    #: user record fields prompted by do_nua() loop
-    validation_fields = (
-        vfield(name='handle',
-               prompt_key='Username',
-               kwargs={'width': username_max_length},
-               validation_function=validate_handle,
-               getter=lambda: getattr(user, 'handle', None),
-               description=u'Handle or Alias that you will be known '
-               u'by on this board.'),
-        vfield(name='location',
-               prompt_key='Origin (optional)',
-               kwargs={'width': location_max_length},
-               validation_function=None,
-               getter=lambda: getattr(user, 'location', None),
-               description=u'Group of affiliation, geographic location, '
-               u'or other moniker which other members will '
-               u'know as your place or origin.'),
-        vfield(name='email',
-               prompt_key='E-mail (optional)',
-               kwargs={'width': email_max_length},
-               validation_function=None,
-               getter=lambda: getattr(user, 'email', None),
-               description=u'E-mail address is both private and optional, '
-               u'allowing the ability to reset your password '
-               u'should it ever be forgotten.'),
-        vfield(name='password',
-               prompt_key='Password',
-               kwargs={'width': password_max_length,
-                       'hidden': hidden_char},
-               validation_function=validate_password,
-               getter=lambda: None,
-               description=None),
-        vfield(name=None,
-               prompt_key='Again',
-               kwargs={'width': password_max_length,
-                       'hidden': hidden_char},
-               validation_function=validate_password_again,
-               getter=lambda: None,
-               description=None),
-    )
-
     idx = 0
     while idx != len(validation_fields):
         field = validation_fields[idx]
@@ -284,46 +339,3 @@ def do_nua(user):
 
     return user
 
-
-def validate_handle(user, handle):
-    errmsg = None
-    if find_user(handle):
-        errmsg = u'User by this name already exists.'
-
-    elif len(handle) < username_min_length:
-        errmsg = (u'Username too short, must be at least {0} characters.'
-                  .format(username_min_length))
-
-    elif handle.lower() in invalid_usernames:
-        errmsg = u'Username is not legal form: reserved.'
-
-    elif os.path.sep in handle:
-        errmsg = u'Username is not legal form: contains OS path separator.'
-
-    elif not re.match(username_re_validator, handle):
-        errmsg = (u'Username fails validation of regular expression, '
-                  u'{0!r}.'.format(username_re_validator))
-
-    # No validation error
-    return errmsg, 0
-
-
-def validate_password(user, password):
-    errmsg = None
-    if password == u'':
-        errmsg = u'Password is required.'
-    elif len(password) < password_min_length:
-        errmsg = (u'Password too short, must be at least {0} characters.'
-                  .format(password_min_length))
-
-    # No validation error
-    return errmsg, 0
-
-
-def validate_password_again(user, password):
-    errmsg = None
-    if not user.auth(password):
-        errmsg = u'Password does not match, try again!'
-
-    # returns -1 as modifier, to return to password prompt.
-    return errmsg, -1
