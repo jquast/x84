@@ -1,3 +1,4 @@
+""" SSH and SFTP server support for x/84, https://github.com/jquast/x84 """
 from __future__ import absolute_import
 
 # standard
@@ -38,8 +39,6 @@ class SshClient(BaseClient):
     #         Too many instance attributes
     #         Too many public methods
 
-    kind = 'ssh'
-
     def __init__(self, sock, address_pair, on_naws=None):
         super(SshClient, self).__init__(sock, address_pair, on_naws)
 
@@ -48,6 +47,10 @@ class SshClient(BaseClient):
 
         # Becomes the ssh session channel
         self.channel = None
+
+        # the session kind may be transposed into 'sftp'
+        # if such subsystem is enabled and connected.
+        self.kind = 'ssh'
 
     def shutdown(self):
         """
@@ -86,8 +89,9 @@ class SshClient(BaseClient):
         """
         Returns True if channel and transport is active.
         """
-        if self.transport is None or self.channel is None:
-            # connecting/negotiating,
+        if (self.transport is None or self.channel is None):
+            # still connecting/negotiating, return our static
+            # value (which is True, unless shutdown was called)
             return self.active
         return self.transport.is_active()
 
@@ -144,7 +148,8 @@ class SshClient(BaseClient):
         Returns True if data is awaiting on the ssh channel.
         """
         if self.channel is None or self.kind == 'sftp':
-            # channel has not yet been negotiated
+            # channel has not yet been negotiated, in the case
+            # of sftp, we explicitly don't want to hear about it!
             return False
         return self.channel.recv_ready()
 
@@ -304,29 +309,26 @@ class SshSessionServer(paramiko.ServerInterface):
         self.username = username.strip()
 
         if self.check_account_noverify(username):
-            self.log.debug('any password accepted for system-enabled '
-                           'account, {0!r}'.format(username))
+            self.log.info('any password accepted for system-enabled '
+                          'account, {0!r}'.format(username))
             return paramiko.AUTH_SUCCESSFUL
         if check_user_password(username, password):
-            self.log.debug('password accepted for user {0!r}.'
-                           .format(username))
+            self.log.info('password accepted for user {0!r}.'.format(username))
             return paramiko.AUTH_SUCCESSFUL
 
-        self.log.debug('password rejected for user {0!r}.'.format(username))
+        self.log.info('password rejected for user {0!r}.'.format(username))
         return paramiko.AUTH_FAILED
 
     def check_auth_publickey(self, username, public_key):
         self.username = username.strip()
         if self.check_account_noverify(username):
-            self.log.debug('pubkey accepted for system-enabled account, {0!r}'
-                           .format(username))
+            self.log.info('pubkey accepted for system-enabled account, {0!r}'
+                          .format(username))
             return paramiko.AUTH_SUCCESSFUL
         elif check_user_pubkey(username, public_key):
-            self.log.debug('pubkey accepted for user {0!r}.'
-                           .format(username))
+            self.log.info('pubkey accepted for user {0!r}.'.format(username))
             return paramiko.AUTH_SUCCESSFUL
-        self.log.debug('pubkey denied for user {0!r}.'
-                       .format(username))
+        self.log.info('pubkey denied for user {0!r}.'.format(username))
         return paramiko.AUTH_FAILED
 
     def check_account_noverify(self, username):
@@ -371,13 +373,16 @@ class SshSessionServer(paramiko.ServerInterface):
         self.log.debug('ssh channel granted.')
         self.shell_requested.set()
         return True
+#        return paramiko.OPEN_SUCCEEDED
 
     def check_channel_subsystem_request(self, channel, name):
+        from x84.bbs import get_ini
         if name == 'sftp':
-            self.log.debug('sftp subsystem granted.')
-            self.client.kind = 'sftp'
-            self.sftp_requested.set()
-            self.sftp = True
+            if get_ini(section='sftp', key='enabled', getter='getboolean'):
+                self.client.kind = 'sftp'
+                self.sftp_requested.set()
+                self.sftp = True
+#                return paramiko.OPEN_SUCCEEDED
 
         return (super(SshSessionServer, self)
                 .check_channel_subsystem_request(channel, name))
