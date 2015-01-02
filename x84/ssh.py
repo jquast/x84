@@ -89,6 +89,7 @@ class SshClient(BaseClient):
         """
         Returns True if channel and transport is active.
         """
+        return True
         if (self.transport is None or self.channel is None):
             # still connecting/negotiating, return our static
             # value (which is True, unless shutdown was called)
@@ -99,6 +100,7 @@ class SshClient(BaseClient):
         """
         Return True if any data is buffered for sending (screen output).
         """
+        return True
         if self.channel is None:
             # channel has not yet been negotiated
             return False
@@ -373,7 +375,6 @@ class SshSessionServer(paramiko.ServerInterface):
         self.log.debug('ssh channel granted.')
         self.shell_requested.set()
         return True
-#        return paramiko.OPEN_SUCCEEDED
 
     def check_channel_subsystem_request(self, channel, name):
         from x84.bbs import get_ini
@@ -382,7 +383,7 @@ class SshSessionServer(paramiko.ServerInterface):
                 self.client.kind = 'sftp'
                 self.sftp_requested.set()
                 self.sftp = True
-#                return paramiko.OPEN_SUCCEEDED
+                return True
 
         return (super(SshSessionServer, self)
                 .check_channel_subsystem_request(channel, name))
