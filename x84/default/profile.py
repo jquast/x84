@@ -102,7 +102,7 @@ def display_options(term, session, yloc, xloc, user, fields):
     palette1 = [getattr(term, _color) for _color in color_palette1]
     palette2 = [getattr(term, _color) for _color in color_palette2]
     palette3 = [getattr(term, _color) for _color in color_palette3]
-    delay = 0.01
+    delay = 0.05
 
     # if the screen resizes during animation, return True,
     # forcing another full-screen refresh
@@ -191,7 +191,7 @@ def main():
             display_prompt(term, session, yloc, xloc)
             dirty = 0
 
-        inp = term.inkey(0.1)
+        inp = term.inkey(0.25)
 
         if inp == u'q':
             break
