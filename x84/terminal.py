@@ -40,7 +40,7 @@ class Terminal(BlessedTerminal):
         try:
             self._keyboard_decoder = codecs.getincrementaldecoder(encoding)()
             self._encoding = encoding
-            log.info('keyboard encoding is {!r}'.format(encoding))
+            log.debug('keyboard encoding is {!r}'.format(encoding))
         except Exception, err:
             log.exception(err)
 
@@ -170,16 +170,15 @@ def register_tty(tty):
     Register a global instance of TerminalProcess
     """
     log = logging.getLogger(__name__)
-    log.debug('registered tty: %s', tty.sid)
+    log.debug('[{tty.sid}] registered tty'.format(tty=tty))
     TERMINALS[tty.sid] = tty
 
 
 def unregister_tty(tty):
     """
-    Unregister a Terminal, described by its telnet.TelnetClient,
+    Unregister a Terminal, described by its Client,
     input and output Queues, and Lock.
     """
-    log = logging.getLogger(__name__)
     try:
         flush_queue(tty.master_read)
         tty.master_read.close()
@@ -190,7 +189,6 @@ def unregister_tty(tty):
         # signal tcp socket to close
         tty.client.deactivate()
     del TERMINALS[tty.sid]
-    log.debug('unregistered tty: %s', tty.sid)
 
 
 def get_terminals():
@@ -218,12 +216,15 @@ def kill_session(client, reason='killed'):
     from x84.terminal import unregister_tty
     client.shutdown()
 
+    log = logging.getLogger(__name__)
     tty = find_tty(client)
     if tty is not None:
         try:
             tty.master_write.send(('exception', Disconnected(reason),))
         except (EOFError, IOError):
             pass
+        log.info('[{tty.sid}] goodbye: {reason}'
+                 .format(tty=tty, reason=reason))
         unregister_tty(tty)
 
 
