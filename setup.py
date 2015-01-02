@@ -62,13 +62,9 @@ class develop(_develop):
         _develop.finalize_options(self)
 
     def run(self):
-        for req in ('requirements-dev.txt',
-                    'requirements.txt',
-                    'requirements-crypto.txt',):
-            req_path = os.path.join(HERE, req)
-            cargs = ['pip', 'install', '--upgrade', '--requirement', req_path]
-            print('>>', ' '.join(map(pipes.quote, list(cargs))))
-            subprocess.check_call(cargs)
+        cargs = ['pip', 'install', '--upgrade', 'sphinx', 'tox']
+        print('>>', ' '.join(map(pipes.quote, list(cargs))))
+        subprocess.check_call(cargs)
         _develop.run(self)
 
 
