@@ -66,19 +66,20 @@ class X84SFTPServer (SFTPServerInterface):
         # default file mode for uploaded files,
         _base = 8  # (value is octal!)
         self.mode = int(get_ini(
-            section='sftp', key='uploads_filemode', getter='getint') or '644', _base)
+            section='sftp', key='uploads_filemode') or '644', _base)
 
         # allow anonymous login where enabled, otherwise use the
         # given `username' authenticated by ssh
         from x84.bbs.userbase import get_user, User
-        self.user = (User(u'anonymous') if kwargs.get('anonymous')
-                     else get_user(kwargs.get('username')))
+        _ssh_session = kwargs.pop('ssh_session')
+        self.user = (User(u'anonymous') if _ssh_session.anonymous
+                     else get_user(_ssh_session.username))
 
         # XXX this means if a user interactively flags files, they have to
         # re-sftp login to see them, we should fix this
         self.flagged = self.user.get('flaggedfiles', set())
 
-        super(X84SFTPServer, self).__init__(*args)
+        super(X84SFTPServer, self).__init__(*args, **kwargs)
 
     def _dummy_dir_stat(self):
         self.log.debug('_dummy_dir_stat')
