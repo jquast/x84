@@ -550,8 +550,8 @@ def check_user_pubkey(username, public_key):
         return False
     user_pubkey = get_user(handle).get('pubkey', False)
     if not user_pubkey:
-        log.debug('{0} attempted pubkey authentication, '
-                  'but no public key on record for the user.'
+        log.debug('pubkey authentication by {0!r} but no '
+                  'public key on record for the user.'
                   .format(username))
         return False
     try:
