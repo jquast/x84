@@ -1,4 +1,3 @@
-""" SSH and SFTP server support for x/84, https://github.com/jquast/x84 """
 from __future__ import absolute_import
 
 # standard
@@ -89,7 +88,7 @@ class SshClient(BaseClient):
         """
         Returns True if channel and transport is active.
         """
-        if (self.transport is None or self.channel is None):
+        if self.transport is None or self.channel is None:
             # still connecting/negotiating, return our static
             # value (which is True, unless shutdown was called)
             return self.active
@@ -114,15 +113,13 @@ class SshClient(BaseClient):
         try:
             return self.channel.send(send_bytes)
         except EOFError:
-            raise Disconnected('{self.addrport}: EOFError'
-                               .format(self=self))
+            raise Disconnected('EOFError')
         except socket.error as err:
             if err[0] == errno.EDEADLK:
                 self.log.debug('{self.addrport}: {err} (bandwidth exceed)'
                                .format(self=self, err=err))
                 return 0
-            raise Disconnected('socket error: {err}'
-                               .format(self=self, err=err))
+            raise Disconnected('socket error: {err}'.format(err=err))
 
     def send(self):
         """
@@ -150,6 +147,8 @@ class SshClient(BaseClient):
         if self.channel is None or self.kind == 'sftp':
             # channel has not yet been negotiated, in the case
             # of sftp, we explicitly don't want to hear about it!
+            #
+            # for sftp, we always return False ... XXX
             return False
         return self.channel.recv_ready()
 
@@ -176,7 +175,6 @@ class SshClient(BaseClient):
 
 
 class ConnectSsh(BaseConnect):
-
     """
     ssh protocol connection handler.
 
@@ -205,6 +203,11 @@ class ConnectSsh(BaseConnect):
             self.client.transport.load_server_moduli()
             self.client.transport.add_server_key(self.server_host_key)
             ssh_session = SshSessionServer(client=self.client)
+            from x84.bbs import get_ini
+            if get_ini(section='sftp', key='enabled', getter='getboolean'):
+                self.client.transport.set_subsystem_handler(
+                    'sftp', paramiko.SFTPServer, X84SFTPServer,
+                    ssh_session=ssh_session)
 
             def detected():
                 return (ssh_session.shell_requested.isSet() or
@@ -227,12 +230,6 @@ class ConnectSsh(BaseConnect):
                                .format(client=self.client))
                 self.client.deactivate()
                 return
-
-            self.client.transport.set_subsystem_handler(
-                'sftp',
-                paramiko.SFTPServer,
-                X84SFTPServer,
-                session=ssh_session)
 
             first_log = False
             while not detected() and self._timeleft(st_time):
@@ -284,7 +281,6 @@ class ConnectSsh(BaseConnect):
 
 
 class SshSessionServer(paramiko.ServerInterface):
-
     def __init__(self, client):
         self.shell_requested = threading.Event()
         self.sftp_requested = threading.Event()
@@ -322,13 +318,14 @@ class SshSessionServer(paramiko.ServerInterface):
     def check_auth_publickey(self, username, public_key):
         self.username = username.strip()
         if self.check_account_noverify(username):
-            self.log.info('pubkey accepted for system-enabled account, {0!r}'
-                          .format(username))
+            self.log.info('any pubkey accepted for system-enabled '
+                          'account, {0!r}'.format(username))
             return paramiko.AUTH_SUCCESSFUL
         elif check_user_pubkey(username, public_key):
             self.log.info('pubkey accepted for user {0!r}.'.format(username))
             return paramiko.AUTH_SUCCESSFUL
-        self.log.info('pubkey denied for user {0!r}.'.format(username))
+        self.log.debug('pubkey denied for user {0!r}.'
+                       .format(username))
         return paramiko.AUTH_FAILED
 
     def check_account_noverify(self, username):
@@ -381,7 +378,7 @@ class SshSessionServer(paramiko.ServerInterface):
                 self.client.kind = 'sftp'
                 self.sftp_requested.set()
                 self.sftp = True
-                return True
+                # XXX not returning True ?!
 
         return (super(SshSessionServer, self)
                 .check_channel_subsystem_request(channel, name))
@@ -406,7 +403,6 @@ class SshSessionServer(paramiko.ServerInterface):
 
 
 class SshServer(BaseServer):
-
     """
     Poll sockets for new connections and sending/receiving data from clients.
     """
