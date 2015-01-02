@@ -1,355 +1,200 @@
 """
- User profile editor script for x/84, http://github.com/jquast/x84
+User profile editor script for x/84, http://github.com/jquast/x84
+
+This script is closely coupled with, and dependent upon nua.py.
 """
+# std imports
+from __future__ import division
+import collections
+import time
+
+# bbs
+from x84.bbs import getterminal, getsession, echo, timeago
+
+# local
+from common import display_banner
+import nua
+
+field = collections.namedtuple('input_validation', [
+    # field's value
+    'value',
+    # field format, u'{lb}{key}{rb}mail:    {email}'
+    'field_fmt',
+    # description y/x loc,
+    'disp_yloc', 'disp_xloc',
+    # interactive edit field x/y loc, (None=read-only)
+    'edit_yloc', 'edit_xloc',
+    # edit field key, (None=read-only)
+    'key',
+    # width of field (None=not justified)
+    'width',
+])
 
 
-ABOUT_DOT_PLAN = (u'The .plan file is a throwback to early Unix '
-                  + u'"blogosphere", this is a simple file that is '
-                  + u'GLOBALLY shared with all other users. You can '
-                  + u'put anything you want here: something about '
-                  + u'yourself and your interests, your websites, '
-                  + u'greetz, etc.')
-
-ABOUT_TERM = (u'This only sets TERM for new processes, such as doors. '
-              + u'Your bbs session itself discovers TERM only once during '
-              + u'telnet negotiation on-connect.')
-
-EXIT = False
-
-
-def process_keystroke(inp, user):
-    """ Process keystroke, ``inp``, for target ``user``. """
-    # pylint: disable=R0914,R0912,R0915,R0911,W0603
-    #         Too many local variables
-    #         Too many branches
-    #         Too many statements
-    #         Too many return statements
-    #         Using the global statement
-    # ^ lol, this is one of those things that should be
-    #   refactored into smaller subroutines =)
-    from x84.bbs import getsession, getterminal, echo, getch, gosub
-    from x84.bbs import LineEditor, ScrollingEditor
-    from x84.bbs.ini import CFG
-    def_timeout = CFG.getint('system', 'timeout')
-    global EXIT
-    session, term = getsession(), getterminal()
-    is_self = bool(user.handle == session.user.handle)
-    invalid = u'\r\niNVAlid.'
-    assert is_self or 'sysop' in session.user.groups
-
-    if is_self and inp in (u'c', u'C'):
-        gosub('charset')
-
-    elif is_self and inp in (u't', u'T'):
-        echo(term.move(term.height - 1, 0))
-        echo(ABOUT_TERM + u'\r\n')
-        echo(u'\r\ntERMiNAl tYPE: ')
-        term = LineEditor(30, session.env.get('TERM')).read()
-        echo(u"\r\n\r\nSEt TERM tO '%s'? [yn]" % (term,))
-        while True:
-            inp2 = getch()
-            if inp2 in (u'y', u'Y'):
-                session.env['TERM'] = term
-                break
-            elif inp2 in (u'n', u'N'):
-                break
-
-    elif is_self and inp in (u'w', u'W'):
-        echo(u'\r\ntERMiNAl Width: ')
-        width = LineEditor(3, str(term.width)).read()
-        try:
-            width = int(width)
-        except ValueError:
-            echo(invalid)
-            return True
-        if width < 0 or width > 999:
-            echo(invalid)
-            return True
-        echo(u"\r\n\r\nSEt COLUMNS=%d? [yn]" % (width,))
-        while True:
-            inp2 = getch()
-            if inp2 in (u'y', u'Y'):
-                term.columns = width
-                break
-            elif inp2 in (u'n', u'N'):
-                break
-
-    elif is_self and inp in (u'h', u'H'):
-        echo(u'\r\ntERMiNAl hEiGht: ')
-        height = LineEditor(3, str(term.height)).read()
-        try:
-            height = int(height)
-        except ValueError:
-            echo(invalid)
-            return True
-        if height < 0 or height > 999:
-            echo(invalid)
-            return True
-        echo(u"\r\n\r\nSEt LINES=%d? [yn]" % (height,))
-        while True:
-            inp2 = getch()
-            if inp2 in (u'y', u'Y'):
-                term.rows = height
-                break
-            elif inp2 in (u'n', u'N'):
-                break
-
-    elif 'sysop' in session.user.groups and inp in (u'd', u'D',):
-        echo(u"\r\n\r\ndElEtE %s ? [yn]" % (user.handle,))
-        while True:
-            inp2 = getch()
-            if inp2 in (u'y', u'Y'):
-                user.delete()
-                break
-            elif inp2 in (u'n', u'N'):
-                break
-        EXIT = True
-
-    elif 'sysop' in session.user.groups and inp in (u's', u'S',):
-        sysop = not 'sysop' in user.groups
-        echo(u"\r\n\r\n%s SYSOP ACCESS? [yn]" % (
-            'ENAblE' if sysop else 'diSAblE',))
-        while True:
-            inp2 = getch()
-            if inp2 in (u'y', u'Y'):
-                if sysop:
-                    user.groups.add('sysop')
-                else:
-                    user.groups.remove('sysop')
-                user.save()
-                break
-            elif inp2 in (u'n', u'N'):
-                break
-    elif inp in (u'p', u'P'):
-        min_pass = CFG.getint('nua', 'min_pass')
-        max_pass = CFG.getint('nua', 'max_pass')
-        echo(u'\r\nPASSWORd: ')
-        password = LineEditor(max_pass, hidden='*').read()
-        if not password:
-            echo(u'\r\n\r\nNEVER MiNd...')
-            term.inkey(1)
-            return
-        if len(password) < min_pass:
-            echo(
-                term.bold_red(u'\r\n\r\ntOO ShORt! (MUSt bE %d+)' % min_pass,))
-            term.inkey(1)
-            return
-        echo(u'\r\n   AGAiN: ')
-        validate_password = LineEditor(max_pass, hidden='*').read()
-        if password != validate_password:
-            echo(term.bold_red(u'\r\n\r\nPASSWORdS dO NOt MAtCh!'))
-            term.inkey(1)
-            return
-        echo(u"\r\n\r\nSEt PASSWORd? [yn]")
-        while True:
-            inp2 = getch()
-            if inp2 in (u'y', u'Y'):
-                user.password = password
-                user.save()
-                break
-            elif inp2 in (u'n', u'N'):
-                break
-
-    elif inp in (u'k', 'K',):
-        change = True
-        if user.get('pubkey', False):
-            echo(u"\r\n\r\nSSh PUbliC kEY AlREAdY SEt, ChANGE ? [yn]")
-            while True:
-                inp2 = getch()
-                if inp2 in (u'y', u'Y'):
-                    break
-                elif inp2 in (u'n', u'N'):
-                    change = False
-                    break
-        if change:
-            echo(u"\r\n\r\njUSt PAStE iN YOUR PUbliC kEY, MAkE SURE itS "
-                 u"All iN ONE lINE!\r\n\r\n\r\n")
-            editor = ScrollingEditor(width=term.width - 6,
-                                     yloc=term.height - 3,
-                                     xloc=3)
-            echo(term.reverse_yellow)
-            pubkey = editor.read()
-            echo(term.normal)
-            if pubkey is not None:
-                if not pubkey.strip():
-                    if user.get('pubkey', None):
-                        del user['pubkey']
-                    echo(u'\r\n\r\nYOUR SECREtS ARE NEVER SAfE!\r\n')
-                else:
-                    echo(u'\r\n\r\nWElCOME tO thE bROthERhOOd!\r\n')
-                    user['pubkey'] = pubkey
-                user.save()
-                getch(timeout=1.5)
-            else:
-                echo(u'\r\n\r\nCANCElEd!!\r\n')
-                getch(timeout=0.5)
-
-    elif inp in (u'.',):
-        echo(term.move(0, 0) + term.normal + term.clear)
-        echo(term.move(int(term.height * .8), 0))
-        for line in term.wrap(ABOUT_DOT_PLAN, term.width / 3):
-            echo(line.center(term.width).rstrip() + u'\r\n')
-        echo(u'\r\n\r\nPRESS ANY kEY ...')
-        getch()
-        if is_self:
-            gosub('editor', '.plan')
-        else:
-            tmpkey = '%s-%s' % (user.handle, user.plan)
-            draft = user.get('.plan', u'')
-            session.user[tmpkey] = draft
-            gosub('editor', tmpkey)
-            if session.user.get(tmpkey, u'') != draft:
-                echo(u"\r\n\r\nSEt .PlAN ? [yn]")
-                while True:
-                    inp2 = getch()
-                    if inp2 in (u'y', u'Y'):
-                        user['.plan'] = session.user[tmpkey]
-                        break
-                    elif inp2 in (u'n', u'N'):
-                        break
-    elif inp in (u'l', u'L'):
-        max_location = CFG.getint('nua', 'max_location')
-        echo(u'\r\nlOCAtiON: ')
-        location = LineEditor(max_location, str(user.location)).read()
-        echo(u"\r\n\r\nSEt lOCAtiON tO '%s'? [yn]" % (
-            location if location else 'None',))
-        while True:
-            inp2 = getch()
-            if inp2 in (u'y', u'Y'):
-                user.location = location
-                user.save()
-                break
-            elif inp2 in (u'n', u'N'):
-                break
-    elif inp in (u'e', u'E'):
-        max_email = CFG.getint('nua', 'max_email')
-        echo(u'\r\nEMAil: ')
-        email = LineEditor(max_email, str(user.email)).read()
-        echo(u"\r\n\r\nSEt EMAil tO '%s'? [yn]" % (
-            email if email else 'None',))
-        while True:
-            inp2 = getch()
-            if inp2 in (u'y', u'Y'):
-                user.email = email
-                user.save()
-                break
-            elif inp2 in (u'n', u'N'):
-                break
-    elif inp in (u'i', u'I'):
-        echo(u'\r\ntiMEOUt (0=NONE): ')
-        timeout = LineEditor(6, str(user.get('timeout', def_timeout))).read()
-        try:
-            timeout = int(timeout)
-        except ValueError:
-            echo(invalid)
-            return True
-        if timeout < 0:
-            echo(invalid)
-            return True
-        echo(u"\r\n\r\nSEt tiMEOUt=%s? [yn]" % (
-            timeout if timeout else 'None',))
-        while True:
-            inp2 = getch()
-            if inp2 in (u'y', u'Y'):
-                user['timeout'] = timeout
-                session.send_event('set-timeout', timeout)
-                break
-            elif inp2 in (u'n', u'N'):
-                break
-
-    elif inp in (u'm', u'M'):
-        mesg = False if user.get('mesg', True) else True
-        echo(u"\r\n\r\n%s iNStANt MESSAGiNG? [yn]" % (
-            'ENAblE' if mesg else 'DiSAblE',))
-        while True:
-            inp2 = getch()
-            if inp2 in (u'y', u'Y'):
-                user['mesg'] = mesg
-                break
-            elif inp2 in (u'n', u'N'):
-                break
-    elif inp in (u'x', u'X'):
-        expert = not user.get('expert', False)
-        echo(u"\r\n\r\n%s EXPERt MOdE? [yn]" % (
-            'ENAblE' if expert else 'DiSAblE',))
-        while True:
-            inp2 = getch()
-            if inp2 in (u'y', u'Y'):
-                user['expert'] = expert
-                break
-            elif inp2 in (u'n', u'N'):
-                break
-    elif inp in (u'q', u'Q',):
-        EXIT = True
-    else:
-        return False
-    return True
+def get_display_fields(user, yloc, xloc):
+    # needs OrderedDict for nua.validation_fields[name]
+    # so that we can reference validation functions from `nua'
+    _indent = xloc + 4 + nua.username_max_length
+    return collections.OrderedDict(
+        # user: <name> last called 10m ago
+        #              from ssh-127.0.0.1:65534
+        #              1 calls, 1 posts
+        user=field(value=user.handle,
+                   field_fmt=u'{rb}{value}{lb}',
+                   disp_yloc=yloc, disp_xloc=xloc,
+                   edit_yloc=yloc, edit_xloc=xloc + 1,
+                   key=u'c', width=nua.username_max_length),
+        ago=field(value=timeago(time.time() - user.lastcall),
+                  field_fmt=u'last called {value} ago',
+                  disp_yloc=yloc,
+                  disp_xloc=_indent,
+                  edit_yloc=None, edit_xloc=None, key=None, width=None),
+        last_from=field(value=user.get('last_from', 'None'),
+                        field_fmt=u'from {value}',
+                        disp_yloc=yloc + 1,
+                        disp_xloc=_indent,
+                        edit_yloc=None, edit_xloc=None, key=None, width=None),
+        calls=field(value=str(user.calls),
+                    field_fmt=u'{value} calls',
+                    disp_yloc=yloc + 2,
+                    disp_xloc=_indent,
+                    edit_yloc=None, edit_xloc=None, key=None, width=None),
+        posts=field(value=str(user.get('msgs_sent', 0)),
+                    field_fmt=u'{value} posts',
+                    disp_yloc=yloc + 2,
+                    disp_xloc=_indent + len('1999 calls') + 1,
+                    edit_yloc=None, edit_xloc=None, key=None, width=None),
+        # go ahead, show them the salt; it gets trimmed,
+        # and its gibberish, maybe it gives them confidence
+        # that we don't know their actual password.
+        password=field(value=u''.join(user.password),
+                       field_fmt=u'{lb}{key}{rb}assword{colon} {value}',
+                       disp_yloc=yloc + 5, disp_xloc=xloc,
+                       edit_yloc=yloc + 5, edit_xloc=xloc + 12,
+                       key=u'p', width=nua.password_max_length),
+        origin=field(value=user.location,
+                     field_fmt=u'{lb}{key}{rb}rigin{colon}   {value}',
+                     disp_yloc=yloc + 7, disp_xloc=xloc,
+                     edit_yloc=yloc + 7, edit_xloc=xloc + 12,
+                     key=u'o', width=nua.location_max_length),
+        email=field(value=user.email,
+                    field_fmt=u'{lb}{key}{rb}mail{colon}    {value}',
+                    disp_yloc=yloc + 9, disp_xloc=xloc,
+                    edit_yloc=yloc + 9, edit_xloc=xloc + 12,
+                    key=u'e', width=nua.email_max_length),
+        sshkey=field(value=user.get('pubkey') and 'yes' or 'no',
+                     field_fmt=u'{lb}{key}{rb}sh-key{colon}  {value}',
+                     disp_yloc=yloc + 11, disp_xloc=xloc,
+                     edit_yloc=yloc + 11, edit_xloc=xloc + 12,
+                     key=u's', width=8),
+        idle=field(value=str(user.get('timeout', 'no')),
+                   field_fmt=u'{lb}{key}{rb}dle off{colon} {value}',
+                   disp_yloc=yloc + 11, disp_xloc=xloc + 21,
+                   edit_yloc=yloc + 11, edit_xloc=xloc + 34,
+                   key=u'i', width=5),
+    )
 
 
-def dummy_pager(user):
-    """ A dummy selector for profile attributes """
-    from x84.bbs import getsession, getterminal, echo, getch
-    session, term = getsession(), getterminal()
-    plan = user.get('.plan', False)
-    from x84.bbs.ini import CFG
-    def_timeout = CFG.getint('system', 'timeout')
-    menu = ['(c)%-20s - %s' % (u'hARACtER ENCOdiNG',
-                               term.bold(session.encoding),),
-            '(t)%-20s - %s' % (u'ERMiNAl tYPE',
-                               term.bold(session.env.get('TERM', 'unknown')),),
-            '(h)%-20s - %s' % (u'ERMiNAl hEiGht',
-                               term.bold(str(term.height)),),
-            '(w)%-20s - %s' % (u'ERMiNAl WidtH',
-                               term.bold(str(term.width)),),
-            '(l)%-20s - %s' % (u'OCAtiON',
-                               term.bold(user.location),),
-            '(p)%-20s - %s' % (u'ASSWORd',
-                               term.bold_black(u'******'),),
-            '(k)%-20s - %s' % (u'SSh kEY',
-                               term.bold_black(
-                                   str(bool(user.get('pubkey', False)))),),
-            '(e)%-20s - %s' % (u'-MAil AddRESS',
-                               term.bold(user.email),),
-            (term.bold('t') +
-             '(i)%-19s - %s' % (u'MEOUt', term.bold(
-                 str(user.get('timeout', def_timeout))),)),
-            '(s)%-20s - %s' % (u'YSOP ACCESS',
-                               term.bold(u'ENAblEd'
-                                         if 'sysop' in user.groups
-                                         else 'diSAblEd')),
-            '(m)%-20s - %s' % (u'ESG',
-                               term.bold(u'[%s]' % (
-                                   'y' if user.get('mesg', True)
-                                   else 'n',),)),
-            '(.)%-20s - %s' % (u'PlAN filE', '%d bytes' % (
-                len(plan),) if plan else '(NO PlAN.)'),
-            '(x)%-20s - %s' % (u'PERt MOdE',
-                               term.bold(u'ENAblEd'
-                                         if user.get('expert', False)
-                                         else 'diSAblEd')),
-            '(q)Uit', ]
-    echo(term.normal + u'\r\n\r\n')
-    lines = u'\r\n'.join(menu).splitlines()
-    xpos = max(1, int(term.width / 2) - (40 / 2))
-    for row, line in enumerate(lines):
-        if row and (0 == row % (term.height - 2)):
-            echo(term.reverse(u'\r\n-- More --'))
-            getch()
-        echo(u'\r\n' + ' ' * xpos + line)
-    echo(u'\r\n\r\n Enter option [ctlpkeim.xq]: ')
-    return process_keystroke(getch(), user)
+def display_options(term, session, yloc, xloc, user, fields):
+    color_palette1 = ['bright_black', 'bright_black', 'bright_black']
+    color_palette2 = ['bright_black', 'red', 'bright_red']
+    color_palette3 = ['red', 'bright_red', 'red_reverse']
+    palette1 = [getattr(term, _color) for _color in color_palette1]
+    palette2 = [getattr(term, _color) for _color in color_palette2]
+    palette3 = [getattr(term, _color) for _color in color_palette3]
+    delay = 0.01
+
+    # if the screen resizes during animation, return True,
+    # forcing another full-screen refresh
+    needs_refresh = False
+
+    for count in range(3):
+        if count < 2 and not delay:
+            # on input, skip animation
+            continue
+        _color1, _color2, _color3 = (
+            palette1[count % len(palette1)],
+            palette2[count % len(palette2)],
+            palette3[count % len(palette3)])
+        lb, rb, colon = _color1('['), _color1(']'), _color1(':')
+        for field in fields.values():
+            # trim and padd field-value to maximum length,
+            _value = (field.value[:field.width]
+                      if field.width and term.length(field.value) > field.width
+                      else term.ljust(field.value, field.width)
+                      if field.width
+                      else field.value)
+            # backlight editable fields, bold others,
+            _value = (_color3(_value) if field.key
+                      else _color2(_value))
+            # bold keystroke if not None,
+            _key = _color2(field.key) if field.key else None
+            # and display,
+            echo(u'{move_yx}{text}'.format(
+                move_yx=term.move(field.disp_yloc, field.disp_xloc),
+                text=field.field_fmt.format(
+                    rb=rb, lb=lb,
+                    colon=colon,
+                    value=_value,
+                    key=_key)))
+            if session.read_event('refresh', delay):
+                needs_refresh = True
+            elif session.poll_event('input'):
+                # on input, skip animation
+                delay = 0
+    return needs_refresh
 
 
-def main(handle=None):
+def display_prompt(term, session, yloc, xloc):
+    # < [q]uit, [f]ind user, [c]hange name, [d]elete > ?
+    lb, rb = term.bold_black('['), term.bold_black(']')
+    is_sysop = session.user.is_sysop
+
+    echo(term.move(yloc + 14, xloc))
+    echo(u'{lt} {lb}{key_q}{rb}uit'.format(
+        lt=term.red(u'<'), lb=lb, rb=rb,
+        key_q=term.bold_red(u'q')))
+    if is_sysop:
+        # administrative functions (sysops only)
+        echo(u', {lb}{key_f}{rb}ind user, '
+             u'{lb}{key_c}{rb}hange name, '
+             u'{lb}{key_d}{rb}elete'.format(
+                 lb=lb, rb=rb,
+                 key_f=term.bold_red(u'f'),
+                 key_c=term.bold_red(u'c'),
+                 key_d=term.bold_red(u'd')
+             ))
+    echo(u' {gt} ?\b\b'.format(gt=term.red('>')))
+
+
+def main():
     """ Main procedure. """
-    # pylint: disable=W0603
-    #         Using the global statement
-    from x84.bbs import getsession, getterminal
-    from x84.bbs import get_user
     session, term = getsession(), getterminal()
-    user = session.user if ('sysop' not in session.user.groups
-                            ) or (handle is None) else get_user(handle)
-    global EXIT
-    while not EXIT:
-        session.activity = 'User profile editor'
-        dummy_pager(user)
+    yloc = xloc = 0
+    dirty = True
+    tgt_user = session.user
+    while True:
+        if dirty or session.poll_event('refresh'):
+            if term.height >= 24:
+                echo(term.move(term.height - 1, 0))
+                yloc = display_banner('art/ue.ans') + 1
+            else:
+                echo(term.move(term.height - 1, 0))
+                # create a new, empty screen
+                echo(u'\r\n' * (term.height + 1))
+                yloc = 1
+            xloc = max(5, (term.width // 2) - 30)
+            fields = get_display_fields(tgt_user, yloc, xloc)
+            if display_options(term, session, yloc, xloc, tgt_user, fields):
+                # screen resized during redraw, draw again
+                continue
+            display_prompt(term, session, yloc, xloc)
+            dirty = 0
+
+        inp = term.inkey(0.1)
+
+        if inp == u'q':
+            break
+        elif inp == u'\x0c':
+            # ^L, refresh
+            dirty = True
