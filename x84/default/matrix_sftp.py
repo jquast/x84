@@ -4,7 +4,7 @@ SFTP Matrix for X/84 (Formerly, 'The Progressive') BBS,
 This script is the default session entry point for all sftp connections.
 
 Nothing especially cute going on here yet.  Ultimately we'd like
-a single-directioned communication from x84.sftp.X84SFTPServer
+a single-directioned communication from x84.sftp.StubSFTPServer
 so that we can be notified of the user activity.  We need to make
 sure to ensure certain kinds of events are ignored or not handled,
 also.
@@ -14,11 +14,6 @@ client.  We are still able to push bytes through, though we should
 not and allow the sftp subsystem handler to do that for us.
 
 Also, anonymous and new users are not well-handled, here.
-
-In order to configure x/84 as an SFTP server, you will need to add an [sftp]
-section to your default.ini file and add a `root` option. This points to the
-location of your SFTP server's root directory. Within that directory, ensure
-that there is a directory named `__uploads__`.
 """
 
 # std imports

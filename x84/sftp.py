@@ -66,7 +66,7 @@ class X84SFTPServer (SFTPServerInterface):
         # default file mode for uploaded files,
         _base = 8  # (value is octal!)
         self.mode = int(get_ini(
-            section='sftp', key='uploads_filemode', getter='getint') or 644, _base)
+            section='sftp', key='uploads_filemode', getter='getint') or '644', _base)
 
         # allow anonymous login where enabled, otherwise use the
         # given `username' authenticated by ssh
