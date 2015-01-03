@@ -12,7 +12,7 @@ import glob
 import os
 
 # local
-from x84.bbs import getterminal, showart, echo
+from x84.bbs import getterminal, showart, echo, get_ini
 from x84.bbs import getsession, get_user, User, LineEditor
 from x84.bbs import goto, gosub, DBProxy, syncterm_setfont
 from x84.default.common import coerce_terminal_encoding
@@ -37,6 +37,12 @@ art_speed = 0.04
 
 #: which sauce records to display
 sauce_records = set(['author', 'title', 'group', 'date', 'filename'])
+
+#: ssh port configured, this is displayed to the user, if you're using NAT port
+#: forwarding or something like that, you'll want to set the configuration
+#: value of section [ssh] for key 'advertise_port'.
+ssh_port = (get_ini(section='ssh', key='advertise_port') or
+            get_ini(section='ssh', key='port'))
 
 #: maximum number of sauce columns for wide displays
 max_sauce_columns = 2
@@ -244,16 +250,16 @@ def do_intro_art(term, session):
 
 def describe_ssh_availability(term, session):
     from x84.bbs.ini import CFG
-    from x84.bbs import get_ini
     if session.kind == 'ssh':
         # what a good citizen!
         return
 
-    elif not CFG.has_section('ssh'):
+    if not (CFG.has_section('ssh') and
+            not CFG.has_option('ssh', 'enabled')
+            or CFG.getboolean('ssh', 'enabled')):
         # ssh not enabled
         return
 
-    ssh_port = get_ini(section='ssh', key='port')
     description = (
         "    {term.red}You are using {session.kind}, but ssh is available "
         "on port {ssh_port} of this server.  If you want a secure connection "
