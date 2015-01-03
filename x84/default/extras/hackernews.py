@@ -22,7 +22,7 @@ from textwrap import wrap
 from common import waitprompt
 
 __author__ = 'Hellbeard'
-__version__ = 1.0
+__version__ = 1.01
 
 # -----------------------------------------------------------------------------      
 
@@ -32,7 +32,7 @@ def articlereader(article):
     offset = 0
     keypressed = ''
     dirty = True
-    inverted_text = True
+    inverted_text = False
 
     echo(term.clear+term.move(0,0)+term.normal)
     echo(term.hide_cursor)
@@ -117,7 +117,7 @@ def main():
     wrappedarticle = []               # if the article header needs wrapping..
     amount = term.height / 5          # the amount of rows that a description is estimated to use.
 
-    echo('*')
+    echo(u'*')
 
     for post in feed.entries:         # buffers the articles titels, summarys and links.
         article.append(post.title)
