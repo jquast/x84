@@ -407,8 +407,11 @@ def locate_user(term, tgt_user, point):
                             _color2(handle) for handle in handles)))
                 echo(term.move(*point))
                 for y_offset, txt in enumerate(term.wrap(matches_text, width=width)):
-                    echo(term.move_x(point.x))
+                    echo(term.move(point.y + y_offset, point.x))
                     echo(txt + term.clear_eol)
+                    if point.y + y_offset > term.height - 3:
+                        # we simply cannot display anymore
+                        break
                 echo(term.clear_eos)
         else:
             handle = find_user(inp)
