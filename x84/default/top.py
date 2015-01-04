@@ -211,8 +211,6 @@ def do_intro_art(term, session):
 
     Bonus: allow chosing other artfiles with '<' and '>'.
     """
-    editor_colors = {'highlight': term.black_on_red}
-
     # set syncterm font, if any
     if syncterm_font and term._kind.startswith('ansi'):
         echo(syncterm_setfont(syncterm_font))
@@ -227,7 +225,7 @@ def do_intro_art(term, session):
             display_prompt(term)
             dirty = False
         dirty = True
-        inp = LineEditor(1, colors=editor_colors).read()
+        inp = LineEditor(1, colors={'highlight': term.normal}).read()
         if inp is None or inp.lower() == u'y':
             # escape/yes: quick login
             return True
@@ -260,16 +258,20 @@ def describe_ssh_availability(term, session):
         # ssh not enabled
         return
 
+    about_key = (u"You may even use an ssh key, which you can configure from "
+                 u"your user profile, " if not session.user.get('pubkey')
+                 else u'')
+    big_msg = term.bold_blue("Big Brother is Watching You")
     description = (
         "    {term.red}You are using {session.kind}, but ssh is available "
         "on port {ssh_port} of this server.  If you want a secure connection "
-        "with shorter latency, we recommend instead to use ssh!  You may "
-        "even use an ssh key, which you can configure from your user "
-        "profile.  Remember: {big_msg}!"
+        "with shorter latency, we recommend instead to use ssh!  {about_key}"
+        "Remember: {big_msg}!"
         .format(term=term,
                 session=session,
                 ssh_port=ssh_port,
-                big_msg=term.bold_blue("Big Brother is Watching You"))
+                about_key=about_key,
+                big_msg=big_msg)
     )
 
     echo(u'\r\n\r\n')

@@ -82,7 +82,10 @@ def pull_rest(net, last_msg_id):
         req = requests.get(url,
                            headers={'Auth-X84net': get_token(net)},
                            verify=net['verify'])
-    except Exception, err:
+    except requests.ConnectionError as err:
+        log.warn('[{net[name]}] exception in pull_rest: {err}'
+                 .format(net=net, err=err))
+    except Exception as err:
         log.exception('[{net[name]}] exception in pull_rest: {err}'
                       .format(net=net, err=err))
         return False
@@ -95,7 +98,7 @@ def pull_rest(net, last_msg_id):
     try:
         response = json.loads(req.text)
         return response['messages'] if response['response'] else []
-    except Exception, err:
+    except Exception as err:
         log.exception('[{net[name]}] JSON error: {err}'
                       .format(net=net, err=err))
         return False
