@@ -207,7 +207,7 @@ setup(name='x84',
                               ],
       },
       install_requires=[
-          'blessed==1.9.4',
+          'blessed==1.9.5',
           'requests==2.5.1',
           'irc==9.0',
           'sqlitedict==1.1.0',
