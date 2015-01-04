@@ -496,7 +496,7 @@ class Session(object):
             channel, sender = data
             if self.user.get('mesg', True) or sender == -1:
                 self.log.info('page from {0}.'.format(sender))
-                chat_script = Script(name='chat', args=(channel, sender,))
+                chat_script = Script(name='chat', args=(channel, sender,),kwargs={})
                 if not self.runscript(chat_script):
                     self.log.info('rejected page from {0}.'.format(sender))
                 # buffer refresh event for any asyncronous event UI's

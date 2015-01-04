@@ -225,7 +225,7 @@ def main():
     #         Too many branches
     #         Too many local variables
     #         Too many statements
-    from x84.bbs import getsession, getterminal, getch, echo, syncterm_setfont
+    from x84.bbs import getsession, getterminal, getch, echo
     session, term = getsession(), getterminal()
     ayt_lastfresh = 0
 
@@ -240,10 +240,6 @@ def main():
     dirty = time.time()
     cur_row = 0
 
-    # tells syncterm to change to topaz, then delete the output to avoid the
-    # code to be shown in other clients
-    echo(syncterm_setfont('topaz') + u'\r' + term.clear_eol)
-
     while True:
         ayt_lastfresh = broadcast_ayt(ayt_lastfresh)
         inp = getch(POLL_KEY)
@@ -252,6 +248,7 @@ def main():
             dirty = time.time()
             cur_row = 0
         elif inp in (u'q', 'Q', term.KEY_EXIT, unichr(27)):
+            echo('\r\n\r\n')
             return
         elif inp in (u'c', 'C'):
             cur_row = 0 if chat(sessions) else cur_row

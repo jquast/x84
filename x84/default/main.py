@@ -83,7 +83,10 @@ def refresh():
             term.white(name + '  ')))
         ansilen = term.length(buf_str + out_str)
         if ansilen >= maxwidth:
-            echo(term.center(buf_str) + u'\r\n\r\n')
+            if term.height > 25:
+                echo(term.center(buf_str) + u'\r\n\r\n')
+            else:
+                echo(term.center(buf_str) + u'\r\n')
             buf_str = out_str
         else:
             buf_str += out_str
@@ -121,12 +124,14 @@ def main():
         elif inp == u'$':
             gosub('bulletins')
         elif inp == u'bbs':
+            echo(syncterm_setfont('cp437') + term.move_x(0) + term.clear_eol)
             gosub('bbslist')
         elif inp == u'l':
             gosub('lc')
         elif inp == u'o':
             gosub('ol')
         elif inp == u's':
+            echo(syncterm_setfont('cp437') + term.move_x(0) + term.clear_eol)
             gosub('si')
         elif inp == u'u':
             gosub('userlist')
@@ -135,10 +140,12 @@ def main():
         elif inp == u'n':
             gosub('news')
         elif inp == u'f':
+            echo(syncterm_setfont('cp437') + term.move_x(0) + term.clear_eol)
             gosub('weather')
         elif inp == u'e':
             gosub('profile')
         elif inp == u'#':
+            echo(syncterm_setfont('cp437') + term.move_x(0) + term.clear_eol)
             gosub('lord')
         elif inp == u't':
             # switch into cp437 for syncterm
