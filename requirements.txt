@@ -1,5 +1,5 @@
 blessed==1.9.5
-irc==9.0
+irc==11.0.1
 jaraco.timing==1.1
 jaraco.util==10.6
 more-itertools==2.2

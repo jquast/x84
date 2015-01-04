@@ -101,7 +101,7 @@ setup(name='x84',
       install_requires=[
           'blessed==1.9.5',
           'requests==2.5.1',
-          'irc==9.0',
+          'irc==11.0.1',
           'sqlitedict==1.1.0',
           'python-dateutil==2.3',
           'jaraco.timing==1.1',
