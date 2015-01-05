@@ -114,9 +114,8 @@ def main():
         le = LineEditor(30)
         le.colors['highlight'] = term.normal
         inp = le.read()
-        # makes the input indifferent to wheter you used lower case when typing
-        # in a command or not..
-        inp = inp.lower()
+        if inp is not None:
+            inp = inp.lower()
 
         dirty = True
         if inp == u'*':
