@@ -552,6 +552,11 @@ class Session(object):
             self.log.debug('<-- {!r}'.format(data))
 
         if 'input' not in self._buffer:
+            # a rare scenario: inkey() causes a first-event of 'input' to
+            # be received without buffering from read_events(); then wants
+            # to push it back.  Here, too, we must check and construct the
+            # input buffer.  It wouldn't be bad to do this on __init__,
+            # either.
             self._buffer['input'] = collections.deque(maxlen=65534)
         if pushback:
             self._buffer['input'].appendleft(data)
