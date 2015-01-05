@@ -212,7 +212,7 @@ class ScrollingEditor(AnsiWindow):
         self._input_length = 0
         self._quit = False
         self._bell = False
-        self.content = u''
+        self.content = kwargs.pop('content', u'')
         # there are some flaws about how a 'height' of a window must be
         # '3', even though we only want 1; we must also offset (y, x) by
         # 1 and width by 2: issue #161.
