@@ -14,9 +14,7 @@ from x84.bbs.msgbase import list_msgs, get_msg, list_tags, Msg
 from x84.bbs.exception import Disconnected, Goto
 from x84.bbs.editor import LineEditor, ScrollingEditor
 from x84.bbs.output import (echo, timeago, encode_pipe, decode_pipe,
-                            syncterm_setfont,
-                            Ansi, ansiwrap  # deprecated
-                            )
+                            syncterm_setfont)
 from x84.bbs.ansiwin import AnsiWindow
 from x84.bbs.selector import Selector
 from x84.bbs.lightbar import Lightbar
@@ -104,17 +102,12 @@ def getterminal():
     return x84.bbs.session.getterminal()
 
 
-# temporary hacks until blessings updates with term.inkey() upstream ..
+# this is old behavior -- upstream blessed project does the correct
+# thing. please use term.inkey() and see the documentation for
+# blessed's inkey() method, it **always** returns unicode, never None,
+# and definitely never an integer.
 def getch(timeout=None):
-    """
-    Retrieve a keystroke from 'input' queue, blocking forever or, when
-    specified, None when timeout has elapsed.
-
-    upstream blessings has better 'keycode' evaluation (none of this
-    duck typing, its always unicode, but has .is_sequence bool test,
-    and a .value test for keycode comparison). we workaround for legacy
-    behavior unless upstream blessings accepts our impl. in some form ..
-    """
+    warnings.warn('getch() is deprecated, use getterminal().inkey()')
     keystroke = getterminal().inkey(timeout)
     if keystroke == u'':
         return None
