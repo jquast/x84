@@ -1,6 +1,5 @@
 """ common interface module for x/84, https://github.com/jquast/x84 """
 from __future__ import division
-import inspect
 import os
 
 from x84.bbs import echo, showart
@@ -41,19 +40,6 @@ def display_banner(filepattern, encoding=None, vertical_padding=0):
 
     # move to home, insert vertical padding
     echo(term.home + (u'\r\n' * vertical_padding))
-
-    # When the given artfile pattern's folder is not absolute,
-    # nor relative to our cwd, build a relative position of the
-    # folder by the calling module's containing folder.  This only
-    # works for subdirectories i think (like art/).
-    _folder = os.path.dirname(filepattern)
-    if not (_folder.startswith(os.path.sep) or os.path.isdir(_folder)):
-        caller_module = inspect.stack()[1][1]
-        rel_folder = os.path.dirname(caller_module)
-        if _folder:
-            rel_folder = os.path.join(os.path.dirname(caller_module), _folder)
-        if os.path.isdir(rel_folder):
-            filepattern = os.path.join(rel_folder, os.path.basename(filepattern))
 
     art_generator = showart(filepattern, encoding=encoding, center=True)
     line_no = 0

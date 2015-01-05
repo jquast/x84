@@ -29,94 +29,102 @@ log = logging.getLogger()
 here = os.path.dirname(__file__)
 
 #: name of bbs
-system_bbsname = get_ini(section='system',
-                         key='bbsname'
-                         ) or 'Unnamed'
+system_bbsname = get_ini(
+    section='system', key='bbsname'
+) or 'Unnamed'
 
 #: whether new user accounts are accepted
-new_allowed = get_ini(section='nua',
-                      key='allow_apply',
-                      getter='getboolean'
-                      ) or False
+new_allowed = get_ini(
+    section='nua', key='allow_apply', getter='getboolean'
+) or False
 
 #: which login names trigger new user account script
-new_usernames = get_ini(section='matrix',
-                        key='newcmds',
-                        split=True
-                        ) or ['new']
+new_usernames = get_ini(
+    section='matrix', key='newcmds', split=True
+) or ['new']
 
 #: which script to execute to apply for new account
-new_script = get_ini(section='nua',
-                     key='script'
-                     ) or 'nua'
+new_script = get_ini(
+    section='nua', key='script'
+) or 'nua'
 
 #: which script to execute on successful login
-top_script = get_ini(section='matrix',
-                     key='topscript'
-                     ) or 'top'
+top_script = get_ini(
+    section='matrix', key='topscript'
+) or 'top'
 
 #: whether anonymous login is allowed
-anonymous_allowed = get_ini(section='matrix',
-                            key='enable_anonymous',
-                            getter='getboolean'
-                            ) or False
+anonymous_allowed = get_ini(
+    section='matrix', key='enable_anonymous', getter='getboolean'
+) or False
 
 #: which login names that trigger anonymous login.
-anonymous_names = get_ini(section='matrix',
-                          key='anoncmds',
-                          split=True
-                          ) or ['anonymous']
+anonymous_names = get_ini(
+    section='matrix', key='anoncmds', split=True
+) or ['anonymous']
 
 #: whether password resets are allowed
-reset_allowed = get_ini(section='matrix',
-                        key='enable_pwreset',
-                        getter='getboolean'
-                        ) or False
+reset_allowed = get_ini(
+    section='matrix', key='enable_pwreset', getter='getboolean'
+) or False
 
-reset_script = get_ini(section='matrix',
-                       key='reset_script'
-                       ) or 'pwreset'
+reset_script = get_ini(
+    section='matrix', key='reset_script'
+) or 'pwreset'
 
-bye_usernames = get_ini(section='matrix',
-                        key='byecmds',
-                        split=True
-                        ) or ['bye', 'logoff', 'exit', 'quit']
+bye_usernames = get_ini(
+    section='matrix', key='byecmds', split=True
+) or ['bye', 'logoff', 'exit', 'quit']
 
 #: maximum length of user handles
-username_max_length = get_ini(section='nua',
-                              key='max_user',
-                              getter='getint'
-                              ) or 10
+username_max_length = get_ini(
+    section='nua', key='max_user', getter='getint'
+) or 10
 
 #: maximum length of password
-password_max_length = get_ini(section='nua',
-                              key='max_pass',
-                              getter='getint'
-                              ) or 15
+password_max_length = get_ini(
+    section='nua', key='max_pass', getter='getint'
+) or 15
 
 #: random maximum time to artificially sleep for unknown user.
-unknown_sleep = 2.0
+unknown_sleep = get_ini(
+    section='matrix', key='unknown_sleep', getter='getfloat'
+) or 2.0
 
 #: maximum failed logins before disconect
-login_max_attempts = 5
+login_max_attempts = get_ini(
+    section='matrix', key='max_login_attemps', getter='getint'
+) or 5
 
 #: on-connect fontset for SyncTerm emulator
-syncterm_font = 'topaz'
+syncterm_font = get_ini(
+    section='matrix', key='syncterm_font'
+) or 'topaz'
 
 #: on-connect banner
-art_file = os.path.join(here, 'art', 'matrix.ans')
+art_file = get_ini(
+    section='matrix', key='art_file'
+) or os.path.join(here, 'art', 'matrix.ans')
 
 #: encoding on banner
-art_encoding = 'topaz'
+art_encoding = get_ini(
+    section='matrix', key='art_encoding'
+) or 'topaz'
 
 #: primary color (highlight)
-color_primary = 'red'
+color_primary = get_ini(
+    section='matrix', key='color_primary'
+) or 'red'
 
 #: secondary color (lowlight)
-color_secondary = 'green'
+color_secondary = get_ini(
+    section='matrix', key='color_secondary'
+) or 'green'
 
 #: password hidden character
-hidden_char = u'\u00f7'
+hidden_char = get_ini(
+    section='nua', key='hidden_char'
+) or u'\u00f7'
 
 
 def display_banner(term):

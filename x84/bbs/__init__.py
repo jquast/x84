@@ -3,6 +3,7 @@ x/84 bbs module, https://github.com/jquast/x84
 """
 # std
 import warnings
+import inspect
 
 # local, side-effects (encodings are registered)
 __import__('encodings.aliases')
@@ -178,6 +179,19 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
 
     term = getterminal()
 
+    # When the given artfile pattern's folder is not absolute, nor relative to
+    # our cwd, build a relative position of the folder by the calling module's
+    # containing folder.  This only works for subdirectories i think (like
+    # art/).
+    _folder = os.path.dirname(filepattern)
+    if not (_folder.startswith(os.path.sep) or os.path.isdir(_folder)):
+        caller_module = inspect.stack()[1][1]
+        rel_folder = os.path.dirname(caller_module)
+        if _folder:
+            rel_folder = os.path.join(os.path.dirname(caller_module), _folder)
+        if os.path.isdir(rel_folder):
+            filepattern = os.path.join(rel_folder, os.path.basename(filepattern))
+
     # Open the piece
     try:
         filename = os.path.relpath(random.choice(glob.glob(filepattern)))
@@ -293,7 +307,6 @@ def get_ini(section=None, key=None, getter='get', split=False, splitsep=None):
         # imports is not really an error.  However, if you're importing
         # a module that calls get_ini before the config system is
         # initialized, then you're going to get an empty value! warning!!
-        import inspect
         stack = inspect.stack()
         caller_mod, caller_func = stack[2][1], stack[2][3]
         warnings.warn('ini system not (yet) initialized, '
