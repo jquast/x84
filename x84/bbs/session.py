@@ -481,14 +481,16 @@ class Session(object):
             #        Raising NoneType while only classes, (..) allowed
             raise data
 
+        # these callback-responsive session events should be handled by
+        # another method, or by a configurable 'event: callback' registration
+        # system.
         # respond to global 'AYT' requests
         if event == 'global' and data[0] == 'AYT':
             reply_to = data[1]
             self.send_event('route', (
                 reply_to, 'ACK',
                 self.sid, self.user.handle,))
-            ## note: I don't know why we return a boolean .. any good reason??
-            return True
+            return
 
         # accept 'page' as instant chat when 'mesg' is True, or sender is -1
         # -- intent is that sysop can always 'chat' a user ..
@@ -502,13 +504,13 @@ class Session(object):
                     self.log.info('rejected page from {0}.'.format(sender))
                 # buffer refresh event for any asyncronous event UI's
                 self.buffer_event('refresh', 'page-return')
-                return True
+                return
 
         # respond to 'info-req' events by returning pickled session info
         if event == 'info-req':
             sid = data[0]
             self.send_event('route', (sid, 'info-ack', self.sid, self.info(),))
-            return True
+            return
 
         if event not in self._buffer:
             # " Once a bounded length deque is full, when new items are added,
