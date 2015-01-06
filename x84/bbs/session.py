@@ -490,27 +490,24 @@ class Session(object):
             self.send_event('route', (
                 reply_to, 'ACK',
                 self.sid, self.user.handle,))
-            return
+            return True
 
-        # accept 'page' as instant chat when 'mesg' is True, or sender is -1
-        # -- intent is that sysop can always 'chat' a user ..
-        if (event == 'page' and len(self._script_stack) and
-                self.current_script.name != 'chat'):
-            channel, sender = data
-            if self.user.get('mesg', True) or sender == -1:
-                self.log.info('page from {0}.'.format(sender))
-                chat_script = Script(name='chat', args=(channel, sender,),kwargs={})
-                if not self.runscript(chat_script):
-                    self.log.info('rejected page from {0}.'.format(sender))
-                # buffer refresh event for any asyncronous event UI's
-                self.buffer_event('refresh', 'page-return')
-                return
+        # accept 'gosub' as a literal command to run a new script directly
+        # from this buffer_event method.  I'm sure it's fine ...
+        if event == 'gosub':
+            save_activity = self.activity
+            self.log.info('event-driven gosub: {0}'.format(data))
+            try:
+                self.runscript(Script(*data))
+            finally:
+                self.activity = save_activity
+            return True
 
         # respond to 'info-req' events by returning pickled session info
         if event == 'info-req':
             sid = data[0]
             self.send_event('route', (sid, 'info-ack', self.sid, self.info(),))
-            return
+            return True
 
         if event not in self._buffer:
             # " Once a bounded length deque is full, when new items are added,
@@ -630,11 +627,13 @@ class Session(object):
             # ask engine process for new event data,
             if self.reader.poll(waitfor):
                 event, data = self.reader.recv()
-                if event in events:
-                    # return matching event immediately w/o buffering
-                    return (event, data)
-                # an event for another caller -- buffer it.
-                self.buffer_event(event, data)
+                # it is necessary to always buffer an event, as some
+                # side-effects may occur by doing so.  When buffer_event
+                # returns True, those side-effects caused no data to be
+                # buffered, and one should not try to return any data for it.
+                if not self.buffer_event(event, data):
+                    if event in events:
+                        return event, self._buffer[event].pop()
             elif timeout == -1:
                 return (None, None)
             waitfor = timeleft(stime)

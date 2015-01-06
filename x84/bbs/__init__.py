@@ -107,7 +107,7 @@ def getterminal():
 # blessed's inkey() method, it **always** returns unicode, never None,
 # and definitely never an integer.
 def getch(timeout=None):
-    warnings.warn('getch() is deprecated, use getterminal().inkey()')
+    #warnings.warn('getch() is deprecated, use getterminal().inkey()')
     keystroke = getterminal().inkey(timeout)
     if keystroke == u'':
         return None
@@ -259,7 +259,7 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
             msg_too_wide = u''.join(
                 (term.normal,
                  term.bold_black(u'-- '),
-                 u'cancelled {0}, too wide:: {{0}}'.format(os.path.basename(filename)),
+                 u'canceled {0}, too wide:: {{0}}'.format(os.path.basename(filename)),
                  term.bold_black(u' --'),
                  ))
             yield (u'\r\n' +
@@ -273,11 +273,6 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
                 break
         yield padding + line + u'\r\n'
     yield term.normal
-
-
-def showcp437(filepattern):
-    warnings.warn('showcp437() is deprecated, use showart()')
-    return showart(filepattern, 'cp437')
 
 
 def get_ini(section=None, key=None, getter='get', split=False, splitsep=None):

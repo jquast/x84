@@ -205,10 +205,10 @@ class ScrollingEditor(AnsiWindow):
         self._horiz_pos = 0
         self._enable_scrolling = False
         self._horiz_lastshift = 0
-        self._scroll_pct = 35.0
-        self._margin_pct = 20.0
+        self._scroll_pct = kwargs.pop('scroll_pct', 35.0)
+        self._margin_pct = kwargs.pop('margin_pct', 20.0)
         self._carriage_returned = False
-        self._max_length = 0
+        self._max_length = kwargs.pop('max_length', 0)
         self._input_length = 0
         self._quit = False
         self._bell = False
@@ -250,7 +250,6 @@ class ScrollingEditor(AnsiWindow):
         """
         Return True when no more input can be accepted (end of line).
         """
-        #return self._term.length(self.content) >= self.max_length
         return self._input_length >= self.max_length
 
     @property
@@ -259,7 +258,8 @@ class ScrollingEditor(AnsiWindow):
         Returns True when user nears margin and bell has been sounded and
         carriage has not yet been returned.
         """
-        return int(float(self.visible_width) * (float(self.scroll_pct) * .01))
+        margin = int(float(self.visible_width) * (float(self.scroll_pct) * .01))
+        return (self._input_length >= self.visible_width - margin)
 
     @bell.setter
     def bell(self, value):
@@ -332,8 +332,8 @@ class ScrollingEditor(AnsiWindow):
     def scroll_pct(self):
         """
         Number of columns, as a percentage of its total visible width, that
-        will be scrolled when a user reaches the margin and enable_scrolling
-        is True. Default is 35.
+        will be scrolled when a user reaches the margin by percent.
+        Default is 35.
         """
         return self._scroll_pct
 
@@ -398,7 +398,8 @@ class ScrollingEditor(AnsiWindow):
         elif type(keystroke) is int:
             rstr = u''
         else:
-            rstr = self.add(keystroke)
+            if ord(keystroke) >= 0x20:
+                rstr = self.add(keystroke)
         return rstr
 
     def read(self):
