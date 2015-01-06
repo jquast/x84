@@ -212,10 +212,8 @@ def recv_input(term, editors, edit_idx, inp):
         edit_idx = (0 if edit_idx == len(editors) - 1
                     else edit_idx + 1)
         editor = editors[edit_idx]
-        if editor.content:
-            # clear existing content
-            editor.update(u'')
-            echo(editor.refresh())
+        editor.update(u'')
+        echo(editor.refresh())
         echo(editor.fixate())
 
     return editors, edit_idx
