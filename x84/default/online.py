@@ -139,7 +139,8 @@ def chat(sessions):
     session = getsession()
     (node, tgt_session) = get_node(sessions)
     if tgt_session and tgt_session != session:
-        gosub('chat', dial=session.user.handle, other_sid=tgt_session['sid'])
+        gosub('chat', dial=tgt_session['handle'],
+              other_sid=tgt_session['sid'])
 
 
 def view(sessions):
