@@ -52,11 +52,11 @@ class AnsiWindow(object):
         self._alignment = 'left'
         self._moved = False
 
-        assert self.isinview(), (
-            'AnsiWindow(height={self.height}, width={self.width}, '
-            'yloc={self.yloc}, xloc={self.xloc}) not in viewport '
-            'Terminal(height={term.height}, width={term.width})'
-            .format(self=self, term=getterminal()))
+#        assert self.isinview(), (
+#            'AnsiWindow(height={self.height}, width={self.width}, '
+#            'yloc={self.yloc}, xloc={self.xloc}) not in viewport '
+#            'Terminal(height={term.height}, width={term.width})'
+#            .format(self=self, term=getterminal()))
 
     def init_theme(self, colors=None, glyphs=None):
         """

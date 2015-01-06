@@ -29,9 +29,9 @@ class Terminal(BlessedTerminal):
     def inkey(self, timeout=None, esc_delay=0.35):
         try:
             return BlessedTerminal.inkey(self, timeout, esc_delay=0.35)
-        except UnicodeDecodeError, err:
+        except UnicodeDecodeError as err:
             log = logging.getLogger(__name__)
-            log.warn('UnicodeDecodeError: {}'.format(err))
+            log.warn('UnicodeDecodeError: {0}'.format(err))
             return u'?'
     inkey.__doc__ = BlessedTerminal.inkey.__doc__
 
@@ -50,7 +50,7 @@ class Terminal(BlessedTerminal):
 
         # if available, place back into buffer and return True,
         if val is not None:
-            self.session._buffer['input'].append(val)
+            self.session.buffer_input(val, pushback=True)
             return True
 
         # no value available within timeout.

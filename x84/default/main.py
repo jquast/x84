@@ -30,7 +30,6 @@ def refresh():
         ('o', 'NE liNERS'),
         ('whO', "'S ONliNE"),
         ('n', 'EWS'),
-        ('c', 'hAt'),
         ('iRC', ' chAt'),
         ('!', 'ENCOdiNG'),
         ('t', 'EtRiS'),
@@ -150,8 +149,6 @@ def main():
             # switch into cp437 for syncterm
             echo(syncterm_setfont('cp437') + term.move_x(0) + term.clear_eol)
             gosub('tetris')
-        elif inp == u'c':
-            gosub('chat')
         elif inp == u'irc':
             gosub('ircchat')
         elif inp == u'p':
