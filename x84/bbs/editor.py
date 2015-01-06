@@ -203,16 +203,16 @@ class ScrollingEditor(AnsiWindow):
         self._term = getterminal()
         self._horiz_shift = 0
         self._horiz_pos = 0
-        self._enable_scrolling = False
+        # self._enable_scrolling = False
         self._horiz_lastshift = 0
         self._scroll_pct = kwargs.pop('scroll_pct', 35.0)
         self._margin_pct = kwargs.pop('margin_pct', 20.0)
         self._carriage_returned = False
         self._max_length = kwargs.pop('max_length', 0)
-        self._input_length = 0
         self._quit = False
         self._bell = False
         self.content = kwargs.pop('content', u'')
+        self._input_length = self._term.length(self.content)
         # there are some flaws about how a 'height' of a window must be
         # '3', even though we only want 1; we must also offset (y, x) by
         # 1 and width by 2: issue #161.
