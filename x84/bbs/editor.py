@@ -511,8 +511,9 @@ class ScrollingEditor(AnsiWindow):
         self._horiz_pos = 0
         self.content = ucs
         self._input_length = self._term.length(ucs)
+        self._carriage_returned = False
+        self._quit = False
         assert unichr(27) not in ucs, ('Editor is not ESC sequence-safe')
-        # TODO: assert binary, also .. hex editor? :-)
 
     def add(self, u_chr):
         """
