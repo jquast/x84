@@ -46,7 +46,6 @@ class Session(object):
     #        Too many instance attributes
     #        Too many public methods
     #        Too many arguments
-    TRIM_CP437 = bytes(chr(14) + chr(15))  # HACK
     _encoding = None
     _decoder = None
     _activity = None
@@ -404,35 +403,16 @@ class Session(object):
 
     def write(self, ucs, encoding=None):
         """
-        Write unicode data to telnet client. Take special care to encode
-        as 'iso8859-1' actually intended for 'cp437'-encoded terminals.
+        Write unicode data ``ucs`` to telnet client.
+
+        Take special care to encode as 'cp437_art', but report as 'iso8859-1'
+        for those 8-bit binary (presumably, cp437-encoded) terminals, so that
+        all bytes of the 0x00-0xff spectrum are writable.
         """
-        from x84.bbs.cp437 import CP437
-        if 0 == len(ucs):
+        # do not write empty strings
+        if not ucs:
             return
-        assert isinstance(ucs, unicode)
-        if encoding is None and self.encoding == 'cp437':
-            encoding = 'iso8859-1'
-            # our output terminal is cp437, so we need to take special care to
-            # re-encode things as "iso8859-1" but really encoded for cp437.
-            # For example, u'\u2591' becomes u'\xb0' (unichr(176)),
-            # -- the original ansi shaded block for cp437 terminals.
-            #
-            # additionally, the 'shift-in' and 'shift-out' characters
-            # display as '*' on SyncTerm, I think they stem from curses:
-            # http://lkml.indiana.edu/hypermail/linux/kernel/0602.2/0868.html
-            # regardless, remove them (self.TRIM_CP437)
-            text = ucs.encode(encoding, 'replace')
-            ucs = u''.join([(unichr(CP437.index(glyph))
-                             if glyph in CP437
-                             and glyph not in self.TRIM_CP437
-                             else unicode(
-                                 text[idx].translate(None, self.TRIM_CP437),
-                                 encoding, 'replace'))
-                            for (idx, glyph) in enumerate(ucs)])
-        else:
-            encoding = encoding or self.encoding
-        self.terminal.stream.write(ucs, encoding)
+        self.terminal.stream.write(ucs, encoding or self.encoding)
 
         if self.log.isEnabledFor(logging.DEBUG) and self.tap_output:
             self.log.debug('--> {!r}'.format(ucs))
