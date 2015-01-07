@@ -3,6 +3,7 @@ x/84 bbs module, https://github.com/jquast/x84
 """
 # std
 import warnings
+import inspect
 
 # local, side-effects (encodings are registered)
 __import__('encodings.aliases')
@@ -13,33 +14,29 @@ from x84.bbs.msgbase import list_msgs, get_msg, list_tags, Msg
 from x84.bbs.exception import Disconnected, Goto
 from x84.bbs.editor import LineEditor, ScrollingEditor
 from x84.bbs.output import (echo, timeago, encode_pipe, decode_pipe,
-                            syncterm_setfont,
-                            Ansi, ansiwrap  # deprecated
-                            )
+                            syncterm_setfont)
 from x84.bbs.ansiwin import AnsiWindow
 from x84.bbs.selector import Selector
 from x84.bbs.lightbar import Lightbar
-from x84.bbs.cp437 import from_cp437
 from x84.bbs.dbproxy import DBProxy
 from x84.bbs.pager import Pager
 from x84.bbs.door import Door, DOSDoor, Dropfile
 from x84.bbs.modem import send_modem, recv_modem
 
 
-__all__ = ['list_users', 'get_user', 'find_user', 'User', 'Group', 'list_msgs',
+__all__ = ('list_users', 'get_user', 'find_user', 'User', 'Group', 'list_msgs',
            'get_msg', 'list_tags', 'Msg', 'LineEditor', 'ScrollingEditor',
-           'echo', 'timeago', 'Ansi', 'ansiwrap', 'AnsiWindow', 'Selector',
+           'echo', 'timeago', 'AnsiWindow', 'Selector',
            'Lightbar', 'from_cp437', 'DBProxy', 'Pager', 'Door', 'DOSDoor',
            'goto', 'disconnect', 'getsession', 'getterminal', 'getch', 'gosub',
-           'ropen', 'showart', 'showcp437', 'Dropfile', 'encode_pipe',
+           'ropen', 'showart', 'Dropfile', 'encode_pipe',
            'decode_pipe', 'syncterm_setfont', 'get_ini', 'send_modem',
            'recv_modem',
-           ]
+           )
 
 
-# Translation map for embedded font hints in SAUCE records as documented at
-# http://www.acid.org/info/sauce/sauce.htm section FontName
-
+#: Translation map for embedded font hints in SAUCE records as documented at
+#: http://www.acid.org/info/sauce/sauce.htm section FontName
 SAUCE_FONT_MAP = {
     'Amiga MicroKnight':  'amiga',
     'Amiga MicroKnight+': 'amiga',
@@ -57,8 +54,7 @@ SAUCE_FONT_MAP = {
     'IBM VGA':            'cp437',
 }
 
-# All IBM PC code pages that are supported
-
+# IBM-PC code pages
 for page in (
     '437', '720', '737', '775', '819', '850', '852', '855', '857', '858',
     '860', '861', '862', '863', '864', '865', '866', '869', '872',
@@ -103,17 +99,18 @@ def getterminal():
     return x84.bbs.session.getterminal()
 
 
-# temporary hacks until blessings updates with term.inkey() upstream ..
 def getch(timeout=None):
     """
-    Retrieve a keystroke from 'input' queue, blocking forever or, when
-    specified, None when timeout has elapsed.
+    A deprecated form of getterminal().inkey().
 
-    upstream blessings has better 'keycode' evaluation (none of this
-    duck typing, its always unicode, but has .is_sequence bool test,
-    and a .value test for keycode comparison). we workaround for legacy
-    behavior unless upstream blessings accepts our impl. in some form ..
+    This is old behavior -- upstream blessed project does the correct
+    thing. please use term.inkey() and see the documentation for
+    blessed's inkey() method, it **always** returns unicode, never None,
+    and definitely never an integer. However some internal UI libraries
+    were built upon getch(), and as such, this remains ...
     """
+    # mark deprecate in v2.1; remove entirely in v3.0
+    # warnings.warn('getch() is deprecated, use getterminal().inkey()')
     keystroke = getterminal().inkey(timeout)
     if keystroke == u'':
         return None
@@ -123,9 +120,7 @@ def getch(timeout=None):
 
 
 def gosub(script, *args, **kwargs):
-    """
-    Call bbs script with optional arguments, Returns value.
-    """
+    """ Call bbs script with optional arguments, Returns value. """
     from x84.bbs.session import Script
     # pylint: disable=W0142
     #        Used * or ** magic
@@ -134,9 +129,7 @@ def gosub(script, *args, **kwargs):
 
 
 def ropen(filename, mode='rb'):
-    """
-    Open random file using wildcard (glob)
-    """
+    """ Open random file using wildcard (glob). """
     import glob
     import random
     files = glob.glob(filename)
@@ -177,6 +170,19 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
     from x84.bbs.ini import CFG
 
     term = getterminal()
+
+    # When the given artfile pattern's folder is not absolute, nor relative to
+    # our cwd, build a relative position of the folder by the calling module's
+    # containing folder.  This only works for subdirectories i think (like
+    # art/).
+    _folder = os.path.dirname(filepattern)
+    if not (_folder.startswith(os.path.sep) or os.path.isdir(_folder)):
+        caller_module = inspect.stack()[1][1]
+        rel_folder = os.path.dirname(caller_module)
+        if _folder:
+            rel_folder = os.path.join(os.path.dirname(caller_module), _folder)
+        if os.path.isdir(rel_folder):
+            filepattern = os.path.join(rel_folder, os.path.basename(filepattern))
 
     # Open the piece
     try:
@@ -252,7 +258,7 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
             msg_too_wide = u''.join(
                 (term.normal,
                  term.bold_black(u'-- '),
-                 u'cancelled {0}, too wide:: {{0}}'.format(os.path.basename(filename)),
+                 u'canceled {0}, too wide:: {{0}}'.format(os.path.basename(filename)),
                  term.bold_black(u' --'),
                  ))
             yield (u'\r\n' +
@@ -266,11 +272,6 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
                 break
         yield padding + line + u'\r\n'
     yield term.normal
-
-
-def showcp437(filepattern):
-    warnings.warn('showcp437() is deprecated, use showart()')
-    return showart(filepattern, 'cp437')
 
 
 def get_ini(section=None, key=None, getter='get', split=False, splitsep=None):
@@ -293,7 +294,6 @@ def get_ini(section=None, key=None, getter='get', split=False, splitsep=None):
         # imports is not really an error.  However, if you're importing
         # a module that calls get_ini before the config system is
         # initialized, then you're going to get an empty value! warning!!
-        import inspect
         stack = inspect.stack()
         caller_mod, caller_func = stack[2][1], stack[2][3]
         warnings.warn('ini system not (yet) initialized, '
@@ -309,3 +309,11 @@ def get_ini(section=None, key=None, getter='get', split=False, splitsep=None):
     if split:
         return []
     return u''
+
+
+def from_cp437(text):
+    """ Given a bytestring in IBM codepage 437, return a translated
+        unicode string suitable for decoding to UTF-8.
+    """
+    warnings.warn('from_cp437() is deprecated, use bytes.decode("cp437_art")')
+    return text.decode('cp437_art')

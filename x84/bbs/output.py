@@ -8,7 +8,7 @@ from x84.bbs.session import getterminal, getsession
 
 from blessed.sequences import Sequence
 
-__all__ = ['echo', 'timeago', 'encode_pipe', 'decode_pipe']
+__all__ = ('echo', 'timeago', 'encode_pipe', 'decode_pipe')
 
 #: A mapping of SyncTerm fonts/code pages to their sequence value.
 #: Where matching, their python-standard encoding value is used, (fe. 'cp437').
@@ -125,7 +125,6 @@ def decode_pipe(ucs):
 
     outp = ucs if match is None else u''.join((outp, ucs[match.end():]))
     return u''.join((outp, term.normal))
-_decode_pipe = decode_pipe
 
 
 def encode_pipe(ucs):
@@ -136,7 +135,9 @@ def encode_pipe(ucs):
     color sequences with their pipe-equivalent values.
     """
     # TODO: Support all kinds of terminal color sequences,
-    # such as kermit or avatar or some such, something non-emca
+    # such as kermit or avatar or some such, something non-emca,
+    # upstream blessed project is looking for a SequenceIterator
+    # class, https://github.com/jquast/blessed/issues/29
     outp = u''
     nxt = 0
     ANSI_COLOR = re.compile(r'\033\[(\d{2,3})m')
@@ -157,61 +158,3 @@ def encode_pipe(ucs):
             # otherwise point to next character
             nxt = idx + 1
     return outp
-_encode_pipe = encode_pipe
-
-
-##### Deprecated (will be removed in v2.0) #############
-
-def ansiwrap(ucs, width=70, **kwargs):
-    """Wrap a single paragraph of Unicode Ansi sequences,
-    returning a list of wrapped lines.
-    """
-    warnings.warn('ansiwrap() deprecated, getterminal() now'
-                  'supplies an equivalent .wrap() API')
-    return getterminal().wrap(text=ucs, width=width, **kwargs)
-
-
-class Ansi(Sequence):
-
-    def __new__(cls, object):
-        warnings.warn('Ansi() deprecated, getterminal() now provides '
-                      '.length(), .rjust(), .wrap(), etc.')
-        new = Sequence.__new__(cls, object, getterminal())
-        return new
-
-    def __len__(self):
-        warnings.warn('Ansi().__len__() deprecated, getterminal() now '
-                      'provides an equivalent .length() API')
-        return self._term.length(text=self)
-
-    def wrap(self, width, **kwargs):
-        warnings.warn('Ansi().wrap() deprecated, getterminal() now '
-                      'provides a similar .wrap() API')
-        if 'indent' in kwargs:
-            indent = kwargs.pop('indent')
-        else:
-            indent = u''
-        lines = []
-        for line in unicode(self).splitlines():
-            if line.strip():
-                for wrapped in ansiwrap(line, width, subsequent_indent=indent):
-                    lines.append(wrapped)
-            else:
-                lines.append(u'')
-        return '\r\n'.join(lines)
-
-    def seqfill(self, _encode_pipe=False):
-        warnings.warn('Ansi().seqfill() deprecated, getterminal() now '
-                      'provides an equivalent .padd() API')
-        val = self.padd()
-        if _encode_pipe:
-            return encode_pipe(unicode(val))
-        return val
-
-    def decode_pipe(self):
-        warnings.warn('Ansi().decode_pipe() deprecated, use decode_pipe()')
-        return _decode_pipe(unicode(self))
-
-    def encode_pipe(self):
-        warnings.warn('Ansi().decode_pipe() deprecated, use decode_pipe()')
-        return _encode_pipe(unicode(self))

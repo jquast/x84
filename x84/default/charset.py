@@ -102,9 +102,9 @@ def main():
     session.activity = u'Selecting character set'
 
     # set syncterm font, if any
-    if syncterm_font and term._kind.startswith('ansi'):
+    if syncterm_font and term.kind.startswith('ansi'):
         echo(u'\r\n')
-        echo(syncterm_setfont('topaz'))
+        echo(syncterm_setfont(syncterm_font))
         echo(term.move_x(0) + term.clear_eol)
 
     do_select_encoding(term, session)

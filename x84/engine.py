@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Command-line launcher and main event loop for x/84
+Command-line launcher and event loop for x/84, https://github.com/jquast/x84
 """
 # Place ALL metadata in setup.py, except where not suitable, place here.
 # For any contributions, feel free to tag __author__ etc. at top of such file.
@@ -58,17 +58,15 @@ def main():
     servers = get_servers(CFG)
 
     # begin unmanaged servers
-    if get_ini(section='web', key='modules'):
+    if (CFG.has_section('web') and
+            (not CFG.has_option('web', 'enabled')
+             or CFG.getboolean('web', 'enabled'))):
         # start https server for one or more web modules.
-        #
-        # may raise an ImportError for systems where pyOpenSSL and etc. could
-        # not be installed (due to any issues with missing python-dev, libffi,
-        # cc, etc.).  Allow it to raise naturally, the curious user should
-        # either discover and resolve the root issue, or disable web modules if
-        # it cannot be resolved.
         from x84 import webserve
         webserve.main()
 
+    # 3.0: This should be a separate section all together
+    #      with an enables = yes option.
     if get_ini(section='msg', key='network_tags'):
         # start background timer to poll for new messages
         # of message networks we may be a member of.
@@ -89,6 +87,7 @@ def main():
             for key, client in server.clients.items()[:]:
                 kill_session(client, 'server shutdown')
                 del server.clients[key]
+    return 0
 
 
 def parse_args():
@@ -139,8 +138,8 @@ def get_servers(CFG):
     servers = []
 
     if (CFG.has_section('telnet') and
-            not CFG.has_option('telnet', 'enabled')
-            or CFG.getboolean('telnet', 'enabled')):
+            (not CFG.has_option('telnet', 'enabled')
+             or CFG.getboolean('telnet', 'enabled'))):
         # start telnet server instance
         from x84.telnet import TelnetServer
         servers.append(TelnetServer(config=CFG))
@@ -159,8 +158,8 @@ def get_servers(CFG):
         servers.append(SshServer(config=CFG))
 
     if (CFG.has_section('rlogin') and
-            not CFG.has_option('rlogin', 'enabled')
-            or CFG.getboolean('rlogin', 'enabled')):
+            (not CFG.has_option('rlogin', 'enabled')
+             or CFG.getboolean('rlogin', 'enabled'))):
         # start rlogin server instance
         from x84.rlogin import RLoginServer
         servers.append(RLoginServer(config=CFG))
@@ -509,7 +508,7 @@ def _loop(servers):
     WIN32 = sys.platform.lower().startswith('win32')
     session_fds = set()
 
-    log = logging.getLogger('x84.engine')
+    log = logging.getLogger(__name__)
 
     if not len(servers):
         raise ValueError("No servers configured for event loop! (ssh, telnet)")

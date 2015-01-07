@@ -14,8 +14,10 @@ PC_KEYSET = {'refresh': [unichr(12), ],
 class LineEditor(object):
 
     """
-    This unicode line editor is unaware of its (x, y) position and is great
-    for prompting a quick phrase on any terminal, such as a login: prompt.
+    This unicode line editor is unaware of its (x, y) position.
+
+    It is great for prompting a quick phrase on any terminal,
+    such as a ``login:`` prompt.
     """
     # This should really be gnu/readline, but its not really accessible ..
     _hidden = False
@@ -24,15 +26,17 @@ class LineEditor(object):
     def __init__(self, width=None, content=u'', hidden=False,
                  colors=None, glyphs=None, keyset=None):
         """
-        Arguments:
-            width: the maximum input length.
-            content: given default content.
-            colors: optional dictionary containing key 'highlight'.
-            keyset: optional dictionary of line editing values.
+        :param width: the maximum input length.
+        :param content: given default content.
+        :param colors: optional dictionary containing key 'highlight'.
+        :param keyset: optional dictionary of line editing values.
         """
+        from x84.bbs.session import getterminal
+        self._term = getterminal()
         self.content = content or u''
         self.hidden = hidden
         self._width = width
+        self._input_length = self._term.length(content)
 
         self._quit = False
         self._carriage_returned = False
@@ -44,10 +48,8 @@ class LineEditor(object):
         """
         Initialize colors['highlight'].
         """
-        from x84.bbs.session import getterminal
         # set defaults,
-        term = getterminal()
-        self.colors = {'highlight': term.reverse}
+        self.colors = {'highlight': self._term.reverse}
 
         # allow user override
         if colors:
@@ -59,14 +61,12 @@ class LineEditor(object):
         """
         This initializer sets keyboard keys for backspace/exit.
         """
-        from x84.bbs.session import getterminal
-        term = getterminal()
         self.keyset = keyset
-        self.keyset['refresh'].append(term.KEY_REFRESH)
-        self.keyset['backspace'].append(term.KEY_BACKSPACE)
-        self.keyset['backspace'].append(term.KEY_DELETE)
-        self.keyset['enter'].append(term.KEY_ENTER)
-        self.keyset['exit'].append(term.KEY_ESCAPE)
+        self.keyset['refresh'].append(self._term.KEY_REFRESH)
+        self.keyset['backspace'].append(self._term.KEY_BACKSPACE)
+        self.keyset['backspace'].append(self._term.KEY_DELETE)
+        self.keyset['enter'].append(self._term.KEY_ENTER)
+        self.keyset['exit'].append(self._term.KEY_ESCAPE)
 
     @property
     def quit(self):
@@ -119,30 +119,26 @@ class LineEditor(object):
 
         No movement or positional sequences are returned.
         """
-        from x84.bbs.session import getterminal
-        term = getterminal()
         disp_lightbar = u''.join((
-            term.normal,
+            self._term.normal,
             self.colors.get('highlight', u''),
             ' ' * self.width,
             '\b' * self.width))
         content = self.content
         if self.hidden:
-            content = self.hidden * term.length(self.content)
-        return u''.join((disp_lightbar, content, term.cursor_visible))
+            content = self.hidden * self._term.length(self.content)
+        return u''.join((disp_lightbar, content, self._term.cursor_visible))
 
     def process_keystroke(self, keystroke):
         """
         Process the keystroke received by read method and take action.
         """
-        from x84.bbs.session import getterminal
-        term = getterminal()
         self._quit = False
         if keystroke in self.keyset['refresh']:
-            return u'\b' * term.length(self.content) + self.refresh()
+            return u'\b' * self._term.length(self.content) + self.refresh()
         elif keystroke in self.keyset['backspace']:
             if len(self.content) != 0:
-                len_toss = term.length(self.content[-1])
+                len_toss = self._term.length(self.content[-1])
                 self.content = self.content[:-1]
                 return u''.join((
                     u'\b' * len_toss,
@@ -151,7 +147,7 @@ class LineEditor(object):
         elif keystroke in self.keyset['backword']:
             if len(self.content) != 0:
                 ridx = self.content.rstrip().rfind(' ') + 1
-                toss = term.length(self.content[ridx:])
+                toss = self._term.length(self.content[ridx:])
                 move = len(self.content[ridx:])
                 self.content = self.content[:ridx]
                 return u''.join((
@@ -165,7 +161,7 @@ class LineEditor(object):
         elif type(keystroke) is int:
             return u''
         elif (ord(keystroke) >= ord(' ') and
-                (term.length(self.content) < self.width or self.width is None)):
+                (self._term.length(self.content) < self.width or self.width is None)):
             self.content += keystroke
             return keystroke if not self.hidden else self.hidden
         return u''
@@ -177,15 +173,13 @@ class LineEditor(object):
         """
         from x84.bbs import getch
         from x84.bbs.output import echo
-        from x84.bbs.session import getterminal
-        term = getterminal()
         self._carriage_returned = False
         self._quit = False
         echo(self.refresh())
         while not (self.quit or self.carriage_returned):
             inp = getch()
             echo(self.process_keystroke(inp))
-        echo(term.normal)
+        echo(self._term.normal)
         if not self.quit:
             return self.content
         return None
@@ -194,9 +188,9 @@ class LineEditor(object):
 class ScrollingEditor(AnsiWindow):
 
     """
-    A single line Editor fully aware of its (y, x).
-    Infinite horizontal scrolling is enabled with the enable_scrolling
-    property. When True, scrolling amount is limited using max_length.
+    A single line Editor, requires absolute (yloc, xloc) position.
+
+    Infinite horizontal scrolling is enabled or limited using max_length.
     """
     # pylint: disable=R0902,R0904
     #        Too many instance attributes (14/7)
@@ -204,34 +198,33 @@ class ScrollingEditor(AnsiWindow):
 
     def __init__(self, *args, **kwargs):
         """
-        Construct a Line editor at (y,x) location of width (n).
+        Construct a Line editor at (y,x) location..
         """
+        from x84.bbs.session import getterminal
+        self._term = getterminal()
         self._horiz_shift = 0
         self._horiz_pos = 0
-        self._enable_scrolling = False
+        # self._enable_scrolling = False
         self._horiz_lastshift = 0
-        self._scroll_pct = 35.0
-        self._margin_pct = 20.0
+        self._scroll_pct = kwargs.pop('scroll_pct', 35.0)
+        self._margin_pct = kwargs.pop('margin_pct', 20.0)
         self._carriage_returned = False
-        self._max_length = 0
+        self._max_length = kwargs.pop('max_length', 0)
         self._quit = False
         self._bell = False
-        self.content = u''
+        self.content = kwargs.pop('content', u'')
+        self._input_length = self._term.length(self.content)
+        # there are some flaws about how a 'height' of a window must be
+        # '3', even though we only want 1; we must also offset (y, x) by
+        # 1 and width by 2: issue #161.
         kwargs['height'] = 3
-
         self.init_keystrokes(keyset=kwargs.pop('keyset', PC_KEYSET.copy()))
-
-        # height = 3  # TODO: 2 of 3 for top and bottom border
-        # (optionally displayed .. is this best x/y coord?
-        #   once working, lets set default as borderless!)
         AnsiWindow.__init__(self, *args, **kwargs)
 
     def init_theme(self, colors=None, glyphs=None):
         AnsiWindow.init_theme(self, colors, glyphs)
         if 'highlight' not in self.colors:
-            from x84.bbs.session import getterminal
-            term = getterminal()
-            self.colors['highlight'] = term.yellow_reverse
+            self.colors['highlight'] = self._term.yellow_reverse
         if 'strip' not in self.glyphs:
             self.glyphs['strip'] = u'$ '
 
@@ -239,14 +232,12 @@ class ScrollingEditor(AnsiWindow):
         """
         This initializer sets keyboard keys for various editing keystrokes.
         """
-        from x84.bbs.session import getterminal
-        term = getterminal()
         self.keyset = keyset
-        self.keyset['refresh'].append(term.KEY_REFRESH)
-        self.keyset['backspace'].append(term.KEY_BACKSPACE)
-        self.keyset['backspace'].append(term.KEY_DELETE)
-        self.keyset['enter'].append(term.KEY_ENTER)
-        self.keyset['exit'].append(term.KEY_ESCAPE)
+        self.keyset['refresh'].append(self._term.KEY_REFRESH)
+        self.keyset['backspace'].append(self._term.KEY_BACKSPACE)
+        self.keyset['backspace'].append(self._term.KEY_DELETE)
+        self.keyset['enter'].append(self._term.KEY_ENTER)
+        self.keyset['exit'].append(self._term.KEY_ESCAPE)
 
     @property
     def position(self):
@@ -260,9 +251,7 @@ class ScrollingEditor(AnsiWindow):
         """
         Return True when no more input can be accepted (end of line).
         """
-        from x84.bbs.session import getterminal
-        term = getterminal()
-        return term.length(self.content) >= self.max_length
+        return self._input_length >= self.max_length
 
     @property
     def bell(self):
@@ -270,7 +259,8 @@ class ScrollingEditor(AnsiWindow):
         Returns True when user nears margin and bell has been sounded and
         carriage has not yet been returned.
         """
-        return int(float(self.visible_width) * (float(self.scroll_pct) * .01))
+        margin = int(float(self.visible_width) * (float(self.scroll_pct) * .01))
+        return (self._input_length >= self.visible_width - margin)
 
     @bell.setter
     def bell(self, value):
@@ -294,19 +284,25 @@ class ScrollingEditor(AnsiWindow):
         """
         return self._quit
 
-    @property
-    def enable_scrolling(self):
-        """
-        Enable horizontal scrolling of line editor.
-        Otherwise, input is limited to visible width.
-        """
-        return self._enable_scrolling
-
-    @enable_scrolling.setter
-    def enable_scrolling(self, value):
-        # pylint: disable=C0111
-        #         Missing docstring
-        self._enable_scrolling = value
+# jquast: disabled because this isn't actually honored -- what is probably
+# intended her is some kind of mix-in with LineEditor, but they work quite
+# differently -- one requires absolute (y, x) and the other doesn't use it
+# at all.  However, if we can implement term.get_position() we could probably
+# work something out about an optional (y, x) position for both.
+#
+#    @property
+#    def enable_scrolling(self):
+#        """
+#        Enable horizontal scrolling of line editor.
+#        Otherwise, input is limited to visible width.
+#        """
+#        return self._enable_scrolling
+#
+#    @enable_scrolling.setter
+#    def enable_scrolling(self, value):
+#        # pylint: disable=C0111
+#        #         Missing docstring
+#        self._enable_scrolling = value
 
     @property
     def is_scrolled(self):
@@ -337,8 +333,8 @@ class ScrollingEditor(AnsiWindow):
     def scroll_pct(self):
         """
         Number of columns, as a percentage of its total visible width, that
-        will be scrolled when a user reaches the margin and enable_scrolling
-        is True. Default is 35.
+        will be scrolled when a user reaches the margin by percent.
+        Default is 35.
         """
         return self._scroll_pct
 
@@ -347,6 +343,7 @@ class ScrollingEditor(AnsiWindow):
         # pylint: disable=C0111
         #         Missing docstring
         self._scroll_pct = float(value)
+        assert value < 50, ("Bugs with values greater than 50 ...")
 
     @property
     def margin_pct(self):
@@ -381,6 +378,16 @@ class ScrollingEditor(AnsiWindow):
         #         Missing docstring
         self._max_length = value
 
+    @property
+    def content(self):
+        """ The contents of editor. """
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        self._content = value
+        self._input_length = self._term.length(value)
+
     def process_keystroke(self, keystroke):
         """
         Process the keystroke received by read method and take action.
@@ -402,7 +409,8 @@ class ScrollingEditor(AnsiWindow):
         elif type(keystroke) is int:
             rstr = u''
         else:
-            rstr = self.add(keystroke)
+            if ord(keystroke) >= 0x20:
+                rstr = self.add(keystroke)
         return rstr
 
     def read(self):
@@ -428,10 +436,8 @@ class ScrollingEditor(AnsiWindow):
         position in window. Set x_adjust to -1 to position cursor 'on'
         the last character, or 0 for 'after' (default).
         """
-        from x84.bbs.session import getterminal
-        term = getterminal()
         xpos = self._xpadding + self._horiz_pos + x_adjust
-        return self.pos(1, xpos) + term.cursor_visible
+        return self.pos(1, xpos) + self._term.cursor_visible
 
     def refresh(self):
         """
@@ -442,20 +448,19 @@ class ScrollingEditor(AnsiWindow):
         it is if wrapping must occur; this can happen if a
         non-scrolling editor was provided a very large .content
         buffer, then later .refresh()'d. -- essentially enabling
-        infinate scrolling
+        infinite scrolling
         """
         # reset position and detect new position
-        from x84.bbs import getterminal
-        term = getterminal()
         self._horiz_lastshift = self._horiz_shift
         self._horiz_shift = 0
         self._horiz_pos = 0
-        for _count in range(term.length(self.content)):
+        #                  (self._term.length(self.content))
+        for _count in range(self._input_length):
             if (self._horiz_pos >
                     (self.visible_width - self.scroll_amt)):
                 self._horiz_shift += self.scroll_amt
                 self._horiz_pos -= self.scroll_amt
-                self.enable_scrolling = True
+                #self.enable_scrolling = True
             self._horiz_pos += 1
         if self._horiz_shift > 0:
             self._horiz_shift += len(self.glyphs['strip'])
@@ -466,7 +471,7 @@ class ScrollingEditor(AnsiWindow):
             prnt = self.content
         return u''.join((
             self.pos(self.ypadding, self.xpadding),
-            term.normal,
+            self._term.normal,
             self.colors.get('highlight', u''),
             self.align(prnt),
             self.fixate(),))
@@ -489,13 +494,10 @@ class ScrollingEditor(AnsiWindow):
         """
         if 0 == len(self.content):
             return u''
-        from x84.bbs.session import getterminal
-        term = getterminal()
-
         rstr = u''
-        # measured backspace erases over double-wide
-        len_toss = term.length(self.content[-1])
-        len_move = len(self.content[-1])
+        # measured backspace erases over double-wide (wcwidth)
+        len_toss = self._term.length(self.content[-1])
+        len_move = 1
         self.content = self.content[:-1]
         if (self.is_scrolled and (self._horiz_pos < self.scroll_amt)):
             # shift left,
@@ -518,8 +520,9 @@ class ScrollingEditor(AnsiWindow):
         self._horiz_shift = 0
         self._horiz_pos = 0
         self.content = ucs
+        self._carriage_returned = False
+        self._quit = False
         assert unichr(27) not in ucs, ('Editor is not ESC sequence-safe')
-        # TODO: assert binary, also .. hex editor? :-)
 
     def add(self, u_chr):
         """
@@ -531,16 +534,19 @@ class ScrollingEditor(AnsiWindow):
         Otherwise, the input is simply returned to be displayed
         ('local echo').
         """
-        from x84.bbs import getterminal
-        term = getterminal()
         if self.eol:
             # cannot input, at end of line!
             return u''
-        # append to input
-        self.content += u_chr
+
+        # append input to content directly to the backend variable,
+        # so that we adjust the length only by the most recently-added
+        # character.
+        self._content += u_chr
+        self._input_length += self._term.length(u_chr)
+
         # return character appended as output, ensure .fixate() is used first!
         self._horiz_pos += 1
         if self._horiz_pos >= (self.visible_width - self.margin_amt):
             # scrolling is required,
             return self.refresh()
-        return term.normal + self.colors['highlight'] + u_chr
+        return self._term.normal + self.colors['highlight'] + u_chr

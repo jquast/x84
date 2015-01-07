@@ -5,6 +5,7 @@ Database request handler for x/84 http://github.com/jquast/x84
 import multiprocessing
 import threading
 import logging
+import errno
 import os
 
 # 3rd-party
@@ -35,7 +36,7 @@ def check_db(filepath):
         'Must have rw access to db_folder:', db_folder)
     if os.path.exists(filepath):
         assert os.access(filepath, os.F_OK | os.R_OK | os.W_OK), (
-            'Must have r+w access to fb file:', filepath)
+            'Must have r+w access to db file:', filepath)
 
 
 def get_db_filepath(schema):
@@ -140,9 +141,16 @@ class DBHandler(threading.Thread):
         # pylint: disable=W0703
         #         Catching too general exception
         except Exception as err:
-            # Pokemon exception; package & raise from session process,
-            self.queue.send(('exception', err,))
-            self.log.exception(err)
+            # Pokemon exception, send to session
+            try:
+                self.queue.send(('exception', err,))
+            except IOError as err:
+                if err.errno == errno.EBADF:
+                    # our pipe/queue has been disconnected (the session
+                    # has disconnected), heck this might be the cause of
+                    # our first exception
+                    return
+                raise
         finally:
             dictdb.close()
         return

@@ -1,192 +1,305 @@
 """
- Main menu script for x/84, http://github.com/jquast/x84
+Main menu script for x/84, http://github.com/jquast/x84
 """
+# std imports
+from __future__ import division
+import collections
+import math
+import os
+
+# local
+from x84.bbs import getsession, getterminal, get_ini
+from x84.bbs import echo, LineEditor, gosub, syncterm_setfont
+from x84.bbs import ini
+
+MenuItem = collections.namedtuple(
+    'MenuItem', ['inp_key', 'text', 'script', 'args', 'kwargs'])
+
+#: When set False, menu items are not colorized and render much
+#: faster on slower systems (such as raspberry pi).
+colored_menu_items = get_ini(
+    section='main', key='colored_menu_items', getter='getboolean'
+) or True
+
+#: color used for menu key entries
+color_highlight = get_ini(
+    section='main', key='color_highlight'
+) or 'bright_magenta'
+
+#: color used for prompt
+color_prompt = get_ini(
+    section='main', key='color_prompt',
+) or 'magenta_reverse'
+
+#: color used for brackets ``[`` and ``]``
+color_lowlight = get_ini(
+    section='main', key='color_lowlight'
+) or 'bright_black'
+
+#: filepath to artfile displayed for this script
+art_file = get_ini(
+    section='main', key='art_file'
+) or 'art/main*.asc'
+
+#: encoding used to display artfile
+art_encoding = get_ini(
+    section='oneliners', key='art_file'
+) or 'cp437'
+
+#: fontset for SyncTerm emulator
+syncterm_font = get_ini(
+    section='oneliners', key='syncterm_font'
+) or 'cp437'
+
+#: system name of bbs
+bbsname = get_ini(
+    section='system', key='bbsname'
+) or 'Unnamed'
+
+#: A declaration of menu items and their acting gosub script
+MENU = [
+    MenuItem(inp_key=u'ac',
+             text=u'adjust charset',
+             script='charset',
+             args=(), kwargs={}),
+    MenuItem(inp_key=u'irc',
+             text=u'irc chat',
+             script='ircchat',
+             args=(), kwargs={}),
+    MenuItem(inp_key=u'lc',
+             text=u'last callers',
+             script='lc',
+             args=(), kwargs={}),
+    MenuItem(inp_key=u'who',
+             text=u"who's online",
+             script='online',
+             args=(), kwargs={}),
+    MenuItem(inp_key=u'fb',
+             text=u'file browser',
+             script='fbrowse',
+             args=(), kwargs={}),
+    MenuItem(inp_key=u'pe',
+             text=u'profile editor',
+             script='profile',
+             args=(), kwargs={}),
+    MenuItem(inp_key=u'bbs',
+             text=u'bbs list',
+             script='bbslist',
+             args=(), kwargs={}),
+    MenuItem(inp_key=u'g',
+             text=u'logoff system',
+             script='logoff',
+             args=(), kwargs={}),
+    MenuItem(inp_key=u'weather',
+             text=u'weather forecast',
+             script='weather',
+             args=(), kwargs={}),
+    MenuItem(inp_key=u'user',
+             text=u'user list',
+             script='userlist',
+             args=(), kwargs={}),
+    MenuItem(inp_key=u'news',
+             text=u'news reader',
+             script='news',
+             args=(), kwargs={}),
+    MenuItem(inp_key=u'ol',
+             text=u'one-liners',
+             script='ol',
+             args=(), kwargs={}),
+    MenuItem(inp_key=u'tetris',
+             text=u'tetris game',
+             script='tetris',
+             args=(), kwargs={}),
+    MenuItem(inp_key=u'si',
+             text=u'system info',
+             script='si',
+             args=(), kwargs={}),
+    MenuItem(inp_key=u'vote',
+             text=u'voting booth',
+             script='vote',
+             args=(), kwargs={}),
+
+    # writemsg.py will be done from the reader (TODO
+    MenuItem(inp_key=u'read',
+             text=u'read messages',
+             script='readmsgs',
+             args=(), kwargs={}),
+]
+
+# there doesn't exist any documentation on how this works,
+# only the given examples in the generated default.ini file
+if ini.CFG.has_section('sesame'):
+    from ConfigParser import NoOptionError
+    for door in ini.CFG.options('sesame'):
+        if door.endswith('_key'):
+            # skip entries ending by _key.
+            continue
+
+        if not os.path.exists(ini.CFG.get('sesame', door)):
+            # skip entry if path does not resolve
+            continue
+
+        try:
+            inp_key = get_ini(section=sesame, key='{0}_key'.format(door))
+        except NoOptionError:
+            # skip entry if there is no {door}_key option
+            continue
+
+        MENU.append(
+            MenuItem(inp_key=inp_key,
+                     text=u'play {0}'.format(door),
+                     script='sesame',
+                     args=(door,),
+                     kwargs={}))
 
 
-def refresh():
-    """ Refresh main menu. """
-    # pylint: disable=R0914
-    #         Too many local variables
-    from x84.bbs import getsession, getterminal, echo, showart, ini, syncterm_setfont
-    import os
-    import logging
-    logger = logging.getLogger()
-    session, term = getsession(), getterminal()
-    session.activity = u'Main menu'
-    artfile = 'main*.asc'
+def decorate_menu_item(menu_item, term, highlight, lowlight):
+    key_text = (u'{lb}{inp_key}{rb}'.format(
+        lb=lowlight(u'['),
+        rb=lowlight(u']'),
+        inp_key=highlight(menu_item.inp_key)))
 
-    # tells syncterm to change to topaz, then delete the output to avoid the
-    # code to be shown in other clients
-    echo(syncterm_setfont('topaz') + term.move_x(0) + term.clear_eol)
+    # set the inp_key within the key_text if matching
+    if menu_item.inp_key in menu_item.text:
+        return menu_item.text.replace(menu_item.inp_key, key_text)
 
-    # displays a centered main menu header in topaz encoding for utf8
-    for line in showart(os.path.join(os.path.dirname(__file__), 'art', artfile), 'topaz'):
-        echo(term.cyan + term.move_x((term.width / 2) - 40) + line)
-    echo(u'\r\n\r\n')
-    entries = [
-        ('$', 'rEAD bUllETiNS'),
-        ('bbS', ' NEXUS'),
-        ('l', 'ASt CAllS'),
-        ('o', 'NE liNERS'),
-        ('whO', "'S ONliNE"),
-        ('n', 'EWS'),
-        ('c', 'hAt'),
-        ('iRC', ' chAt'),
-        ('!', 'ENCOdiNG'),
-        ('t', 'EtRiS'),
-        ('s', 'YS. iNfO'),
-        ('u', 'SER LiST'),
-        ('f', 'ORECASt'),
-        ('e', 'dit PROfilE'),
-        ('p', 'OSt A MSG'),
-        ('r', 'EAd All MSGS'),
-        ('v', 'OTiNG bOOTH'),
-        ('g', 'OOdbYE /lOGOff'), ]
+    # otherwise prefixed with space
+    return (u'{key_text} {menu_text}'.format(
+        key_text=key_text, menu_text=menu_item.text))
 
-    # add LORD to menu only if enabled,
-    if ini.CFG.getboolean('dosemu', 'enabled') and (
-            ini.CFG.get('dosemu', 'lord_path') != 'no'):
-        entries.insert(0, ('#', 'PlAY lORd!'))
 
-    # add sesame doors to menu if enabled
+def render_menu_entries(term, top_margin, menu_items):
+    # we take measured effects to do this operation much quicker when
+    # colored_menu_items is set False, mostly to accomidate slower systems such
+    # as the raspberry pi.
+    if colored_menu_items:
+        highlight = getattr(term, color_highlight)
+        lowlight = getattr(term, color_lowlight)
+        measure_width = term.length
+    else:
+        highlight = lambda txt: txt
+        lowlight = lambda txt: txt
+        measure_width = str.__len__
 
-    if ini.CFG.has_section('sesame'):
-        from ConfigParser import NoOptionError
-        for door in ini.CFG.options('sesame'):
-            if '_' in door:
-                continue
+    # render all menu items, highlighting their action 'key'
+    rendered_menuitems = [
+        decorate_menu_item(menu_item, term,
+                           highlight=highlight,
+                           lowlight=lowlight)
+        for menu_item in menu_items
+    ]
+    # create a parallel array of their measurable width
+    column_widths = map(measure_width, rendered_menuitems)
 
-            # .. but only if we have the binary
-            if not os.path.exists(ini.CFG.get('sesame', door)):
-                continue
+    # here, we calculate how many vertical sections of menu entries
+    # may be displayed in 80 columns or less -- and forat accordingly
+    # so that they are left-adjusted in 1 or more tabular columns, with
+    # sufficient row spacing to padd out the full vertical height of the
+    # window.
+    #
+    # It's really just a bunch of math to make centered, tabular columns..
+    display_width = min(term.width, 80)
+    padding = max(column_widths) + 3
+    n_columns = max(1, int(math.floor(display_width / padding)))
+    xpos = max(1, int(math.floor((term.width / 2) - (display_width / 2))))
+    xpos += int(math.floor((display_width - ((n_columns * padding))) / 2))
+    rows = int(math.ceil(len(rendered_menuitems) / n_columns))
+    height = int(math.ceil((term.height - 3) - top_margin))
+    row_spacing = max(1, min(3, int(math.floor(height / rows))))
 
-            # .. and a key is configured
-            try:
-                key = ini.CFG.get('sesame', '{}_key'.format(door))
-            except NoOptionError:
-                logger.error("no key configured for sesame door '{}'".format(
-                    door,
-                ))
-            else:
-                logger.debug("added sesame door '{}' with key '{}'".format(
-                    door, key
-                ))
-                entries.insert(0, (key, 'PlAY {}'.format(door)))
+    column = 1
+    output = u''
+    for idx, item in enumerate(rendered_menuitems):
+        padding_left = term.move_x(xpos) if column == 1 and xpos else u''
+        padding_right = ' ' * (padding - column_widths[idx])
+        if idx == len(rendered_menuitems) - 1:
+            # last item, two newlines
+            padding_right = u'\r\n' * 2
+        elif column == n_columns:
+            # newline(s) on last column only
+            padding_right = u'\r\n' * row_spacing
+        column = 1 if column == n_columns else column + 1
+        output = u''.join((output, padding_left, item, padding_right))
+    return output
 
-    maxwidth = term.width * .8
-    buf_str = u''
-    for key, name in entries:
-        out_str = u''.join((
-            term.cyan(u'('),
-            term.magenta_underline(key),
-            term.cyan(u')'),
-            term.white(name + '  ')))
-        ansilen = term.length(buf_str + out_str)
-        if ansilen >= maxwidth:
-            if term.height > 25:
-                echo(term.center(buf_str) + u'\r\n\r\n')
-            else:
-                echo(term.center(buf_str) + u'\r\n')
-            buf_str = out_str
-        else:
-            buf_str += out_str
-    echo(term.center(buf_str) + u'\r\n\r\n')
+
+def get_line_editor(term):
+    """ Return a line editor suitable for menu entry prompts. """
+    # if inp_key's were CJK characters, you should use term.length to measure
+    # printable length of double-wide characters ... this is too costly to
+    # enable by default.  Just a note for you east-asian folks.
+    max_inp_length = max([len(item.inp_key) for item in MENU])
+    return LineEditor(width=max_inp_length,
+                      colors={'highlight': getattr(term, color_prompt)})
+
+
+def display_prompt(term):
+    xpos = 0
+    if term.width > 30:
+        xpos = max(5, int((term.width / 2) - (80 / 2)))
+    return (u'{xpos}{user}{at}{bbsname}{colon} '.format(
+        xpos=term.move_x(xpos),
+        user=term.session.user.handle,
+        at=getattr(term, color_lowlight)(u'@'),
+        bbsname=bbsname,
+        colon=getattr(term, color_lowlight)(u'::')))
 
 
 def main():
-    """ Main procedure. """
-    # pylint: disable=R0912
-    #         Too many branches
-    from x84.bbs import getsession, getterminal, getch, goto, gosub, ini
-    from x84.bbs import LineEditor, echo, syncterm_setfont
-    from common import waitprompt
-    from ConfigParser import Error as ConfigError
-    session = getsession()
-    term = getterminal()
+    """ Main menu entry point. """
+    from x84.default.common import display_banner
+    session, term = getsession(), getterminal()
 
     dirty = True
+    text, width, height = u'', -1, -1
+    # restore settings to main menu's default
+    editor = get_line_editor(term)
     while True:
-        if dirty or session.poll_event('refresh'):
-            refresh()
+        if dirty == 2:
+            # set syncterm font, if any
+            if syncterm_font and term.kind.startswith('ansi'):
+                echo(syncterm_setfont(syncterm_font))
+        if dirty:
+            top_margin = display_banner(art_file, encoding=art_encoding) + 1
+            echo(u'\r\n')
+            if width != term.width or height != term.height:
+                width, height = term.width, term.height
+                text = render_menu_entries(term, top_margin, MENU)
+            echo(u''.join((text, display_prompt(term), editor.refresh())))
+            dirty = 0
 
-        echo('\r' + term.underline_green + session.user.handle + term.normal +
-             term.magenta + '@' + term.cyan + 'x/84 ' + term.normal + 'Command: ')
-        le = LineEditor(30)
-        le.colors['highlight'] = term.normal
-        inp = le.read()
-        # makes the input indifferent to wheter you used lower case when typing
-        # in a command or not..
-        inp = inp.lower()
+        event, data = session.read_events(('input', 'refresh'))
 
-        dirty = True
-        if inp == u'*':
-            goto('main')  # reload main menu using hidden option '*'
-        elif inp == u'$':
-            gosub('bulletins')
-        elif inp == u'bbs':
-            echo(syncterm_setfont('cp437') + term.move_x(0) + term.clear_eol)
-            gosub('bbslist')
-        elif inp == u'l':
-            gosub('lc')
-        elif inp == u'o':
-            gosub('ol')
-        elif inp == u's':
-            echo(syncterm_setfont('cp437') + term.move_x(0) + term.clear_eol)
-            gosub('si')
-        elif inp == u'u':
-            gosub('userlist')
-        elif inp == u'who':
-            gosub('online')
-        elif inp == u'n':
-            gosub('news')
-        elif inp == u'f':
-            echo(syncterm_setfont('cp437') + term.move_x(0) + term.clear_eol)
-            gosub('weather')
-        elif inp == u'e':
-            gosub('profile')
-        elif inp == u'#':
-            echo(syncterm_setfont('cp437') + term.move_x(0) + term.clear_eol)
-            gosub('lord')
-        elif inp == u't':
-            # switch into cp437 for syncterm
-            echo(syncterm_setfont('cp437') + term.move_x(0) + term.clear_eol)
-            gosub('tetris')
-        elif inp == u'c':
-            gosub('chat')
-        elif inp == u'irc':
-            gosub('ircchat')
-        elif inp == u'p':
-            gosub('writemsg')
-        elif inp == u'r':
-            gosub('readmsgs')
-        elif inp == u'v':
-            gosub('vote')
-        elif inp == u'g':
-            goto('logoff')
-        elif inp == u'!':
-            gosub('charset')
-        elif inp == '\x1f' and 'sysop' in session.user.groups:
-            # ctrl+_, run a debug script
-            gosub('debug')
-        elif inp == '':
-            echo('\n')
-            waitprompt()
-        else:
-            handled = False
-            try:
-                for option in ini.CFG.options('sesame'):
-                    if option.endswith('_key'):
-                        door = option.replace('_key', '')
-                        key = ini.CFG.get('sesame', option)
-                        if inp == key:
-                            gosub('sesame', door)
-                            handled = True
-                            break
-            except ConfigError:
-                pass
+        if event == 'refresh':
+            dirty = True
+            continue
 
-            if not handled:
-                echo('\r\n' + term.red + 'No such command. Try again.\r\n')
-                waitprompt()
+        elif event == 'input':
+            session.buffer_input(data, pushback=True)
 
-                dirty = True
+            # we must loop over inkey(0), we received a 'data'
+            # event, though there may be many keystrokes awaiting for our
+            # decoding -- or none at all (multibyte sequence not yet complete).
+            inp = term.inkey(0)
+            while inp:
+                if inp.code == term.KEY_ENTER:
+                    # find matching menu item,
+                    for item in MENU:
+                        if item.inp_key == editor.content.strip():
+                            echo(term.normal + u'\r\n')
+                            gosub(item.script, *item.args, **item.kwargs)
+                            dirty = 2
+                    else:
+                        if editor.content:
+                            # command not found, clear prompt.
+                            echo(u''.join((
+                                (u'\b' * len(editor.content)),
+                                (u' ' * len(editor.content)),
+                                (u'\b' * len(editor.content)),)))
+                            editor.content = u''
+                            echo(editor.refresh())
+                elif inp.is_sequence:
+                    echo(editor.process_keystroke(inp.code))
+                else:
+                    echo(editor.process_keystroke(inp))
+                inp = term.inkey(0)

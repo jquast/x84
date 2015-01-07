@@ -90,8 +90,6 @@ def prompt():
         decorate('c', 'hAt USR'),
         decorate('s', 'ENd MSG'),
         (u''.join((
-            decorate('p', 'lAYbACk REC'),
-            decorate('w', 'AtCh liVE'),
             decorate('d', 'iSCONNECt SiD'),
             decorate('e', 'diT USR'),
             decorate('v', 'iEW SiD AttRS'),
@@ -132,28 +130,6 @@ def edit(sessions):
         return True
 
 
-def playback(sessions):
-    """ Prompt for node and gosub ttyplay script for ttyrec of target session.
-    """
-    from x84.bbs import gosub
-    (node, tgt_session) = get_node(sessions)
-    if node is not None:
-        gosub('ttyplay', tgt_session['ttyrec'])
-        return True
-
-
-def watch(sessions):
-    """
-    Prompt for node and gosub ttyplay script for ttyrec of target session,
-    with 'peek' boolean set to True.
-    """
-    from x84.bbs import gosub
-    (node, tgt_session) = get_node(sessions)
-    if node is not None:
-        gosub('ttyplay', tgt_session['ttyrec'], True)
-        return True
-
-
 def chat(sessions):
     """
     Prompt for node and page target session for chat.
@@ -162,15 +138,9 @@ def chat(sessions):
     from x84.bbs import gosub, getsession
     session = getsession()
     (node, tgt_session) = get_node(sessions)
-    if node is not None:
-        # page other user,
-        channel = tgt_session['sid']
-        sender = (session.user.handle
-                  if 'sysop' not in session.user.groups else -1)
-        session.send_event('route', (
-            tgt_session['sid'], 'page', channel, sender))
-        gosub('chat', channel)
-        return True
+    if tgt_session and tgt_session != session:
+        gosub('chat', dial=tgt_session['handle'],
+              other_sid=tgt_session['sid'])
 
 
 def view(sessions):
@@ -259,12 +229,6 @@ def main():
         elif inp is not None and 'sysop' in session.user.groups:
             if inp in (u'e', u'E'):
                 cur_row = 0 if edit(sessions) else cur_row
-                dirty = time.time()
-            elif inp in (u'p', u'P'):
-                cur_row = 0 if playback(sessions) else cur_row
-                dirty = time.time()
-            elif inp in (u'w', u'W'):
-                cur_row = 0 if watch(sessions) else cur_row
                 dirty = time.time()
             elif inp in (u'v', u'V'):
                 cur_row = 0 if view(sessions) else cur_row + 3

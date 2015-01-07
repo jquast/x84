@@ -29,9 +29,9 @@ class Terminal(BlessedTerminal):
     def inkey(self, timeout=None, esc_delay=0.35):
         try:
             return BlessedTerminal.inkey(self, timeout, esc_delay=0.35)
-        except UnicodeDecodeError, err:
+        except UnicodeDecodeError as err:
             log = logging.getLogger(__name__)
-            log.warn('UnicodeDecodeError: {}'.format(err))
+            log.warn('UnicodeDecodeError: {0}'.format(err))
             return u'?'
     inkey.__doc__ = BlessedTerminal.inkey.__doc__
 
@@ -40,7 +40,7 @@ class Terminal(BlessedTerminal):
         try:
             self._keyboard_decoder = codecs.getincrementaldecoder(encoding)()
             self._encoding = encoding
-            log.info('keyboard encoding is {!r}'.format(encoding))
+            log.debug('keyboard encoding is {!r}'.format(encoding))
         except Exception, err:
             log.exception(err)
 
@@ -50,7 +50,7 @@ class Terminal(BlessedTerminal):
 
         # if available, place back into buffer and return True,
         if val is not None:
-            self.session._buffer['input'].append(val)
+            self.session.buffer_input(val, pushback=True)
             return True
 
         # no value available within timeout.
@@ -170,16 +170,15 @@ def register_tty(tty):
     Register a global instance of TerminalProcess
     """
     log = logging.getLogger(__name__)
-    log.debug('registered tty: %s', tty.sid)
+    log.debug('[{tty.sid}] registered tty'.format(tty=tty))
     TERMINALS[tty.sid] = tty
 
 
 def unregister_tty(tty):
     """
-    Unregister a Terminal, described by its telnet.TelnetClient,
+    Unregister a Terminal, described by its Client,
     input and output Queues, and Lock.
     """
-    log = logging.getLogger(__name__)
     try:
         flush_queue(tty.master_read)
         tty.master_read.close()
@@ -190,7 +189,6 @@ def unregister_tty(tty):
         # signal tcp socket to close
         tty.client.deactivate()
     del TERMINALS[tty.sid]
-    log.debug('unregistered tty: %s', tty.sid)
 
 
 def get_terminals():
@@ -218,12 +216,15 @@ def kill_session(client, reason='killed'):
     from x84.terminal import unregister_tty
     client.shutdown()
 
+    log = logging.getLogger(__name__)
     tty = find_tty(client)
     if tty is not None:
         try:
             tty.master_write.send(('exception', Disconnected(reason),))
         except (EOFError, IOError):
             pass
+        log.info('[{tty.sid}] goodbye: {reason}'
+                 .format(tty=tty, reason=reason))
         unregister_tty(tty)
 
 

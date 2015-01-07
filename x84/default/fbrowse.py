@@ -152,9 +152,10 @@ def main():
             echo(term.bold_green(
                 u'Start your {0} receiving program '
                 u'to begin transferring {1}...\r\n'
-                .format(protocol, f[f.rfind(os.path.sep) + 1:])))
+                .format(protocol, f[f.rfind(os.path.sep) + 1:].decode('utf8')
+                )))
             echo(u'Press ^X twice to cancel\r\n')
-            dl = open(f, 'r')
+            dl = open(f, 'rb')
             if not send_modem(dl, protocol):
                 echo(term.bold_red(u'Transfer failed!\r\n'))
             else:
@@ -224,19 +225,19 @@ def main():
         # describe directory
         if isdir or filename == u'..%s' % os.path.sep:
             description = u'%s: %s' % (
-                term.bold('Directory'),
-                filename
+                term.bold(u'Directory'),
+                filename.decode('utf8')
             )
         # describe file
         else:
             fullname = os.path.join(directory, filename)
             size = filesize(fullname)
             description = u'%s: %s  %s: %s' % (
-                term.bold('Filename'),
-                filename[len(root):]
-                if directory == os.path.join(root, flagged_dirname)
-                else filename,
-                term.bold('Size'),
+                term.bold(u'Filename'),
+                filename[len(root):].decode('utf8')
+                    if directory == os.path.join(root, flagged_dirname)
+                    else filename.decode('utf8'),
+                term.bold(u'Size'),
                 size,
             )
         echo(term.move(1, browser['diz_location']))
@@ -256,16 +257,18 @@ def main():
         files_list = list()
         for f in files:
             if os.path.join(directory, f) not in browser['flagged_files']:
-                files_list.append((f, u' %s' % f.strip()))
+                files_list.append((f, u' %s' % f.strip().decode(
+                    'utf8')))
             else:
-                files_list.append((f, u'%s%s' % (flagged_char, f.strip())))
+                files_list.append((f, u'%s%s' % (flagged_char, f.strip().decode(
+                    'utf8'))))
         return files_list
 
     def flagged_listdir():
         """ build listing for flagged files pseudo-folder """
 
-        files = [u'%s%s' % (flagged_char, f[f.rfind(os.path.sep) + 1:])
-                 for f in browser['flagged_files']]
+        files = [u'%s%s' % (flagged_char, f[f.rfind(os.path.sep) + 1:].decode(
+                 'utf8')) for f in browser['flagged_files']]
         zipped_files = zip(browser['flagged_files'], files)
         sorted_files = sorted(zipped_files, key=lambda x: x[1].lower())
         sorted_files.insert(0, (u'..%s' % os.path.sep, u' ..%s' % os.path.sep))
@@ -471,3 +474,4 @@ def main():
     # fire it up!
     draw_interface()
     browse_dir(root)
+    echo(term.height - 1 + u'\r\n\r\n' + term.normal)

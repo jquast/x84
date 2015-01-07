@@ -1,5 +1,6 @@
 """ common interface module for x/84, https://github.com/jquast/x84 """
 from __future__ import division
+import os
 
 from x84.bbs import echo, showart
 from x84.bbs import getterminal, LineEditor
@@ -40,7 +41,6 @@ def display_banner(filepattern, encoding=None, vertical_padding=0):
     # move to home, insert vertical padding
     echo(term.home + (u'\r\n' * vertical_padding))
 
-    # show art
     art_generator = showart(filepattern, encoding=encoding, center=True)
     line_no = 0
     for line_no, txt in enumerate(art_generator):

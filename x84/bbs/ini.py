@@ -94,12 +94,22 @@ def init(lookup_bbs, lookup_log):
 
 
 def init_bbs_ini():
-    """
-    Returns ConfigParser instance of bbs system defaults
-    """
+    """ Returns ConfigParser instance of bbs system defaults. """
+    #### How this should have been written ...
+    ####
+    #### each module should provide a declaration, probably based on a
+    #### collections.namedtuple that simply states the various fields,
+    #### a help description, and its default values.  Then, this program
+    #### simply "walks" the module path, importing everybody and finding
+    #### this declaration to build up the "default" configuration file.
+    ####
+    #### at least, in this way, the module defines its configuration scheme
+    #### where it is used.
     import ConfigParser
     import getpass
     import socket
+    # wouldn't it be nice if we could use comments in the file .. ?
+    # in such cases, it might be better to use jinja2 or something
     cfg_bbs = ConfigParser.SafeConfigParser()
 
     cfg_bbs.add_section('system')
@@ -158,11 +168,29 @@ def init_bbs_ini():
         os.path.join('~', '.x84', 'ssh_host_rsa_key')))
     cfg_bbs.set('ssh', 'hostkeybits', '2048')
 
-    # rlogin realisticly only works on port 513
+    cfg_bbs.add_section('sftp')
+    cfg_bbs.set('sftp', 'enabled', 'no')
+    cfg_bbs.set('sftp', 'root', os.path.expanduser(
+        os.path.join('~', 'x84-sftp_root')))
+    cfg_bbs.set('sftp', 'uploads_filemode', '644')
+
+    # rlogin only works on port 513
     cfg_bbs.add_section('rlogin')
     cfg_bbs.set('rlogin', 'enabled', 'no')
     cfg_bbs.set('rlogin', 'addr', '127.0.0.1')
     cfg_bbs.set('rlogin', 'port', '513')
+
+    # web
+    cfg_bbs.add_section('web')
+    cfg_bbs.set('web', 'enabled', 'no')
+    cfg_bbs.set('web', 'port', '443')
+    cfg_bbs.set('web', 'cert', os.path.expanduser(
+        os.path.join('~', '.x84', 'ssl.cer')))
+    cfg_bbs.set('web', 'key', os.path.expanduser(
+        os.path.join('~', '.x84', 'ssl.key')))
+    cfg_bbs.set('web', 'chain', os.path.expanduser(
+        os.path.join('~', '.x84', 'ca.cer')))
+    cfg_bbs.set('web', 'modules', 'msgserve')
 
     # default path if cmd argument is not absolute,
     cfg_bbs.add_section('door')
@@ -175,6 +203,7 @@ def init_bbs_ini():
     cfg_bbs.set('matrix', 'script', 'matrix')
     cfg_bbs.set('matrix', 'script_telnet', 'matrix')
     cfg_bbs.set('matrix', 'script_ssh', 'matrix_ssh')
+    cfg_bbs.set('matrix', 'script_sftp', 'matrix_sftp')
     cfg_bbs.set('matrix', 'topscript', 'top')
     cfg_bbs.set('matrix', 'enable_anonymous', 'no')
     cfg_bbs.set('matrix', 'enable_pwreset', 'yes')
@@ -197,13 +226,14 @@ def init_bbs_ini():
     cfg_bbs.set('shroo-ms', 'idkey', '')
     cfg_bbs.set('shroo-ms', 'restkey', '')
 
+    # new user account script
     cfg_bbs.add_section('nua')
     cfg_bbs.set('nua', 'script', 'nua')
     cfg_bbs.set('nua', 'min_user', '3')
     cfg_bbs.set('nua', 'min_pass', '4')
     cfg_bbs.set('nua', 'max_user', '11')
     cfg_bbs.set('nua', 'max_pass', '16')
-    cfg_bbs.set('nua', 'max_email', '50')
+    cfg_bbs.set('nua', 'max_email', '30')
     cfg_bbs.set('nua', 'max_location', '24')
     cfg_bbs.set('nua', 'allow_apply', 'yes')
     cfg_bbs.set('nua', 'invalid_handles', ' '.join(
@@ -227,11 +257,11 @@ def init_bbs_ini():
     cfg_bbs.set('dosemu', 'enabled', 'no')
     cfg_bbs.set('dosemu', 'bin', '/usr/bin/dosemu')
     cfg_bbs.set('dosemu', 'home', '/DOS')
-    # set to a valid folder to enable lord; dropfile is placed in lord folder.
-    cfg_bbs.set('dosemu', 'lord_path', '/DOS/X/lord')
-    cfg_bbs.set('dosemu', 'lord_dropfile', 'DORINFO')
-    cfg_bbs.set('dosemu', 'lord_args',
-                '-quiet -I \'$_com1 = "virtual"\' \'X:\\LORD\\START.BAT %%#\'')
+#    # set to a valid folder to enable lord; dropfile is placed in lord folder.
+#    cfg_bbs.set('dosemu', 'lord_path', '/DOS/X/lord')
+#    cfg_bbs.set('dosemu', 'lord_dropfile', 'DORINFO')
+#    cfg_bbs.set('dosemu', 'lord_args',
+#                '-quiet -I \'$_com1 = "virtual"\' \'X:\\LORD\\START.BAT %%#\'')
 
     cfg_bbs.add_section('sesame')
     cfg_bbs.set('sesame', 'CavesOfPhear', '/usr/bin/phear')

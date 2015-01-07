@@ -23,9 +23,6 @@ from paramiko import (
     SFTP_PERMISSION_DENIED,
 )
 
-# local
-from x84.bbs import get_ini
-
 # directory name for flagged files
 flagged_dirname = '__flagged__'
 uploads_dirname = '__uploads__'
@@ -34,7 +31,7 @@ uploads_dirname = '__uploads__'
 class X84SFTPHandle (SFTPHandle):
 
     def __init__(self, *args, **kwargs):
-        self.log = logging.getLogger('x84.engine')
+        self.log = logging.getLogger(__name__)
         self.user = kwargs.pop('user')
         super(X84SFTPHandle, self).__init__(*args, **kwargs)
 
@@ -60,18 +57,29 @@ class X84SFTPHandle (SFTPHandle):
 
 class X84SFTPServer (SFTPServerInterface):
     def __init__(self, *args, **kwargs):
-        from x84.bbs import DBProxy
-        root = get_ini(section='sftp', key='root')
-        umask = get_ini(section='sftp', key='umask') or 0o644
-        self.ssh_session = kwargs.pop('session')
-        username = self.ssh_session.username
-        userdb = DBProxy('userbase', use_session=False)
-        self.user = None
-        with userdb:
-            self.user = userdb[username]
+        from x84.bbs import get_ini
+        self.log = logging.getLogger(__name__)
+
+        # root file folder,
+        self.root = get_ini(section='sftp', key='root')
+
+        # default file mode for uploaded files,
+        _base = 8  # (value is octal!)
+        self.mode = int(get_ini(
+            section='sftp', key='uploads_filemode') or '644', _base)
+
+        # allow anonymous login where enabled, otherwise use the
+        # given `username' authenticated by ssh
+        from x84.bbs.userbase import get_user, User
+        _ssh_session = kwargs.pop('ssh_session')
+        self.user = (User(u'anonymous') if _ssh_session.anonymous
+                     else get_user(_ssh_session.username))
+
+        # XXX this means if a user interactively flags files, they have to
+        # re-sftp login to see them, we should fix this
         self.flagged = self.user.get('flaggedfiles', set())
-        self.log = logging.getLogger('x84.engine')
-        super(X84SFTPServer, self).__init__(*args)  # , **kwargs)
+
+        super(X84SFTPServer, self).__init__(*args, **kwargs)
 
     def _dummy_dir_stat(self):
         self.log.debug('_dummy_dir_stat')
@@ -169,7 +177,7 @@ class X84SFTPServer (SFTPServerInterface):
         try:
             binary_flag = getattr(os, 'O_BINARY',  0)
             flags |= binary_flag
-            fd = os.open(path, flags, self.umask)
+            fd = os.open(path, flags, self.mode)
         except OSError as err:
             return SFTPServer.convert_errno(err.errno)
         if (flags & os.O_CREAT) and (attr is not None):
