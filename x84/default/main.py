@@ -276,27 +276,30 @@ def main():
 
         elif event == 'input':
             session.buffer_input(data, pushback=True)
+
+            # we must loop over inkey(0), we received a 'data'
+            # event, though there may be many keystrokes awaiting for our
+            # decoding -- or none at all (multibyte sequence not yet complete).
             inp = term.inkey(0)
-            if not inp:
-                # we have not yet received a complete multibyte sequence
-                continue
-            if inp.code == term.KEY_ENTER:
-                # find matching menu item,
-                for item in MENU:
-                    if item.inp_key == editor.content.strip():
-                        echo(term.normal + u'\r\n')
-                        gosub(item.script, *item.args, **item.kwargs)
-                        dirty = 2
+            while inp:
+                if inp.code == term.KEY_ENTER:
+                    # find matching menu item,
+                    for item in MENU:
+                        if item.inp_key == editor.content.strip():
+                            echo(term.normal + u'\r\n')
+                            gosub(item.script, *item.args, **item.kwargs)
+                            dirty = 2
+                    else:
+                        if editor.content:
+                            # command not found, clear prompt.
+                            echo(u''.join((
+                                (u'\b' * len(editor.content)),
+                                (u' ' * len(editor.content)),
+                                (u'\b' * len(editor.content)),)))
+                            editor.content = u''
+                            echo(editor.refresh())
+                elif inp.is_sequence:
+                    echo(editor.process_keystroke(inp.code))
                 else:
-                    if editor.content:
-                        # command not found, clear prompt.
-                        echo(u''.join((
-                            (u'\b' * len(editor.content)),
-                            (u' ' * len(editor.content)),
-                            (u'\b' * len(editor.content)),)))
-                        editor.content = u''
-                        echo(editor.refresh())
-            elif inp.is_sequence:
-                echo(editor.process_keystroke(inp.code))
-            else:
-                echo(editor.process_keystroke(inp))
+                    echo(editor.process_keystroke(inp))
+                inp = term.inkey(0)
