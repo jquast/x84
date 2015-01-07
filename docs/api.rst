@@ -18,7 +18,7 @@ Engine
    :members:
 
 ``x84.db``
---------------
+----------
 
 .. automodule:: x84.db
    :members:
@@ -56,7 +56,7 @@ Protocols
    :members:
 
 ``x84.ssh``
---------------
+-----------
 
 .. automodule:: x84.ssh
    :members:
@@ -68,13 +68,13 @@ Protocols
    :members:
 
 ``x84.sftp``
---------------
+------------
 
 .. automodule:: x84.sftp
    :members:
 
 ``x84.webserve``
---------------
+----------------
 
 .. automodule:: x84.webserve
    :members:
@@ -84,13 +84,13 @@ Service Plugins
 ===============
 
 ``x84.fail2ban``
---------------
+----------------
 
 .. automodule:: x84.fail2ban
    :members:
 
 ``x84.msgpoll``
---------------
+---------------
 
 .. automodule:: x84.msgpoll
    :members:
@@ -178,7 +178,7 @@ Service Plugins
    :members:
 
 ``x84.bbs.msgbase``
------------------
+-------------------
 
 .. automodule:: x84.bbs.msgbase
    :members:

@@ -15,7 +15,6 @@ Contents:
    others
    developers
    api
-   internals
    future_direction
    history
 

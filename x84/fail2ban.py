@@ -7,13 +7,14 @@ To enable, add to default.ini::
     enabled = yes
 
 The following options are available, but not required:
-- ip_blacklist: space-separated list of IPs on permanent blacklist.
-- ip_whitelist: space-separated list of IPs to always allow.
-- max_attempted_logins: max no. of logins allowed for given time window
-- max_attempted_logins_window: the length (in seconds) of the time window
+
+- ``ip_blacklist``: space-separated list of IPs on permanent blacklist.
+- ``ip_whitelist``: space-separated list of IPs to always allow.
+- ``max_attempted_logins``: max no. of logins allowed for given time window
+- ``max_attempted_logins_window``: the length (in seconds) of the time window
   for which logins will be tracked (sliding scale).
-- initial_ban_length: ban length (in seconds) when an IP is blacklisted.
-- ban_increment_length: amount of time (in seconds) to add to a ban on
+- ``initial_ban_length``: ban length (in seconds) when an IP is blacklisted.
+- ``ban_increment_length``: amount of time (in seconds) to add to a ban on
   subsequent login attempts
 """
 

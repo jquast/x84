@@ -3,9 +3,10 @@ Handle Asynchronous Telnet Connections.
 Single-process, threads for on-connect negotiation, select-based.
 
 Limitations:
- - No linemode support, character-at-a-time only.
- - No out-of-band / data mark (DM) / sync supported
-   (no ^C, ^S, ^Q helpers)
+
+- No linemode support, character-at-a-time only.
+- No out-of-band / data mark (DM) / sync supported
+  (no ^C, ^S, ^Q helpers)
 
 This is a modified version of miniboa retrieved from
 svn address http://miniboa.googlecode.com/svn/trunk/miniboa
