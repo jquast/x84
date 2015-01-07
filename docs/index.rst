@@ -10,9 +10,7 @@ Contents:
    :maxdepth: 2
 
    intro
-   clients
-   port23
-   others
+   project_details
    developers
    default_api
    api
