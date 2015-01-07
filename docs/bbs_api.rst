@@ -2,7 +2,7 @@ API Documentation
 =================
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
 Listed here are general functions and classes that a script would use to interactive as a bbs board. An example of importing from "Userland" would look be::
 
@@ -32,8 +32,6 @@ https://pypi.python.org/pypi/blessed
 .. autofunction:: x84.bbs.encode_pipe
 .. autofunction:: x84.bbs.decode_pipe
 .. autofunction:: x84.bbs.syncterm_setfont
-.. autofunction:: x84.bbs.output.ansiwrap
-.. autoclass: x84.bbs.Ansi
 .. autoclass: blessed.Terminal
 
 Session
