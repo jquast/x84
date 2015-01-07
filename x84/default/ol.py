@@ -214,7 +214,6 @@ def post_shroo_ms(message, username):
 
 def do_merge_shroo_ms(new_content):
     """ Add oneliners from shroo-ms to local database. """
-    maybe_expunge_records()
     udb = DBProxy('oneliner')
     with udb:
         udb.update(new_content)
@@ -231,7 +230,8 @@ def maybe_expunge_records():
             _sorted = sorted(
                 ((value, key) for (key, value) in contents.items()),
                 key=lambda _valkey: keysort_by_datetime(_valkey[0]))
-            for expunged, (value, key) in enumerate(_sorted[MAX_HISTORY:]):
+            for expunged, (value, key) in enumerate(
+                    _sorted[len(udb) - MAX_HISTORY:]):
                 del udb[key]
     if expunged:
         log = logging.getLogger(__name__)
@@ -349,9 +349,9 @@ def get_timeago(now, given_datestr):
 
 def generate_recent_oneliners(term, n_liners, offset):
     """ return string of all oneliners, its vert. hieght and adj. offset. """
-
     # generate a color palette
     palette = [getattr(term, _color) for _color in color_palette]
+
     # for relative 'time ago'
     now = time.time()
 
@@ -504,8 +504,6 @@ def main():
     session, term = getsession(), getterminal()
 
     echo(u'\r\n')
-
-    maybe_expunge_records()
 
     # set syncterm font, if any
     if syncterm_font and term.kind.startswith('ansi'):
