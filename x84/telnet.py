@@ -5,7 +5,7 @@ Limitations:
 
 - No linemode support, character-at-a-time only.
 - No out-of-band / data mark (DM) / sync supported
-  (no ^C, ^S, ^Q helpers)
+- No flow control (``^S``, ``^Q``)
 
 This is a modified version of miniboa retrieved from svn address
 http://miniboa.googlecode.com/svn/trunk/miniboa which is meant for
