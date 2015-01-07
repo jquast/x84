@@ -10,7 +10,6 @@ import pipes
 import errno
 import sys
 import os
-
 from distutils.core import setup
 from distutils.sysconfig import get_python_inc
 from distutils.unixccompiler import UnixCCompiler
@@ -22,25 +21,6 @@ from setuptools import Command
 HERE = os.path.dirname(__file__)
 README = 'README.rst'
 DOC_URL = 'http://x84.rtfd.org'
-maybe_requires = [
-    # These are installed only if a C compiler is available,
-    # otherwise a warning is emitted and they are excluded.
-    'bcrypt==1.1.0',
-    'cffi==0.8.6',
-    'cryptography==0.7.1',
-    'ecdsa==0.11',
-    'enum34==1.0.4',
-    'paramiko==1.15.2',
-    'pyOpenSSL==0.14',
-    'pyasn1==0.1.7',
-    'pycparser==2.10',
-    'pycrypto==2.6.1',
-    # currently, ssl (from above) is required to run any kind
-    # of webserver, that is, only https webservers are
-    # supported for the moment.
-    'web.py==0.37',
-    'cherrypy==3.6.0',
-]
 
 
 def check_virtualenv():
@@ -98,97 +78,8 @@ class build_docs(Command):
             sys.exit(1)
 
 
-def get_maybe_requires():
-    """
-    Checks for Python.h, libffi, and a C compiler -- if available, returns
-    all of maybe_requires[], which is a list of (optional) python packages
-    that require a C compiler environment, otherwise emits the appropriate
-    warning and returns an empty list.
-
-    This list extends ``install_requires`` of the call to setup().
-    """
-    msg_nosupport = ('This installation may not support ssh, ssl '
-                     'web server, or fast encryption of passwords '
-                     'using bcrypt.')
-
-    has_python_h = bool(
-        'Python.h' in os.listdir(get_python_inc()))
-
-    bin_cc = UnixCCompiler.executables.get('compiler', ['cc'])[0]
-    has_cc = False
-    try:
-        has_cc = bool(0 == subprocess.call(
-            ('which', bin_cc), stdout=open(os.devnull, 'w')))
-    except WindowsError:
-        pass
-
-    has_libffi = False
-    try:
-        has_libffi = bool(
-            0 == subprocess.call(('pkg-config', '--exists', 'libffi',),
-                                 stdout=open(os.devnull, 'w')))
-    except OSError as err:
-        if err.errno != errno.ENOENT:
-            raise
-        warnings.warn("pkg-config was not found. {0}".format(msg_nosupport))
-    except WindowsError:
-        pass
-
-    if not has_python_h:
-        suggest_cmd = (' Make sure the "development" version '
-                       'of Python is installed.')
-        if sys.platform.lower() == 'linux':
-            dist = platform.linux_distribution()[0]
-            if dist in ('debian', 'ubuntu',):
-                suggest_cmd = (" Try `apt-get install python2.7-dev'.")
-        elif sys.platform.lower() == 'win32':
-            suggest_cmd = " Try using linux or osx."
-        warnings.warn("header files for Python not found (Python.h). "
-                      "{0}{1}".format(msg_nosupport, suggest_cmd))
-
-    elif not has_cc:
-        suggest_cmd = (' Try installing gcc.')
-        if sys.platform.lower() == 'darwin':
-            xcode_url = "https://developer.apple.com/xcode/downloads/"
-            suggest_cmd = " Install XCode from {0}".format(xcode_url)
-        elif sys.platform.lower() == 'linux':
-            dist = platform.linux_distribution()[0]
-            if dist in ('debian', 'ubuntu',):
-                suggest_cmd = (" Try `apt-get install gcc'.")
-        elif sys.platform.lower() == 'win32':
-            suggest_cmd = " Try using linux or osx."
-        warnings.warn("No C compiler found ({0}). {1}{2}"
-                      .format(bin_cc, msg_nosupport, suggest_cmd))
-        return maybe_requires
-
-    elif not has_libffi:
-        suggest_cmd = (" We're going to try to build anyway; if it continues "
-                       "to fail -- install libffi. ")
-        if sys.platform.lower() == 'darwin':
-            suggest_cmd = (" Try `brew install libffi' followed by "
-                           "`brew link --force libffi' (requires homebrew)")
-        elif sys.platform.lower() == 'linux':
-            dist = platform.linux_distribution()[0]
-            if dist in ('debian', 'ubuntu',):
-                suggest_cmd = (" We're going to try to build anyway; "
-                               "if it continues to fail, try "
-                               "`apt-get install libffi'.")
-        elif sys.platform.lower() == 'win32':
-            suggest_cmd = " Try using linux or osx."
-        warnings.warn("Foreign Function Interface library not found (libffi). "
-                      "{0}{1}".format(msg_nosupport, suggest_cmd))
-
-        # it appears linux doesn't have any trouble without libffi anyway
-        # (according to reports).  So, we still return maybe_requires ..
-        return maybe_requires
-
-    else:
-        return maybe_requires
-
-    return []
-
 setup(name='x84',
-      version='1.2.0',
+      version='1.9.84',
       description=("Framework for Telnet and SSH BBS or MUD server "
                    "development with example default bbs board"),
       long_description=open(os.path.join(HERE, README)).read(),
@@ -221,37 +112,61 @@ setup(name='x84',
           'six==1.8.0',
           'wsgiref==0.1.2',
           'xmodem==0.3.2',
-      ] + get_maybe_requires(),
-      entry_points = {
-          'console_scripts': ['x84=x84.engine:main'],
-      },
-      classifiers=[
-          'Environment :: Console :: Curses',
-          'Environment :: Console',
-          'Intended Audience :: Developers',
-          'License :: OSI Approved :: ISC License (ISCL)',
-          'Natural Language :: English',
-          'Operating System :: MacOS :: MacOS X',
-          'Operating System :: POSIX :: BSD :: FreeBSD',
-          'Operating System :: POSIX :: BSD :: NetBSD',
-          'Operating System :: POSIX :: BSD :: OpenBSD',
-          'Operating System :: POSIX :: BSD',
-          'Operating System :: POSIX :: Linux',
-          'Operating System :: POSIX :: SunOS/Solaris',
-          'Operating System :: POSIX',
-          'Operating System :: Unix',
-          'Programming Language :: Python :: 2 :: Only',
-          'Programming Language :: Python :: 2.6',
-          'Programming Language :: Python :: 2.7',
-          'Topic :: Artistic Software',
-          'Topic :: Communications :: BBS',
-          'Topic :: Software Development :: User Interfaces',
-          'Topic :: Terminals :: Telnet',
-          'Topic :: Terminals',
       ],
-      cmdclass={
-          'develop': develop,
-          'docs': build_docs,
+      extras_require={
+          'with_crypto': (
+              # These cryptogaphy requirements may only be installed:
+              # - if a C compiler is available,
+              # - if libssl is available,
+              # - (sometimes, only) if libffi is available
+              #
+              # for this reason, they are **optional**, so that x/84 may be installed
+              # without a compiler or these external C libraries -- however it is
+              # highly recommended to always try to install x84[with_crypto].
+              'bcrypt==1.1.0',
+              'cffi==0.8.6',
+              'cryptography==0.7.1',
+              'ecdsa==0.11',
+              'enum34==1.0.4',
+              'paramiko==1.15.2',
+              'pyOpenSSL==0.14',
+              'pyasn1==0.1.7',
+              'pycparser==2.10',
+              'pycrypto==2.6.1',
+              'web.py==0.37',
+              'cherrypy==3.6.0',
+          )
       },
-      zip_safe=False,
-      )
+entry_points = {
+    'console_scripts': ['x84=x84.engine:main'],
+},
+classifiers=[
+    'Environment :: Console :: Curses',
+    'Environment :: Console',
+    'Intended Audience :: Developers',
+    'License :: OSI Approved :: ISC License (ISCL)',
+    'Natural Language :: English',
+    'Operating System :: MacOS :: MacOS X',
+    'Operating System :: POSIX :: BSD :: FreeBSD',
+    'Operating System :: POSIX :: BSD :: NetBSD',
+    'Operating System :: POSIX :: BSD :: OpenBSD',
+    'Operating System :: POSIX :: BSD',
+    'Operating System :: POSIX :: Linux',
+    'Operating System :: POSIX :: SunOS/Solaris',
+    'Operating System :: POSIX',
+    'Operating System :: Unix',
+    'Programming Language :: Python :: 2 :: Only',
+    'Programming Language :: Python :: 2.6',
+    'Programming Language :: Python :: 2.7',
+    'Topic :: Artistic Software',
+    'Topic :: Communications :: BBS',
+    'Topic :: Software Development :: User Interfaces',
+    'Topic :: Terminals :: Telnet',
+    'Topic :: Terminals',
+],
+cmdclass={
+    'develop': develop,
+    'docs': build_docs,
+},
+zip_safe=False,
+)
