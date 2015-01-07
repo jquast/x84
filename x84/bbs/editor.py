@@ -36,6 +36,7 @@ class LineEditor(object):
         self.content = content or u''
         self.hidden = hidden
         self._width = width
+        self._input_length = self._term.length(content)
 
         self._quit = False
         self._carriage_returned = False
@@ -377,6 +378,16 @@ class ScrollingEditor(AnsiWindow):
         #         Missing docstring
         self._max_length = value
 
+    @property
+    def content(self):
+        """ The contents of editor. """
+        return self._content
+
+    @content.setter
+    def content(self, value):
+        self._content = value
+        self._input_length = self._term.length(value)
+
     def process_keystroke(self, keystroke):
         """
         Process the keystroke received by read method and take action.
@@ -486,8 +497,7 @@ class ScrollingEditor(AnsiWindow):
         rstr = u''
         # measured backspace erases over double-wide (wcwidth)
         len_toss = self._term.length(self.content[-1])
-        self._input_length -= len_toss
-        len_move = 1  # len(self.content[-1])
+        len_move = 1
         self.content = self.content[:-1]
         if (self.is_scrolled and (self._horiz_pos < self.scroll_amt)):
             # shift left,
@@ -510,7 +520,6 @@ class ScrollingEditor(AnsiWindow):
         self._horiz_shift = 0
         self._horiz_pos = 0
         self.content = ucs
-        self._input_length = self._term.length(ucs)
         self._carriage_returned = False
         self._quit = False
         assert unichr(27) not in ucs, ('Editor is not ESC sequence-safe')
@@ -529,8 +538,10 @@ class ScrollingEditor(AnsiWindow):
             # cannot input, at end of line!
             return u''
 
-        # append to input
-        self.content += u_chr
+        # append input to content directly to the backend variable,
+        # so that we adjust the length only by the most recently-added
+        # character.
+        self._content += u_chr
         self._input_length += self._term.length(u_chr)
 
         # return character appended as output, ensure .fixate() is used first!
