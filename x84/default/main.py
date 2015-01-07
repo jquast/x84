@@ -9,7 +9,7 @@ import os
 
 # local
 from x84.bbs import getsession, getterminal, get_ini
-from x84.bbs import echo, LineEditor, gosub
+from x84.bbs import echo, LineEditor, gosub, syncterm_setfont
 from x84.bbs import ini
 
 MenuItem = collections.namedtuple(
