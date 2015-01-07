@@ -257,11 +257,11 @@ def init_bbs_ini():
     cfg_bbs.set('dosemu', 'enabled', 'no')
     cfg_bbs.set('dosemu', 'bin', '/usr/bin/dosemu')
     cfg_bbs.set('dosemu', 'home', '/DOS')
-    # set to a valid folder to enable lord; dropfile is placed in lord folder.
-    cfg_bbs.set('dosemu', 'lord_path', '/DOS/X/lord')
-    cfg_bbs.set('dosemu', 'lord_dropfile', 'DORINFO')
-    cfg_bbs.set('dosemu', 'lord_args',
-                '-quiet -I \'$_com1 = "virtual"\' \'X:\\LORD\\START.BAT %%#\'')
+#    # set to a valid folder to enable lord; dropfile is placed in lord folder.
+#    cfg_bbs.set('dosemu', 'lord_path', '/DOS/X/lord')
+#    cfg_bbs.set('dosemu', 'lord_dropfile', 'DORINFO')
+#    cfg_bbs.set('dosemu', 'lord_args',
+#                '-quiet -I \'$_com1 = "virtual"\' \'X:\\LORD\\START.BAT %%#\'')
 
     cfg_bbs.add_section('sesame')
     cfg_bbs.set('sesame', 'CavesOfPhear', '/usr/bin/phear')
