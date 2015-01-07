@@ -2,11 +2,9 @@
 Module API documentation
 ========================
 
-Contents:
+All of the docstrings of all modules, classes, and functions are provided below.
 
-.. toctree::
-   :maxdepth: 4
-
+Many of them are of no matter, but some may be very helpful.
 
 Engine
 ======
@@ -96,8 +94,8 @@ Service Plugins
    :members:
 
 
-"userland" api (x84.bbs)
-========================
+Userland/scripting API
+======================
 
 ``x84.bbs.door``
 ----------------
