@@ -6,7 +6,7 @@ The ``default.ini`` file option, *scriptpath*, of section *[system]*, defines fo
 
 This folder may be changed to a folder of your own chosing, and populated with your own scripts. A good start would be to copy the default/ folder, or even perform a checkout from github.
 
-By default, matrix.py_ is called on-connect, with variations for sftp and ssh as matrix_sftp.py and matrix_ssh.py set by the ``default.ini`` file option *script* of section *[matrix]*. This script calls out to nua.py_ for new account creation, top.py_ when authenticated, and main.py_ for a main menu.
+By default, *matrix.py* is called on-connect, with variations for sftp and ssh as *matrix_sftp.py* and *matrix_ssh.py* set by the ``default.ini`` file option *script* of section *[matrix]*. This script calls out to *nua.py* for new account creation, *top.py* when authenticated, and *main.py* for a main menu.
 
 main(), gosub, and goto
 =======================
