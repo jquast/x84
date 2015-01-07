@@ -1,6 +1,4 @@
-"""
-editor script for X/84, https://github.com/jquast/x84
-"""
+""" Editor script for X/84, https://github.com/jquast/x84 """
 # std
 import os
 
@@ -78,30 +76,22 @@ def wrap_rstrip(value):
 
 
 def softwrap_join(value):
-    """
-    Return whitespace-joined string from value split by softwrap ``'\n'``.
-    """
+    r""" Return whitespace-joined string from value split by softwrap ``'\n'``. """
     return WHITESPACE.join(value.split(SOFTWRAP))
 
 
 def is_hardwrapped(ucs):
-    """
-    Returns true if string is hardwrapped with ``'\r\n'``.
-    """
+    r""" Returns true if string is hardwrapped with ``'\r\n'``. """
     return ucs[-(len(HARDWRAP)):] == HARDWRAP
 
 
 def is_softwrapped(ucs):
-    """
-    Returns true if string is softwrapped with ``'\n'``.
-    """
+    r""" Returns true if string is softwrapped with ``'\n'``. """
     return ucs[-(len(SOFTWRAP)):] == SOFTWRAP
 
 
 def get_lbcontent(lightbar):
-    """
-    Returns ucs string for content of Lightbar instance, ``lightbar``.
-    """
+    """ Returns ucs string for content of Lightbar instance, ``lightbar``. """
     # a custom 'soft newline' versus 'hard newline' is implemented,
     # '\n' == 'soft', '\r\n' == 'hard'
     lines = list()
@@ -123,10 +113,7 @@ def get_lbcontent(lightbar):
 
 
 def set_lbcontent(lightbar, ucs):
-    """
-    Sets content of Lightbar instance, ``lightbar`` for given
-    Unicode string, ``ucs``.
-    """
+    """ Sets content for given Unicode string, ``ucs``. """
     # a custom 'soft newline' versus 'hard newline' is implemented,
     # '\n' == 'soft', '\r\n' == 'hard'
     term = getterminal()
@@ -184,9 +171,7 @@ def yes_no(lightbar, msg, prompt_msg='are you sure? ', attr=None):
 
 
 def get_lightbar(ucs):
-    """
-    Returns lightbar instance with content of given
-    Unicode string, ``ucs``.
+    """ Returns lightbar instance with content of given Unicode string, ``ucs``.
     """
     term = getterminal()
     width = min(80, max(term.width, 40))
