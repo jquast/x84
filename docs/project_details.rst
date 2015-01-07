@@ -9,41 +9,36 @@ Compatible Clients
 
 Any UTF-8 client is compatible. For Apple systems, *Andale Mono* works wonderfully.
 
-PuTTy
------
+- PuTTy
 
-Under preference item *Window -> Translation*, option *Remote character set*, change *iso8859-1* to *UTF-8*.
+  - Under preference item *Window -> Translation*, option *Remote character set*,
+    change *iso8859-1* to *UTF-8*.
 
-iTerm
------
+- iTerm
 
-Menu item *iTerm -> Preferences*, section *Profiles*, select tab *Text*, chose *Andale Mono* font.
+  - Menu item *iTerm -> Preferences*, section *Profiles*, select tab *Text*,
+    chose *Andale Mono* font.
 
-Terminal.app
-------------
-Menu item *Terminal -> Preferences*, chose profile *Pro*, select Font *Andale Mono*, and enable *use bright colors for bold text*.
+- Terminal.app
 
-uxterm
-------
+  - Menu item *Terminal -> Preferences*, chose profile *Pro*, select Font
+    *Andale Mono*, and enable *use bright colors for bold text*.
 
-Or other utf-8 rxvt and xterm variants: urxvt, dtterm.
+- uxterm
 
-Non-unicode
------------
+  - Or other utf-8 rxvt and xterm variants: urxvt, dtterm.
+    Recommended font is **Deja Vu Sans Mono**.
 
-Other than UTF-8, only IBM CP437 encoding is supported. Any telnet client with CP437 font is supported.
+- Non-unicode Terminals
 
-Examples of these include PuTTy, SyncTerm, mtel, netrunner, linux/bsd console + linux/bsd telnet.
+  - Other than UTF-8, only IBM CP437 encoding is supported. Any telnet client
+    with CP437 font is (currently) supported.
 
-Some non-DOS terminal emulators may require installing a fontset, such as *Terminus_* to provide CP437 art.
+  - Examples of these include **PuTTy**, **SyncTerm**, **mtel**, **netrunner**,
+    various minix/linux/bsd consoles with a linux or bsd telnet client.
 
-TCP Encryption
---------------
-
-Telnet is not a secure protocol.  This implementation of x/84 is without any encryption. It is not secure from network eavesdropping. SSH is supported and works perfectly fine if eavesdropping is a concern.
-
-.. _Terminus: http://terminus-font.sourceforge.net/
-
+  - Some non-DOS terminal emulators may require installing a fontset, such as
+    `Terminus`_ to provide CP437 art.
 
 Binding to port 23
 ==================
