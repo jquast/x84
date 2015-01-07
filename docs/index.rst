@@ -8,12 +8,13 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
+   :glob:
 
    intro
    project_details
    developers
    default_api
-   api
+   api/*
    future_direction
    history
 
