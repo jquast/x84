@@ -2,39 +2,43 @@
 """
 x84net message poll for x/84, https://github.com/jquast/x84
 
-To configure message polling, add a tag for the network to the 'server_tags'
-attribute in the [msg] section of your default.ini.  Optionally include a
-custom 'origin' line.  If not provided, "Sent from <bbsname>" will be used.
+To configure message polling, add a tag for the network to the ``'server_tags'``
+attribute in the ``[msg]`` section of your default.ini.  Optionally include a
+custom 'origin' line.  If not provided, ``"Sent from <bbsname>"`` will be
+used.
 
-Next, create a section using the name of that tag, prefixed with 'msgnet_'.
-(Example: if the tag is 'x84net', create a 'msgnet_x84net' section.)
+Next, create a section using the name of that tag, prefixed with
+``'msgnet_'``.  For example, if the tag is ``'x84net'``, create a
+``'msgnet_x84net'`` section.
 
 The following attributes are required:
- - url_base: The base URL for the message network's REST API.
- - board_id: Your board's ID in the network.
- - token: Your board's secure token, assigned to you by the network admin.
+
+ - ``url_base``: The base URL for the message network's REST API.
+ - ``board_id``: Your board's ID in the network.
+ - ``token``: Your board's secure token, assigned to you by the network admin.
 
 The following attributes are optional:
- - ca_path: The path to a CA bundle if the server's CA is not already
+
+ - ``ca_path``: The path to a CA bundle if the server's CA is not already
    included in your operating system.
- - poll_interval: The number of seconds elapsed between polling a message
+ - ``poll_interval``: The number of seconds elapsed between polling a message
    network for new messages (default is 1984, ~33 minutes).
 
 If you wish to tag your messages with a custom origin line when they are
-delivered to the network hub, add an 'origin_line' attribute to the [msg]
-section of your default.ini.
+delivered to the network hub, add an 'origin_line' attribute to the ``[msg]``
+section of your ``default.ini``.
 
-Example default.ini configuration:
+Example *default.ini* configuration::
 
-[msg]
-network_tags = x84net
-origin_line = Sent from a mediocre BBS.
+    [msg]
+    network_tags = x84net
+    origin_line = Sent from a mediocre BBS.
 
-[msgnet_x84net]
-url_base = https://some.server:8443/api/messages/
-board_id = 1
-token = somereallylongtoken
-poll_interval = 300
+    [msgnet_x84net]
+    url_base = https://some.server:8443/api/messages/
+    board_id = 1
+    token = somereallylongtoken
+    poll_interval = 300
 """
 
 # local imports
@@ -117,7 +121,7 @@ def push_rest(net, msg, parent):
                            headers={'Auth-X84net': get_token(net)},
                            data=data,
                            verify=net['verify'])
-    except Exception, err:
+    except Exception as err:
         log.exception('[{net[name]}] exception in push_rest: {err}'
                       .format(net=net, err=err))
         return False
@@ -129,7 +133,7 @@ def push_rest(net, msg, parent):
 
     try:
         response = json.loads(req.text)
-    except Exception, err:
+    except Exception as err:
         log.exception('[{net[name]}] JSON error: {err}'
                       .format(net=net, err=err))
     else:
