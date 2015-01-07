@@ -439,3 +439,4 @@ def main():
     # fire it up!
     draw_interface()
     browse_dir(root)
+    echo(term.height - 1 + u'\r\n\r\n' + term.normal)
