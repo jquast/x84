@@ -1,3 +1,9 @@
+===============
+Project Details
+===============
+
+General information useful for prospective developers and users.
+
 Compatible Clients
 ==================
 
