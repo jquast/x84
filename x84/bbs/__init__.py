@@ -18,7 +18,6 @@ from x84.bbs.output import (echo, timeago, encode_pipe, decode_pipe,
 from x84.bbs.ansiwin import AnsiWindow
 from x84.bbs.selector import Selector
 from x84.bbs.lightbar import Lightbar
-from x84.bbs.cp437 import from_cp437
 from x84.bbs.dbproxy import DBProxy
 from x84.bbs.pager import Pager
 from x84.bbs.door import Door, DOSDoor, Dropfile
@@ -27,18 +26,17 @@ from x84.bbs.modem import send_modem, recv_modem
 
 __all__ = ('list_users', 'get_user', 'find_user', 'User', 'Group', 'list_msgs',
            'get_msg', 'list_tags', 'Msg', 'LineEditor', 'ScrollingEditor',
-           'echo', 'timeago', 'Ansi', 'ansiwrap', 'AnsiWindow', 'Selector',
+           'echo', 'timeago', 'AnsiWindow', 'Selector',
            'Lightbar', 'from_cp437', 'DBProxy', 'Pager', 'Door', 'DOSDoor',
            'goto', 'disconnect', 'getsession', 'getterminal', 'getch', 'gosub',
-           'ropen', 'showart', 'showcp437', 'Dropfile', 'encode_pipe',
+           'ropen', 'showart', 'Dropfile', 'encode_pipe',
            'decode_pipe', 'syncterm_setfont', 'get_ini', 'send_modem',
            'recv_modem',
            )
 
 
-# Translation map for embedded font hints in SAUCE records as documented at
-# http://www.acid.org/info/sauce/sauce.htm section FontName
-
+#: Translation map for embedded font hints in SAUCE records as documented at
+#: http://www.acid.org/info/sauce/sauce.htm section FontName
 SAUCE_FONT_MAP = {
     'Amiga MicroKnight':  'amiga',
     'Amiga MicroKnight+': 'amiga',
@@ -56,8 +54,7 @@ SAUCE_FONT_MAP = {
     'IBM VGA':            'cp437',
 }
 
-# All IBM PC code pages that are supported
-
+# IBM-PC code pages
 for page in (
     '437', '720', '737', '775', '819', '850', '852', '855', '857', '858',
     '860', '861', '862', '863', '864', '865', '866', '869', '872',
@@ -102,12 +99,18 @@ def getterminal():
     return x84.bbs.session.getterminal()
 
 
-# this is old behavior -- upstream blessed project does the correct
-# thing. please use term.inkey() and see the documentation for
-# blessed's inkey() method, it **always** returns unicode, never None,
-# and definitely never an integer.
 def getch(timeout=None):
-    #warnings.warn('getch() is deprecated, use getterminal().inkey()')
+    """
+    A deprecated form of getterminal().inkey().
+
+    This is old behavior -- upstream blessed project does the correct
+    thing. please use term.inkey() and see the documentation for
+    blessed's inkey() method, it **always** returns unicode, never None,
+    and definitely never an integer. However some internal UI libraries
+    were built upon getch(), and as such, this remains ...
+    """
+    # mark deprecate in v2.1; remove entirely in v3.0
+    # warnings.warn('getch() is deprecated, use getterminal().inkey()')
     keystroke = getterminal().inkey(timeout)
     if keystroke == u'':
         return None
@@ -117,9 +120,7 @@ def getch(timeout=None):
 
 
 def gosub(script, *args, **kwargs):
-    """
-    Call bbs script with optional arguments, Returns value.
-    """
+    """ Call bbs script with optional arguments, Returns value. """
     from x84.bbs.session import Script
     # pylint: disable=W0142
     #        Used * or ** magic
@@ -128,9 +129,7 @@ def gosub(script, *args, **kwargs):
 
 
 def ropen(filename, mode='rb'):
-    """
-    Open random file using wildcard (glob)
-    """
+    """ Open random file using wildcard (glob). """
     import glob
     import random
     files = glob.glob(filename)
@@ -310,3 +309,11 @@ def get_ini(section=None, key=None, getter='get', split=False, splitsep=None):
     if split:
         return []
     return u''
+
+
+def from_cp437(text):
+    """ Given a bytestring in IBM codepage 437, return a translated
+        unicode string suitable for decoding to UTF-8.
+    """
+    warnings.warn('from_cp437() is deprecated, use bytes.decode("cp437_art")')
+    return text.decode('cp437_art')
