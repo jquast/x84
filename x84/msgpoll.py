@@ -87,8 +87,9 @@ def pull_rest(net, last_msg_id):
                            headers={'Auth-X84net': get_token(net)},
                            verify=net['verify'])
     except requests.ConnectionError as err:
-        log.warn('[{net[name]}] exception in pull_rest: {err}'
+        log.warn('[{net[name]}] ConnectionError in pull_rest: {err}'
                  .format(net=net, err=err))
+        return False
     except Exception as err:
         log.exception('[{net[name]}] exception in pull_rest: {err}'
                       .format(net=net, err=err))
