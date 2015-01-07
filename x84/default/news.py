@@ -57,7 +57,7 @@ def main(quick=False):
         return
 
     # set syncterm font, if any
-    if syncterm_font and term._kind == 'ansi':
+    if syncterm_font and term.kind == 'ansi':
         echo(syncterm_setfont(syncterm_font))
 
     session.activity = 'Reading news'

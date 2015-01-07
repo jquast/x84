@@ -317,7 +317,7 @@ def main(handle=u''):
 
     # set syncterm font, if any
     term = getterminal()
-    if term._kind == 'ansi':
+    if term.kind == 'ansi':
         echo(syncterm_setfont(syncterm_font))
 
     # reset handle to an empty string if it is any

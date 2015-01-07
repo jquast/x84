@@ -212,7 +212,7 @@ def do_intro_art(term, session):
     Bonus: allow chosing other artfiles with '<' and '>'.
     """
     # set syncterm font, if any
-    if syncterm_font and term._kind.startswith('ansi'):
+    if syncterm_font and term.kind.startswith('ansi'):
         echo(syncterm_setfont(syncterm_font))
 
     index = int(time.time()) % len(art_files)

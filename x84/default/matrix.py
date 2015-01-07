@@ -134,14 +134,14 @@ def display_banner(term):
     echo(term.normal)
 
     # set syncterm font, if any
-    if syncterm_font and term._kind.startswith('ansi'):
+    if syncterm_font and term.kind.startswith('ansi'):
         echo(syncterm_setfont(syncterm_font))
 
     # http://www.termsys.demon.co.uk/vtansi.htm
     # disable line-wrapping (SyncTerm does not honor, careful!)
     echo(u'\x1b[7l')
 
-    if term._kind.startswith('xterm'):
+    if term.kind.startswith('xterm'):
         # http://www.xfree86.org/4.5.0/ctlseqs.html
         # Save xterm icon and window title on stack.
         echo(u'\x1b[22;0t')
