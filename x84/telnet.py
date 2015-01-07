@@ -108,10 +108,12 @@ class TelnetOption(object):
 
     """
     Simple class used to track the status of an extended Telnet option.
-    Attributes and values:
-        local_option: UNKNOWN (default), True, or False.
-        remote_option: UNKNOWN (default), True, or False.
-        reply_pending: True or Fale.
+
+    Attributes and their state values:
+
+    - ``local_option``: UNKNOWN (default), True, or False.
+    - ``remote_option``: UNKNOWN (default), True, or False.
+    - ``reply_pending``: True or Fale.
     """
     # pylint: disable=R0903
     #         Too few public methods (0/2)
