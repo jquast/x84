@@ -38,7 +38,7 @@ Any UTF-8 client is compatible. For Apple systems, *Andale Mono* works wonderful
     various minix/linux/bsd consoles with a linux or bsd telnet client.
 
   - Some non-DOS terminal emulators may require installing a fontset, such as
-    `Terminus`_ to provide CP437 art.
+    *Terminus* to provide CP437 art.
 
 Binding to port 23
 ==================
