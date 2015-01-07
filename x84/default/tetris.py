@@ -303,7 +303,7 @@ def play():
         u'%s PRESS ANY kEY' % (term.bold_black('...'),),
     )))
     getch()
-    artfile = os.path.join(os.path.dirname(__file__), 'tetris.ans')
+    artfile = os.path.join(os.path.dirname(__file__), 'art', 'tetris.ans')
     echo_unbuffered(u'\r\n' * term.height)  # cls
     if os.path.exists(artfile):
         echo_unbuffered(from_cp437(open(artfile).read()).rstrip())
