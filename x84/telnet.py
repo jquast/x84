@@ -1,6 +1,5 @@
 """
-Handle Asynchronous Telnet Connections.
-Single-process, threads for on-connect negotiation, select-based.
+Telnet server for x84, https://github.com/jquast/x84
 
 Limitations:
 
@@ -8,19 +7,26 @@ Limitations:
 - No out-of-band / data mark (DM) / sync supported
   (no ^C, ^S, ^Q helpers)
 
-This is a modified version of miniboa retrieved from
-svn address http://miniboa.googlecode.com/svn/trunk/miniboa
-which is meant for MUD's. This server would not be safe for MUD clients.
-"""
-#  Copyright 2012 Jeff Quast, whatever Jim's license is; changes from miniboa:
-#    character-at-a-time input instead of linemode, encoding option on send,
-#    strict rejection of linemode, terminal type detection, environment
-#    variable support, GA and SGA, utf-8 safe
+This is a modified version of miniboa retrieved from svn address
+http://miniboa.googlecode.com/svn/trunk/miniboa which is meant for
+MUD's. This server would not be safe for most (linemode) MUD clients.
 
-#------------------------------------------------------------------------------
+Changes from miniboa:
+
+- character-at-a-time input instead of linemode
+- encoding option on send
+- strict rejection of linemode
+- terminal type detection
+- environment variable support
+- GA and SGA
+- utf-8 safe
+"""
+# ------------------------------------------------------------------------------
 #   miniboa/async.py
 #   miniboa/telnet.py
+#
 #   Copyright 2009 Jim Storch
+#
 #   Licensed under the Apache License, Version 2.0 (the "License"); you may
 #   not use this file except in compliance with the License. You may obtain a
 #   copy of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -29,7 +35,7 @@ which is meant for MUD's. This server would not be safe for MUD clients.
 #   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #   License for the specific language governing permissions and limitations
 #   under the License.
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 from __future__ import absolute_import
 
