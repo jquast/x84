@@ -18,18 +18,14 @@ Contents:
    port23
    others
    developers
-   api/index
+   api
    internals
    future_direction
    history
 
-Support
+  
+Indexes
 =======
-
-An irc channel, *#1984* on efnet, is available for development discussion.
-   
-Indices and tables
-==================
 
 * :ref:`genindex`
 * :ref:`modindex`

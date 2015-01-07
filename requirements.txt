@@ -1,4 +1,4 @@
-blessed==1.9.4
+blessed==1.9.5
 irc==9.0
 jaraco.timing==1.1
 jaraco.util==10.6
@@ -8,6 +8,5 @@ requests==2.5.1
 sauce==1.1
 six==1.8.0
 sqlitedict==1.1.0
-wcwidth==0.1.4
 wsgiref==0.1.2
 xmodem==0.3.2
