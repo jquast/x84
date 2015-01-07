@@ -7,7 +7,7 @@ def main():
     #         Too many local variables
     #         Used builtin function 'map'
     #         Too many branches
-    from x84.bbs import getsession, getterminal, echo, getch, from_cp437
+    from x84.bbs import getsession, getterminal, echo, getch
     from x84.engine import __url__ as url
     import platform
     import random
@@ -47,7 +47,8 @@ def main():
         + [term.bold_blue]
         + [term.bold_white]
         + [term.normal])
-    art = from_cp437(open(artfile).read()) if os.path.exists(artfile) else u''
+    art = open(artfile).read().decode('cp437_art') \
+        if os.path.exists(artfile) else u''
     otxt = list(art.splitlines())
     for num, line in enumerate(body):
         while num > len(otxt):
