@@ -1,8 +1,4 @@
-.. x/84 documentation master file, created by
-   sphinx-quickstart on Thu Feb 21 19:55:19 2013.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
+================================
 Welcome to x/84's documentation!
 ================================
 
@@ -24,6 +20,7 @@ Contents:
    history
 
   
+=======
 Indexes
 =======
 

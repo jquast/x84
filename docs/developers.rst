@@ -1,3 +1,4 @@
+==========
 Developers
 ==========
 
@@ -8,7 +9,7 @@ are completely new to Python_, it's recommended to read more about the
 language, like provided by the free `Dive Into Python`_ book by Mark Pilgrim.
 
 Requirements
-------------
+============
 
 The following is step-by-step instructions for creating a developer environment
 for making your own customizations of x/84's engine and api and building your
@@ -28,7 +29,7 @@ You should install the following packages::
     $ sudo pacman -S git python2 python2-pip python2-virtualenv python2-virtualenvwrapper
 
 Virtualenv
-``````````
+----------
 
 Optional but recommended, using virtualenv and virtualenvwrapper_ ensures
 you can install x/84 and its dependencies without root access and quickly
@@ -63,7 +64,7 @@ Run setup.py develop
    ./setup.py develop
 
 Starting x/84
--------------
+=============
 
 1. Active your virtualenv if you haven't already::
 
@@ -74,7 +75,7 @@ Starting x/84
       x84
 
 x84 Usage
-`````````
+---------
 
 Optional command line arguments,
 
@@ -83,7 +84,7 @@ Optional command line arguments,
     ``--logger=`` alternate logging configuration filepath
 
 Contributing using git
-----------------------
+======================
 
 If you intend to contribute patches or new mods to the x/84 telnet system, you
 should `fork the repository <https://help.github.com/articles/fork-a-repo>`_

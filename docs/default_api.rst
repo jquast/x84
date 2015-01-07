@@ -1,6 +1,7 @@
 .. toctree::
    :maxdepth: 2
 
+======================
 Customizing your board
 ======================
 
@@ -11,7 +12,7 @@ This folder may be changed to a folder of your own chosing, and populated with y
 By default, matrix.py_ is called on-connect, with variations for sftp and ssh as matrix_sftp.py and matrix_ssh.py set by the ``default.ini`` file option *script* of section *[matrix]*. This script calls out to nua.py_ for new account creation, top.py_ when authenticated, and main.py_ for a main menu.
 
 main(), gosub, and goto
------------------------
+=======================
 
 All scripts to be called by ``goto`` or ``gosub`` must supply a ``main`` function.  Keyword and positional arguments are allowed.
 
