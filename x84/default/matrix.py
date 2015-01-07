@@ -99,7 +99,7 @@ login_max_attempts = get_ini(
 #: on-connect fontset for SyncTerm emulator
 syncterm_font = get_ini(
     section='matrix', key='syncterm_font'
-) or 'topaz'
+) or 'cp437'
 
 #: on-connect banner
 art_file = get_ini(
