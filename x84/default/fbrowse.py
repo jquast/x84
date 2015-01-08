@@ -226,7 +226,7 @@ def main():
         """ redraw and resize the interface """
 
         lightbar.height = term.height
-        lightbar.width = int(term.width * 0.25)
+        lightbar.width = max(10, int(term.width * 0.25))
 
         # +1 for spacing between lightbar and diz
         browser['diz_location'] = lightbar.width + 1
