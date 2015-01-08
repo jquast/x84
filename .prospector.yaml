@@ -48,7 +48,7 @@ pylint:
         # Too many lines in module
         ##- C0302
         # Used * or ** magic
-        ##- W0142
+        - W0142
         # Used builtin function 'filter'.
         # (For maintainability, one should prefer list comprehension.)
         ##- W0141
