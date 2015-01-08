@@ -90,7 +90,7 @@ def main():
         refresh screen, database, and return database index
         """
         echo(u''.join((u'\r\n\r\n', term.clear_eol,)))
-        for line in showart(os.path.join(os.path.dirname(__file__), 'art', 'logoff.ans'), 'topaz'):
+        for line in showart(os.path.join(os.path.dirname(__file__), 'art', 'logoff.ans'), 'cp437'):
             echo(line)
         idx = refresh_automsg(-1 if idx is None else idx)
         refresh_prompt(prompt_msg)
