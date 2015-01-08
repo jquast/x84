@@ -91,8 +91,8 @@ def main():
     descriptions = DBProxy(DIZ_DB)
     # setup lightbar
     lb_colors = {
-        'border': term.blue,
-        'highlight': term.bold_white_on_blue
+        'border': term.bold_blue,
+        'highlight': term.blue_reverse,
     }
     lb = Lightbar(term.height, int(term.width * 0.25), 0, 0, colors=lb_colors)
     # load flagged files
