@@ -1,6 +1,7 @@
 """
 Terminal handler for x/84 bbs.  http://github.com/jquast/x84
 """
+import contextlib
 import logging
 import codecs
 import sys
@@ -71,6 +72,14 @@ class Terminal(BlessedTerminal):
     def padd(self, text):
         from blessed.sequences import Sequence
         return Sequence(text, self).padd()
+
+    @contextlib.contextmanager
+    def raw(self):
+        yield
+
+    @contextlib.contextmanager
+    def cbreak(self):
+        yield
 
     @property
     def is_a_tty(self):
