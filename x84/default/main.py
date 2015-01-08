@@ -253,9 +253,7 @@ def main():
     from x84.default.common import display_banner
     session, term = getsession(), getterminal()
 
-    dirty = True
-    text, width, height = u'', -1, -1
-    # restore settings to main menu's default
+    text, width, height, dirty = u'', -1, -1, 2
     editor = get_line_editor(term)
     while True:
         if dirty == 2:

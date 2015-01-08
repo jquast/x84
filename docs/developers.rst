@@ -52,25 +52,27 @@ activate the environment at any time.
 
       mkvirtualenv -p `which python2.7` x84
 
-4. Anytime later that you want to load the x/84 environment, use command::
+Anytime you want to load x/84 environment in a new login shell,
+source virtualenvwrapper.sh in step #2 and activate using command::
 
       workon x84
 
-Run setup.py develop
---------------------
+Install editable version
+------------------------
 
-::
+Instead of installing x84 as a complete package, we use ``pip`` to install
+an editable version -- this is so that when a modification is done to the
+files in our local directory, they are immediately reflected in the ``x84``
+script which is added to your system ``$PATH`` anytime the virtualenv is
+activated::
 
-   ./setup.py develop
+   pip install -e .[with_crypto]
+
 
 Starting x/84
-=============
+-------------
 
-1. Active your virtualenv if you haven't already::
-
-      workon x84
-
-2. And Launch x/84 server::
+::
 
       x84
 
@@ -82,6 +84,11 @@ Optional command line arguments,
     ``--config=`` alternate bbs configuration filepath
 
     ``--logger=`` alternate logging configuration filepath
+
+By default these are, in order of preference: ``/etc/x84/default.ini``
+and ``/etc/x84/logging.ini``, or ``~/.x84/default.ini`` and
+``~/.x84/logging.ini``.
+
 
 Contributing using git
 ======================
