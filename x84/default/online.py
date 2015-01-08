@@ -20,8 +20,8 @@ def banner():
     import os
     term = getterminal()
     banner = '\r\n'
-    for line in showart(os.path.join(os.path.dirname(__file__), 'art', 'online.ans'), 'topaz'):
-        banner = banner + term.move_x((term.width / 2) - 40) + line
+    for line in showart(os.path.join(os.path.dirname(__file__), 'art', 'online.ans')):
+        banner = banner + term.move_x(max(0,(term.width / 2) - 40)) + line
     return (banner)
 
 

@@ -36,6 +36,39 @@ def diz_from_bzip2(filename):
 
     return diz_from_zip(filename, method=zipfile.ZIP_BZIP2)
 
+def diz_from_dms(filename):
+    """ 
+    Amiga diskmasher format. Depends on the external binary 'xdms'.
+    To use this function you'll have to add it to diz_extractors
+    """
+    import subprocess
+    p = subprocess.Popen('xdms d '+filename, stdout=subprocess.PIPE, shell=True)
+    diz = ''
+    for line in iter(p.stdout.readline,''):
+        diz = diz + line.decode('cp437_art').rstrip()+'\r\n'
+    return diz
+
+def diz_from_lha(filename):
+    """
+    Amiga LHA format. Depends on the external binary 'lha'
+    To use this function you'll have to add it to diz_extractors
+    """
+    import subprocess
+    import random
+    import string
+    
+    path = '/tmp/x84temp' + ''.join(random.choice(string.ascii_letters) for x in range(10))
+    subprocess.call(['mkdir '+path], shell=True)
+    subprocess.call(['lha xw='+path+' '+filename], shell=True)
+    if os.path.isfile(path+'/file_id.diz'):
+        p = subprocess.Popen('cat '+path+'/file_id.diz', stdout=subprocess.PIPE, shell=True)
+        diz = ''
+        for line in iter(p.stdout.readline,''):
+            diz = diz + line.decode('cp437_art').rstrip()+'\r\n'
+        subprocess.call(['rm -r '+path], shell=True)
+    else:
+        diz = 'No description'
+    return diz
 
 ### config ###
 
@@ -44,6 +77,8 @@ diz_extractors = {
     'zip': diz_from_zip,
     'bz2': diz_from_bzip2,
     'bzip2': diz_from_bzip2,
+#    'dms': diz_from_dms,
+#    'lha': diz_from_lha,
 }
 # extensions for ASCII collies
 colly_extensions = ['txt', 'asc', 'ans', ]
