@@ -4,8 +4,18 @@ def main():
     Displays all known key capabilities that may match the terminal.
     As each key is pressed on input, it is lit up and points are scored.
     """
-    from x84.bbs import getterminal, echo
-    term = getterminal()
+    try:
+        from x84.bbs import getterminal, echo
+        term = getterminal()
+    except (ImportError, AttributeError):
+        from blessed import Terminal
+        import sys
+        term = Terminal()
+
+        def echo(text):
+            sys.stdout.write(u'{}'.format(text))
+            sys.stdout.flush()
+
     score = level = hit_highbit = hit_unicode = 0
     dirty = True
 
@@ -40,7 +50,7 @@ def main():
             disp_inp = inp
             if inp.is_sequence:
                 disp_inp = inp.__str__()
-            echo(u'%{0!r} {1!r} {2!r}'.format(disp_inp, inp.code, inp.name))
+            echo(u'{0!r} {1!r} {2!r}'.format(disp_inp, inp.code, inp.name))
 
     def build_gameboard(term):
         column, row = 0, 0
