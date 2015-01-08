@@ -36,6 +36,40 @@ def diz_from_bzip2(filename):
 
     return diz_from_zip(filename, method=zipfile.ZIP_BZIP2)
 
+def diz_from_dms(filename):
+    """ 
+    Amiga diskmasher format. Depends on the external binary 'xdms'.
+    To use this function you'll have to add it to diz_extractors.
+    """
+    import subprocess
+    p = subprocess.Popen(('xdms','d',filename), shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = p.communicate()
+    if p.returncode == 0:
+        output = output.decode('cp437_art').rstrip()+'\r\n'
+        return output
+    else:
+        return 'No description'
+
+def diz_from_lha(filename):
+    """
+    Amiga LHA format. Depends on the external binary 'lha'
+    To use this function you'll have to add it to diz_extractors.
+    """
+    import subprocess
+    import tempfile
+    import shutil
+    path = tempfile.mktemp()
+    p = subprocess.Popen(('lha','xw'+path,filename), shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    output, error = p.communicate()
+    if p.returncode == 0 and os.path.isfile(path+'/file_id.diz'):
+        file_diz = ''
+        for line in open("{0}/file_id.diz".format(path), 'r'):
+            file_diz = file_diz + line.decode('cp437_art').rstrip()+'\r\n'
+    else:
+        file_diz = 'No description'
+    shutil.rmtree(path)
+    return file_diz
+
 
 ### config ###
 
@@ -44,6 +78,8 @@ diz_extractors = {
     'zip': diz_from_zip,
     'bz2': diz_from_bzip2,
     'bzip2': diz_from_bzip2,
+#    'dms': diz_from_dms,
+#    'lha': diz_from_lha,
 }
 # extensions for ASCII collies
 colly_extensions = ['txt', 'asc', 'ans', ]
