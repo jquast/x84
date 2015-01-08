@@ -320,7 +320,6 @@ class Session(object):
             # put it in sys.path for relative imports
             if self.script_path not in sys.path:
                 sys.path.insert(0, self.script_path)
-                self.log.debug("sys.path[0] <- {!r}".format(self.script_path))
 
             # discover import path to __init__.py, store result
             lookup = imp.find_module('__init__', [self.script_path])
@@ -625,13 +624,25 @@ class Session(object):
         *script*, an instance of the ``Script`` namedtuple.
         """
         from x84.bbs.exception import ScriptError
-        self._script_stack.append(script)
-        self.log.info("runscript name={0}".format(script.name))
 
-        # pylint: disable=W0142
-        #        Used * or ** magic
-        lookup = imp.find_module(script.name, [self.script_module.__path__])
-        module = imp.load_module(script.name, *lookup)
+        self.log.info("runscript {0}".format(script.name))
+        self._script_stack.append(script)
+
+        # if given a script name such as 'extras.target', adjust the lookup
+        # path to be extended by {default_scriptdir}/extras, and adjust
+        # script_name to be just 'target'.
+        script_relpath = self.script_module.__path__
+        lookup_paths = [script_relpath]
+        if '.' not in script.name:
+            script_name = script.name
+        else:
+            # build a new system path, relative to `script_module'
+            remaining, script_name = script.name.rsplit('.', 1)
+            lookup_paths.append(os.path.join(script_relpath, *remaining.split('.')))
+
+        self.log.debug('lookup_paths: {0}'.format(lookup_paths))
+        lookup = imp.find_module(script_name, lookup_paths)
+        module = imp.load_module(script_name, *lookup)
 
         # ensure main() function exists!
         if not hasattr(module, 'main'):
