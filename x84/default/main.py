@@ -58,6 +58,10 @@ bbsname = get_ini(
 
 #: A declaration of menu items and their acting gosub script
 MENU = [
+    MenuItem(inp_key=u'key',
+             text=u'keyboard test',
+             script='extras.test_keyboard_keys',
+             args=(), kwargs={}),
     MenuItem(inp_key=u'ac',
              text=u'adjust charset',
              script='charset',
