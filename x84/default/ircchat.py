@@ -363,9 +363,9 @@ class IRCChat(object):
 
     def on_error(self, connection, event):
         """ Some error has been received """
-        self.log.error('error: {0!r}'.format(event))
+        self.log.error('error: {0}'.format(event))
         # pylint:disable=W0613
-        self.queue(u'{0} ERROR {1!r}'.format(
+        self.queue(u'{0} ERROR {1}'.format(
             self._indicator(color=self.term.bold_red), event))
 
 
