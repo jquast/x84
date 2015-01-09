@@ -41,6 +41,8 @@ class AnsiWindow(object):
         """
         Constructor class for a simple Window.
         """
+        import warnings
+
         self.height = height
         self.width = width
         self.yloc = yloc
@@ -52,11 +54,12 @@ class AnsiWindow(object):
         self._alignment = 'left'
         self._moved = False
 
-#        assert self.isinview(), (
-#            'AnsiWindow(height={self.height}, width={self.width}, '
-#            'yloc={self.yloc}, xloc={self.xloc}) not in viewport '
-#            'Terminal(height={term.height}, width={term.width})'
-#            .format(self=self, term=getterminal()))
+        if not self.isinview():
+            warnings.warn(
+                'AnsiWindow(height={self.height}, width={self.width}, '
+                'yloc={self.yloc}, xloc={self.xloc}) not in viewport '
+                'Terminal(height={term.height}, width={term.width})'
+                .format(self=self, term=getterminal()), FutureWarning)
 
     def init_theme(self, colors=None, glyphs=None):
         """
