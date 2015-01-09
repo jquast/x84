@@ -2,7 +2,7 @@
 editor package for x/84, https://github.com/jquast/x84
 """
 
-from x84.bbs.ansiwin import AnsiWindow
+from x84.bbs.ansiwin import AnsiWindow, GLYPHSETS
 
 PC_KEYSET = {'refresh': [unichr(12), ],
              'backspace': [unichr(8), unichr(127), ],
@@ -50,6 +50,7 @@ class LineEditor(object):
         """
         # set defaults,
         self.colors = {'highlight': self._term.reverse}
+        self.glyphs = GLYPHSETS['thin'].copy()
 
         # allow user override
         if colors is not None:
