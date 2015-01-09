@@ -237,7 +237,7 @@ def poll_network_for_messages(net):
 
     msgs = pull_rest(net=net, last_msg_id=last_msg_id)
 
-    if msgs is not False:
+    if msgs:
         log.info('{net[name]} Retrieved {num} messages'
                  .format(net=net, num=len(msgs)))
     else:
