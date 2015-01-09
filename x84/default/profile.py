@@ -114,7 +114,7 @@ def get_display_fields(user, point):
     # go ahead, show them the password salt; it gets trimmed, and its gibberish,
     # maybe it gives them confidence that we don't know their actual password.
     _password = u''
-    if user.password:
+    if user.handle != 'anonymous':
         _password = u''.join(user.password)
     fields['password'] = field(
         value=_password,
