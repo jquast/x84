@@ -40,7 +40,7 @@ art_encoding = get_ini(
 #: fontset for SyncTerm emulator
 syncterm_font = get_ini(
     section='oneliners', key='syncterm_font'
-) or 'cp437'
+) or 'topaz'
 
 #: alternating colors for oneliners text
 color_palette = get_ini(
@@ -507,7 +507,7 @@ def main():
 
     # set syncterm font, if any
     if syncterm_font and term.kind.startswith('ansi'):
-        echo(syncterm_setfont('topaz'))
+        echo(syncterm_setfont(syncterm_font))
         echo(term.move_x(0) + term.clear_eol)
 
     do_prompt(term, session)
