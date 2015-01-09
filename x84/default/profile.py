@@ -62,6 +62,7 @@ field = collections.namedtuple('input_validation', [
 
 
 def get_display_fields(user, point):
+    """ Return OrderedDict of display fields. """
     # reference the description text fields from nua.py
     # for their same purpose here.
     descriptions = {
@@ -164,7 +165,7 @@ def get_display_fields(user, point):
 
 
 def show_banner(term):
-    # display banner, calculate reference x/y coords
+    """ Display banner, calculate and return x/y coords as Point. """
     if term.height >= 24:
         echo(term.move(term.height - 1, 0))
         yloc = display_banner('art/ue.ans') + 1
@@ -176,7 +177,8 @@ def show_banner(term):
     return Point(y=yloc, x=max(5, (term.width // 2) - 30))
 
 
-def display_options(term, session, user, fields):
+def display_options(term, fields):
+    """ Display all fields with their values and edit-key commands. """
     _color1, _color2, _color3, _color4 = [
         getattr(term, _color)
         for _color in (color_lowlight,
@@ -220,6 +222,7 @@ def display_options(term, session, user, fields):
 
 
 def display_prompt(term, session, point):
+    """ Display prompt. """
     # < [q]uit, [f]ind user, [d]elete > ?
     _color1, _color2, = [getattr(term, _color)
                          for _color in (color_lowlight, color_highlight)]
@@ -246,28 +249,30 @@ def display_prompt(term, session, point):
              u'{lb}{key_gt}{rb}next'
              .format(lb=lb, rb=rb,
                      key_f=_color2(u'f'),
-                     key_c=_color2(u'c'),
                      key_d=_color2(u'd'),
                      key_gt=_color2(u'>'))))
 
     out_text = u''.join(
         (out_text,
          u'{colon}{clear_eos} ?\b\b'
-         .format(lb=lb, rb=rb, colon=colon, clear_eos=term.clear_eos)))
+         .format(colon=colon, clear_eos=term.clear_eos)))
 
     return out_text
 
 
 def do_command(term, session, inp, fields, tgt_user, point):
+    """ Perform action by given input. """
     _color1, _color2, _color3 = [
         getattr(term, _color) for _color in (
             color_lowlight, color_highlight, color_field_edit)]
 
     # discover edit field by matching command key
-    for field_name, field in fields.items():
+    field_name = None
+    for _fname, field in fields.items():
         if field.key == inp.lower():
+            field_name = _fname
             break
-    else:
+    if field_name is None:
         # return False if no field matches this key
         return False
 
@@ -343,10 +348,10 @@ def do_command(term, session, inp, fields, tgt_user, point):
     return True
 
 
-def delete_user(term, session, tgt_user, point):
-    _color1, _color2, _color3 = [
-        getattr(term, _color) for _color in (
-            color_lowlight, color_highlight, color_field_edit)]
+def delete_user(term, tgt_user, point):
+    """ Delete given user. You may delete yourself. """
+    _color1, _color2 = [getattr(term, _color)
+                        for _color in (color_lowlight, color_highlight)]
     lb, rb, colon = _color1('['), _color1(']'), _color1(':')
 
     echo(term.move(*point))
@@ -367,15 +372,17 @@ def delete_user(term, session, tgt_user, point):
     return False
 
 
-def locate_user(term, tgt_user, point):
+def locate_user(term, point):
+    """ Prompt for search pattern and return discovered User. """
     _color1, _color2, _color3 = [
         getattr(term, _color) for _color in (
             color_lowlight, color_highlight, color_field_edit)]
 
     # show help
     width = term.width - (point.x * 2)
-    help = (u'Enter username or glob pattern.  Press escape to cancel.')
-    for y_offset, txt in enumerate(term.wrap(help, width=width)):
+    help_txt = (u'Enter username or glob pattern.  Press escape to cancel.')
+    y_offset = 0
+    for y_offset, txt in enumerate(term.wrap(help_txt, width=width)):
         echo(term.move(point.y + y_offset, point.x))
         echo(_color1(txt) + term.clear_eol)
     point_prompt = Point(y=point.y + y_offset + 2, x=point.x)
@@ -471,7 +478,7 @@ def main():
         fields = get_display_fields(tgt_user, point=point_margin)
 
         # display all fields and prompt
-        echo(display_options(term, session, tgt_user, fields))
+        echo(display_options(term, fields))
         echo(display_prompt(term, session, point=point_prompt))
 
         dirty = 0
@@ -502,10 +509,10 @@ def main():
                 dirty = -1
                 break
             elif inp == u'f' and session.user.is_sysop:
-                tgt_user = locate_user(term, tgt_user, point_prompt) or tgt_user
+                tgt_user = locate_user(term, point_prompt) or tgt_user
                 break
             elif inp == u'd':
-                if delete_user(term, session, tgt_user, point_prompt):
+                if delete_user(term, tgt_user, point_prompt):
                     if tgt_user == session.user:
                         # if you delete yourself, you must logoff.
                         goto('logoff')
