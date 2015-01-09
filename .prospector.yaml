@@ -61,6 +61,6 @@ pyroma:
 
 vulture:
     # this tool does a good job of finding unused code.
-    run: true
+    run: false
 
 # vim: noai:ts=4:sw=4
