@@ -290,6 +290,7 @@ def main():
                             echo(term.normal + u'\r\n')
                             gosub(item.script, *item.args, **item.kwargs)
                             dirty = 2
+                            break
                     else:
                         if editor.content:
                             # command not found, clear prompt.
