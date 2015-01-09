@@ -1,22 +1,18 @@
 #! /usr/bin/env python
-"""
-Distribution file for x/84
-"""
+""" Distribution file for x/84. """
 from __future__ import print_function
 import subprocess
-import warnings
-import platform
 import pipes
 import errno
 import sys
 import os
-from distutils.core import setup
-from distutils.sysconfig import get_python_inc
-from distutils.unixccompiler import UnixCCompiler
 
+# pylint: disable=E0611,F0401
+#         No name 'core' in module 'distutils'
+#         Unable to import 'distutils.core'
+from distutils.core import setup
 from setuptools.command.develop import develop as _develop
 from setuptools import Command
-
 
 HERE = os.path.dirname(__file__)
 README = 'README.rst'
@@ -24,10 +20,7 @@ DOC_URL = 'http://x84.rtfd.org'
 
 
 def check_virtualenv():
-    """
-    Used for commands that require a virtualenv -- when VIRTUAL_ENV
-    is not set, prints an error and exits 1.
-    """
+    """ Ensure a virtualenv is used. """
     if not os.getenv('VIRTUAL_ENV'):
         print('You must be in a virtualenv, See developer documentation '
               'at filepath docs/developers.rst or online at {0}'
@@ -35,21 +28,27 @@ def check_virtualenv():
         exit(1)
 
 
-class develop(_develop):
-    """ This derived develop command class ensures virtualenv and requirements. """
+class Develop(_develop):
+
+    """ Ensure a virtualenv is used and install developer requirements. """
+
     def finalize_options(self):
+        """ Validate options. """
         check_virtualenv()
         _develop.finalize_options(self)
 
     def run(self):
+        """ Run develop command. """
         cargs = ['pip', 'install', '--upgrade', 'sphinx', 'tox']
         print('>>', ' '.join(map(pipes.quote, list(cargs))))
         subprocess.check_call(cargs)
         _develop.run(self)
 
 
-class build_docs(Command):
+class BuildDocs(Command):
+
     """ Build documentation using sphinx. """
+
     #: path to source documentation folder.
     DOCS_SRC = os.path.join(HERE, 'docs')
 
@@ -59,13 +58,17 @@ class build_docs(Command):
     user_options = []
 
     def initialize_options(self):
+        """ Initialize options. """
         pass
 
     def finalize_options(self):
+        """ Validation options. """
+        # pylint: disable=R0201
+        #         Method could be a function
         check_virtualenv()
 
     def run(self):
-        " Call sphinx-build. "
+        """ Call sphinx-build. """
         try:
             subprocess.call(
                 ('sphinx-build', '-E', self.DOCS_SRC, self.DOCS_DST),
@@ -73,8 +76,7 @@ class build_docs(Command):
         except OSError as err:
             if err.errno != errno.ENOENT:
                 raise
-            print("You must install 'sphinx' to build documentation.",
-                  file=sys.stderr)
+            print("run '{0} develop' first".format(__file__), file=sys.stderr)
             sys.exit(1)
 
 
@@ -119,9 +121,12 @@ setup(name='x84',
               # - if libssl is available,
               # - (sometimes, only) if libffi is available
               #
-              # for this reason, they are **optional**, so that x/84 may be installed
-              # without a compiler or these external C libraries -- however it is
-              # highly recommended to always try to install x84[with_crypto].
+              # for this reason, they are **optional**, so that x/84 may be
+              # installed without a compiler or these external C libraries
+              # -- however it is **highly** recommended to always try to
+              # use install x84[with_crypto].  It has always been a goal for
+              # x/84 to be "pure python" to remain compatible with alternative
+              # python interpreter implementations.
               'bcrypt==1.1.0',
               'cffi==0.8.6',
               'cryptography==0.7.1',
@@ -136,36 +141,36 @@ setup(name='x84',
               'cherrypy==3.6.0',
           )
       },
-entry_points = {
-    'console_scripts': ['x84=x84.engine:main'],
-},
-classifiers=[
-    'Environment :: Console :: Curses',
-    'Environment :: Console',
-    'Intended Audience :: Developers',
-    'License :: OSI Approved :: ISC License (ISCL)',
-    'Natural Language :: English',
-    'Operating System :: MacOS :: MacOS X',
-    'Operating System :: POSIX :: BSD :: FreeBSD',
-    'Operating System :: POSIX :: BSD :: NetBSD',
-    'Operating System :: POSIX :: BSD :: OpenBSD',
-    'Operating System :: POSIX :: BSD',
-    'Operating System :: POSIX :: Linux',
-    'Operating System :: POSIX :: SunOS/Solaris',
-    'Operating System :: POSIX',
-    'Operating System :: Unix',
-    'Programming Language :: Python :: 2 :: Only',
-    'Programming Language :: Python :: 2.6',
-    'Programming Language :: Python :: 2.7',
-    'Topic :: Artistic Software',
-    'Topic :: Communications :: BBS',
-    'Topic :: Software Development :: User Interfaces',
-    'Topic :: Terminals :: Telnet',
-    'Topic :: Terminals',
-],
-cmdclass={
-    'develop': develop,
-    'docs': build_docs,
-},
-zip_safe=False,
+      entry_points={
+          'console_scripts': ['x84=x84.engine:main'],
+      },
+      classifiers=[
+          'Environment :: Console :: Curses',
+          'Environment :: Console',
+          'Intended Audience :: Developers',
+          'License :: OSI Approved :: ISC License (ISCL)',
+          'Natural Language :: English',
+          'Operating System :: MacOS :: MacOS X',
+          'Operating System :: POSIX :: BSD :: FreeBSD',
+          'Operating System :: POSIX :: BSD :: NetBSD',
+          'Operating System :: POSIX :: BSD :: OpenBSD',
+          'Operating System :: POSIX :: BSD',
+          'Operating System :: POSIX :: Linux',
+          'Operating System :: POSIX :: SunOS/Solaris',
+          'Operating System :: POSIX',
+          'Operating System :: Unix',
+          'Programming Language :: Python :: 2 :: Only',
+          'Programming Language :: Python :: 2.6',
+          'Programming Language :: Python :: 2.7',
+          'Topic :: Artistic Software',
+          'Topic :: Communications :: BBS',
+          'Topic :: Software Development :: User Interfaces',
+          'Topic :: Terminals :: Telnet',
+          'Topic :: Terminals',
+      ],
+      cmdclass={
+          'develop': Develop,
+          'docs': BuildDocs,
+      },
+      zip_safe=False,
 )

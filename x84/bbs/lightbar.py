@@ -14,7 +14,7 @@ NETHACK_KEYSET = {'home': [u'y', '0'],
                   }
 
 
-class Lightbar (AnsiWindow):
+class Lightbar(AnsiWindow):
 
     """
     This Windowing class offers a classic 'lightbar' interface.

@@ -1,6 +1,4 @@
-"""
-x/84 bbs module, https://github.com/jquast/x84
-"""
+""" top-level scripting module for x/84. """
 # std
 import warnings
 import inspect
@@ -70,31 +68,23 @@ for page in (
 
 
 def goto(script, *args, **kwargs):
-    """
-    Change bbs script. Does not return.
-    """
+    """ Change bbs script. Does not return. """
     raise Goto(script, *args, **kwargs)
 
 
 def disconnect(reason=u''):
-    """
-    Disconnect session. Does not return.
-    """
+    """ Disconnect session. Does not return. """
     raise Disconnected(reason,)
 
 
 def getsession():
-    """
-    Returns Session of calling process.
-    """
+    """ Return Session of calling process. """
     import x84.bbs.session
     return x84.bbs.session.getsession()
 
 
 def getterminal():
-    """
-    Returns Terminal of calling process.
-    """
+    """ Return Terminal of calling process. """
     import x84.bbs.session
     return x84.bbs.session.getterminal()
 
@@ -139,11 +129,13 @@ def ropen(filename, mode='rb'):
 def showart(filepattern, encoding=None, auto_mode=True, center=False,
             poll_cancel=False, msg_cancel=None):
     """
-    Yield unicode sequences for any given ANSI Art (of art_encoding). Effort
-    is made to parse SAUCE data, translate input to unicode, and trim artwork
-    too large to display.  If ``poll_cancel`` is not ``False``, represents
-    time as float for each line to block for keypress -- if any is received,
-    then iteration ends and ``msg_cancel`` is displayed as last line of art.
+    Yield unicode sequences for any given ANSI Art (of art_encoding).
+
+    Effort is made to parse SAUCE data, translate input to unicode, and trim
+    artwork too large to display.  If ``poll_cancel`` is not ``False``,
+    represents time as float for each line to block for keypress -- if any is
+    received, then iteration ends and ``msg_cancel`` is displayed as last line
+    of art.
 
     If you provide no ``encoding``, the piece encoding will be based on either
     the encoding in the SAUCE record, the configured default or the default
@@ -173,14 +165,18 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
 
     # When the given artfile pattern's folder is not absolute, nor relative to
     # our cwd, build a relative position of the folder by the calling module's
-    # containing folder.  This only works for subdirectories i think (like
-    # art/).
+    # containing folder.  This only works for subdirectories (like 'art/').
     _folder = os.path.dirname(filepattern)
     if not (_folder.startswith(os.path.sep) or os.path.isdir(_folder)):
+        # On occasion, after a general exception in a script, re-calling the
+        # same script may cause yet another exception, HERE.  The 2nd call is
+        # fine though; this only would effect a developer.
+        #
+        # Just try again.
         caller_module = inspect.stack()[1][1]
         rel_folder = os.path.dirname(caller_module)
         if _folder:
-            rel_folder = os.path.join(os.path.dirname(caller_module), _folder)
+            rel_folder = os.path.join(rel_folder, _folder)
         if os.path.isdir(rel_folder):
             filepattern = os.path.join(rel_folder, os.path.basename(filepattern))
 
@@ -197,6 +193,8 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
             term.bold_red(u' --'),
         ))
         return
+
+    file_basename = os.path.basename(filename)
 
     # Parse the piece
     parsed = SAUCE(filename)
@@ -222,6 +220,8 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
     # between the various encodings.
     if auto_mode:
         def _decode(what):
+            # pylint: disable=C0111
+            #         Missing function docstring (col 8)
             session = getsession()
             if session.encoding == 'utf8':
                 return what.decode(encoding)
@@ -235,34 +235,38 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
     else:
         _decode = lambda what: what.decode(encoding)
 
-    # For wide terminals, center the piece on the screen using cursor movement,
-    # if requested
+    # For wide terminals, center piece on screen using cursor movement
+    # when center=True.
     padding = u''
     if center and term.width > 81:
         padding = term.move_x((term.width / 2) - 40)
-
     lines = _decode(parsed.data).splitlines()
     for idx, line in enumerate(lines):
-        # Allow slow terminals to cancel by pressing a keystroke
+
         if poll_cancel is not False and term.inkey(poll_cancel):
+            # Allow slow terminals to cancel by pressing a keystroke
             msg_cancel = msg_cancel or u''.join(
                 (term.normal,
                  term.bold_black(u'-- '),
                  u'canceled {0} by input'.format(os.path.basename(filename)),
                  term.bold_black(u' --'),
                  ))
-            yield u'\r\n' + term.center(msg_cancel) + u'\r\n'
+            yield u'\r\n' + term.center(msg_cancel).rstrip() + u'\r\n'
             return
+
         line_length = term.length(line.rstrip())
+
         if not padding and term.width < line_length:
+            # if the artwork is too wide, simply stop displaying it.
             msg_too_wide = u''.join(
                 (term.normal,
                  term.bold_black(u'-- '),
-                 u'canceled {0}, too wide:: {{0}}'.format(os.path.basename(filename)),
+                 (u'canceled {0}, too wide:: {1}'
+                  .format(file_basename, line_length)),
                  term.bold_black(u' --'),
                  ))
             yield (u'\r\n' +
-                   term.center(msg_too_wide.format(line_length)) +
+                   term.center(msg_too_wide).rstrip() +
                    u'\r\n')
             return
         if idx == len(lines) - 1:
@@ -302,7 +306,7 @@ def get_ini(section=None, key=None, getter='get', split=False, splitsep=None):
         getter = getattr(CFG, getter)
         value = getter(section, key)
         if split and hasattr(value, 'split'):
-            return map(str.strip, value.split(splitsep))
+            return [_value.strip() for _value in value.split(splitsep)]
         return value
     if getter == 'getboolean':
         return False
@@ -312,8 +316,6 @@ def get_ini(section=None, key=None, getter='get', split=False, splitsep=None):
 
 
 def from_cp437(text):
-    """ Given a bytestring in IBM codepage 437, return a translated
-        unicode string suitable for decoding to UTF-8.
-    """
+    """ Deprecated form of ``bytes.decode('cp437_art')``. """
     warnings.warn('from_cp437() is deprecated, use bytes.decode("cp437_art")')
     return text.decode('cp437_art')

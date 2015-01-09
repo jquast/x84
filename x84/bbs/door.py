@@ -264,7 +264,7 @@ class Dropfile(object):
                 u'0\r\n'                  # ptr to new msgs?
                 u'0\r\n'                  # total u/l
                 u'0\r\n'                  # total d/l
-                u'8  { Databits }\r\n'  # ?? like 8,N,1 ??
+                u'8\r\n'                  # ?? like 8,N,1 ??
                 u'REMOTE\r\n'             # local or remote?
                 u'{s.comport}\r\n'
                 u'{s.comspeed}\r\n'
@@ -374,7 +374,7 @@ class Door(object):
             # on Solaris we would need to use something like I've done
             # in pexpect project, a custom pty fork implementation.
             pid, self.master_fd = pty.fork()
-        except OSError, err:
+        except OSError as err:
             # too many open files, out of memory, no such file/directory
             logger.error('OSError in pty.fork(): %s', err)
             return
@@ -387,6 +387,8 @@ class Door(object):
                                  self._term.height,
                                  self._term.width,
                                  0, 0)
+            # pylint: disable=E1101
+            #         Instance of 'DummyStream' has no 'fileno' member
             fcntl.ioctl(sys.stdout.fileno(), termios.TIOCSWINSZ, _bytes)
             # we cannot log an exception, only print to stderr and have
             # it captured by the parent process; this is because our 'logger'

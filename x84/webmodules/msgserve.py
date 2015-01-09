@@ -60,7 +60,7 @@ def parse_auth(request_data):
 
 class MessageApi(object):
 
-    " message network web API endpoint "
+    """ message network web API endpoint """
 
     # todo: validate messages much earlier (here, not below the scissor-line)
 

@@ -1,7 +1,7 @@
 """
  Configuration for x/84 BBS, https://github.com/jquast/x84/
 """
-
+from __future__ import print_function
 import logging.config
 import os.path
 
@@ -95,16 +95,16 @@ def init(lookup_bbs, lookup_log):
 
 def init_bbs_ini():
     """ Returns ConfigParser instance of bbs system defaults. """
-    #### How this should have been written ...
-    ####
-    #### each module should provide a declaration, probably based on a
-    #### collections.namedtuple that simply states the various fields,
-    #### a help description, and its default values.  Then, this program
-    #### simply "walks" the module path, importing everybody and finding
-    #### this declaration to build up the "default" configuration file.
-    ####
-    #### at least, in this way, the module defines its configuration scheme
-    #### where it is used.
+    # ### How this should have been written ...
+    # ###
+    # ### each module should provide a declaration, probably based on a
+    # ### collections.namedtuple that simply states the various fields,
+    # ### a help description, and its default values.  Then, this program
+    # ### simply "walks" the module path, importing everybody and finding
+    # ### this declaration to build up the "default" configuration file.
+    # ###
+    # ### at least, in this way, the module defines its configuration scheme
+    # ### where it is used.
     import ConfigParser
     import getpass
     import socket

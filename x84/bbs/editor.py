@@ -52,8 +52,10 @@ class LineEditor(object):
         self.colors = {'highlight': self._term.reverse}
 
         # allow user override
-        if colors:
+        if colors is not None:
             self.colors.update(colors)
+        if glyphs is not None:
+            self.glyphs.update(glyphs)
         if hidden:
             self.hidden = hidden
 
@@ -260,7 +262,7 @@ class ScrollingEditor(AnsiWindow):
         carriage has not yet been returned.
         """
         margin = int(float(self.visible_width) * (float(self.scroll_pct) * .01))
-        return (self._input_length >= self.visible_width - margin)
+        return bool(self._input_length >= self.visible_width - margin)
 
     @bell.setter
     def bell(self, value):
@@ -499,7 +501,7 @@ class ScrollingEditor(AnsiWindow):
         len_toss = self._term.length(self.content[-1])
         len_move = 1
         self.content = self.content[:-1]
-        if (self.is_scrolled and (self._horiz_pos < self.scroll_amt)):
+        if self.is_scrolled and (self._horiz_pos < self.scroll_amt):
             # shift left,
             self._horiz_shift -= self.scroll_amt
             self._horiz_pos += self.scroll_amt

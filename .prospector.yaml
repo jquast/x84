@@ -1,5 +1,5 @@
 inherits:
-    - strictness_veryhigh
+    - strictness_medium
 
 ignore:
   - (^|/)\..+
@@ -45,15 +45,10 @@ pylint:
         # no 'mark' member
         ignored-classes: pytest
     disable:
-        # Too many lines in module
-        ##- C0302
+        # Used builtin function 'map' (col 29)
+        - W0141
         # Used * or ** magic
         - W0142
-        # Used builtin function 'filter'.
-        # (For maintainability, one should prefer list comprehension.)
-        ##- W0141
-        # Use % formatting in logging functions but pass the % parameters
-        ##- W1202
 
 pyroma:
     # checks setup.py
