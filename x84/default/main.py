@@ -289,6 +289,7 @@ def main():
                         if item.inp_key == editor.content.strip():
                             echo(term.normal + u'\r\n')
                             gosub(item.script, *item.args, **item.kwargs)
+                            editor.content = u''
                             dirty = 2
                             break
                     else:
