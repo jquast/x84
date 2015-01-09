@@ -363,10 +363,12 @@ class IRCChat(object):
 
     def on_error(self, connection, event):
         """ Some error has been received """
-        self.log.error('error: {0}'.format(event))
-        # pylint:disable=W0613
-        self.queue(u'{0} ERROR {1}'.format(
-            self._indicator(color=self.term.bold_red), event))
+        err_desc = (u'error (type={event.type}, source={event.source}, '
+                    'target={event.target}, arguments={event.arguments}'
+                    .format(event=event))
+        self.log.error('error: {0}'.format(err_desc))
+        self.queue(u'{0} ERROR: {1} '.format(
+            self._indicator(color=self.term.bold_red), err_desc))
 
 
 def clean_up(term):
@@ -428,7 +430,6 @@ def establish_connection(term, session):
             term.inkey(3)
             return False
 
-    stime = time.time()
     while True:
         client.reactor.process_once()
         event, data = session.read_events(
