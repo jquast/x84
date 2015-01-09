@@ -8,7 +8,7 @@ import os
 from x84.bbs import getsession, getterminal, echo, getch, syncterm_setfont
 from x84.bbs import get_ini, DBProxy, Lightbar, LineEditor
 from x84.bbs import send_modem, recv_modem
-from .common import filesize
+from x84.default.common import filesize
 
 #: file description database
 DIZ_DB = 'filediz'
