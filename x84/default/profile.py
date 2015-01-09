@@ -113,8 +113,11 @@ def get_display_fields(user, point):
     )
     # go ahead, show them the password salt; it gets trimmed, and its gibberish,
     # maybe it gives them confidence that we don't know their actual password.
+    _password = u''
+    if user.password:
+        _password = u''.join(user.password)
     fields['password'] = field(
-        value=u''.join(user.password or (u'', u'')),
+        value=_password,
         field_fmt=u'{lb}{key}{rb}assword{colon} {value}',
         display_location=Point(y=point.y + 5, x=point.x),
         edit_location=Point(y=point.y + 5, x=point.x + 12),
