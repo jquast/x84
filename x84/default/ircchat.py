@@ -17,6 +17,7 @@ enable_ssl = True
 import collections
 import warnings
 import datetime
+import logging
 import time
 import re
 
@@ -74,6 +75,7 @@ class IRCChat(object):
     def __init__(self, term, session):
         """ IRC Chat client class constructor. """
 
+        self.log = logging.getLogger(__name__)
         self.reactor = irc.client.Reactor()
         self.connection = self.reactor.server()
         self.connected = False
@@ -361,10 +363,11 @@ class IRCChat(object):
 
     def on_error(self, connection, event):
         """ Some error has been received """
+        self.log.error('error: {0!r}'.format(event))
         # pylint:disable=W0613
-        self.queue(u'{0} ERROR {1}'.format(
+        self.queue(u'{0} ERROR {1!r}'.format(
             self._indicator(color=self.term.bold_red),
-            self.term.bold(u' '.join(event.arguments))
+            self.term.bold(event.arguments)
         ))
 
 
