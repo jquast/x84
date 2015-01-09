@@ -348,7 +348,7 @@ def init_log_ini():
     cfg_log.set('logger_requests', 'level', 'WARN')
     cfg_log.set('logger_requests', 'formatter', 'default')
     cfg_log.set('logger_requests', 'handlers', 'console, rotate_daily')
-    cfg_log.set('logger_requests', 'qualname', 'requests')
+    cfg_log.set('logger_requests', 'qualname', 'requests.packages.urllib3.connectionpool')
 
 
     return cfg_log
