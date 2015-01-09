@@ -214,29 +214,32 @@ def get_centigrade():
     from x84.bbs import getterminal, getsession, echo, getch
     term = getterminal()
     session = getsession()
-    echo(u'\r\n\r\n')
-    echo(term.yellow(u'Celcius'))
-    echo(term.bold_yellow(u'('))
-    echo(term.bold_yellow_reverse(u'C'))
-    echo(term.bold_yellow(u')'))
-    echo(u' or ')
-    echo(term.yellow(u'Fahrenheit'))
-    echo(term.bold_yellow(u'('))
-    echo(term.bold_yellow_reverse(u'F'))
-    echo(term.bold_yellow(u')'))
-    echo(u'? ')
-    anonymous = bool(session.user.handle == 'anonymous')
+    if bool(session.user.handle == 'anonymous'):
+        # anonymous cannot set a preference.
+        return
+
+    echo(u''.join((
+        u'\r\n\r\n',
+        term.yellow(u'Celcius'),
+        term.bold_yellow(u'('),
+        term.bold_yellow_reverse(u'C'),
+        term.bold_yellow(u')'),
+        u' or ',
+        term.yellow(u'Fahrenheit'),
+        term.bold_yellow(u'('),
+        term.bold_yellow_reverse(u'F'),
+        term.bold_yellow(u')'),
+        u'? ')))
+
     while True:
         inp = getch()
         if inp in (u'c', u'C'):
             session.user['centigrade'] = True
-            if not anonymous:
-                session.user.save()
+            session.user.save()
             break
         elif inp in (u'f', u'F'):
             session.user['centigrade'] = False
-            if not anonymous:
-                session.user.save()
+            session.user.save()
             break
         elif inp in (u'q', u'Q', term.KEY_EXIT):
             break
@@ -255,11 +258,13 @@ def chk_centigrade():
     else:
         echo(term.yellow(u'Fahrenheit'))
     echo(term.bold_black('...'))
-    echo(u' press ')
-    echo(term.bold_yellow_reverse(cf_key))
-    echo(u' to change.')
-    if getch(timeout=timeout_fch) == cf_key:
-        get_centigrade()
+
+    if bool(session.user.handle != 'anonymous'):
+        echo(u' press ')
+        echo(term.bold_yellow_reverse(cf_key))
+        echo(u' to change.')
+        if getch(timeout=timeout_fch) == cf_key:
+            get_centigrade()
 
 
 def chk_save_location(location):
