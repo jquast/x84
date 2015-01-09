@@ -109,7 +109,7 @@ art_file = get_ini(
 #: encoding on banner
 art_encoding = get_ini(
     section='matrix', key='art_encoding'
-) or 'topaz'
+) or 'cp437'
 
 #: primary color (highlight)
 color_primary = get_ini(

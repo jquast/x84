@@ -100,7 +100,7 @@ def list_results(questionnumber):
     counter = 0
 
     echo(term.clear())
-    echo(term.white + questions[questionnumber] + term.move_x(term.width - 10) + ' index: ' + str(index[questionnumber]) +
+    echo(term.white + questions[questionnumber] + term.move_x(max(0,term.width - 10)) + ' index: ' + str(index[questionnumber]) +
          '\r\n' + term.blue + '-' * len(questions[questionnumber]) + '\r\n\r\n')
     echo(term.magenta + '(alternatives)' + term.move_x(49) +
          '(votes)' + term.move_x(57) + '(percentage)\r\n')
@@ -298,8 +298,8 @@ def delete_question(questionnumber):
 
     if inp == 'a':  # delete answer alternative..
         echo(term.clear)
-        echo(term.white + questions[questionnumber] + term.move_x(
-            term.width - 12) + ' index: ' + str(index[questionnumber]) + '\r\n\r\n')
+        echo(term.white + questions[questionnumber] + term.move_x(max(0,
+            term.width - 12)) + ' index: ' + str(index[questionnumber]) + '\r\n\r\n')
         for i in range(0, amount_of_alternatives[questionnumber]):
             echo(term.cyan + str(i) + '. ' + term.white +
                  alternatives[(questionnumber, i)] + '\r\n')
@@ -395,8 +395,8 @@ def main():
     while True:
         # clears the screen and displays the vote art header
         echo(term.clear())
-        for line in showart(os.path.join(os.path.dirname(__file__), 'art', 'vote.ans'), 'topaz'):
-            echo(term.cyan + term.move_x((term.width / 2) - 40) + line)
+        for line in showart(os.path.join(os.path.dirname(__file__), 'art', 'vote.ans'), 'cp437'):
+            echo(term.cyan + term.move_x(max(0,(term.width / 2) - 40)) + line)
 
         if 'sysop' in session.user.groups:
             spacing = 1

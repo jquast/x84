@@ -7,22 +7,28 @@ General information useful for prospective developers and users.
 Compatible Clients
 ==================
 
-Any UTF-8 client is compatible. For Apple systems, *Andale Mono* works wonderfully.
+Any UTF-8 client is compatible. For Apple systems, **Andale Mono**
+works wonderfully for cp437 blockart.  Please note that many modern
+terminal emulators (especially Apple) modify the default 16 colors
+away from their original CGA specification.  This will cause CP437
+block-art to appear milky and poor, you should ensure your colorscheme
+is configured exactly as the CGA specification
+http://en.wikipedia.org/wiki/Color_Graphics_Adapter#Color_palette
 
 - PuTTy
 
   - Under preference item *Window -> Translation*, option *Remote character set*,
     change *iso8859-1* to *UTF-8*.
 
-- iTerm
+- iTerm/iTerm2
 
   - Menu item *iTerm -> Preferences*, section *Profiles*, select tab *Text*,
-    chose *Andale Mono* font.
+    chose **Andale Mono** font.
 
 - Terminal.app
 
   - Menu item *Terminal -> Preferences*, chose profile *Pro*, select Font
-    *Andale Mono*, and enable *use bright colors for bold text*.
+    **Andale Mono**, and enable **use bright colors for bold text**.
 
 - uxterm
 
@@ -38,7 +44,7 @@ Any UTF-8 client is compatible. For Apple systems, *Andale Mono* works wonderful
     various minix/linux/bsd consoles with a linux or bsd telnet client.
 
   - Some non-DOS terminal emulators may require installing a fontset, such as
-    *Terminus* to provide CP437 art.
+    **Terminus** to provide CP437 art.
 
 Binding to port 23
 ==================
@@ -53,6 +59,14 @@ Linux
 using privbind_, run the BBS as user 'nobody', group 'nogroup'::
 
   sudo privbind -u nobody -g nogroup x84
+
+The default board, ``1984.ws`` runs from the git master branch
+from a virtualenv using command::
+
+    PYTHON_EGG_CACHE=/tmp/nobody.python-eggs sudo privbind -u nobody -g nogroup `which python` -mx84.engine
+
+with system files ``/etc/x84/default.ini`` and ``/etc/x84/logging.ini`` configured
+to save data in nobody-owned files and folders at path ``/var/x84``.
 
 Solaris 10
 ----------

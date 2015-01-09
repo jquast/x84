@@ -12,6 +12,7 @@ from x84.bbs import getsession, getterminal, get_ini
 from x84.bbs import echo, LineEditor, gosub, syncterm_setfont
 from x84.bbs import ini
 
+#: MenuItem is a definition class for display, input, and target script.
 MenuItem = collections.namedtuple(
     'MenuItem', ['inp_key', 'text', 'script', 'args', 'kwargs'])
 
@@ -24,7 +25,7 @@ colored_menu_items = get_ini(
 #: color used for menu key entries
 color_highlight = get_ini(
     section='main', key='color_highlight'
-) or 'bright_magenta'
+) or 'bold_magenta'
 
 #: color used for prompt
 color_prompt = get_ini(
@@ -34,7 +35,7 @@ color_prompt = get_ini(
 #: color used for brackets ``[`` and ``]``
 color_lowlight = get_ini(
     section='main', key='color_lowlight'
-) or 'bright_black'
+) or 'bold_black'
 
 #: filepath to artfile displayed for this script
 art_file = get_ini(
@@ -44,12 +45,12 @@ art_file = get_ini(
 #: encoding used to display artfile
 art_encoding = get_ini(
     section='oneliners', key='art_file'
-) or 'cp437'
+) or 'cp437'  # ascii, actually
 
 #: fontset for SyncTerm emulator
 syncterm_font = get_ini(
     section='oneliners', key='syncterm_font'
-) or 'cp437'
+) or 'topaz'
 
 #: system name of bbs
 bbsname = get_ini(
@@ -140,7 +141,7 @@ if ini.CFG.has_section('sesame'):
             continue
 
         try:
-            inp_key = get_ini(section=sesame, key='{0}_key'.format(door))
+            inp_key = get_ini(section='sesame', key='{0}_key'.format(door))
         except NoOptionError:
             # skip entry if there is no {door}_key option
             continue
@@ -154,6 +155,7 @@ if ini.CFG.has_section('sesame'):
 
 
 def decorate_menu_item(menu_item, term, highlight, lowlight):
+    """ Return menu item decorated. """
     key_text = (u'{lb}{inp_key}{rb}'.format(
         lb=lowlight(u'['),
         rb=lowlight(u']'),
@@ -169,9 +171,10 @@ def decorate_menu_item(menu_item, term, highlight, lowlight):
 
 
 def render_menu_entries(term, top_margin, menu_items):
+    """ Return all menu items rendered in decorated tabular format. """
     # we take measured effects to do this operation much quicker when
-    # colored_menu_items is set False, mostly to accomidate slower systems such
-    # as the raspberry pi.
+    # colored_menu_items is set False to accommodate slower systems
+    # such as the raspberry pi.
     if colored_menu_items:
         highlight = getattr(term, color_highlight)
         lowlight = getattr(term, color_lowlight)
@@ -183,9 +186,8 @@ def render_menu_entries(term, top_margin, menu_items):
 
     # render all menu items, highlighting their action 'key'
     rendered_menuitems = [
-        decorate_menu_item(menu_item, term,
-                           highlight=highlight,
-                           lowlight=lowlight)
+        decorate_menu_item(menu_item=menu_item, term=term,
+                           highlight=highlight, lowlight=lowlight)
         for menu_item in menu_items
     ]
     # create a parallel array of their measurable width
@@ -234,6 +236,7 @@ def get_line_editor(term):
 
 
 def display_prompt(term):
+    """ Return string for displaying command prompt. """
     xpos = 0
     if term.width > 30:
         xpos = max(5, int((term.width / 2) - (80 / 2)))
@@ -250,9 +253,7 @@ def main():
     from x84.default.common import display_banner
     session, term = getsession(), getterminal()
 
-    dirty = True
-    text, width, height = u'', -1, -1
-    # restore settings to main menu's default
+    text, width, height, dirty = u'', -1, -1, 2
     editor = get_line_editor(term)
     while True:
         if dirty == 2:
