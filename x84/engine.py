@@ -508,7 +508,7 @@ def _loop(servers):
     WIN32 = sys.platform.lower().startswith('win32')
     session_fds = set()
 
-    log = logging.getLogger(__name__)
+    log = logging.getLogger('x84.engine')
 
     if not len(servers):
         raise ValueError("No servers configured for event loop! (ssh, telnet)")
