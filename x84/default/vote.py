@@ -7,7 +7,7 @@ import os
 databasename = 'votingbooth'  # change this for alternate database file
 
 __author__ = 'Hellbeard'
-__version__ = 1.0
+__version__ = 1.01
 
 # -----------------------------------------------------------------------------------
 
