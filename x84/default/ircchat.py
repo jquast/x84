@@ -366,9 +366,7 @@ class IRCChat(object):
         self.log.error('error: {0!r}'.format(event))
         # pylint:disable=W0613
         self.queue(u'{0} ERROR {1!r}'.format(
-            self._indicator(color=self.term.bold_red),
-            self.term.bold(event.arguments)
-        ))
+            self._indicator(color=self.term.bold_red), event))
 
 
 def clean_up(term):
