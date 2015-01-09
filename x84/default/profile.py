@@ -331,20 +331,25 @@ def do_command(term, session, inp, fields, tgt_user, point):
 
         # well, it has validated, shall we apply it, then?
         if field_name in ('password', 'location', 'email',):
-            setattr(tgt_user, field_name, inp)
+            # except for anonymous,
+            if tgt_user.handle != 'anonymous':
+                setattr(tgt_user, field_name, inp)
         elif field_name in ('timeout', 'pubkey',):
             if field_name == 'timeout':
                 # coerce to integer, set, and if tgt_user is our current
                 # user, then send new value for as engine event
                 timeout_val = int(inp)
-                tgt_user[field_name] = timeout_val
+                if tgt_user.handle != 'anonymous':
+                    tgt_user[field_name] = timeout_val
                 if tgt_user.handle == session.user.handle:
                     session.send_event('set-timeout', timeout_val)
             elif field_name == 'pubkey':
-                tgt_user[field_name] = inp
+                if tgt_user.handle != 'anonymous':
+                    tgt_user[field_name] = inp
         else:
             raise ValueError('unknown field.name: {0}'.format(field.name))
-    tgt_user.save()
+    if tgt_user.handle != 'anonymous':
+        tgt_user.save()
     return True
 
 
@@ -362,7 +367,8 @@ def delete_user(term, tgt_user, point):
     inp = term.inkey()
     echo(inp + term.move(point.y + 2, point.x))
     if inp == u'y':
-        tgt_user.delete()
+        if tgt_user.handle != 'anonymous':
+            tgt_user.delete()
         echo(_color2('Deleted !'))
         time.sleep(1)
         return True
