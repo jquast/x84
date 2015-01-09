@@ -52,7 +52,7 @@ class IRCChat(object):  # pylint:disable=R0904
     """
 
     def __init__(self, term, session):
-        """ Initialize the client, exposing the connection """
+        """ Initialize the client """
 
         self.reactor = irc.client.Reactor()
         self.connection = self.reactor.server()
@@ -70,24 +70,15 @@ class IRCChat(object):  # pylint:disable=R0904
 
         import re
 
-        mirc_colors = [
-            'bold_white', 'black', 'blue', 'green', 'bold_red', 'red',
-            'magenta', 'yellow', 'bold_yellow', 'bold_green', 'cyan',
-            'bold_cyan', 'bold_blue', 'bold_magenta', 'bold_black', 'white',
-        ]
-        num_colors = len(mirc_colors)
-        translate = {
-            '\x0f': self.term.normal,
-            '\x02': self.term.bold,
-            '\x1f': self.term.underline,
-            '\x15': self.term.underline,
-            '\x12': self.term.reverse,
-            '\x16': self.term.reverse,
-        }
-
         def color_repl(match):
             """ Regex function for replacing color codes """
 
+            mirc_colors = [
+                'bold_white', 'black', 'blue', 'green', 'bold_red', 'red',
+                'magenta', 'yellow', 'bold_yellow', 'bold_green', 'cyan',
+                'bold_cyan', 'bold_blue', 'bold_magenta', 'bold_black', 'white',
+            ]
+            num_colors = len(mirc_colors)
             bgc = None
             fgc = int(match.group(1))
             boldbg = False
@@ -113,6 +104,14 @@ class IRCChat(object):  # pylint:disable=R0904
         def mode_repl(match):
             """ Regex function for replacing 'modes' """
 
+            translate = {
+                '\x0f': self.term.normal,
+                '\x02': self.term.bold,
+                '\x1f': self.term.underline,
+                '\x15': self.term.underline,
+                '\x12': self.term.reverse,
+                '\x16': self.term.reverse,
+            }
             return u'{0}{1}'.format(translate[match.group(1)], match.group(2))
 
         text = re.sub(r'\x03(\d{1,2})(?:,(\d{1,2}))?', color_repl, text)
@@ -162,12 +161,12 @@ class IRCChat(object):  # pylint:disable=R0904
         ))
 
     def connect(self, *args, **kwargs):
-        """ Initialize the connection and try to connect """
+        """ Try to connect to the server """
 
         self.connection.connect(*args, **kwargs)
 
     def on_disconnect(self, connection, event):  # pylint:disable=R0201,W0613
-        """ Disconnected; set the quit Event to self.terminate this Thread """
+        """ Disconnected; send quit event to end the main loop """
 
         self.session.send_event('route', (self.session.sid, 'irc-quit'))
 
@@ -188,7 +187,7 @@ class IRCChat(object):  # pylint:disable=R0904
         connection.nick(newnick)
 
     def on_welcome(self, connection, event):  # pylint:disable=W0613
-        """ Connected to the server; fire up the input loop """
+        """ Connected to the server; join the channel """
 
         if not self.connected:
             self.session.send_event('route', (self.session.sid,
@@ -244,6 +243,8 @@ class IRCChat(object):  # pylint:disable=R0904
             self.term.bold(event.arguments[0])
         ))
 
+    # privnotice is mostly server chatter. disabled for now.
+    #
     # def on_privnotice(self, connection, event):
     #     """ Received a private notice (from the server, most likely) """
     #
