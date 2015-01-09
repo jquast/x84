@@ -625,7 +625,7 @@ class Session(object):
         """
         from x84.bbs.exception import ScriptError
 
-        self.log.info("runscript {0}".format(script.name))
+        self.log.info("runscript {0!r}".format(script.name))
         self._script_stack.append(script)
 
         # if given a script name such as 'extras.target', adjust the lookup
@@ -640,7 +640,6 @@ class Session(object):
             remaining, script_name = script.name.rsplit('.', 1)
             lookup_paths.append(os.path.join(script_relpath, *remaining.split('.')))
 
-        self.log.debug('lookup_paths: {0}'.format(lookup_paths))
         lookup = imp.find_module(script_name, lookup_paths)
         module = imp.load_module(script_name, *lookup)
 

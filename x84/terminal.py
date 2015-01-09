@@ -87,23 +87,23 @@ class Terminal(BlessedTerminal):
 
 
 def translate_ttype(ttype):
-    from x84.bbs.ini import CFG
+    from x84.bbs import get_ini
     log = logging.getLogger(__name__)
 
-    termcap_unknown = CFG.get('system', 'termcap-unknown')
-    termcap_ansi = CFG.get('system', 'termcap-ansi')
+    termcap_unknown = get_ini('system', 'termcap-unknown') or 'ansi'
+    termcap_ansi = get_ini('system', 'termcap-ansi') or 'ansi'
 
     if termcap_unknown != 'no' and ttype == 'unknown':
         log.debug("terminal-type {0!r} => {1!r}"
                   .format(ttype, termcap_unknown))
         return termcap_unknown
 
-    elif termcap_ansi != 'no' and ttype.lower().startswith('ansi'):
+    elif (termcap_ansi != 'no' and ttype.lower().startswith('ansi')
+          and ttype != termcap_ansi):
         log.debug("terminal-type {0!r} => {1!r}"
                   .format(ttype, termcap_ansi))
         return termcap_ansi
 
-    log.info("terminal type is {0!r}".format(ttype))
     return ttype
 
 
@@ -112,9 +112,10 @@ def determine_encoding(env):
     Determine and return preferred encoding given session env.
     """
     from x84.bbs import get_ini
-    default_encoding = get_ini(section='session',
-                               key='default_encoding'
-                               ) or 'utf8'
+    default_encoding = get_ini(
+        section='session', key='default_encoding'
+    ) or 'utf8'
+
     fallback_encoding = {
         'ansi': 'cp437',
         'ansi-bbs': 'cp437',
@@ -135,12 +136,28 @@ def init_term(writer, env):
     A blessed-abstracted curses terminal is returned.
     """
     from x84.bbs.ipc import IPCStream
+    from x84.bbs import get_ini
+    log = logging.getLogger(__name__)
     env['TERM'] = translate_ttype(env.get('TERM', 'unknown'))
     env['encoding'] = determine_encoding(env)
-    return Terminal(kind=env['TERM'],
+    term = Terminal(kind=env['TERM'],
                     stream=IPCStream(writer=writer),
                     rows=int(env.get('LINES', '24')),
                     columns=int(env.get('COLUMNS', '80')))
+
+    if term.kind is None:
+        # the given environment's TERM failed curses initialization
+        # because, more than likely, the TERM type was not found.
+        termcap_unknown = get_ini('system', 'termcap-unknown') or 'ansi'
+        log.debug('terminal-type {0} failed, using {1} instead.'
+                  .format(env['TERM'], termcap_unknown))
+        term = Terminal(kind=termcap_unknown,
+                        stream=IPCStream(writer=writer),
+                        rows=int(env.get('LINES', '24')),
+                        columns=int(env.get('COLUMNS', '80')))
+
+    log.info("terminal type is {0!r}".format(term.kind))
+    return term
 
 
 class TerminalProcess(object):
@@ -152,11 +169,11 @@ class TerminalProcess(object):
     """
 
     def __init__(self, client, sid, master_pipes):
-        from x84.bbs.ini import CFG
+        from x84.bbs import get_ini
         self.client = client
         self.sid = sid
         (self.master_write, self.master_read) = master_pipes
-        self.timeout = CFG.getint('system', 'timeout')
+        self.timeout = get_ini('system', 'timeout') or 0
 
 
 def flush_queue(queue):

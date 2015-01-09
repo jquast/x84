@@ -744,8 +744,6 @@ class TelnetClient(BaseClient):
             columns = old_columns
         self.env['LINES'] = str(rows)
         self.env['COLUMNS'] = str(columns)
-        self.log.debug('{self.addrport}: NAWS is {cols}x{rows}'
-                       .format(self=self, cols=columns, rows=rows))
         if self.on_naws is not None:
             self.on_naws(self)
 
