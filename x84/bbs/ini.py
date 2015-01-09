@@ -336,11 +336,19 @@ def init_log_ini():
     cfg_log.set('logger_paramiko', 'handlers', 'console, rotate_daily')
     cfg_log.set('logger_paramiko', 'qualname', 'paramiko.transport')
 
-    # squelch xmodem debug, too verbose
+    # squelch xmodem's debug, too verbose
     cfg_log.add_section('logger_xmodem')
     cfg_log.set('logger_xmodem', 'level', 'INFO')
     cfg_log.set('logger_xmodem', 'formatter', 'default')
     cfg_log.set('logger_xmodem', 'handlers', 'console, rotate_daily')
     cfg_log.set('logger_xmodem', 'qualname', 'xmodem')
+
+    # squelch requests to warn, too verbose
+    cfg_log.add_section('logger_requests')
+    cfg_log.set('logger_requests', 'level', 'WARN')
+    cfg_log.set('logger_requests', 'formatter', 'default')
+    cfg_log.set('logger_requests', 'handlers', 'console, rotate_daily')
+    cfg_log.set('logger_requests', 'qualname', 'requests')
+
 
     return cfg_log
