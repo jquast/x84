@@ -71,7 +71,7 @@ class BuildDocs(Command):
         """ Call sphinx-build. """
         try:
             subprocess.call(
-                ('sphinx-build', '-v', '-v', '-n', '-E',
+                ('sphinx-build', '-v', '-n', '-E',
                  self.DOCS_SRC, self.DOCS_DST),
                 stdout=sys.stdout, stderr=sys.stderr)
         except OSError as err:
