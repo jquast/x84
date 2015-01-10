@@ -3,11 +3,17 @@ Output and Ansi art unicode helpers for x/84, https://github.com/jquast/x84
 """
 import warnings
 import inspect
+import random
+import glob
+import os
 import re
 
+# local
+from x84.bbs.ini import get_ini
 from x84.bbs.session import getterminal, getsession
 
-__all__ = ('echo', 'timeago', 'encode_pipe', 'decode_pipe')
+# 3rd-party
+from sauce import SAUCE
 
 #: A mapping of SyncTerm fonts/code pages to their sequence value.
 #: Where matching, their python-standard encoding value is used, (fe. 'cp437').
@@ -192,8 +198,6 @@ def encode_pipe(ucs):
 
 def ropen(filename, mode='rb'):
     """ Open random file using wildcard (glob). """
-    import glob
-    import random
     files = glob.glob(filename)
     return open(random.choice(files), mode) if len(files) else None
 
@@ -227,12 +231,6 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
     current terminal's width.
 
     """
-    import random
-    import glob
-    import os
-    from sauce import SAUCE
-    from x84.bbs.ini import CFG
-
     term = getterminal()
 
     # When the given artfile pattern's folder is not absolute, nor relative to
@@ -279,13 +277,10 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
         if parsed.record and parsed.filler_str in SAUCE_FONT_MAP:
             encoding = SAUCE_FONT_MAP[parsed.filler_str]
 
-        # 2. Get the system default art encoding
-        elif CFG.has_option('system', 'art_utf8_codec'):
-            encoding = CFG.get('system', 'art_utf8_codec')
-
-        # 3. Fall back to CP437
+        # 2. Get the system default art encoding,
+        #    or fall-back to cp437
         else:
-            encoding = 'cp437'
+            encoding = get_ini('system', 'art_utf8_codec') or 'cp437'
 
     # If auto_mode is enabled, we'll only use the input encoding on UTF-8
     # capable terminals, because our codecs do not know how to "transcode"

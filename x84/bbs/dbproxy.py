@@ -11,6 +11,7 @@ from x84.db import (
     get_db_lock,
     log_db_cmd,
 )
+from x84.bbs.session import getsession
 
 
 class DBProxy(object):
@@ -38,7 +39,6 @@ class DBProxy(object):
                             engine components.)
         :type use_session: bool
         """
-        from x84.bbs.session import getsession
         self.log = logging.getLogger(__name__)
         self.schema = schema
         self.table = table
