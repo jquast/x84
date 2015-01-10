@@ -36,7 +36,7 @@ def get_fail2ban_function():
     Returns a function which may be passed an IP address, returning True
     if the connection from address ``ip`` should be accepted.
 
-    @returns: function accepting ip address, returning boolean
+    :returns: function accepting ip address, returning boolean
     @rtype: callable
     """
     # local imports

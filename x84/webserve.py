@@ -1,18 +1,20 @@
 #!/usr/bin/env python2.7
-"""
+r"""
 web server for x/84, https://github.com/jquast/x84
 
 To configure the web server, add a ``[web]`` section to your default.ini.
 
 The following attributes are required:
-- cert: An SSL certificate filepath.
-- key: An SSL certificate key filepath.
-- modules: A list of webmodules to load.
+
+- ``cert``: An SSL certificate filepath.
+- ``key``: An SSL certificate key filepath.
+- ``modules``: A list of webmodules to load.
 
 The following attributes are optional:
-- addr: A single address to bind to, defaults to 0.0.0.0 (ANY).
-- port: A single port number to bind to, defaults to 8443.
-- chain: An SSL chain certificate filepath.
+
+- ``addr``: A single address to bind to, defaults to 0.0.0.0 (ANY).
+- ``port``: A single port number to bind to, defaults to 8443.
+- ``chain``: An SSL chain certificate filepath.
 
 Example::
 
@@ -24,6 +26,7 @@ Example::
     chain = ~/.x84/ca.cer
 
 You can generate your own self-signed certificate.
+
 First, generate a server key::
 
     openssl genrsa -des3 -out server.key 1024
@@ -38,16 +41,15 @@ And remove the passphrase from the certificate::
 
     openssl rsa -in server.key.org -out server.key
 
-Finally, generate a self-signed certificate::
+Then, generate a self-signed certificate::
 
     openssl x509 -req -days 1984 -in server.csr \
         -signkey server.key -out server.crt
 
-Install::
+Then, install to paths specified by *.ini* potions ``cert`` and ``key``::
 
     cp server.crt ~/.x84/ssl.cer
     cp server.key ~/.x84/ssl.key
-
 """
 import threading
 import traceback

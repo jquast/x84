@@ -41,7 +41,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'x/84'
-copyright = u'2013, Jeff Quast'
+copyright = u'2003, Jeff Quast'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -70,7 +70,7 @@ exclude_patterns = ['_build']
 #default_role = None
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
-#add_function_parentheses = True
+add_function_parentheses = True
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
@@ -144,16 +144,16 @@ html_static_path = ['_static']
 #html_use_index = True
 
 # If true, the index is split into individual pages for each letter.
-#html_split_index = False
+html_split_index = True
 
 # If true, links to the reST sources are added to the pages.
-#html_show_sourcelink = True
+html_show_sourcelink = True
 
 # If true, "Created using Sphinx" is shown in the HTML footer. Default is True.
-#html_show_sphinx = True
+html_show_sphinx = False
 
 # If true, "(C) Copyright ..." is shown in the HTML footer. Default is True.
-#html_show_copyright = True
+html_show_copyright = True
 
 # If true, an OpenSearch description file will be output, and all pages will
 # contain a <link> tag referring to it.  The value of this option must be the

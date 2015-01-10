@@ -257,15 +257,25 @@ def kill_session(client, reason='killed'):
 def start_process(sid, env, CFG, child_pipes, kind, addrport,
                   matrix_args=None, matrix_kwargs=None):
     """
-    A multiprocessing.Process target. Arguments:
-        sid: string describing session source (fe. IP address & Port)
-        env: dictionary of client environment variables (requires 'TERM')
-        CFG: ConfigParser instance of bbs configuration
-        child_pipes: tuple of (writer, reader) for the engine IPC.
-        kind: what kind of connection? 'telnet', 'ssh', etc.,
-        addrport: tuple of (client-ip, client-port)
-        matrix_args: optional positional arguments to pass to matrix script.
-        matrix_kwargs: optional keyward arguments to pass to matrix script.
+    A ``multiprocessing.Process`` target.
+
+    :param sid: string describing session source (usually IP address & port).
+    :type sid: str
+    :param env: dictionary of client environment variables
+                (must contain at least ``'TERM'``).
+    :type env: dict
+    :param CFG: ConfigParser instance of bbs configuration
+    :type CFG: ConfigParser.ConfigParser
+    :param child_pipes: tuple of ``(writer, reader)`` for engine IPC.
+    :type child_pipes: tuple
+    :param kind: what kind of connection as string, ``'telnet'``, ``'ssh'``, etc.
+    :type kind: str
+    :param addrport: ``(client-ip, client-port)`` as string and integer.
+    :typpe addrport: tuple
+    :param matrix_args: optional positional arguments to pass to matrix script.
+    :type matrix_args: tuple
+    :param matrix_kwargs: optional keyward arguments to pass to matrix script.
+    :type matrix_kwargs: dict
     """
     import x84.bbs.ini
     from x84.bbs.ipc import make_root_logger

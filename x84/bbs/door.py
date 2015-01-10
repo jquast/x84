@@ -578,27 +578,35 @@ class DOSDoor(Door):
     This Door-derived class removes the "report cursor position" query
     sequence, which is sent by DOSEMU on startup. It also removes the "switch
     to alternate screen mode" set and reset (blessings terminals provide this
-    with the context manager, ala "with term.fullscreen():".
+    with the context manager, using statement ``with term.fullscreen():``).
 
     It would appear that any early keyboard input received (esp. in response
     to "report cursor position") prior to DOOR execution in DOSEMU causes all
     input to be bitshifted and invalid and/or broken.
 
-    This class should resolve such issues by ovveriding output_filter to
-    remove such sequence, and input_filter which only allows input after a
-    few seconds have passed.
+    This class resolves that issue by overriding ``output_filter`` to remove
+    such sequences, and ``input_filter`` which only allows input after a few
+    seconds have elapsed.
     """
 
+    #: regular expression of sequences to be replaced by ``term.clear``
+    #: during ``START_BLOCK`` delay in ``output_filter``
     RE_REPWITH_CLEAR = (r'\033\[('
                         r'1;80H.*\033\[1;1H'
                         r'|H\033\[2J'
                         r'|\d+;1H.*\033\[1;1H'
                         r')')
+    #: regular expression of sequences to strip entirely during
+    #: ``START_BLOCK`` delay in ``output_filter``.
     RE_REPWITH_NONE = (r'\033\[('
                        r'6n'
                        r'|\?1049[lh]'
                        r'|\d+;\d+r'
                        r'|1;1H\033\[\dM)')
+    #: Number of seconds to allow to elapse for ``input_filter`` and
+    #: ``output_filter`` as a workaround for stripping startup sequences
+    #: and working around a strange keyboard input bug.
+
     START_BLOCK = 4.0
     # pylint: disable=R0913
     #         Too many arguments

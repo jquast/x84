@@ -6,7 +6,7 @@ Command-line launcher and event loop for x/84, https://github.com/jquast/x84
 # For any contributions, feel free to tag __author__ etc. at top of such file.
 __author__ = "Johannes Lundberg (jojo), Jeff Quast (dingo)"
 __url__ = u'https://github.com/jquast/x84/'
-__copyright__ = "Copyright 2014"
+__copyright__ = "Copyright 2003"
 __credits__ = [
     # use 'scene' names unless preferred or unavailable.
     "zipe",
@@ -35,8 +35,9 @@ def main():
     x84 main entry point. The system begins and ends here.
 
     Command line arguments to engine.py:
-      --config= location of alternate configuration file
-      --logger= location of alternate logging.ini file
+
+    - ``--config=`` location of alternate configuration file
+    - ``--logger=`` location of alternate logging.ini file
     """
     import x84.bbs.ini
 
