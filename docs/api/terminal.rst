@@ -6,3 +6,4 @@ Terminal I/O
 
 .. automodule:: x84.terminal
    :members:
+   :show-inheritance:
