@@ -44,7 +44,9 @@ class IPCLogHandler(logging.Handler):
                 dummy = self.format(record)  # NOQA
                 record.exc_info = None
             record.handle = None
-            record.handle = getsession().handle
+            session = getsession()
+            if session:
+                record.handle = session.handle
             self.oqueue.send(('logger', record))
         except (KeyboardInterrupt, SystemExit):
             raise
