@@ -512,9 +512,9 @@ class Session(object):
                 if ((_height, _width) != (n_height, n_width)):
                     # RECURSIVE: we call buffer_event to push-in a duplicate
                     # "resize" event, so the script that was interrupted has
-                    # an opportunity to to the new terminal dimensions if the
-                    # script that was event-driven gosub had already acquired
-                    # and reacted all 'refresh' events.
+                    # an opportunity to adjust to the new terminal dimensions
+                    # if the script that was event-driven as gosub had already
+                    # acquired and reacted to any refresh-resize events.
                     data = ('resize', n_height, n_width)
                     self.buffer_event('refresh', data)
                 # otherwise its fine to not require the calling function to
