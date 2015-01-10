@@ -29,15 +29,12 @@ class DBProxy(object):
         """
         Class constructor.
 
-        :param scheme: database key, becomes base filename of .sqlite3 file.
-        :type scheme: str
-        :param table: optional database table.
-        :type table: str
-        :param use_session: Whether iterable returns should be sent over an IPC
+        :param str scheme: database key, becomes base filename of .sqlite3 file.
+        :param str table: optional database table.
+        :param bool use_session: Whether iterable returns should be sent over an IPC
                             pipe (client is a x84.bbs.session.Session), or
                             returned directly (such as used by the main thread
                             engine components.)
-        :type use_session: bool
         """
         self.log = logging.getLogger(__name__)
         self.schema = schema

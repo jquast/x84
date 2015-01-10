@@ -48,18 +48,12 @@ class AnsiWindow(object):
         """
         Class constructor for base windowing class.
 
-        :param width: width of window.
-        :type width: int
-        :param height: height of window.
-        :type height: int
-        :param yloc: y-location of window.
-        :type yloc: int
-        :param xloc: x-location of window.
-        :type xloc: int
-        :param colors: color theme, only key value of ``highlight`` is used.
-        :type colors: dict
-        :param glyphs: bordering window character glyphs.
-        :type glyphs: dict
+        :param int width: width of window.
+        :param int height: height of window.
+        :param int yloc: y-location of window.
+        :param int xloc: x-location of window.
+        :param dict colors: color theme, only key value of ``highlight`` is used.
+        :param dict glyphs: bordering window character glyphs.
         """
         self.height = height
         self.width = width

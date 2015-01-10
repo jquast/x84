@@ -53,8 +53,7 @@ def main(last=10):
     """
     Script entry point.
 
-    :param last: Number of last callers to display
-    :type last: int
+    :param int last: Number of last callers to display
     """
     session, term = getsession(), getterminal()
     session.activity = u'Viewing last callers'

@@ -15,18 +15,15 @@ def send_modem(stream, protocol='xmodem1k', retry=16, timeout=30,
     Currently, these are the only protocols supported.  Returns ``True`` upon
     successful transmission, otherwise ``False``.
 
-    :param stream: The stream object to send data from.
-    :type stream: stream (file, etc.)
-    :param retry: The maximum number of times to try to resend a failed
-                  packet before failing.
-    :type retry: int
-    :param timeout: seconds to elapse for response before failing.
-    :type timeout: int
-    :param callback: Reference to a callback function that has the following
-                     signature. This is useful for getting status updates while
-                     a transfer is underway:
-                     ``def callback(total_count, success_count, error_count)``
-    :type callback: callable
+    :param stream: The file-like stream object to send data from.
+    :param int retry: The maximum number of times to try to resend a failed
+                      packet before failing.
+    :param int timeout: seconds to elapse for response before failing.
+    :param callable callback: Reference to a callback function that has the
+           following signature. This is useful for getting
+           status updates while a transfer is underway::
+
+               ``def callback(total_count, success_count, error_count)``
     """
     # get protocol implementation class
     supported_protocols = ('xmodem', 'xmodem1k')
@@ -71,13 +68,10 @@ def recv_modem(stream, protocol='xmodem1k', retry=16, timeout=30):
     Currently, these are the only protocols supported.  Returns ``True`` upon
     successful transmission, otherwise ``False``.
 
-    :param stream: The stream object to send data from.
-    :type stream: stream (file, etc.)
-    :param retry: The maximum number of times to try to resend a failed
-                  packet before failing.
-    :type retry: int
-    :param timeout: seconds to elapse for response before failing.
-    :type timeout: int
+    :param stream: The file-like stream object to send data from.
+    :param int retry: The maximum number of times to try to resend a failed
+                      packet before failing.
+    :param int timeout: seconds to elapse for response before failing.
     """
     # get protocol implementation class
     supported_protocols = ('xmodem', 'xmodem1k')

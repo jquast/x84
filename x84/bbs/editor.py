@@ -41,18 +41,12 @@ class LineEditor(object):
         """
         Class constructor.
 
-        :param width: the maximum input length.
-        :type width: int
-        :param content: given default content.
-        :type content: str
-        :param hidden: When non-False, a single 'mask' character for output.
-        :type hidden: str
-        :param colors: optional dictionary containing key 'highlight'.
-        :type colors: dict
-        :param glyphs: optional dictionary of window border characters.
-        :type glyphs: dict
-        :param keyset: optional dictionary of line editing values.
-        :type keyset: dict
+        :param int width: the maximum input length.
+        :param str content: given default content.
+        :param str hidden: When non-False, a single 'mask' character for output.
+        :param dict colors: optional dictionary containing key 'highlight'.
+        :param dict glyphs: optional dictionary of window border characters.
+        :param dict keyset: optional dictionary of line editing values.
         """
         self._term = getterminal()
         self.content = content or u''
@@ -211,18 +205,12 @@ class ScrollingEditor(AnsiWindow):
         """
         Class constructor.
 
-        :param width: width of window.
-        :type width: int
-        :param yloc: y-location of window.
-        :type yloc: int
-        :param xloc: x-location of window.
-        :type xloc: int
-        :param colors: color theme, only key value of ``highlight`` is used.
-        :type colors: dict
-        :param glyphs: bordering window character glyphs.
-        :type glyphs: dict
-        :param keyset: command keys, global ``PC_KEYSET`` is used by default.
-        :type keyset: dict[iterable]
+        :param int width: width of window.
+        :param int yloc: y-location of window.
+        :param int xloc: x-location of window.
+        :param dict colors: color theme, only key value of ``highlight`` is used.
+        :param dict glyphs: bordering window character glyphs.
+        :param dict keyset: command keys, global ``PC_KEYSET`` is used by default.
         """
         self._term = getterminal()
         self._horiz_shift = 0

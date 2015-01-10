@@ -373,10 +373,9 @@ def main(background_daemon=True):
 
     Called by x84/engine.py, function main() as unmanaged thread.
 
-    :param background_daemon: When True (default), this function returns and
-      web modules are served in an unmanaged, background (daemon) thread.
-      Otherwise, function call to ``main()`` is blocking.
-    :type background_daemon: bool
+    :param bool background_daemon: When True (default), this function returns
+                and web modules are served in an unmanaged, background (daemon)
+                thread.  Otherwise, function call to ``main()`` is blocking.
     :rtype: None
     """
     from threading import Thread

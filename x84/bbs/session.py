@@ -96,24 +96,18 @@ class Session(object):
 
         Only one session may be instantiated per process.
 
-        :param terminal: interactive terminal associated with this session.
-        :type terminal: blessed.Terminal.
-        :param sid: session identification string
-        :type sid: str
-        :param env: transport-negotiated environment variables, should
-           contain at least values for TERM and 'encoding'.
-        :type env: dict
-        :param child_pipes: tuple of (writer, reader)
-        :type child_pipes: tuple
-        :param kind: transport description string (ssh, telnet)
-        :type kind: str
-        :param addrport: transport ip address and port as string
-        :type addrport: str
-        :param matrix_args: When non-None, a tuple of positional arguments
-           that should be passed to the matrix script.
-        :param matrix_kwargs: When non-None, a dictionary of keyword arguments
-           that should be passed to the matrix script.
-        :type matrix_kwargs: dict
+        :param blessed.Terminal terminal: interactive terminal associated with
+                                          this session.
+        :param str sid: session identification string
+        :param dict env: transport-negotiated environment variables, should
+                         contain at least values for TERM and 'encoding'.
+        :param tuple child_pipes: tuple of ``(writer, reader)``.
+        :param str kind: transport description string (ssh, telnet)
+        :param str addrport: transport ip address and port as string
+        :param tuple matrix_args: When non-None, a tuple of positional
+                                  arguments passed to the matrix script.
+        :param dict matrix_kwargs: When non-None, a dictionary of keyword
+                                   arguments passed to the matrix script.
         """
         self.log = logging.getLogger(__name__)
 

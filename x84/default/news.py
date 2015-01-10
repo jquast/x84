@@ -41,8 +41,8 @@ def main(quick=False):
     """
     Script entry point.
 
-    :param quick: When True, returns early if this news has already been read.
-    :type quick: bool
+    :param bool quick: When True, returns early if this news has already
+                       been read.
     """
     session, term = getsession(), getterminal()
 

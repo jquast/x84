@@ -38,28 +38,21 @@ class Lightbar(AnsiWindow):
 
         Initialize a lightbar of height, width, y and x, and position.
 
-        :param width: width of window.
-        :type width: int
-        :param height: height of window.
-        :type height: int
-        :param yloc: y-location of window.
-        :type yloc: int
-        :param xloc: x-location of window.
-        :type xloc: int
-        :param colors: color theme, only key value of ``highlight`` is used.
-        :type colors: dict
-        :param glyphs: bordering window character glyphs.
-        :type glyphs: dict
-        :param keyset: command keys, global ``NETHACK_KEYSET`` is
-                       used by default, augmented by application
-                       keys such as home, end, pgup, etc.
-        :type keyset: dict[iterable]
-        :param content: Lightbar content as list of tuples, an empty list
-                        is used by default.  Tuples must be in form of
-                        ``(key, str)``.  ``key`` may have any suitable
-                        significance for the caller.  ``str``, however,
-                        must be of a unicode terminal sequence.
-        :type content: list[(key, str)]
+        :param int width: width of window.
+        :param int height: height of window.
+        :param int yloc: y-location of window.
+        :param int xloc: x-location of window.
+        :param dict colors: color theme, only key value of ``highlight`` is used.
+        :param dict glyphs: bordering window character glyphs.
+        :param dict keyset: command keys, global ``NETHACK_KEYSET`` is
+                            used by default, augmented by application
+                            keys such as home, end, pgup, etc.
+        :type dict keyset: dict[iterable]
+        :param list content: Lightbar content as list of tuples, an empty list
+                             is used by default.  Tuples must be in form of
+                             ``(key, str)``.  ``key`` may have any suitable
+                             significance for the caller.  ``str``, however,
+                             must be of a unicode terminal sequence.
         """
         self._selected = False
         self._quit = False

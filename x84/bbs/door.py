@@ -45,10 +45,9 @@ class Dropfile(object):
         """
         Class constructor.
 
-        :param filetype: dropfile type. One of ``Dropfile.DOORSYS``,
-                         ``Dropfile.DOOR32``, ``Dropfile.CALLINFOBBS``,
-                         or ``Dropfile.DORINFO``.
-        :type filetype: int
+        :param int filetype: dropfile type. One of ``Dropfile.DOORSYS``,
+                             ``Dropfile.DOOR32``, ``Dropfile.CALLINFOBBS``,
+                             or ``Dropfile.DORINFO``.
         """
         assert filetype in (self.DOORSYS, self.DOOR32,
                             self.CALLINFOBBS, self.DORINFO)
@@ -358,32 +357,24 @@ class Door(object):
         """
         Class constructor.
 
-        :param cmd: full path of command to execute.
-        :type cmd: str
-        :param args: command arguments as tuple.
-        :type args: tuple
-        :param env_lang: exported as environment variable LANG.
-        :type env_lang: str
-        :param env_term: exported as environment variable TERM.  When
-                         unspecified, it is determined by the same
-                         TERM value the original blessed.Terminal instance
-                         used.
-        :type env_term: str
-        :param env_path: exported as environment variable PATH.
-                         When None (default), the .ini 'env_path'
-                         value of section [door] is
-        :type env_path: str
-        :param env_home: exported as environment variable HOME.  When env_home
-                         is None, the environment value of the main process is
-                         used.
-        :type env_home: str
-        :param cp437: When true, forces decoding of external program as
-                      codepage 437.  This is the most common encoding used
-                      by DOS doors.
-        :param env: Additional environment variables to extend to the sub-process.
-        :type env: dict
-        :type cp437: bool
-
+        :param str cmd: full path of command to execute.
+        :param tuple args: command arguments as tuple.
+        :param str env_lang: exported as environment variable ``LANG``.
+        :param str env_term: exported as environment variable ``TERM``.  When
+                             unspecified, it is determined by the same
+                             TERM value the original ``blessed.Terminal``
+                             instance is used.
+        :param str env_path: exported as environment variable ``PATH``.
+                             When None (default), the .ini ``env_path``
+                             value of section ``[door]`` is
+        :param str env_home: exported as environment variable ``HOME``.
+                             When env_home is ``None``, the environment
+                             value of the main process is used.
+        :param bool cp437: When true, forces decoding of external program as
+                           codepage 437.  This is the most common encoding used
+                           by DOS doors.
+        :param dict env: Additional environment variables to extend to the
+                         sub-process.
         """
         self._session, self._term = getsession(), getterminal()
         self.cmd = cmd
@@ -616,32 +607,24 @@ class DOSDoor(Door):
         """
         Class constructor.
 
-        :param cmd: full path of command to execute.
-        :type cmd: str
-        :param args: command arguments as tuple.
-        :type args: tuple
-        :param env_lang: exported as environment variable LANG.
-        :type env_lang: str
-        :param env_term: exported as environment variable TERM.  When
-                         unspecified, it is determined by the same
-                         TERM value the original blessed.Terminal instance
-                         used.
-        :type env_term: str
-        :param env_path: exported as environment variable PATH.
-                         When None (default), the .ini 'env_path'
-                         value of section [door] is
-        :type env_path: str
-        :param env_home: exported as environment variable HOME.  When env_home
-                         is None, the environment value of the main process is
-                         used.
-        :type env_home: str
-        :param cp437: When true, forces decoding of external program as
-                      codepage 437.  This is the most common encoding used
-                      by DOS doors.
-        :param env: Additional environment variables to extend to the
-                    sub-process.
-        :type env: dict
-        :type cp437: bool
+        :param str cmd: full path of command to execute.
+        :param tuple args: command arguments as tuple.
+        :param str env_lang: exported as environment variable ``LANG``.
+        :param str env_term: exported as environment variable ``TERM``.  When
+                             unspecified, it is determined by the same
+                             TERM value the original ``blessed.Terminal``
+                             instance is used.
+        :param str env_path: exported as environment variable ``PATH``.
+                             When None (default), the .ini ``env_path``
+                             value of section ``[door]`` is
+        :param str env_home: exported as environment variable ``HOME``.
+                             When env_home is ``None``, the environment
+                             value of the main process is used.
+        :param bool cp437: When true, forces decoding of external program as
+                           codepage 437.  This is the most common encoding used
+                           by DOS doors.
+        :param dict env: Additional environment variables to extend to the
+                         sub-process.
         """
         Door.__init__(self, cmd, args, env_lang, env_term,
                       env_path, env_home, cp437)

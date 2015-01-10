@@ -21,13 +21,10 @@ def waitprompt():
 def display_banner(filepattern, encoding=None, vertical_padding=0):
     """ Start new screen and show artwork, centered.
 
-    :param filepattern: file to display
-    :type filepattern: str
-    :param encoding: encoding of art file(s).
-    :type encoding: str or None
-    :param vertical_padding: number of blank lines to prefix art
-    :type vertical_padding: int
-    :returns: number of lines displayed
+    :param str filepattern: file to display
+    :param str encoding: encoding of art file(s).
+    :param int vertical_padding: number of blank lines to prefix art
+    :return: number of lines displayed
     :rtype: int
     """
     term = getterminal()
@@ -53,11 +50,12 @@ def display_banner(filepattern, encoding=None, vertical_padding=0):
 def prompt_pager(content, line_no=0, colors=None, width=None, breaker=u'- '):
     """ Display text, using a command-prompt pager.
 
-    :param content: iterable of text contents.
-    :param line_no: line number to offset beginning of pager.
-    :param colors: optional dictionary containing terminal styling
-                   attributes, for keys 'highlight' and 'lowlight'.
-                   When unset, yellow and green are used.
+    :param iterable content: iterable of text contents.
+    :param int line_no: line number to offset beginning of pager.
+    :param dict colors: optional dictionary containing terminal styling
+                        attributes, for keys ``'highlight'`` and
+                        ``'lowlight'``.  When unset, yellow and green
+                        are used.
     """
     term = getterminal()
     colors = colors or {
