@@ -113,6 +113,8 @@ setup(name='x84',
           'six==1.8.0',
           'wsgiref==0.1.2',
           'xmodem==0.3.2',
+          'feedparser==5.1.3',
+          'html2text==2014.12.29',
       ],
       extras_require={
           'with_crypto': (
