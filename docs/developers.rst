@@ -28,12 +28,17 @@ You should install the following packages::
 
     $ sudo pacman -S git python2 python2-pip python2-virtualenv python2-virtualenvwrapper
 
+And please make sure you're using an up-to-date version of pip::
+
+    $ pip-2.7 --upgrade pip
+
 Virtualenv
 ----------
 
-Optional but recommended, using virtualenv and virtualenvwrapper_ ensures
+Optional but recommended, using virtualenv and/or virtualenvwrapper_ ensures
 you can install x/84 and its dependencies without root access and quickly
-activate the environment at any time.
+activate the environment at any time, but without affecting system libraries
+or other python projects.
 
 1. Install virtualenvwrapper_::
 
@@ -53,7 +58,8 @@ activate the environment at any time.
       mkvirtualenv -p `which python2.7` x84
 
 Anytime you want to load x/84 environment in a new login shell,
-source virtualenvwrapper.sh in step #2 and activate using command::
+source ``virtualenvwrapper.sh`` (as in step #2) and activate using
+command::
 
       workon x84
 
@@ -61,12 +67,11 @@ Install editable version
 ------------------------
 
 Instead of installing x84 as a complete package, we use ``pip`` to install
-an editable version -- this is so that when a modification is done to the
-files in our local directory, they are immediately reflected in the ``x84``
-script which is added to your system ``$PATH`` anytime the virtualenv is
-activated::
+an *editable* version -- this is so that when a modification is done to the
+files in our local project directory, they are immediately reflected in the
+``x84`` server anytime the virtualenv is activated::
 
-   pip install -e .[with_crypto]
+   pip install --editable .[with_crypto]
 
 
 Starting x/84
@@ -75,6 +80,22 @@ Starting x/84
 ::
 
       x84
+
+
+As another user
+---------------
+
+When installing x84 as an *editable* version inside a virtualenv, some
+care must be taken in regards to using sudo and privbind.  This is the
+method used by the default board::
+
+    PYTHON_EGG_CACHE=/tmp/.python-eggs sudo privbind -u nobody -g nogroup `which python` -mx84.engine
+
+The ``\`which python\``` ensures the vitualenv-activated python version
+of the current user is used, and instead of running the ``x84`` script
+which would be not be found in the system path of target user *nobody*,
+we instead load the *x84.engine* module directly.
+
 
 x84 Usage
 ---------
