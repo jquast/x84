@@ -42,12 +42,12 @@ class Lightbar(AnsiWindow):
         :param int height: height of window.
         :param int yloc: y-location of window.
         :param int xloc: x-location of window.
-        :param dict colors: color theme, only key value of ``highlight`` is used.
+        :param dict colors: color theme, only key value of ``highlight``
+                            is used.
         :param dict glyphs: bordering window character glyphs.
         :param dict keyset: command keys, global ``NETHACK_KEYSET`` is
                             used by default, augmented by application
                             keys such as home, end, pgup, etc.
-        :type dict keyset: dict[iterable]
         :param list content: Lightbar content as list of tuples, an empty list
                              is used by default.  Tuples must be in form of
                              ``(key, str)``.  ``key`` may have any suitable

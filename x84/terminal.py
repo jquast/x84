@@ -259,23 +259,18 @@ def start_process(sid, env, CFG, child_pipes, kind, addrport,
     """
     A ``multiprocessing.Process`` target.
 
-    :param sid: string describing session source (usually IP address & port).
-    :type sid: str
-    :param env: dictionary of client environment variables
-                (must contain at least ``'TERM'``).
-    :type env: dict
-    :param CFG: ConfigParser instance of bbs configuration
-    :type CFG: ConfigParser.ConfigParser
-    :param child_pipes: tuple of ``(writer, reader)`` for engine IPC.
-    :type child_pipes: tuple
-    :param kind: what kind of connection as string, ``'telnet'``, ``'ssh'``, etc.
-    :type kind: str
-    :param addrport: ``(client-ip, client-port)`` as string and integer.
-    :typpe addrport: tuple
-    :param matrix_args: optional positional arguments to pass to matrix script.
-    :type matrix_args: tuple
-    :param matrix_kwargs: optional keyward arguments to pass to matrix script.
-    :type matrix_kwargs: dict
+    :param str sid: string describing session source (IP address & port).
+    :param dict env: dictionary of client environment variables
+                     (must contain at least ``'TERM'``).
+    :param ConfigParser.ConfigParser CFG: bbs configuration
+    :param tuple child_pipes: tuple of ``(writer, reader)`` for engine IPC.
+    :param str kind: what kind of connection as string, ``'telnet'``,
+                     ``'ssh'``, etc.
+    :param tuple addrport: ``(client-ip, client-port)`` as string and integer.
+    :param tuple matrix_args: optional positional arguments to pass to matrix
+                              script.
+    :param dict matrix_kwargs: optional keyward arguments to pass to matrix
+                               script.
     """
     import x84.bbs.ini
     from x84.bbs.ipc import make_root_logger

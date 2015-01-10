@@ -70,8 +70,7 @@ class BaseServer(object):
         """
         Return a list of clients with data ready to be receive.
 
-        :type ready_fds: list
-        :param ready_fds: file descriptors already known to be ready
+        :param list ready_fds: file descriptors already known to be ready
         """
         if ready_fds is None:
             # given no file descriptors, we must iterate them all by hand.

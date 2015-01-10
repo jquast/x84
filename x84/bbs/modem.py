@@ -23,7 +23,7 @@ def send_modem(stream, protocol='xmodem1k', retry=16, timeout=30,
            following signature. This is useful for getting
            status updates while a transfer is underway::
 
-               ``def callback(total_count, success_count, error_count)``
+               def callback(total_count, success_count, error_count)
     """
     # get protocol implementation class
     supported_protocols = ('xmodem', 'xmodem1k')
