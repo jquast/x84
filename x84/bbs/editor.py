@@ -139,6 +139,7 @@ class LineEditor(object):
     def process_keystroke(self, keystroke):
         """ Process the keystroke and return string to refresh. """
         self._quit = False
+        keystroke = hasattr(keystroke, 'code') and keystroke.code or keystroke
         if keystroke in self.keyset['refresh']:
             return u'\b' * self._term.length(self.content) + self.refresh()
         elif keystroke in self.keyset['backspace']:
@@ -166,7 +167,8 @@ class LineEditor(object):
         elif type(keystroke) is int:
             return u''
         elif (ord(keystroke) >= ord(' ') and
-                (self._term.length(self.content) < self.width or self.width is None)):
+                (self._term.length(self.content) < self.width
+                 or self.width is None)):
             self.content += keystroke
             return keystroke if not self.hidden else self.hidden
         return u''
@@ -379,6 +381,7 @@ class ScrollingEditor(AnsiWindow):
         """ Process the keystroke and return string to refresh. """
         self._quit = False
         rstr = u''
+        keystroke = hasattr(keystroke, 'code') and keystroke.code or keystroke
         if keystroke in self.keyset['refresh']:
             rstr = self.refresh()
         elif keystroke in self.keyset['backspace']:

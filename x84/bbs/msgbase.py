@@ -98,18 +98,18 @@ class Msg(object):
     @property
     def ctime(self):
         """
-        M.ctime() --> datetime
-
         Datetime message was instantiated
+
+        :rtype: datetime.datetime
         """
         return self._ctime
 
     @property
     def stime(self):
         """
-        M.stime() --> datetime
-
         Datetime message was saved to database
+
+        :rtype: datetime.datetime
         """
         return self._stime
 

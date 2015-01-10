@@ -702,7 +702,7 @@ def launch(dos=None, cp437=True, drop_type=None,
            drop_folder=None, name=None, args='',
            forcesize=None, activity=None, command=None,
            nodes=None, forcesize_func=None, env_term=None):
-    """
+    r"""
     Helper function for launching an external program as a "Door".
 
     the forcesize_func may be overridden if the sysop wants to use
@@ -725,7 +725,8 @@ def launch(dos=None, cp437=True, drop_type=None,
         bin = /usr/bin/dosemu
         home = /home/bbs
         path = /usr/bin:/usr/games:/usr/local/bin
-        opts = -u virtual -f /home/bbs/dosemu.conf -o /home/bbs/dosemu%%#.log %%c 2> /home/bbs/dosemu_boot%%#.log
+        opts = -u virtual -f /home/bbs/dosemu.conf \
+               -o /home/bbs/dosemu%%#.log %%c 2> /home/bbs/dosemu_boot%%#.log
         dropdir = /home/bbs/dos
         nodes = 4
 

@@ -1,6 +1,4 @@
-"""
-Output and Ansi art unicode helpers for x/84, https://github.com/jquast/x84
-"""
+""" Terminal output package for x/84. """
 import warnings
 import inspect
 import random
@@ -15,9 +13,13 @@ from x84.bbs.session import getterminal, getsession
 # 3rd-party
 from sauce import SAUCE
 
-#: A mapping of SyncTerm fonts/code pages to their sequence value.
+#: A mapping of SyncTerm fonts/code pages to their sequence value, for use
+#: as argument ``font_name`` of :func:`syncterm_setfont`.
+#:
 #: Where matching, their python-standard encoding value is used, (fe. 'cp437').
-#: Otherwise, the lower-case named of the font is used. This is derived from,
+#: Otherwise, the lower-case named of the font is used.
+#:
+#: source:
 #: http://cvs.synchro.net/cgi-bin/viewcvs.cgi/*checkout*/src/conio/cterm.txt
 SYNCTERM_FONTMAP = (
     "cp437", "cp1251", "koi8_r", "iso8859_2", "iso8859_4", "cp866",
@@ -30,7 +32,9 @@ SYNCTERM_FONTMAP = (
     "microknight", "topaz",)
 
 #: Translation map for embedded font hints in SAUCE records as documented at
-#: http://www.acid.org/info/sauce/sauce.htm section FontName
+#: http://www.acid.org/info/sauce/sauce.htm section FontName. Used by
+#: :func:`showart` to automatically determine which codepage to be used
+#: by utf8 terminals to provide an approximate translation.
 SAUCE_FONT_MAP = {
     'Amiga MicroKnight':  'amiga',
     'Amiga MicroKnight+': 'amiga',
@@ -62,11 +66,32 @@ for page in (
         'IBM VGA %s' % (page,): codec,
     })
 
+#: simple regular expression for matching simple ansi colors,
+#: for use by :func:`encode_pipe`.
+RE_ANSI_COLOR = re.compile(r'\033\[(\d{2,3})m')
+
 
 def syncterm_setfont(font_name, font_page=0):
-    """ Send SyncTerm-specific terminal sequence for selecting a Font Codepage.
+    """
+    Send SyncTerm's sequence for selecting a "font" codepage.
 
-        Available fonts are described in global constant SYNCTERM_FONTMAP.
+    :param str font_name: any value of :py:const:`SYNCTERM_FONTMAP`.
+    :param int font_page:
+
+    Reference::
+
+        CSI [ p1 [ ; p2 ] ] sp D
+        Font Selection
+        Defaults: p1 = 0  p2 = 0
+        "sp" indicates a single space character.
+        Sets font p1 to be the one indicated by p2.  Currently only the primary
+        font (Font zero) and secondary font (Font one) are supported.  p2 must
+        be between 0 and 255.  Not all output types support font selection.
+        Only X11 and SDL currently do.
+
+    source:
+    http://cvs.synchro.net/cgi-bin/viewcvs.cgi/*checkout*/src/conio/cterm.txt
+
     """
     # font_code is the index of font_name in SYNCTERM_FONTMAP, so that
     # syncterm_setfont('topaz') becomes value 40, and returns sequence
@@ -82,7 +107,11 @@ def syncterm_setfont(font_name, font_page=0):
 
 
 def echo(ucs):
-    """ Display unicode terminal sequence. """
+    """
+    Display unicode terminal sequence.
+
+    :param str ucs: unicode sequence to write to terminal.
+    """
     session = getsession()
     if not isinstance(ucs, unicode):
         warnings.warn('non-unicode: %r' % (ucs,), UnicodeWarning, 2)
@@ -92,12 +121,15 @@ def echo(ucs):
 
 def timeago(secs, precision=0):
     """
-    timago(float[,int])
+    :param int secs: number of seconds "ago".
+    :param int precision: optional decimal precision of returned seconds.
 
-    Pass a duration of time and return human readable shorthand, fe.
+    Pass a duration of time and return human readable shorthand, fe::
 
-    asctime(126.32) -> ' 2m 6s',
-    asctime(70.9999, 2) -> ' 1m 10.99s'
+        >>> asctime(126.32)
+        ' 2m 6s',
+        >>> asctime(70.9999, 2)
+        ' 1m 10.99s'
     """
     # split by days, mins, hours, secs
     years = weeks = days = mins = hours = 0
@@ -117,12 +149,13 @@ def timeago(secs, precision=0):
 
 def decode_pipe(ucs):
     """
-    decode_pipe(ucs) -> unicode
+    Return ucs containing 'pipe codes' with terminal color sequences.
 
-    Return new terminal sequence, replacing 'pipe codes',
-    such as ``u'|03'`` with this terminals equivalent attribute
-    sequence.  These are sometimes known as LORD codes, as they
-    were used in the DOS Door game of the same name.
+    These are sometimes known as LORD codes, as they were used in the DOS Door
+    game of the same name. Compliments :func:`encode_pipe`.
+
+    :param str ucs: string containing 'pipe codes'.
+    :rtype: str
     """
     # simple optimization, no '|' ? exit early!
     if u'|' not in ucs:
@@ -165,25 +198,29 @@ def decode_pipe(ucs):
 
 def encode_pipe(ucs):
     """
-    encode_pipe(ucs) -> unicode
+    Given a string containing ECMA-48 sequence, replace with "pipe codes".
 
-    Return new unicode terminal sequence, replacing EMCA-48 ANSI
-    color sequences with their pipe-equivalent values.
+    These are sometimes known as LORD codes, as they were used in the DOS Door
+    game of the same name. Compliments :func:`decode_pipe`.
+
+    :param str ucs: string containing ECMA-48 sequences.
+    :rtype: str
     """
+    # (dead url ...)
+    # http://wiki.mysticbbs.com/mci_codes
+    #
     # TODO: Support all kinds of terminal color sequences,
     # such as kermit or avatar or some such, something non-emca,
     # upstream blessed project is looking for a SequenceIterator
     # class, https://github.com/jquast/blessed/issues/29
     outp = u''
     nxt = 0
-    ANSI_COLOR = re.compile(r'\033\[(\d{2,3})m')
     for idx in range(0, len(ucs)):
         if idx == nxt:
             # at sequence, point beyond it,
-            match = ANSI_COLOR.match(ucs[idx:])
+            match = RE_ANSI_COLOR.match(ucs[idx:])
             if match:
                 nxt = idx + len(match.group(0))
-                # http://wiki.mysticbbs.com/mci_codes
                 value = int(match.group(1)) - 30
                 if value >= 0 and value <= 60:
                     outp += u'|%02d' % (value,)
@@ -231,6 +268,9 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
     current terminal's width.
 
     """
+    # pylint: disable=R0913,R0914
+    #         Too many arguments
+    #         Too many local variables
     term = getterminal()
 
     # When the given artfile pattern's folder is not absolute, nor relative to

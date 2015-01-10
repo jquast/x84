@@ -63,11 +63,9 @@ class Selector(AnsiWindow):
         self.keyset['exit'].append(term.KEY_ESCAPE)
 
     def process_keystroke(self, keystroke):
-        """
-        Process a keystroke, toggling self.selection and returning string
-        suitable for refresh when changed.
-        """
+        """ Process the keystroke and return string to refresh. """
         self._moved = False
+        keystroke = hasattr(keystroke, 'code') and keystroke.code or keystroke
         if keystroke in self.keyset['refresh']:
             return self.refresh()
         elif keystroke in self.keyset['left']:

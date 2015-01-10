@@ -183,6 +183,7 @@ class Lightbar(AnsiWindow):
         self._vitem_lastidx = self.vitem_idx
         self._vitem_lastshift = self.vitem_shift
         rstr = u''
+        keystroke = hasattr(keystroke, 'code') and keystroke.code or keystroke
         if key in self.keyset['home']:
             rstr = self.move_home()
         elif key in self.keyset['end']:

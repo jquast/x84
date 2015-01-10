@@ -1,8 +1,8 @@
-"""
-Pager class for x/84, http://github.com/jquast/x84/
-"""
+""" Pager package for x/84. """
 from x84.bbs.ansiwin import AnsiWindow
-import logging
+from x84.bbs.output import encode_pipe, decode_pipe
+from x84.bbs.session import getterminal, getch
+from x84.bbs.output import echo
 
 VI_KEYSET = {
     'refresh': [unichr(12), ],
@@ -45,8 +45,7 @@ class Pager(AnsiWindow):
         """
         This initializer sets keys appropriate for navigation.
         """
-        import x84.bbs.session
-        term = x84.bbs.session.getterminal()
+        term = getterminal()
         self.keyset = keyset
         self.keyset['home'].append(term.KEY_HOME)
         self.keyset['end'].append(term.KEY_END)
@@ -117,14 +116,9 @@ class Pager(AnsiWindow):
         return max(0, maximum - self.visible_height)
 
     def process_keystroke(self, keystroke):
-        """
-        Process the keystroke received by run method and return terminal
-        sequence suitable for refreshing when that keystroke modifies the
-        window.
-        """
+        """ Process the keystroke and return string to refresh. """
         self.moved = False
         rstr = u''
-        # convert to integer ... workaround for legacy
         keystroke = hasattr(keystroke, 'code') and keystroke.code or keystroke
         if keystroke in self.keyset['refresh']:
             rstr += self.refresh()
@@ -146,10 +140,13 @@ class Pager(AnsiWindow):
 
     def read(self):
         """
-        Reads input until ESCAPE key is pressed (Blocking).  Returns None.
+        Blocking read-eval-print loop for pager.
+
+        Processes user input, taking action upon and refreshing pager
+        until the escape key is pressed.
+
+        :rtype: None
         """
-        from x84.bbs import getch
-        from x84.bbs.output import echo
         self._quit = False
         echo(self.refresh())
         while not self.quit:
@@ -157,7 +154,9 @@ class Pager(AnsiWindow):
 
     def move_home(self):
         """
-        Scroll to top.
+        Scroll to top and return refresh string.
+
+        :rtype: str
         """
         self.position = 0
         if self.moved:
@@ -166,7 +165,9 @@ class Pager(AnsiWindow):
 
     def move_end(self):
         """
-        Scroll to bottom.
+        Scroll to bottom and return refresh string.
+
+        :rtype: str
         """
         self.position = len(self._content) - self.visible_height
         if self.moved:
@@ -175,21 +176,27 @@ class Pager(AnsiWindow):
 
     def move_pgup(self, num=1):
         """
-        Scroll up ``num`` pages.
+        Scroll up ``num`` pages and return refresh string.
+
+        :rtype: str
         """
         self.position -= (num * (self.visible_height))
         return self.refresh() if self.moved else u''
 
     def move_pgdown(self, num=1):
         """
-        Scroll down ``num`` pages.
+        Scroll down ``num`` pages and return refresh string.
+
+        :rtype: str
         """
         self.position += (num * (self.visible_height))
         return self.refresh() if self.moved else u''
 
     def move_down(self, num=1):
         """
-        Scroll down ``num`` rows.
+        Scroll down ``num`` rows and return refresh string.
+
+        :rtype: str
         """
         self.position += num
         if self.moved:
@@ -198,7 +205,9 @@ class Pager(AnsiWindow):
 
     def move_up(self, num=1):
         """
-        Scroll up ``num`` rows.
+        Scroll up ``num`` rows and return refresh string.
+
+        :rtype: str
         """
         self.position -= num
         if self.moved:
@@ -207,10 +216,11 @@ class Pager(AnsiWindow):
 
     def refresh_row(self, row):
         """
-        Return unicode string suitable for refreshing pager window at
-        visible row.
+        Return unicode string suitable for refreshing pager row.
+
+        :param int row: target row by visible index.
+        :rtype: str
         """
-        from x84.bbs.session import getterminal
         term = getterminal()
         ucs = u''
         if row < len(self.visible_content):
@@ -223,13 +233,16 @@ class Pager(AnsiWindow):
 
     def refresh(self, start_row=0):
         """
-        Return unicode string suitable for refreshing pager window from
-        optional visible content row 'start_row' and downward. This can be
-        useful if only the last line is modified; or in an 'insert' operation,
-        only the last line need be refreshed.
+        Return unicode string suitable for refreshing pager window.
+
+        :param int start_row: refresh from only visible row 'start_row'
+                              and downward. This can be useful if only
+                              the last line is modified; or in an
+                              'insert' operation: only the last line
+                              need be refreshed.
+        :rtype: str
         """
-        import x84.bbs.session
-        term = x84.bbs.session.getterminal()
+        term = getterminal()
         return u''.join(
             [term.normal] + [
                 self.refresh_row(row)
@@ -239,25 +252,30 @@ class Pager(AnsiWindow):
     def update(self, ucs):
         """
         Update content buffer with newline-delimited text.
+
+        :rtype: str
         """
         self.content = ucs
         return self.refresh()
 
     @property
     def content(self):
-        from x84.bbs.output import encode_pipe
+        """
+        Content of pager.
+
+        Return value is "pipe encoded" by :func:`encode_pipe`.
+        :rtype: str
+        """
         return encode_pipe('\r\n'.join(self._content))
 
     @content.setter
     def content(self, ucs_value):
-        from x84.bbs.output import decode_pipe
-        self._content = self.content_wrap(decode_pipe(ucs_value))
+        # pylint: disable=C0111
+        #         Missing method docstring
+        self._content = self._content_wrap(decode_pipe(ucs_value))
 
-    def content_wrap(self, ucs):
-        """
-        Return word-wrapped text ``ucs`` that contains newlines.
-        """
-        from x84.bbs.session import getterminal
+    def _content_wrap(self, ucs):
+        """ Return word-wrapped text ``ucs`` that contains newlines. """
         term = getterminal()
         lines = []
         for line in ucs.splitlines():
@@ -270,7 +288,12 @@ class Pager(AnsiWindow):
     def append(self, ucs):
         """
         Update content buffer with additional line(s) of text.
+
+        "pipe codes" in ``ucs`` are decoded by :func:`decode_pipe`.
+
+        :param str ucs: unicode string to append-to content buffer.
+        :rtype str
+        :return: terminal sequence suitable for refreshing window.
         """
-        from x84.bbs.output import decode_pipe
-        self._content.extend(self.content_wrap(decode_pipe(ucs)))
+        self._content.extend(self._content_wrap(decode_pipe(ucs)))
         return self.move_end() or self.refresh(self.bottom)
