@@ -98,10 +98,10 @@ This has the disadvantage that x84 is unable to identify the originating IP.
 Other Telnet BBS Systems
 ========================
 
-Listed here is software known in the "bbs-scene" as still being actively used, in descending order of their estimated popularity.
+Listed here is software known in the "bbs-scene" as still being actively used, in descending order of their (estimated) popularity.
 
-* mystic_: Pascal, create a sourceforge account to access source code.
 * synchronet_: C formerly commercial, now open source.
+* mystic_: Pascal, create a sourceforge account to access source code.
 * daydream_: C open source.
 * enthral_: C++ open source.
 
@@ -115,8 +115,10 @@ It might best to compare x/84 with the most popularly used surviving BBS systems
 *Process Management*
 
   - All other systems are single process: executed as a "login shell" by xinet.d or similar, they depend on additional 3rd-party systems and distribution packages for telnet or ssh support.
-  - x/84 on the other hand, is a single process that manages the telnet, ssh, sftp, web, and rlogin server.  This means 0-configuration to go online, only toggling the availability of any given service -- it requires no special user accounts or external distribution dependencies other than python and python packages.  This tight integration allows one login by ssh or sftp with your bbs user account and public key and communicate window-size change events.
+  - x/84 on the other hand, is a single process that manages the telnet, ssh, sftp, web, and rlogin server.  This means no additional steps are required to start a working bbs once installed; no special user accounts, xinet.d, or database setup required, only python.
+  - This tight integration allows one to login by ssh or sftp with your bbs user account and public key, for example.  Or to react to and determine window-size changes over telnet and ssh.
   - as a dynamic language, it also allows one to rapidly develop on much of the system without compilation or publishing layer -- simply login again to see the new changes afresh without restarting the server, and without a compilation step.
+  - a "script stack" allows exceptions in scripts to be managed and optionally displayed to the client.  One can rapidly develop a script from the main menu, try it, see an exception such as a SyntaxError thrown, with the traceback and offending line. Then, fix and save changes from your editor, and select the menu option to try it again -- without ever logging off!
 
 
 *Scripting Layer*
@@ -152,7 +154,9 @@ He met `Johannes Lundberg`_ of Sweden who had already began writing his own syst
 
 They grew apart over time with their forks, Johannes providing a new redesign called "The Progressive (PRSV)", which Jeff re-based and began to contribute to when they re-combined efforts years later.  Johannes continually asserted that he would maintain and later release PRSV, but as his involvement wanned, Jeff renamed his fork as x/84, with the intent to merge upstream some day.
 
-x/84 retains only some of the design and basic variables, such as the concept of a session, userbase, and the echo function, but is otherwise completely rewritten by the work of Jeff alone.  x/84 is a re-imagination of the possibilities of authoring a nostalgic text-mode system analogous to those early dial-up systems.  Targeted for, but not limited to, running a bulletin board over the TCP/IP protocol.
+x/84 retains only some of the design and basic variables, such as the concept of a session, userbase, and the echo function, but is otherwise completely rewritten by the work of Jeff alone and since 2013 many contributions over github.
+
+x/84 is a re-imagination of the possibilities of authoring a nostalgic text-mode system analogous to those early dial-up systems.  Targeted for, but not limited to, running a bulletin board over the TCP/IP protocol.  The name x/84 is derived from the theme of an "amiexpress-style system for an Orwellian future".
 
 .. _Jeff Quast: https://jeffquast.com/
 .. _Johannes Lundberg: http://github.com/johannesl/
