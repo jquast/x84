@@ -268,6 +268,7 @@ def main():
             if syncterm_font and term.kind.startswith('ansi'):
                 echo(syncterm_setfont(syncterm_font))
         if dirty:
+            session.activity = 'main menu'
             top_margin = display_banner(art_file, encoding=art_encoding) + 1
             echo(u'\r\n')
             if width != term.width or height != term.height:
