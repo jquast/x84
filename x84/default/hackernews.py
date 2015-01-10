@@ -286,6 +286,7 @@ def main(rss_url=None, rss_title=None):
                 page_height = term.height - 2
                 rendered_articles = render_article_summaries(term, articles)
                 last_width, last_height = term.width, term.height
+                bottom = len(rendered_articles) - 3
 
             # display titlebar
             echo(term.home)
