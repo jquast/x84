@@ -35,13 +35,27 @@ class AnsiWindow(object):
     text alignment
     """
 
-    # pylint: disable=R0902
-    #        Too many instance attributes (8/7)
+    # pylint: disable=R0902,R0913
+    #        Too many instance attributes
+    #        Too many arguments
 
     def __init__(self, height, width, yloc, xloc, colors=None, glyphs=None):
-        """ Constructor class for a simple Window. """
-        # pylint: disable=R0913
-        #         Too many arguments (7/5)
+        """
+        Class constructor for base windowing class.
+
+        :param width: width of window.
+        :type width: int
+        :param height: height of window.
+        :type height: int
+        :param yloc: y-location of window.
+        :type yloc: int
+        :param xloc: x-location of window.
+        :type xloc: int
+        :param colors: color theme, only key value of ``highlight`` is used.
+        :type colors: dict
+        :param glyphs: bordering window character glyphs.
+        :type glyphs: dict
+        """
 
         import warnings
 

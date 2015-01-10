@@ -39,9 +39,17 @@ class LineEditor(object):
                  colors=None, glyphs=None, keyset=None):
         """
         :param width: the maximum input length.
+        :type width: int
         :param content: given default content.
+        :type content: str
+        :param hidden: When non-False, a single 'mask' character for output.
+        :type hidden: str
         :param colors: optional dictionary containing key 'highlight'.
+        :type colors: dict
+        :param glyphs: optional dictionary of window border characters.
+        :type glyphs: dict
         :param keyset: optional dictionary of line editing values.
+        :type keyset: dict
         """
         self._term = getterminal()
         self.content = content or u''
@@ -101,8 +109,9 @@ class LineEditor(object):
     @property
     def hidden(self):
         """
-        When not False, represents a single 'mask' character to hide input
-        with, such as a password prompt
+        When non-False, a single 'mask' character for hiding input.
+
+        Used by password prompts.
         """
         return self._hidden
 
@@ -115,10 +124,7 @@ class LineEditor(object):
 
     @property
     def width(self):
-        """
-        When non-zero, represents the upperbound limit of characters to receive
-        on input until no more characters are accepted.
-        """
+        """ Limit of characters to receive on input. """
         return self._width
 
     @width.setter
@@ -129,7 +135,7 @@ class LineEditor(object):
 
     def refresh(self):
         """
-        Returns unicode suitable for drawing edit line.
+        Return string sequence suitable for refreshing editor.
 
         No movement or positional sequences are returned.
         """
@@ -144,9 +150,7 @@ class LineEditor(object):
         return u''.join((disp_lightbar, content, self._term.cursor_visible))
 
     def process_keystroke(self, keystroke):
-        """
-        Process the keystroke received by read method and take action.
-        """
+        """ Process the keystroke and return string to refresh. """
         self._quit = False
         if keystroke in self.keyset['refresh']:
             return u'\b' * self._term.length(self.content) + self.refresh()
@@ -210,7 +214,18 @@ class ScrollingEditor(AnsiWindow):
 
     def __init__(self, *args, **kwargs):
         """
-        Construct a Line editor at (y,x) location..
+        Class constructor.
+
+        :param width: width of window.
+        :type width: int
+        :param yloc: y-location of window.
+        :type yloc: int
+        :param xloc: x-location of window.
+        :type xloc: int
+        :param colors: color theme, only key value of ``highlight`` is used.
+        :type colors: dict
+        :param glyphs: bordering window character glyphs.
+        :type glyphs: dict
         """
         self._term = getterminal()
         self._horiz_shift = 0
@@ -233,6 +248,7 @@ class ScrollingEditor(AnsiWindow):
         AnsiWindow.__init__(self, *args, **kwargs)
 
     def init_theme(self, colors=None, glyphs=None):
+        """ Set color and bordering glyphs theme. """
         AnsiWindow.init_theme(self, colors, glyphs)
         if 'highlight' not in self.colors:
             self.colors['highlight'] = self._term.yellow_reverse
@@ -240,9 +256,7 @@ class ScrollingEditor(AnsiWindow):
             self.glyphs['strip'] = u'$ '
 
     def init_keystrokes(self, keyset):
-        """
-        This initializer sets keyboard keys for various editing keystrokes.
-        """
+        """ Sets keyboard keys for various editing keystrokes. """
         self.keyset = keyset
         self.keyset['refresh'].append(self._term.KEY_REFRESH)
         self.keyset['backspace'].append(self._term.KEY_BACKSPACE)
@@ -252,25 +266,19 @@ class ScrollingEditor(AnsiWindow):
 
     @property
     def position(self):
-        """
-        Tuple of shift amount and column position of line editor.
-        """
+        """ Tuple of shift amount and column position of line editor. """
         return (self._horiz_shift, self._horiz_pos)
 
     @property
     def eol(self):
-        """
-        Return True when no more input can be accepted (end of line).
-        """
+        """ Whether more input may be accepted (end of line reached). """
         return self._input_length >= self.max_length
 
     @property
     def bell(self):
-        """
-        Returns True when user nears margin and bell has been sounded and
-        carriage has not yet been returned.
-        """
-        margin = int(float(self.visible_width) * (float(self.scroll_pct) * .01))
+        """ Whether the user has neared the margin. """
+        margin = int(float(self.visible_width) *
+                     (float(self.scroll_pct) * .01))
         return bool(self._input_length >= self.visible_width - margin)
 
     @bell.setter
@@ -281,18 +289,12 @@ class ScrollingEditor(AnsiWindow):
 
     @property
     def carriage_returned(self):
-        """
-        Returns True when last keystroke caused carriage to be returned.
-        (KEY_ENTER was pressed)
-        """
+        """ Whether the carriage return character has been handled. """
         return self._carriage_returned
 
     @property
     def quit(self):
-        """
-        Returns: True if a terminating or quit character was handled by
-        process_keystroke(), such as the escape key, or 'q' by default.
-        """
+        """ Whether a 'quit' character has been handled, such as escape. """
         return self._quit
 
     @property
