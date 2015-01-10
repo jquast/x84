@@ -14,6 +14,7 @@ from x84.bbs.ansiwin import AnsiWindow, GLYPHSETS
 from x84.bbs.session import getterminal, getch
 from x84.bbs.output import echo
 
+#: default command-key mapping.
 PC_KEYSET = {'refresh': [unichr(12), ],
              'backspace': [unichr(8), unichr(127), ],
              'backword': [unichr(23), ],
@@ -38,6 +39,8 @@ class LineEditor(object):
     def __init__(self, width=None, content=u'', hidden=False,
                  colors=None, glyphs=None, keyset=None):
         """
+        Class constructor.
+
         :param width: the maximum input length.
         :type width: int
         :param content: given default content.
@@ -64,9 +67,7 @@ class LineEditor(object):
         self.init_theme(colors=colors, glyphs=glyphs)
 
     def init_theme(self, colors=None, glyphs=None, hidden=False):
-        """
-        Initialize colors['highlight'].
-        """
+        """ Set color, bordering glyphs, and hidden attribute theme. """
         # set defaults,
         self.colors = {'highlight': self._term.reverse}
         self.glyphs = GLYPHSETS['thin'].copy()
@@ -80,9 +81,7 @@ class LineEditor(object):
             self.hidden = hidden
 
     def init_keystrokes(self, keyset):
-        """
-        This initializer sets keyboard keys for backspace/exit.
-        """
+        """ Sets keyboard keys for various editing keystrokes. """
         self.keyset = keyset
         self.keyset['refresh'].append(self._term.KEY_REFRESH)
         self.keyset['backspace'].append(self._term.KEY_BACKSPACE)
@@ -92,18 +91,12 @@ class LineEditor(object):
 
     @property
     def quit(self):
-        """
-        Returns: True if a terminating or quit character was handled by
-        process_keystroke(), such as the escape key, or 'q' by default.
-        """
+        """ Whether a 'quit' character has been handled, such as escape. """
         return self._quit
 
     @property
     def carriage_returned(self):
-        """
-        Returns True when last keystroke caused carriage to be returned.
-        (KEY_ENTER was pressed)
-        """
+        """ Whether the carriage return character has been handled. """
         return self._carriage_returned
 
     @property
@@ -187,6 +180,7 @@ class LineEditor(object):
     def read(self):
         """
         Reads input until the ENTER or ESCAPE key is pressed (Blocking).
+
         Allows backspacing. Returns unicode text, or None when canceled.
         """
         self._carriage_returned = False
@@ -208,6 +202,7 @@ class ScrollingEditor(AnsiWindow):
 
     Infinite horizontal scrolling is enabled or limited using max_length.
     """
+
     # pylint: disable=R0902,R0904
     #        Too many instance attributes (14/7)
     #        Too many public methods (33/20)
@@ -226,6 +221,8 @@ class ScrollingEditor(AnsiWindow):
         :type colors: dict
         :param glyphs: bordering window character glyphs.
         :type glyphs: dict
+        :param keyset: command keys, global ``PC_KEYSET`` is used by default.
+        :type keyset: dict[iterable]
         """
         self._term = getterminal()
         self._horiz_shift = 0
@@ -374,6 +371,8 @@ class ScrollingEditor(AnsiWindow):
 
     @max_length.setter
     def max_length(self, value):
+        # pylint: disable=C0111
+        #        Missing docstring
         self._max_length = value
 
     @property
@@ -383,6 +382,8 @@ class ScrollingEditor(AnsiWindow):
 
     @content.setter
     def content(self, value):
+        # pylint: disable=C0111
+        #        Missing docstring
         self._content = value
         self._input_length = self._term.length(value)
 

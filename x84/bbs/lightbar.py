@@ -1,6 +1,4 @@
-"""
-lightbar package for x/84 BBS, http://github.com/jquast/x84
-"""
+""" Lightbar package for x/84. """
 
 # local imports
 from x84.bbs.ansiwin import AnsiWindow
@@ -8,6 +6,7 @@ from x84.bbs.session import getterminal, getch
 from x84.bbs.output import decode_pipe, echo
 
 
+#: default command-key mapping.
 NETHACK_KEYSET = {'home': [u'y', '0'],
                   'end': [u'n', 'G'],
                   'pgup': [u'h', u'b'],
@@ -28,18 +27,44 @@ class Lightbar(AnsiWindow):
     with a list of unicode strings. send keycodes to process_keystroke () to
     interactive with the 'lightbar'.
     """
+
     # pylint: disable=R0902
     #         Too many instance attributes (15/7)
     # pylint: disable=R0904
     #         Too many public methods (29/20)
-    content = list()
-
     def __init__(self, *args, **kwargs):
         """
+        Class constructor.
+
         Initialize a lightbar of height, width, y and x, and position.
+
+        :param width: width of window.
+        :type width: int
+        :param height: height of window.
+        :type height: int
+        :param yloc: y-location of window.
+        :type yloc: int
+        :param xloc: x-location of window.
+        :type xloc: int
+        :param colors: color theme, only key value of ``highlight`` is used.
+        :type colors: dict
+        :param glyphs: bordering window character glyphs.
+        :type glyphs: dict
+        :param keyset: command keys, global ``NETHACK_KEYSET`` is
+                       used by default, augmented by application
+                       keys such as home, end, pgup, etc.
+        :type keyset: dict[iterable]
+        :param content: Lightbar content as list of tuples, an empty list
+                        is used by default.  Tuples must be in form of
+                        ``(key, str)``.  ``key`` may have any suitable
+                        significance for the caller.  ``str``, however,
+                        must be of a unicode terminal sequence.
+        :type content: list[(key, str)]
         """
         self._selected = False
         self._quit = False
+        self.content = kwargs.pop('content', list())
+
         pos = kwargs.pop('position', (0, 0)) or (0, 0)
 
         self.init_keystrokes(
@@ -49,17 +74,13 @@ class Lightbar(AnsiWindow):
         self.position = pos
 
     def init_theme(self, colors=None, glyphs=None):
-        """
-        Initialize color['highlight'].
-        """
+        """ Set color and bordering glyphs theme. """
         colors = colors or {'highlight': getterminal().reverse_yellow}
         glyphs = glyphs or {'strip': u' $'}
         AnsiWindow.init_theme(self, colors, glyphs)
 
     def init_keystrokes(self, keyset):
-        """
-        This initializer sets keyboard keys for various editing keystrokes.
-        """
+        """ Sets keyboard keys for various editing keystrokes. """
         term = getterminal()
         self.keyset = keyset
         self.keyset['home'].append(term.KEY_HOME)
@@ -72,10 +93,10 @@ class Lightbar(AnsiWindow):
         self.keyset['exit'].append(term.KEY_ESCAPE)
 
     def update(self, keyed_uchars=None):
-        """
-        Replace content of lightbar with iterable of aribitrary (key, unicode).
-        unicode is displayed to the user, and key can be used for any
-        programming purposes, such as sorting or identifying.
+        """ Replace content with with sequence of (key, str).
+
+        ``key`` may have any suitable significance for the caller.  ``str``,
+        however, must be of a unicode terminal sequence.
         """
         if keyed_uchars is None:
             keyed_uchars = (None, u'',)
@@ -83,7 +104,8 @@ class Lightbar(AnsiWindow):
         self.position = (self.vitem_idx, self.vitem_shift)
 
     def refresh_row(self, row):
-        """
+        """ Return string sequence suitable for refreshing current selection.
+
         Return unicode byte sequence suitable for moving to location ypos of
         window-relative row, and displaying any valid entry there, or using
         glyphs['erase'] if out of bounds. Strings are ansi color safe, and
@@ -137,24 +159,17 @@ class Lightbar(AnsiWindow):
                          term.normal,))
 
     def fixate(self):
-        """
-        Return terminal sequence for moving cursor to current selection.
-        """
+        """ Return string sequence suitable for "fixating" cursor position. """
         return self.pos(self.ypadding + self.vitem_idx,
                         self.xpadding + self.visible_width)
 
     def refresh(self):
-        """
-        Refresh full lightbar window contents
-        """
+        """ Return string sequence suitable for refreshing lightbar. """
         return u''.join(self.refresh_row(ypos) for ypos in
                         range(max(self.visible_bottom, self.visible_height)))
 
     def refresh_quick(self):
-        """
-        Redraw only the 'dirty' portions after a 'move' has occurred;
-        otherwise redraw entire contents (page has shifted).
-        """
+        """ Redraw only the 'dirty' portions after a 'move' has occurred. """
         if self.moved:
             if (self._vitem_lastshift != self.vitem_shift):
                 # page shift, refresh entire page
@@ -169,9 +184,7 @@ class Lightbar(AnsiWindow):
         return u''
 
     def process_keystroke(self, key):
-        """
-        Process the keystroke received by run method and take action.
-        """
+        """ Process the keystroke and return string to refresh. """
         self._moved = False
         self._selected = False
         self._vitem_lastidx = self.vitem_idx
@@ -198,7 +211,8 @@ class Lightbar(AnsiWindow):
     def read(self):
         """
         Reads input until the ENTER or ESCAPE key is pressed (Blocking).
-        Allows backspacing. Returns unicode text, or None when canceled.
+
+        Returns selection content, or None when canceled.
         """
         self._selected = False
         self._quit = False
@@ -211,47 +225,34 @@ class Lightbar(AnsiWindow):
 
     @property
     def quit(self):
-        """
-        Returns: True if a terminating or quit character was handled by
-        process_keystroke(), such as the escape key, or 'q' by default.
-        """
+        """ Whether a 'quit' character has been handled, such as escape. """
         return self._quit
 
     @property
     def index(self):
-        """
-        Selected index of self.content
-        """
+        """ Selected index of self.content. """
         return self.vitem_shift + self.vitem_idx
 
     @property
     def at_bottom(self):
-        """
-        Returns True if current selection is last in list
-        """
+        """ Whether current selection is pointed at final entry. """
         return self.index == len(self.content) - 1
 
     @property
     def at_top(self):
-        """
-        Returns True if current selection is first in list
-        """
+        """ Whether current selection is pointed at the first entry. """
         return self.index == 0
 
     @property
     def selection(self):
-        """
-        Selected content of self.content by index
-        """
+        """ Selected content of self.content by index. """
         return (self.content[self.index]
                 if self.index >= 0 and self.index < len(self.content)
                 else (None, None))
 
     @property
     def selected(self):
-        """
-        Returns True when keyset['enter'] key detected in process_keystroke
-        """
+        """  Whether carriage return was detected by process_keystroke. """
         return self._selected
 
     @selected.setter
@@ -264,16 +265,16 @@ class Lightbar(AnsiWindow):
 
     @property
     def last_index(self):
-        """
-        Previously selected index of self.content
-        """
+        """ Previously selected index of self.content. """
         return self._vitem_lastshift + self._vitem_lastidx
 
     @property
     def position(self):
         """
-        Tuple pair (row, page). 'row' is index from top of window,
-        and 'page' is number of page items scrolled.
+        Tuple pair (row, page).
+
+        ``row`` is the index from top of window, and 'page' is number of page
+        items scrolled.
         """
         return (self.vitem_idx, self.vitem_shift)
 
@@ -286,19 +287,13 @@ class Lightbar(AnsiWindow):
 
     @property
     def visible_content(self):
-        """
-        Returns content that is visible in window
-        """
-        # pylint: disable=W0612
-        #        Unused variable 'item'
-        item, shift = self.position
+        """ Returns visible content only. """
+        _, shift = self.position
         return self.content[shift:shift + self.visible_height]
 
     @property
     def visible_bottom(self):
-        """
-        Visible bottom-most item of lightbar.
-        """
+        """ Visible bottom-most item of lightbar. """
         if self.vitem_shift + (self.visible_height - 1) > len(self.content):
             return len(self.content)
         else:
@@ -307,17 +302,18 @@ class Lightbar(AnsiWindow):
     @property
     def vitem_idx(self):
         """
+        Relative visible item index within view.
+
         Index of selected item relative by index to only the length of the list
         that is visible, without accounting for scrolled content.
         """
-        # pylint: disable=C0111
-        #         Missing docstring
-        return self._vitem_idx
+        return self._vitem_idx if hasattr(self, '_vitem_idx') else -1
 
     @vitem_idx.setter
     def vitem_idx(self, value):
-        # pylint: disable=C0111
-        #        Missing docstring
+        # pylint: disable=C0111,E0203
+        #         Missing docstring
+        #         Access to member '_vitem_idx' before its definition line
         if hasattr(self, '_vitem_idx') and self._vitem_idx != value:
             self._vitem_lastidx = self._vitem_idx
             self._moved = True
@@ -330,17 +326,17 @@ class Lightbar(AnsiWindow):
     def vitem_shift(self):
         """
         Index of top-most item in viewable window, non-zero when scrolled.
+
         This value effectively represents the number of items not in view
         due to paging.
         """
-        # pylint: disable=C0111
-        #         Missing docstring
-        return self._vitem_shift
+        return self._vitem_shift if hasattr(self, '_vitem_shift') else -1
 
     @vitem_shift.setter
     def vitem_shift(self, value):
-        # pylint: disable=C0111
-        #        Missing docstring
+        # pylint: disable=C0111,E0203
+        #         Missing docstring
+        #         Access to member '_vitem_idx' before its definition line
         if hasattr(self, '_vitem_shift') and self._vitem_shift != value:
             self._vitem_lastshift = self._vitem_shift
             self._moved = True
@@ -350,9 +346,7 @@ class Lightbar(AnsiWindow):
         self._vitem_shift = value
 
     def _chk_bounds(self):
-        """
-        Shift pages and selection until a selection is within bounds
-        """
+        """ Shift pages and selection until selection is within bounds. """
         # if selected item is out of range of new list, then scroll to last
         # page, and move selection to end of screen,
         if self.vitem_shift and (self.index + 1) > len(self.content):
@@ -372,9 +366,7 @@ class Lightbar(AnsiWindow):
             self.vitem_idx -= 1
 
     def move_down(self):
-        """
-        Move selection down one row.
-        """
+        """ Move selection down one row. """
         if self.at_bottom:
             # bounds check
             return u''
@@ -387,9 +379,7 @@ class Lightbar(AnsiWindow):
         return self.refresh_quick()
 
     def goto(self, index):
-        """
-        Move selection to index of lightbar content.
-        """
+        """ Move selection to given index. """
         assert index >= 0 and index < len(self.content)
         row, shift = self.position
         while (row + shift) < index:
@@ -406,9 +396,7 @@ class Lightbar(AnsiWindow):
         return self.refresh_quick()
 
     def move_up(self):
-        """
-        Move selection up one row.
-        """
+        """ Move selection up one row. """
         if self.at_top:
             # bounds check
             return u''
@@ -421,9 +409,7 @@ class Lightbar(AnsiWindow):
         return self.refresh_quick()
 
     def move_pagedown(self):
-        """
-        Move selection down one page.
-        """
+        """ Move selection down one page. """
         if len(self.content) < self.visible_height:
             # move to last entry
             if self.vitem_idx == len(self.content) - 1:
@@ -442,9 +428,7 @@ class Lightbar(AnsiWindow):
         return self.refresh_quick()
 
     def move_pageup(self):
-        """
-        Move selection up one page.
-        """
+        """ Move selection up one page. """
         if len(self.content) < self.visible_height - 1:
             self.vitem_idx = 0
         if self.vitem_shift - self.visible_height > 0:
@@ -459,9 +443,7 @@ class Lightbar(AnsiWindow):
         return self.refresh_quick()
 
     def move_home(self):
-        """
-        Move selection to the very top and first entry of the list.
-        """
+        """ Move selection to the first entry. """
         if (0, 0) == (self.vitem_idx, self.vitem_shift):
             return u''  # already at home
         self.vitem_idx = 0
@@ -469,9 +451,7 @@ class Lightbar(AnsiWindow):
         return self.refresh_quick()
 
     def move_end(self):
-        """
-        Move selection to the very last and final entry of the list.
-        """
+        """ Move selection to the final entry. """
         if len(self.content) < self.visible_height:
             if self.vitem_idx == len(self.content) - 1:
                 return u''  # already at end

@@ -1,18 +1,22 @@
-"""
-msgbase package for x/84, https://github.com/jquast/x84
-"""
+""" Messaging database package for x/84. """
 # std imports
 import datetime
 import logging
 
 # local
 from x84.bbs.dbproxy import DBProxy
+from x84.bbs.session import getsession
+from x84.bbs.ini import get_ini, CFG
 
 # 3rd party
 import dateutil.tz
 
 MSGDB = 'msgbase'
 TAGDB = 'tags'
+
+# TODO(jquast, maze): Use modeling to construct rfc-compliant mail messaging
+# formats.  It would be possible to use standard mbox-formatted mail boxes,
+# and integrate with external systems.  This is a v3.0 release.
 
 
 def to_localtime(tm_value):
@@ -35,29 +39,24 @@ def to_utctime(tm_value):
 
 
 def get_origin_line():
-    """ pull the origin line from config """
-    from x84.bbs import get_ini
+    """ Return ``origin`` configuration item of ``[msg]`` section. """
     return get_ini(section='msg', key='origin_line') or (
         'Sent from {0}'.format(
             get_ini(section='system', key='bbsname')))
 
 
 def format_origin_line():
-    """ format the origin line in preparation for appending to a message """
+    """ Format origin line for message quoting. """
     return u''.join((u'\r\n---\r\n', get_origin_line()))
 
 
 def get_msg(idx=0):
-    """
-    Return Msg record instance by index ``idx``.
-    """
+    """ Return Msg record instance by index ``idx``. """
     return DBProxy(MSGDB)['%d' % int(idx)]
 
 
 def list_msgs(tags=None):
-    """
-    Return set of Msg keys matching 1 or more ``tags``, or all.
-    """
+    """ Return set of indicies matching ``tags``, or all by default. """
     if tags is not None and 0 != len(tags):
         msgs = set()
         db_tag = DBProxy(TAGDB)
@@ -68,9 +67,7 @@ def list_msgs(tags=None):
 
 
 def list_tags():
-    """
-    Return set of available tags.
-    """
+    """ Return set of available tags. """
     return [_tag.decode('utf8') for _tag in DBProxy(TAGDB).keys()]
 
 
@@ -95,10 +92,9 @@ class Msg(object):
     explicitly set, but children are automatically populated into 'threads' of
     messages replied to through the send() method.
     """
+
     # pylint: disable=R0902
     #         Too many instance attributes
-    idx = None
-
     @property
     def ctime(self):
         """
@@ -118,13 +114,11 @@ class Msg(object):
         return self._stime
 
     def __init__(self, recipient=None, subject=u'', body=u''):
-        from x84.bbs.session import getsession
         self.author = None
         session = getsession()
         if session:
             self.author = session.handle
 
-        # msg attributes (todo: create method ..)
         self._ctime = datetime.datetime.now()
         self._stime = None
         self.recipient = recipient
@@ -133,22 +127,24 @@ class Msg(object):
         self.tags = set()
         self.children = set()
         self.parent = None
+        self.idx = None
 
     def save(self, send_net=True, ctime=None):
         """
-        Save message in 'Msgs' sqlite db, and record index in 'tags' db.
-        """
-        from x84.bbs.ini import CFG
-        from x84.bbs import getsession
+        Save message to database, recording 'tags' db.
 
+        As a side-effect, it may queue message for delivery to
+        external systems, when configured.
+        """
+        # pylint: disable=W1202
+        #         Use % formatting in logging functions ...
+        log = logging.getLogger(__name__)
         session = getsession()
         use_session = bool(session is not None)
-        log = logging.getLogger(__name__)
         new = self.idx is None or self._stime is None
 
         # persist message record to MSGDB
-        db_msg = DBProxy(MSGDB, use_session=use_session)
-        with db_msg:
+        with DBProxy(MSGDB, use_session=use_session) as db_msg:
             if new:
                 self.idx = max(map(int, db_msg.keys()) or [-1]) + 1
                 if ctime is not None:
@@ -159,8 +155,7 @@ class Msg(object):
             db_msg['%d' % (self.idx,)] = self
 
         # persist message idx to TAGDB
-        db_tag = DBProxy(TAGDB, use_session=use_session)
-        with db_tag:
+        with DBProxy(TAGDB, use_session=use_session) as db_tag:
             for tag in db_tag.keys():
                 msgs = db_tag[tag]
                 if tag in self.tags and self.idx not in msgs:
@@ -203,9 +198,7 @@ class Msg(object):
                     self=self))
 
     def queue_for_network(self):
-        " Queue message for networks, hosting or sending. "
-        from x84.bbs import get_ini
-
+        """ Queue message for networks, hosting or sending. """
         log = logging.getLogger(__name__)
 
         # server networks this server is a member of,
@@ -222,11 +215,12 @@ class Msg(object):
 
         # check all tags of message; if they match a message network,
         # either record for hosting servers, or schedule for delivery.
+        # pylint: disable=W1202
+        #         Use % formatting in logging functions ...
         for tag in self.tags:
             # message is for a network we host
             if tag in my_networks:
-                transdb = DBProxy('{0}trans'.format(tag))
-                with transdb:
+                with DBProxy('{0}trans'.format(tag)) as transdb:
                     self.body = u''.join((self.body, format_origin_line()))
                     self.save()
                     transdb[self.idx] = self.idx
@@ -235,8 +229,7 @@ class Msg(object):
 
             # message is for a another network, queue for delivery
             elif tag in member_networks:
-                queuedb = DBProxy('{0}queues'.format(tag))
-                with queuedb:
+                with DBProxy('{0}queues'.format(tag)) as queuedb:
                     queuedb[self.idx] = tag
                 log.info('[{tag}] Message (msgid {self.idx}) queued '
                          'for delivery'.format(tag=tag, self=self))

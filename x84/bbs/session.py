@@ -12,12 +12,10 @@ import os
 
 # local
 from x84.bbs.exception import Disconnected, Goto
+from x84.bbs.script_def import Script
 
 #: singleton representing the session connected by current process
 SESSION = None
-
-#: Defines a target script name, positional, and keyword arguments.
-Script = collections.namedtuple('Script', ['name', 'args', 'kwargs'])
 
 
 def getsession():

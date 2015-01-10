@@ -1,5 +1,10 @@
 """ Ansi Windowing package for x/84. """
+# std imports
+import warnings
+
+# local
 from x84.bbs.session import getterminal
+
 
 GLYPHSETS = {
     'ascii': {
@@ -56,9 +61,6 @@ class AnsiWindow(object):
         :param glyphs: bordering window character glyphs.
         :type glyphs: dict
         """
-
-        import warnings
-
         self.height = height
         self.width = width
         self.yloc = yloc

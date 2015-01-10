@@ -1,6 +1,5 @@
-"""
- Configuration for x/84 BBS, https://github.com/jquast/x84/
-"""
+""" Configuration package x/84. """
+# std imports
 from __future__ import print_function
 import logging.config
 import ConfigParser
@@ -21,19 +20,16 @@ CFG = None
 
 def init(lookup_bbs, lookup_log):
     """
-    Initialize global 'CFG' variable, a singleton to contain bbs properties and
-    settings across all modules, as well as the logger. Each variable is tuple
-    lookup path of in-order preferences for .ini files.
+    Initialize global 'CFG' variable, a singleton to contain bbs settings.
 
-    If none our found, defaults are initialized, and the last item of each
-    tuple is created.
+    Each variable (``lookup_bbs``, ``lookup_log``) is tuple lookup path of
+    in-order preferences for .ini files.  If none are found, defaults are
+    initialized, and the last item of each tuple is created.
     """
     log = logging.getLogger(__name__)
 
     def write_cfg(cfg, filepath):
-        """
-        Write Config to filepath.
-        """
+        """ Write Config to filepath. """
         if not os.path.exists(os.path.dirname(os.path.expanduser(filepath))):
             dir_name = os.path.dirname(os.path.expanduser(filepath))
             print('Creating folder {0}'.format(dir_name))
@@ -64,7 +60,7 @@ def init(lookup_bbs, lookup_log):
                 log.warn(err)
         try:
             write_cfg(cfg_log, cfg_logfile)
-            log.info('Saved {0}'.format(cfg_logfile))
+            log.info('Saved %s', cfg_logfile)
         except IOError as err:
             log.error(err)
         logging.config.fileConfig(cfg_logfile)
@@ -90,7 +86,7 @@ def init(lookup_bbs, lookup_log):
                 log.warn(err)
         try:
             write_cfg(cfg_bbs, cfg_bbsfile)
-            log.info('Saved {0}'.format(cfg_bbsfile))
+            log.info('Saved %s', cfg_bbsfile)
         except IOError as err:
             log.error(err)
 
@@ -126,6 +122,8 @@ def init_bbs_ini():
     cfg_bbs.set('system', 'timeout', '1984')
 
     try:
+        # pylint: disable=W0612
+        #         Unused variable 'bcrypt'
         import bcrypt  # NOQA
     except ImportError:
         cfg_bbs.set('system', 'password_digest', 'internal')
@@ -141,7 +139,6 @@ def init_bbs_ini():
     # 'ansi' can changed to any other value; so we could be
     # unidirectional: a value of 'ansi' will translate ansi-bbs -> ansi,
     # and a value of 'ansi-bbs' will translate ansi -> ansi-bbs.
-    ## cfg_bbs.set('system', 'termcap-ansi', 'ansi-bbs')
     cfg_bbs.set('system', 'termcap-ansi', 'ansi')
     # change 'unknown' termcaps to 'ansi': for dumb terminals
     cfg_bbs.set('system', 'termcap-unknown', 'ansi')
@@ -159,11 +156,12 @@ def init_bbs_ini():
 
     cfg_bbs.add_section('ssh')
     try:
-        import x84.ssh  # NOQA
+        # pylint: disable=W0612
+        #         Unused variable 'x84'
+        import x84.ssh  # noqa
         cfg_bbs.set('ssh', 'enabled', 'yes')
     except ImportError:
         cfg_bbs.set('ssh', 'enabled', 'no')
-        pass
     cfg_bbs.set('ssh', 'addr', '127.0.0.1')
     cfg_bbs.set('ssh', 'port', '6022')
     cfg_bbs.set('ssh', 'hostkey', os.path.expanduser(
@@ -281,9 +279,7 @@ def init_bbs_ini():
 
 
 def init_log_ini():
-    """
-    Returns ConfigParser instance of logger defaults
-    """
+    """ Return ConfigParser instance of logger defaults. """
     cfg_log = ConfigParser.RawConfigParser()
     cfg_log.add_section('formatters')
     cfg_log.set('formatters', 'keys', 'default')

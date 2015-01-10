@@ -109,6 +109,7 @@ class DBProxy(object):
 
     def __enter__(self):
         self.acquire()
+        return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.release()
@@ -185,6 +186,6 @@ class DBProxy(object):
 
     def copy(self):
         # https://github.com/piskvorky/sqlitedict/issues/20
-        # should we have a .copy() method? @jquast
+        # @jquast: should sqlitedict have a .copy() method? "no."
         return dict(self.proxy_method('items'))
     copy.__doc__ = dict.copy.__doc__

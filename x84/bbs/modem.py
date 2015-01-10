@@ -42,6 +42,7 @@ def send_modem(stream, protocol='xmodem1k', retry=16, timeout=30,
     session = getsession()
 
     def getc(size, timeout=10):
+        """ Callback function for (X)Modem interface. """
         val = b''
         while len(val) < size:
             next_val = session.read_event('input', timeout=timeout)
@@ -53,6 +54,9 @@ def send_modem(stream, protocol='xmodem1k', retry=16, timeout=30,
         return val[:size] or None
 
     def putc(data, timeout=10):
+        # pylint: disable=W0613
+        #         Unused argument 'timeout'
+        """ Callback function for (X)Modem interface. """
         session.write(data.decode('iso8859-1'), 'iso8859-1')
 
     modem = Modem(getc, putc)
@@ -89,6 +93,7 @@ def recv_modem(stream, protocol='xmodem1k', retry=16, timeout=30):
     session = getsession()
 
     def getc(size, timeout=10):
+        """ Callback function for (X)Modem interface. """
         val = b''
         while len(val) < size:
             next_val = session.read_event('input', timeout=timeout)
@@ -100,6 +105,9 @@ def recv_modem(stream, protocol='xmodem1k', retry=16, timeout=30):
         return val[:size] or None
 
     def putc(data, timeout=10):
+        """ Callback function for (X)Modem interface. """
+        # pylint: disable=W0613
+        #         Unused argument 'timeout'
         session.write(data.decode('iso8859-1'), 'iso8859-1')
 
     modem = Modem(getc, putc)

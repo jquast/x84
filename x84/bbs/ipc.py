@@ -1,4 +1,4 @@
-""" Session IPC for x/84. """
+""" Session IPC package for x/84. """
 # std imports
 import logging
 
@@ -8,8 +8,11 @@ from x84.bbs.session import getsession
 
 def make_root_logger(out_queue):
     """
-    Remove any existing handlers of the current process, and
-    re-address the root logging handler to an IPC output event queue
+    Remove and re-address the root logging handler.
+
+    Any existing handlers of the current process are removed and
+    the root logger is re-address to send via an IPC output event
+    queue.
     """
     root = logging.getLogger()
     map(root.removeHandler, root.handlers)
@@ -19,18 +22,20 @@ def make_root_logger(out_queue):
 class IPCLogHandler(logging.Handler):
 
     """
-    Log handler that sends the log up the 'event pipe'. This is a rather novel
-    solution that seems overlooked in documentation or exisiting code, try it!
+    Log handler that sends the log up the 'event pipe'.
+
+    This is a rather novel solution that seems overlooked in documentation,
+    a forked process must have some method to propagate its logging records
+    up through the main process, otherwise they are lost.
     """
-    _session = None
 
     def __init__(self, out_queue):
-        """ Constructor method, requires multiprocessing.Pipe """
+        """ Constructor method, requires multiprocessing.Pipe. """
         logging.Handler.__init__(self)
         self.oqueue = out_queue
 
     def emit(self, record):
-        """ emit log record via IPC output queue. """
+        """ Emit log record via IPC output queue. """
         try:
             e_inf = record.exc_info
             if e_inf:
@@ -43,18 +48,19 @@ class IPCLogHandler(logging.Handler):
             self.oqueue.send(('logger', record))
         except (KeyboardInterrupt, SystemExit):
             raise
-        except:
+        except Exception:
             self.handleError(record)
 
 
 class IPCStream(object):
 
     """
-    Connect blessed.Terminal argument 'stream' to 'writer' queue, a
-    ``multiprocessing.Pipe`` whose master-side is polled for output
-    in x84.engine.
+    Connect blessed.Terminal argument 'stream' to 'writer' queue.
 
-    Only the write() method of this "stream" is called by blessed.
+    The ``writer`` queue is a ``multiprocessing.Pipe`` whose master-side
+    is polled for output in x84.engine.  Only the ``write()`` method of
+    this "stream" and ``is_a_tty`` attribute is called or evaluated by
+    blessed.Terminal.  The attribute ``is_a_tty`` is mocked as ``True``.
     """
 
     def __init__(self, writer):
