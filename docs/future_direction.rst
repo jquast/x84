@@ -13,5 +13,7 @@ basic v3.0 roadmap:
   this was supported in previous versions, but dropped due to blessed's
   requirements of requiring a unique process for each terminal.
 * start as daemon (-d)
+* Convert messaging to data modeling format (schematics?) and rfc-compliant
+  mail messaging.
 
 Feel free to contribute ideas as a github issue.
