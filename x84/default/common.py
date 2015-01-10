@@ -33,7 +33,7 @@ def display_banner(filepattern, encoding=None, vertical_padding=0):
     term = getterminal()
 
     # move to bottom of screen, reset attribute
-    echo(term.pos(term.height) + term.normal)
+    echo(term.move(term.height, 0) + term.normal)
 
     # create a new, empty screen
     echo(u'\r\n' * (term.height + 1))
@@ -123,8 +123,7 @@ def prompt_pager(content, line_no=0, colors=None, width=None, breaker=u'- '):
     inp = LineEditor(0, colors=colors).read()
 
 
-def prompt_input(term, key, content=u'',
-                 sep_ok=u'::', sep_bad=u'::',
+def prompt_input(term, key, content=u'', sep_ok=u'::',
                  width=None, colors=None):
     """ Prompt for and return input, up to given width and colorscheme.
     """
