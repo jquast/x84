@@ -26,6 +26,7 @@ from x84.bbs.userbase import list_users
 
 
 class Dropfile(object):
+
     """
     Dropfile export class.
 
@@ -36,6 +37,7 @@ class Dropfile(object):
     > information to doors; this was usually done with "dropfiles", small binary
     > or text files dropped into known locations in the BBS's file system.
     """
+
     #: Dropfile type constants
     (DOORSYS, DOOR32, CALLINFOBBS, DORINFO) = range(4)
 
@@ -139,7 +141,7 @@ class Dropfile(object):
 
     @property
     def password(self):
-        """ User's password (not known, always ``<encrypted>``). """
+        """ Password of user. """
         return '<encrypted>'
 
     @property
@@ -340,27 +342,48 @@ class Dropfile(object):
 
 class Door(object):
 
-    """
-    Spawns a subprocess and pipes input and output over bbs session.
-    """
+    """ Spawns a subprocess and pipes input and output over bbs session. """
 
-    # pylint: disable=R0903,R0913
-    #        Too few public methods
-    #        Too many arguments
     time_ipoll = 0.05
     time_opoll = 0.05
     blocksize = 7680
     master_fd = None
+    # pylint: disable=R0903,R0913
+    #        Too few public methods
+    #        Too many arguments
 
     def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
                  env_term=None, env_path=None, env_home=None, cp437=False,
                  env=None):
         """
-        cmd, args = argv[0], argv[1:]
-        lang, term, and env_path become LANG, TERM, and PATH environment
-        variables. When env_term is None, the session terminal type is used.
-        When env_path is None, the .ini 'env_path' value of section [door] is
-        used.  When env_home is None, $HOME of the main process is used.
+        Class constructor.
+
+        :param cmd: full path of command to execute.
+        :type cmd: str
+        :param args: command arguments as tuple.
+        :type args: tuple
+        :param env_lang: exported as environment variable LANG.
+        :type env_lang: str
+        :param env_term: exported as environment variable TERM.  When
+                         unspecified, it is determined by the same
+                         TERM value the original blessed.Terminal instance
+                         used.
+        :type env_term: str
+        :param env_path: exported as environment variable PATH.
+                         When None (default), the .ini 'env_path'
+                         value of section [door] is
+        :type env_path: str
+        :param env_home: exported as environment variable HOME.  When env_home
+                         is None, the environment value of the main process is
+                         used.
+        :type env_home: str
+        :param cp437: When true, forces decoding of external program as
+                      codepage 437.  This is the most common encoding used
+                      by DOS doors.
+        :param env: Additional environment variables to extend to the sub-process.
+        :type env: dict
+        :type cp437: bool
+
         """
         self._session, self._term = getsession(), getterminal()
         self.cmd = cmd
@@ -371,18 +394,9 @@ class Door(object):
         else:
             raise ValueError('args must be tuple or list')
         self.env_lang = env_lang
-        if env_term is None:
-            self.env_term = self._session.env.get('TERM')
-        else:
-            self.env_term = env_term
-        if env_path is None:
-            self.env_path = get_ini('door', 'path')
-        else:
-            self.env_path = env_path
-        if env_home is None:
-            self.env_home = os.getenv('HOME')
-        else:
-            self.env_home = env_home
+        self.env_term = env_term or self._term.kind
+        self.env_path = env_path or get_ini('door', 'path')
+        self.env_home = env_home or os.getenv('HOME')
         self.env = env or {}
         self.cp437 = cp437
         self._utf8_decoder = codecs.getincrementaldecoder('utf8')()
@@ -412,6 +426,8 @@ class Door(object):
                     'LINES': str(self._term.height),
                     'COLUMNS': str(self._term.width),
                     })
+        # pylint: disable=W1202
+        #         Use % formatting in logging functions ...
         logger.debug('os.execvpe(cmd={self.cmd}, args={self.args}, '
                      'env={self.env}'.format(self=self))
         try:
@@ -486,7 +502,6 @@ class Door(object):
         constructor, convert to utf8 glyphs using cp437 encoding;
         otherwise decode output naturally as utf8.
         """
-
         if self.cp437:
             # cp437 bytes don't need to be incrementally decoded, each
             # byte is always final.
@@ -494,13 +509,14 @@ class Door(object):
 
         # utf-8, however, may be read mid-stream of a multibyte sequence.
         decoded = list()
-        for num, byte in enumerate(data):
+        for byte in data:
             ucs = self._utf8_decoder.decode(byte, final=False)
             if ucs is not None:
                 decoded.append(ucs)
         return u''.join(decoded)
 
     def resize(self):
+        """ Signal resize of terminal to pty. """
         import termios
         import fcntl
         logger = logging.getLogger()
@@ -513,9 +529,7 @@ class Door(object):
         fcntl.ioctl(self.master_fd, termios.TIOCSWINSZ, _bytes)
 
     def _loop(self):
-        """
-        Poll input and outpout of ptys,
-        """
+        """ Main event loop, polling i/o of pty and session. """
         # pylint: disable=R0914
         #         Too many local variables (21/15)
         logger = logging.getLogger()
@@ -586,9 +600,41 @@ class DOSDoor(Door):
                        r'|\d+;\d+r'
                        r'|1;1H\033\[\dM)')
     START_BLOCK = 4.0
+    # pylint: disable=R0913
+    #         Too many arguments
 
     def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
-                 env_term=None, env_path=None, env_home=None, cp437=False):
+                 env_term=None, env_path=None, env_home=None, cp437=True):
+        """
+        Class constructor.
+
+        :param cmd: full path of command to execute.
+        :type cmd: str
+        :param args: command arguments as tuple.
+        :type args: tuple
+        :param env_lang: exported as environment variable LANG.
+        :type env_lang: str
+        :param env_term: exported as environment variable TERM.  When
+                         unspecified, it is determined by the same
+                         TERM value the original blessed.Terminal instance
+                         used.
+        :type env_term: str
+        :param env_path: exported as environment variable PATH.
+                         When None (default), the .ini 'env_path'
+                         value of section [door] is
+        :type env_path: str
+        :param env_home: exported as environment variable HOME.  When env_home
+                         is None, the environment value of the main process is
+                         used.
+        :type env_home: str
+        :param cp437: When true, forces decoding of external program as
+                      codepage 437.  This is the most common encoding used
+                      by DOS doors.
+        :param env: Additional environment variables to extend to the
+                    sub-process.
+        :type env: dict
+        :type cp437: bool
+        """
         Door.__init__(self, cmd, args, env_lang, env_term,
                       env_path, env_home, cp437)
         self.check_winsize()
@@ -632,13 +678,15 @@ class DOSDoor(Door):
 
     def run(self):
         """
-        Begin door execution. pty.fork() is called, child process
-        calls execvpe() while the parent process pipes telnet session
-        IPC data to and from the slave pty until child process exits.
+        Begin door execution.
 
-        On exit, DOSDoor flushes any keyboard input; DOSEMU appears to
-        send various terminal reset sequences that may cause a reply to
-        be received on input, and later as an invalid menu command.
+        pty.fork() is called, child process calls execvpe() while the parent
+        process pipes telnet session IPC data to and from the slave pty until
+        child process exits.
+
+        On exit, DOSDoor flushes any keyboard input; DOSEMU appears to send
+        various terminal reset sequences that may cause a reply to be received
+        on input, and later as an invalid menu command.
         """
         echo(u'\r\n' * self._term.height)
         Door.run(self)
@@ -655,6 +703,10 @@ class DOSDoor(Door):
         echo(u"\x1b[r")
 
 
+# pylint: disable=R0913,R0914,R0915
+#         Too many arguments
+#         Too many local variables
+#         Too many statements
 def launch(dos=None, cp437=True, drop_type=None,
            drop_folder=None, name=None, args='',
            forcesize=None, activity=None, command=None,
@@ -718,10 +770,7 @@ def launch(dos=None, cp437=True, drop_type=None,
 
     with term.fullscreen():
         store_rows, store_cols = None, None
-
-        if env_term is None:
-            env_term = session.env['TERM']
-
+        env_term = env_term or term.kind
         strnode = None
         (dosbin, doshome, dospath, dosopts, dosdropdir, dosnodes) = (
             get_ini('dosemu', 'bin'),
