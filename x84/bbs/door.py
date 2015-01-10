@@ -769,7 +769,7 @@ def launch(dos=None, cp437=True, drop_type=None,
             get_ini('dosemu', 'path'),
             get_ini('dosemu', 'opts'),
             get_ini('dosemu', 'dropdir'),
-            get_ini('dosemu', 'nodes'))
+            get_ini('dosemu', 'nodes', getter='getint'))
 
         if drop_folder is not None and drop_type is None:
             drop_type = 'DOORSYS'
