@@ -1,40 +1,75 @@
 # -*- coding: utf-8 -*-
-"""
-Session engine for x/84, http://github.com/jquast/x84/
-"""
+""" Session engine for x/84. """
+
+# std imports
 import collections
 import traceback
 import logging
-import inspect
 import time
 import imp
 import sys
 import os
 
+# local
+from x84.bbs.exception import Disconnected, Goto
+
+#: singleton representing the session connected by current process
 SESSION = None
 
+#: Defines a target script name, positional, and keyword arguments.
 Script = collections.namedtuple('Script', ['name', 'args', 'kwargs'])
 
 
 def getsession():
-    """
-    Return session, after a .run() method has been called on any 1 instance.
-    """
+    """ Returns session of current process.  """
     return SESSION
 
 
 def getterminal():
-    """
-    Return blessed terminal instance of this session.
-    """
+    """ Return blessed.Terminal class instance of this session. """
     return getsession().terminal
 
 
 def getnode():
-    """
-    Returns unique session identifier for this session as integer.
-    """
+    """ Return unique session identifier for this session as integer.  """
     return getsession().node
+
+
+def goto(script, *args, **kwargs):
+    """ Change bbs script. Does not return. """
+    raise Goto(script, *args, **kwargs)
+
+
+def disconnect(reason=u''):
+    """ Disconnect session. Does not return. """
+    raise Disconnected(reason,)
+
+
+def getch(timeout=None):
+    """
+    A deprecated form of getterminal().inkey().
+
+    This is old behavior -- upstream blessed project does the correct
+    thing. please use term.inkey() and see the documentation for
+    blessed's inkey() method, it **always** returns unicode, never None,
+    and definitely never an integer. However some internal UI libraries
+    were built upon getch(), and as such, this remains ...
+    """
+    # mark deprecate in v2.1; remove entirely in v3.0
+    # warnings.warn('getch() is deprecated, use getterminal().inkey()')
+    keystroke = getterminal().inkey(timeout)
+    if keystroke == u'':
+        return None
+    if keystroke.is_sequence:
+        return keystroke.code
+    return keystroke
+
+
+def gosub(script, *args, **kwargs):
+    """ Call bbs script with optional arguments, Returns value. """
+    from x84.bbs.session import Script
+    script = Script(name=script, args=args, kwargs=kwargs)
+    return getsession().runscript(script)
 
 
 class Session(object):
@@ -42,6 +77,7 @@ class Session(object):
     """
     A BBS Session engine. Workflow begins in the ``run()`` method.
     """
+
     # pylint: disable=R0902,R0904,R0913
     #        Too many instance attributes
     #        Too many public methods
@@ -86,8 +122,7 @@ class Session(object):
         # pylint: disable=W0603
         #        Using the global statement
         global SESSION
-        assert SESSION is None, ('Session may be instantiated only once '
-                                 'per sub-process')
+        assert SESSION is None, 'Only one Session per process allowed'
         SESSION = self
 
         # public attributes

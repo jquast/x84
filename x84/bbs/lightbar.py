@@ -1,7 +1,12 @@
 """
 lightbar package for x/84 BBS, http://github.com/jquast/x84
 """
+
+# local imports
 from x84.bbs.ansiwin import AnsiWindow
+from x84.bbs.session import getterminal, getch
+from x84.bbs.output import decode_pipe, echo
+
 
 NETHACK_KEYSET = {'home': [u'y', '0'],
                   'end': [u'n', 'G'],
@@ -47,7 +52,6 @@ class Lightbar(AnsiWindow):
         """
         Initialize color['highlight'].
         """
-        from x84.bbs.session import getterminal
         colors = colors or {'highlight': getterminal().reverse_yellow}
         glyphs = glyphs or {'strip': u' $'}
         AnsiWindow.init_theme(self, colors, glyphs)
@@ -56,7 +60,6 @@ class Lightbar(AnsiWindow):
         """
         This initializer sets keyboard keys for various editing keystrokes.
         """
-        from x84.bbs.session import getterminal
         term = getterminal()
         self.keyset = keyset
         self.keyset['home'].append(term.KEY_HOME)
@@ -87,8 +90,6 @@ class Lightbar(AnsiWindow):
         will be trimmed using glyphs['strip'] if their displayed width is
         wider than window.
         """
-        from x84.bbs.session import getterminal
-        from x84.bbs.output import decode_pipe
         term = getterminal()
 
         pos = self.pos(self.ypadding + row, self.xpadding)
@@ -199,8 +200,6 @@ class Lightbar(AnsiWindow):
         Reads input until the ENTER or ESCAPE key is pressed (Blocking).
         Allows backspacing. Returns unicode text, or None when canceled.
         """
-        from x84.bbs import getch
-        from x84.bbs.output import echo
         self._selected = False
         self._quit = False
         echo(self.refresh())

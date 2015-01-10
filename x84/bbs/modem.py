@@ -1,6 +1,10 @@
-"""
-File transfer routines for X/84 bbs, https://github.com/jquast/x84
-"""
+""" File transfer routines for x/84. """
+
+# local imports
+from x84.bbs.session import getsession
+
+# 3rd party
+import xmodem
 
 
 def send_modem(stream, protocol='xmodem1k', retry=16, timeout=30,
@@ -24,9 +28,6 @@ def send_modem(stream, protocol='xmodem1k', retry=16, timeout=30,
                      ``def callback(total_count, success_count, error_count)``
     :type callback: callable
     """
-    from x84.bbs.session import getsession
-    import xmodem
-
     # get protocol implementation class
     supported_protocols = ('xmodem', 'xmodem1k')
     assert protocol in supported_protocols, (protocol, supported_protocols)
@@ -74,9 +75,6 @@ def recv_modem(stream, protocol='xmodem1k', retry=16, timeout=30):
     :param timeout: seconds to elapse for response before failing.
     :type timeout: int
     """
-    from x84.bbs.session import getsession
-    import xmodem
-
     # get protocol implementation class
     supported_protocols = ('xmodem', 'xmodem1k')
     assert protocol in supported_protocols, (protocol, supported_protocols)

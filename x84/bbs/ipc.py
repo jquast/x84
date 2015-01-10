@@ -1,7 +1,9 @@
-"""
-Session IPC for x/84, http://github.com/jquast/x84/
-"""
+""" Session IPC for x/84. """
+# std imports
 import logging
+
+# local
+from x84.bbs.session import getsession
 
 
 def make_root_logger(out_queue):
@@ -27,17 +29,8 @@ class IPCLogHandler(logging.Handler):
         logging.Handler.__init__(self)
         self.oqueue = out_queue
 
-    @property
-    def session(self):
-        if self._session is None:
-            from x84.bbs.session import getsession
-            self._session = getsession()
-        return self._session
-
     def emit(self, record):
-        """
-        emit log record via IPC output queue
-        """
+        """ emit log record via IPC output queue. """
         try:
             e_inf = record.exc_info
             if e_inf:
@@ -46,8 +39,7 @@ class IPCLogHandler(logging.Handler):
                 dummy = self.format(record)  # NOQA
                 record.exc_info = None
             record.handle = None
-            if self.session:
-                record.handle = self.session.handle
+            record.handle = getsession().handle
             self.oqueue.send(('logger', record))
         except (KeyboardInterrupt, SystemExit):
             raise

@@ -3,8 +3,14 @@
 """
 from __future__ import print_function
 import logging.config
-import os.path
+import ConfigParser
+import warnings
+import inspect
+import getpass
+import socket
+import os
 
+#: Singleton representing configuration after load
 CFG = None
 
 # pylint: disable=R0915,R0912,W0603
@@ -22,7 +28,6 @@ def init(lookup_bbs, lookup_log):
     If none our found, defaults are initialized, and the last item of each
     tuple is created.
     """
-    import ConfigParser
     log = logging.getLogger(__name__)
 
     def write_cfg(cfg, filepath):
@@ -105,9 +110,6 @@ def init_bbs_ini():
     # ###
     # ### at least, in this way, the module defines its configuration scheme
     # ### where it is used.
-    import ConfigParser
-    import getpass
-    import socket
     # wouldn't it be nice if we could use comments in the file .. ?
     # in such cases, it might be better to use jinja2 or something
     cfg_bbs = ConfigParser.SafeConfigParser()
@@ -269,7 +271,8 @@ def init_bbs_ini():
     cfg_bbs.set('sesame', 'FrozenDepths', '/usr/bin/frozendepths')
     cfg_bbs.set('sesame', 'FrozenDepths_key', '@')
     cfg_bbs.set('sesame', 'DopeWars',
-                '/usr/bin/dopewars -a -P {session[handle]} --single-player -u none')
+                ('/usr/bin/dopewars -a -P {session[handle]} '
+                 '--single-player -u none'))
     cfg_bbs.set('sesame', 'DopeWars_key', '$')
     cfg_bbs.set('sesame', 'MyMan', '/usr/bin/myman')
     cfg_bbs.set('sesame', 'MyMan_key', '&')
@@ -281,7 +284,6 @@ def init_log_ini():
     """
     Returns ConfigParser instance of logger defaults
     """
-    import ConfigParser
     cfg_log = ConfigParser.RawConfigParser()
     cfg_log.add_section('formatters')
     cfg_log.set('formatters', 'keys', 'default')
@@ -315,7 +317,8 @@ def init_log_ini():
                 '("' + daily_log + '", "midnight", 1, 60)')
 
     cfg_log.add_section('loggers')
-    cfg_log.set('loggers', 'keys', 'root, sqlitedict, paramiko, xmodem, requests')
+    cfg_log.set('loggers', 'keys',
+                'root, sqlitedict, paramiko, xmodem, requests')
 
     cfg_log.add_section('logger_root')
     cfg_log.set('logger_root', 'level', 'INFO')
@@ -348,6 +351,42 @@ def init_log_ini():
     cfg_log.set('logger_requests', 'level', 'WARN')
     cfg_log.set('logger_requests', 'formatter', 'default')
     cfg_log.set('logger_requests', 'handlers', 'console, rotate_daily')
-    cfg_log.set('logger_requests', 'qualname', 'requests.packages.urllib3.connectionpool')
+    cfg_log.set('logger_requests', 'qualname', 'requests')
 
     return cfg_log
+
+
+def get_ini(section=None, key=None, getter='get', split=False, splitsep=None):
+    """
+    Get an ini configuration of ``section`` and ``key``.
+
+    If the option does not exist, an empty list, string, or False
+    is returned -- return type decided by the given arguments.
+
+    The ``getter`` method is 'get' by default, returning a string.
+    For booleans, use ``getter='get_boolean'``.
+
+    To return a list, use ``split=True``.
+    """
+    assert section is not None, section
+    assert key is not None, key
+    if CFG is None:
+        # when building documentation, 'get_ini' at module-level
+        # imports is not really an error.  However, if you're importing
+        # a module that calls get_ini before the config system is
+        # initialized, then you're going to get an empty value! warning!!
+        stack = inspect.stack()
+        caller_mod, caller_func = stack[2][1], stack[2][3]
+        warnings.warn('ini system not (yet) initialized, '
+                      'caller = {0}:{1}'.format(caller_mod, caller_func))
+    elif CFG.has_option(section, key):
+        getter = getattr(CFG, getter)
+        value = getter(section, key)
+        if split and hasattr(value, 'split'):
+            return [_value.strip() for _value in value.split(splitsep)]
+        return value
+    if getter == 'getboolean':
+        return False
+    if split:
+        return []
+    return u''

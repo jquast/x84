@@ -5,14 +5,34 @@ import collections
 import math
 
 # local
-from x84.bbs import echo, getsession, getterminal, showart
-from x84.bbs import ScrollingEditor
+from x84.bbs import echo, getsession, getterminal, syncterm_setfont, showart
+from x84.bbs import ScrollingEditor, get_ini
 from x84.bbs.session import Script
 
 ChatEvent = collections.namedtuple('ChatEvent', [
     'session_id', 'channel', 'handle', 'command', 'cmd_args'])
 
+WindowDimension = collections.namedtuple(
+    'WindowDimension', ['yloc', 'xloc', 'height', 'width'])
+
 ANSWER, HANGUP = 1, 2
+
+art_encoding = 'cp437'
+
+#: filepath to artfile displayed for this script
+art_file = get_ini(
+    section='chat', key='art_file'
+) or 'art/chat.ans'
+
+#: encoding used to display artfile
+art_encoding = get_ini(
+    section='chat', key='art_encoding'
+) or 'cp437'
+
+#: fontset for SyncTerm emulator
+syncterm_font = get_ini(
+    section='chat', key='syncterm_font'
+) or 'cp437'
 
 
 def prompt_chat_request(term, pos, call_from):
@@ -34,10 +54,6 @@ def prompt_chat_request(term, pos, call_from):
             return False
 
 
-WindowDimension = collections.namedtuple(
-    'WindowDimension', ['yloc', 'xloc', 'height', 'width'])
-
-
 def refresh_screen(term, again=False):
     # create a new, empty screen
     if again:
@@ -45,15 +61,15 @@ def refresh_screen(term, again=False):
     else:
         echo(term.move(term.height - 1, 0))
         echo(u'\r\n' * (term.height + 1))
-    ans_file = 'art/chat.ans'
     ans_height = 24
     ans_width = 78
     ypos, xpos = (max(0, int(math.floor(term.height / 2 - (ans_height / 2)))),
                   max(0, int(math.floor(term.width / 2 - (ans_width / 2)))))
-    for y_offset, line in enumerate(
-            showart(ans_file, encoding='cp437', auto_mode=False)):
-        echo(term.move(ypos + y_offset, xpos))
-        echo(line)
+    for y_offset, line in enumerate(showart(art_file, encoding=art_encoding)):
+        _ypos = ypos + y_offset
+        if _ypos <= term.height:
+            echo(term.move(_ypos, xpos))
+            echo(line)
     top_window = WindowDimension(
         yloc=ypos, xloc=xpos + 1, height=9, width=78)
     bot_window = WindowDimension(
@@ -242,6 +258,11 @@ def do_hangup(session, other_sid):
 
 def main(*args, **kwargs):
     session, term = getsession(), getterminal()
+
+    # set syncterm font, if any
+    if syncterm_font and term.kind.startswith('ansi'):
+        echo(syncterm_setfont(syncterm_font))
+
     with term.fullscreen():
         try:
             return do_chat(session, term, *args, **kwargs)

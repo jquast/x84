@@ -44,12 +44,12 @@ art_file = get_ini(
 
 #: encoding used to display artfile
 art_encoding = get_ini(
-    section='oneliners', key='art_file'
+    section='main', key='art_encoding'
 ) or 'cp437'  # ascii, actually
 
 #: fontset for SyncTerm emulator
 syncterm_font = get_ini(
-    section='oneliners', key='syncterm_font'
+    section='main', key='syncterm_font'
 ) or 'topaz'
 
 #: system name of bbs

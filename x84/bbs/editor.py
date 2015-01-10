@@ -1,8 +1,18 @@
-"""
-editor package for x/84, https://github.com/jquast/x84
-"""
+""" Editor package for x/84. """
+# TODO(jquast): upstream, the blessed project has a ticket to determine
+# the current cursor position, https://github.com/jquast/blessed/issues/19
+# once implemented, LineEditor can be used with absolute positioning.
+# std imports
+#
+# TODO(jquast): Surely somebody has written a readline-like implementation
+# for python that we could use instead.  We cannot use readline directly
+# due to its C and Unix dependency.
+import warnings
 
+# local
 from x84.bbs.ansiwin import AnsiWindow, GLYPHSETS
+from x84.bbs.session import getterminal, getch
+from x84.bbs.output import echo
 
 PC_KEYSET = {'refresh': [unichr(12), ],
              'backspace': [unichr(8), unichr(127), ],
@@ -14,14 +24,16 @@ PC_KEYSET = {'refresh': [unichr(12), ],
 class LineEditor(object):
 
     """
-    This unicode line editor is unaware of its (x, y) position.
+    This unicode line editor is unaware of its (y, x) position.
 
     It is great for prompting a quick phrase on any terminal,
     such as a ``login:`` prompt.
     """
-    # This should really be gnu/readline, but its not really accessible ..
+
     _hidden = False
     _width = 0
+    # pylint: disable=R0913
+    #         Too many arguments (7/5) (col 4)
 
     def __init__(self, width=None, content=u'', hidden=False,
                  colors=None, glyphs=None, keyset=None):
@@ -31,7 +43,6 @@ class LineEditor(object):
         :param colors: optional dictionary containing key 'highlight'.
         :param keyset: optional dictionary of line editing values.
         """
-        from x84.bbs.session import getterminal
         self._term = getterminal()
         self.content = content or u''
         self.hidden = hidden
@@ -174,8 +185,6 @@ class LineEditor(object):
         Reads input until the ENTER or ESCAPE key is pressed (Blocking).
         Allows backspacing. Returns unicode text, or None when canceled.
         """
-        from x84.bbs import getch
-        from x84.bbs.output import echo
         self._carriage_returned = False
         self._quit = False
         echo(self.refresh())
@@ -203,14 +212,13 @@ class ScrollingEditor(AnsiWindow):
         """
         Construct a Line editor at (y,x) location..
         """
-        from x84.bbs.session import getterminal
         self._term = getterminal()
         self._horiz_shift = 0
         self._horiz_pos = 0
         # self._enable_scrolling = False
         self._horiz_lastshift = 0
-        self._scroll_pct = kwargs.pop('scroll_pct', 35.0)
-        self._margin_pct = kwargs.pop('margin_pct', 20.0)
+        self._scroll_pct = kwargs.pop('scroll_pct', 25.0)
+        self._margin_pct = kwargs.pop('margin_pct', 10.0)
         self._carriage_returned = False
         self._max_length = kwargs.pop('max_length', 0)
         self._quit = False
@@ -287,57 +295,38 @@ class ScrollingEditor(AnsiWindow):
         """
         return self._quit
 
-# jquast: disabled because this isn't actually honored -- what is probably
-# intended her is some kind of mix-in with LineEditor, but they work quite
-# differently -- one requires absolute (y, x) and the other doesn't use it
-# at all.  However, if we can implement term.get_position() we could probably
-# work something out about an optional (y, x) position for both.
-#
-#    @property
-#    def enable_scrolling(self):
-#        """
-#        Enable horizontal scrolling of line editor.
-#        Otherwise, input is limited to visible width.
-#        """
-#        return self._enable_scrolling
-#
-#    @enable_scrolling.setter
-#    def enable_scrolling(self, value):
-#        # pylint: disable=C0111
-#        #         Missing docstring
-#        self._enable_scrolling = value
-
     @property
     def is_scrolled(self):
-        """
-        Returns True if the horizontal editor is in a scrolled state.
-        """
-        return self._horiz_shift > 0
+        """ Whether the horizontal editor is in a scrolled state. """
+        return bool(self._horiz_shift)
 
     @property
     def scroll_amt(self):
         """
-        Returns number of columns horizontal editor will scroll, calculated by
-        scroll_pct.
+        Number of columns from-end until horizontal editor will scroll
+
+        Calculated by scroll_pct.
         """
         return int(float(self.visible_width) * (float(self.scroll_pct) * .01))
 
     @property
     def margin_amt(self):
         """
-        Returns number of columns from right-edge that the horizontal editor
-        signals bell=True, indicating that the end is near and the carriage
-        should be soon returned. This also indicates the distance from margin
-        a user may type into until ScrollingEditor horizontally shifts.
+        Absolute number of columns from margin until bell is signaled.
+
+        Indicating that the end is near and the carriage should be soon
+        returned.
         """
         return int(float(self.visible_width) * (float(self.margin_pct) * .01))
 
     @property
     def scroll_pct(self):
         """
+        Percentage of visible width from-end until scrolling occurs.
+
         Number of columns, as a percentage of its total visible width, that
-        will be scrolled when a user reaches the margin by percent.
-        Default is 35.
+        will be scrolled when a user reaches the margin by percent.  Default
+        is 25.
         """
         return self._scroll_pct
 
@@ -351,13 +340,16 @@ class ScrollingEditor(AnsiWindow):
     @property
     def margin_pct(self):
         """
+        Percentage of visible width from-end until bell is signaled.
+
         Number of columns away from input length limit, as a percentage of its
         total visible width, that will alarm the bell. This simulates the bell
-        of a typewriter as a signaling mechanism. Default is 20.
+        of a typewriter as a signaling mechanism. Default is 10.
+
+        Unofficially intended for a faked multi-line editor: by using the bell
+        as a wrap signal to instantiate another line editor and
+        'return the carriage'.
         """
-        # .. unofficially; intended to be used be a faked multi-line editor, by
-        # using the bell as a wrap signal to instantiate another line editor
-        # and 'return the carriage'
         return self._margin_pct
 
     @margin_pct.setter
@@ -369,21 +361,22 @@ class ScrollingEditor(AnsiWindow):
     @property
     def max_length(self):
         """
-        Maximum line length. This also limits infinite scrolling when
-        enable_scrolling is True. When unset, the maximum length is
-        infinite.
+        Maximum line length.
+
+        This also limits infinite scrolling when enable_scrolling is True.
+        When unset, the maximum length is infinite!
         """
+        if not self._max_length:
+            warnings.warn("maximum length of ScrollingEditor is infinite!")
         return self._max_length or float('inf')
 
     @max_length.setter
     def max_length(self, value):
-        # pylint: disable=C0111
-        #         Missing docstring
         self._max_length = value
 
     @property
     def content(self):
-        """ The contents of editor. """
+        """ The contents of the editor. """
         return self._content
 
     @content.setter
@@ -392,9 +385,7 @@ class ScrollingEditor(AnsiWindow):
         self._input_length = self._term.length(value)
 
     def process_keystroke(self, keystroke):
-        """
-        Process the keystroke received by read method and take action.
-        """
+        """ Process the keystroke and return string to refresh. """
         self._quit = False
         rstr = u''
         if keystroke in self.keyset['refresh']:
@@ -419,10 +410,9 @@ class ScrollingEditor(AnsiWindow):
     def read(self):
         """
         Reads input until the ENTER or ESCAPE key is pressed (Blocking).
+
         Allows backspacing. Returns unicode text, or None when canceled.
         """
-        from x84.bbs import getch
-        from x84.bbs.output import echo
         echo(self.refresh())
         self._quit = False
         self._carriage_returned = False
@@ -435,35 +425,33 @@ class ScrollingEditor(AnsiWindow):
 
     def fixate(self, x_adjust=0):
         """
-        Return terminal sequence suitable for placing cursor at current
-        position in window. Set x_adjust to -1 to position cursor 'on'
-        the last character, or 0 for 'after' (default).
+        Return string sequence suitable for "fixating" cursor position.
+
+        Set x_adjust to -1 to position cursor 'on' the last character,
+        or 0 for 'after' (default).
         """
         xpos = self._xpadding + self._horiz_pos + x_adjust
         return self.pos(1, xpos) + self._term.cursor_visible
 
     def refresh(self):
         """
-        Return unicode sequence suitable for refreshing the entire
-        line and placing the cursor.
+        Return string sequence suitable for refreshing editor.
 
-        A strange by-product; if scrolling was not previously enabled,
-        it is if wrapping must occur; this can happen if a
-        non-scrolling editor was provided a very large .content
-        buffer, then later .refresh()'d. -- essentially enabling
-        infinite scrolling
+        A strange by-product; if scrolling was not previously enabled, it is if
+        wrapping must occur; this can happen if a non-scrolling editor was
+        provided a very large .content buffer, then later .refresh()'d. --
+        essentially enabling infinite scrolling.
         """
         # reset position and detect new position
         self._horiz_lastshift = self._horiz_shift
         self._horiz_shift = 0
         self._horiz_pos = 0
         #                  (self._term.length(self.content))
-        for _count in range(self._input_length):
+        for _ in range(self._input_length):
             if (self._horiz_pos >
                     (self.visible_width - self.scroll_amt)):
                 self._horiz_shift += self.scroll_amt
                 self._horiz_pos -= self.scroll_amt
-                #self.enable_scrolling = True
             self._horiz_pos += 1
         if self._horiz_shift > 0:
             self._horiz_shift += len(self.glyphs['strip'])
@@ -482,7 +470,8 @@ class ScrollingEditor(AnsiWindow):
     def backword(self):
         """
         Delete word behind cursor, using ' ' as boundary.
-        in readline this is unix-word-rubout (C-w).
+
+        In gnu-readline this is unix-word-rubout (C-w).
         """
         if 0 == len(self.content):
             return u''
@@ -491,10 +480,7 @@ class ScrollingEditor(AnsiWindow):
         return self.refresh()
 
     def backspace(self):
-        """
-        Remove character from end of content buffer,
-        scroll as necessary.
-        """
+        """ Remove character from end of buffer, scroll as necessary. """
         if 0 == len(self.content):
             return u''
         rstr = u''
@@ -519,6 +505,8 @@ class ScrollingEditor(AnsiWindow):
     def update(self, ucs=u''):
         """
         Replace or reset content.
+
+        Resets properties ``carriage_returned`` and ``quit`` to False.
         """
         self._horiz_shift = 0
         self._horiz_pos = 0
@@ -529,13 +517,13 @@ class ScrollingEditor(AnsiWindow):
 
     def add(self, u_chr):
         """
-        Returns output sequence necessary to add a character to
-        content buffer.  An empty content buffer is returned if
-        no data could be inserted. Sequences for re-displaying
-        the full input line are returned when the character
+        Return output sequence of changes after adding a character to editor.
+
+        An empty string is returned if no data could be inserted. Sequences for
+        re-displaying the full input line are returned when the character
         addition caused the window to scroll horizontally.
-        Otherwise, the input is simply returned to be displayed
-        ('local echo').
+
+        Otherwise, the input is simply returned to be displayed.
         """
         if self.eol:
             # cannot input, at end of line!
