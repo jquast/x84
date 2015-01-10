@@ -503,10 +503,23 @@ class Session(object):
         if event == 'gosub':
             save_activity = self.activity
             self.log.info('event-driven gosub: {0}'.format(data))
+            _height, _width = self.terminal.height, self.terminal.width
             try:
                 self.runscript(Script(*data))
             finally:
                 self.activity = save_activity
+                n_height, n_width = self.terminal.height, self.terminal.width
+                if ((_height, _width) != (n_height, n_width)):
+                    # RECURSIVE: we call buffer_event to push-in a duplicate
+                    # "resize" event, so the script that was interrupted has
+                    # an opportunity to to the new terminal dimensions if the
+                    # script that was event-driven gosub had already acquired
+                    # and reacted all 'refresh' events.
+                    data = ('resize', n_height, n_width)
+                    self.buffer_event('refresh', data)
+                # otherwise its fine to not require the calling function to
+                # refresh -- so long as the target script makes sure(!) to
+                # use the "with term.fullscreen()" context manager.
             return True
 
         # respond to 'info-req' events by returning pickled session info
@@ -663,9 +676,10 @@ class Session(object):
         if '.' not in script.name:
             script_name = script.name
         else:
-            # build a new system path, relative to `script_module'
+            # build another system path, relative to `script_module'
             remaining, script_name = script.name.rsplit('.', 1)
-            lookup_paths.append(os.path.join(script_relpath, *remaining.split('.')))
+            _lookup_path = os.path.join(script_relpath, *remaining.split('.'))
+            lookup_paths.append(_lookup_path)
 
         lookup = imp.find_module(script_name, lookup_paths)
         module = imp.load_module(script_name, *lookup)
