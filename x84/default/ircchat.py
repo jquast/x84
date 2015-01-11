@@ -461,15 +461,17 @@ def refresh_event(term, scrollback, editor):
         term.move(term.height - 1, 0)]))
 
     # re-wrap chat log
-    lastmost = slice(min(term.height - 1, len(scrollback)) * -1, None)
-    for line in list(scrollback)[lastmost]:
-        # note: this will cause more than a screens'-worth to be displayed for
-        # lines that wrap.  We should probably build a final 'output' text
-        # buffer, from the bottom-up, extending by term.wrap until we've
-        # reached at or beyond 'lastmost'.  Then, write only [lastmost] index.
-        echo(u'\r\n'.join(term.wrap(line, term.width - 1)))
-        echo(u'\r\n')
-    echo(editor.refresh())
+    numlines = min(term.height - 2, len(scrollback))
+    sofar = 0
+    output = list()
+    for line in reversed(scrollback):
+        wrapped = term.wrap(line, term.width - 1)
+        sofar += len(wrapped)
+        output = wrapped + output
+        if sofar >= numlines:
+            break
+    output = output[numlines * -1:]
+    echo(u''.join([u'\r\n'.join(output), u'\r\n', editor.refresh()]))
 
 
 def irc_event(term, data, scrollback, editor):
