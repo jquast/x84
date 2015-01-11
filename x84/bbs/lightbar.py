@@ -183,22 +183,22 @@ class Lightbar(AnsiWindow):
         self._vitem_lastidx = self.vitem_idx
         self._vitem_lastshift = self.vitem_shift
         rstr = u''
-        keystroke = hasattr(keystroke, 'code') and keystroke.code or keystroke
-        if key in self.keyset['home']:
+        keystroke = hasattr(key, 'code') and key.code or key
+        if keystroke in self.keyset['home']:
             rstr = self.move_home()
-        elif key in self.keyset['end']:
+        elif keystroke in self.keyset['end']:
             rstr = self.move_end()
-        elif key in self.keyset['pgup']:
+        elif keystroke in self.keyset['pgup']:
             rstr = self.move_pageup()
-        elif key in self.keyset['pgdown']:
+        elif keystroke in self.keyset['pgdown']:
             rstr = self.move_pagedown()
-        elif key in self.keyset['up']:
+        elif keystroke in self.keyset['up']:
             rstr = self.move_up()
-        elif key in self.keyset['down']:
+        elif keystroke in self.keyset['down']:
             rstr = self.move_down()
-        elif key in self.keyset['enter']:
+        elif keystroke in self.keyset['enter']:
             self.selected = True
-        elif key in self.keyset['exit']:
+        elif keystroke in self.keyset['exit']:
             self._quit = True
         return rstr
 
