@@ -109,7 +109,7 @@ def play():
     import time
     from random import randint
     import os
-    from x84.bbs import getterminal, getch, from_cp437, AnsiWindow
+    from x84.bbs import getterminal, getch, from_cp437, AnsiWindow, syncterm_setfont
     from x84.bbs import echo as echo_unbuffered
     term = getterminal()
     field = []
@@ -303,6 +303,9 @@ def play():
         u'%s PRESS ANY kEY' % (term.bold_black('...'),),
     )))
     getch()
+    # set syncterm font to cp437
+    if term.kind.startswith('ansi'):
+        echo(syncterm_setfont('cp437'))
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'tetris.ans')
     echo_unbuffered(u'\r\n' * term.height)  # cls
     if os.path.exists(artfile):
