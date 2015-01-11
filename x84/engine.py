@@ -216,13 +216,12 @@ def accept(log, server, check_ban):
 
         # connecting IP is banned
         if check_ban(address_pair[0]) is False:
+            log.debug('{addr}: refused, banned.'.format(addr=address_pair[0]))
             try:
                 sock.shutdown(socket.SHUT_RDWR)
             except socket.error:
                 pass
             sock.close()
-            log.error('{addr}: refused, banned.'
-                      .format(addr=address_pair[0]))
             return
 
         # instantiate a client of this type
