@@ -3,9 +3,9 @@
 import logging
 
 # local
+from x84.ini import get_ini
 from x84.db import (
     get_db_filepath,
-    should_tapdb,
     get_database,
     get_db_func,
     get_db_lock,
@@ -29,17 +29,18 @@ class DBProxy(object):
         """
         Class constructor.
 
-        :param str scheme: database key, becomes base filename of .sqlite3 file.
+        :param str scheme: database key, becomes basename of .sqlite3 file.
         :param str table: optional database table.
-        :param bool use_session: Whether iterable returns should be sent over an IPC
-                            pipe (client is a x84.bbs.session.Session), or
-                            returned directly (such as used by the main thread
-                            engine components.)
+        :param bool use_session: Whether iterable returns should be sent over
+                                 an IPC pipe (client is a
+                                 :class:`x84.bbs.session.Session` instance),
+                                 or returned directly (such as used by the main
+                                 thread engine components.)
         """
         self.log = logging.getLogger(__name__)
         self.schema = schema
         self.table = table
-        self._tap_db = should_tapdb()
+        self._tap_db = get_ini('session', 'tab_db', getter='getboolean')
         self.session = use_session and getsession()
 
     def proxy_iter_session(self, method, *args):
