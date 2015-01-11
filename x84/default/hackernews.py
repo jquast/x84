@@ -1,7 +1,7 @@
 """
 Hacker news script for x/84.
 
-Lets you browse and read popular articles on news.ycombinator.com
+Lets you browse and read popular articles on news.ycombinator.com.
 """
 # std imports
 from __future__ import division
@@ -11,33 +11,116 @@ import textwrap
 import math
 
 # local
-from x84.bbs import getsession, getterminal, echo, LineEditor
+from x84.bbs import getsession, getterminal, echo, LineEditor, get_ini
 
 # 3rd-party
 import feedparser
 import html2text
 import requests
 
-__author__ = 'Hellbeard'
-__version__ = 1.01
+#: fontset for SyncTerm emulator
+SYNCTERM_FONT = get_ini(
+    section='hackernews', key='syncterm_font'
+) or 'topaz'
+
+#: color of titlebars when viewing article summary
+COLOR_MAIN = get_ini(
+    section='hackernews', key='color_main'
+) or 'black_on_red'
+
+#: color of titlebars when viewing article
+COLOR_VIEW = get_ini(
+    section='hackernews', key='color_view'
+) or "black_on_magenta"
 
 USER_AGENT = 'Lynx/2.8.7rel.2 libwww-FM/2.14 SSL-MM/1.4.1 OpenSSL/1.0.0a'
 RSS_URL = 'https://news.ycombinator.com/rss'
 RSS_TITLE = 'Hacker News'
-COLOR_MAIN = "black_on_red"
-COLOR_VIEW = "black_on_magenta"
 ARTICLE_LIMIT = 100
 REQUEST_TIMEOUT = 10
 
+#: structure defines an article
 Article = collections.namedtuple(
     'Article', ['title', 'link', 'comments', 'netloc'])
 
+#: structure defines a key-movement by mapping to ``KEYSET``.
+Direction = collections.namedtuple(
+    'Direction', ['mapping', 'modifier', 'clamp'])
+
+#: structure defines key movements for :func:`do_movement`
+KEYSET = {
+    'up': ['KEY_UP', u'k'],
+    'sup': ['KEY_SUP', u'K'],
+    'pgup': ['KEY_PGUP', u'b'],
+    'home': ['KEY_HOME', u'0'],
+    'down': ['KEY_DOWN', u'j'],
+    'sdown': ['KEY_SDOWN', u'J'],
+    'pgdown': ['KEY_PGDOWN', u'f', u' '],
+    'end': ['KEY_END', u'G'],
+}
+
+MSG_NOTEXT = ("I'm sorry, the page you requested cannot be displayed in "
+              "textmode.  It's probably not worth *reading*, anyway ...")
+
+
+def get_keyset(term):
+    """ Evaluate and return a keymap for given ``term``. """
+    return {
+        movement: [
+            (val if not val.startswith('KEY')
+             else getattr(term, val))
+            for val in KEYSET[movement]
+        ] for movement in KEYSET
+    }
+
+
+def do_movement(inp, scroll_idx, height, bottom, keyset):
+    """ Return new scroll_idx if ``inp`` is a matching movement. """
+
+    directions = (
+        # up directions
+        Direction(mapping='up',
+                  modifier=-1,
+                  clamp=lambda idx: max(0, idx)),
+        Direction(mapping='sup',
+                  modifier=-5,
+                  clamp=lambda idx: max(0, idx)),
+        Direction(mapping='pgup',
+                  modifier=(height - 1) * -1,
+                  clamp=lambda idx: max(0, idx)),
+        Direction(mapping='home',
+                  modifier=scroll_idx * -1,
+                  clamp=lambda idx: max(0, idx)),
+
+        # down directions
+        Direction(mapping='down',
+                  modifier=1,
+                  clamp=lambda idx: min(bottom, idx)),
+        Direction(mapping='sdown',
+                  modifier=5,
+                  clamp=lambda idx: min(bottom, idx)),
+        Direction(mapping='pgdown',
+                  modifier=height - 1,
+                  clamp=lambda idx: min(bottom, idx)),
+        Direction(mapping='end',
+                  modifier=bottom - scroll_idx,
+                  clamp=lambda idx: min(bottom, idx)),
+    )
+
+    # evaluate and return modified scroll_idx for any matching keyset.
+    for direction in directions:
+        if (inp.code in keyset[direction.mapping] or
+                inp in keyset[direction.mapping]):
+            return direction.clamp(scroll_idx + direction.modifier)
+    return scroll_idx
+
 
 def get_article(term, articles):
+    """ Prompt for an article number, return matching article. """
     echo(term.move(term.height, 0) + getattr(term, COLOR_MAIN))
     echo(term.center(''))
     echo(term.move(term.height, 0))
-    echo(':: enter article #: ')
+    echo(u':: enter article #: ')
     article_idx = LineEditor(
         width=len(str(ARTICLE_LIMIT)),
         colors={'highlight': getattr(term, COLOR_MAIN)}
@@ -53,7 +136,7 @@ def get_article(term, articles):
 
 
 def render_article(term, html_text):
-    """ Render html text to article. """
+    """ Render and return html text of article as text. """
     html_renderer = html2text.HTML2Text(bodywidth=term.width - 1)
     html_renderer.ignore_links = True
     html_renderer.ignore_images = True
@@ -74,17 +157,16 @@ def render_article(term, html_text):
             text_wrapped.extend(textwrap.wrap(line, term.width - 1,
                                               subsequent_indent=_indent))
     final = [_text.rstrip() for _text in text_wrapped]
+
     if not final or not any(_line for _line in final):
+        # no text was rendered by html2text
         final = [''] * (term.height // 2)
-        final.extend(
-            textwrap.wrap("I'm sorry, the page you requested cannot be "
-                          "displayed in textmode.  It's probably not worth "
-                          "*readying* anyway ...", term.width - 1)
-        )
+        final.extend(textwrap.wrap(MSG_NOTEXT, term.width - 1))
     return final
 
 
-def render_article_summaries(term, articles):
+def get_article_summaries(term, articles):
+    """ Render list of articles summary. """
     results = []
     for idx, article in enumerate(articles, 1):
         _idx = '{0}{1}'.format(idx, term.bold_black('.'))
@@ -94,9 +176,10 @@ def render_article_summaries(term, articles):
     return results
 
 
-def render_summary(term, scroll_idx, height, articles):
+def render_articles_summary(term, scroll_idx, height, articles):
+    """ Render and return articles summary in-view. """
     # _vpadd: larger terminals get an extra space between summaries
-    _vpadd= 2 if term.height > 25 else 1
+    _vpadd = 2 if term.height > 25 else 1
     _endline = term.clear_eol + u'\r\n'
 
     line_no = 0
@@ -116,17 +199,20 @@ def render_summary(term, scroll_idx, height, articles):
 
         # add additional padding between articles if room remains
         if line_no + (_vpadd - 1) < height:
-            output = u''.join((output, _endline * (_vpadd- 1)))
-            line_no += (_vpadd- 1)
+            output = u''.join((output, _endline * (_vpadd - 1)))
+            line_no += (_vpadd - 1)
 
         else:
             # no more room remains; break early.
             break
-
+    # clear text to bottom of screen
+    remaining = _endline * (height - line_no)
+    output = u''.join((output, remaining))
     return output
 
 
-def view_article(term, session, url, title, encoding):
+def view_article(session, term, url, title):
+    """ view an article by target ``url``. """
     # context help
     keyset_help = (u'[r]eturn - (pg)up/down - [{0}%] - [s]hare')
 
@@ -147,9 +233,10 @@ def view_article(term, session, url, title, encoding):
         return
 
     # translate to our session-native encoding,
-    req.encoding = encoding
+    req.encoding = session.encoding
     html_text = req.text
 
+    keyset = get_keyset(term)
     _endline = term.clear_eol + u'\r\n'
     bottom = -1
     article_text = u''
@@ -174,14 +261,16 @@ def view_article(term, session, url, title, encoding):
             # display page at offset
             echo(term.move(1, 0))
             page = slice(scroll_idx, scroll_idx + page_height)
-            for line in article_text[page]:
-                echo(line + _endline)
-            echo(term.clear_eos)
+            line_no = 0
+            for line_no, line_txt in enumerate(article_text[page]):
+                echo(line_txt + _endline)
+
+            # clear (any) remaining lines
+            echo(_endline * (page_height - line_no))
 
             # calculate pct
-            pct = min(int(math.ceil(((scroll_idx + page_height)
-                                     / len(article_text)) * 100)
-                          ), 100)
+            _pct = (scroll_idx + page_height) / len(article_text)
+            pct = min(int(math.ceil(_pct * 100)), 100)
 
             # display context help
             echo(term.move(term.height, 0))
@@ -208,55 +297,25 @@ def view_article(term, session, url, title, encoding):
                 elif inp.lower() in (u'r', u'q',):
                     quit = True
                     break
-                elif (inp.code in (term.KEY_DOWN,) or inp in (u'j',)):
-                    if scroll_idx < bottom:
-                        scroll_idx += 1
-                        dirty = 2
-                elif (inp.code in (term.KEY_UP,) or inp in (u'k',)):
-                    if scroll_idx > 0:
-                        scroll_idx -= 1
-                        dirty = 2
-                elif (inp.code in (term.KEY_PGDOWN, term.KEY_ENTER,) or
-                      inp in (u'f',)):
-                    if scroll_idx < bottom:
-                        scroll_idx = min(scroll_idx + page_height, bottom)
-                        dirty = 2
-                elif (inp.code in (term.KEY_PGUP,) or inp in (u'b',)):
-                    if scroll_idx > 0:
-                        scroll_idx = max(scroll_idx - page_height, 0)
-                        dirty = 2
-                elif (inp.code in (term.KEY_HOME,) or inp in (u'0',)):
-                    if scroll_idx != 0:
-                        scroll_idx = 0
-                        dirty = 2
-                elif (inp.code in (term.KEY_END,) or inp in (u'G',)):
-                    if scroll_idx != bottom:
-                        scroll_idx = bottom
-                        dirty = 2
-                elif inp.lower() in (u'r', u'q',):
-                    quit = True
-                    break
                 elif inp in ('s',):
                     # share url
                     echo(term.move(term.height, 0))
                     echo(term.center(url))
                     dirty = True
                     term.inkey()
+                else:
+                    _idx = do_movement(inp=inp, scroll_idx=scroll_idx,
+                                       height=page_height, bottom=bottom,
+                                       keyset=keyset)
+                    if scroll_idx != _idx:
+                        scroll_idx = _idx
+                        dirty = 2
                 inp = term.inkey(0)
 
 
-def main(rss_url=None, rss_title=None):
-    session, term = getsession(), getterminal()
-    session.activity = 'reading hackernews'
-    rss_url = rss_url or RSS_URL
-    rss_title = rss_title or RSS_TITLE
+def view_article_summaries(session, term, rss_url, rss_title):
+    """ view rss article summary by target ``rss_url``. """
     keyset_help = (u'[q]uit - up/down - [v]iew - [c]omments')
-
-    # move to bottom of screen, reset attribute
-    echo(term.move(term.height, 0) + term.normal)
-
-    # create a new, empty screen
-    echo(u'\r\n' * (term.height + 1))
 
     # fetch rss feed articles
     echo(term.move(term.height // 2, 0))
@@ -269,24 +328,25 @@ def main(rss_url=None, rss_title=None):
                         comments=post.comments,
                         netloc=urlparse.urlparse(post.link).netloc)
                 for post in result.entries][:ARTICLE_LIMIT]
-
-    dirty = 2
-    quit = False
+    keyset = get_keyset(term)
     bottom = -1
-    rendered_articles = []
     scroll_idx = 0
     last_width, last_height = -1, -1
-
+    quit = False
+    dirty = 2
     while not quit:
-
         if dirty == 2:
             # dirty value of '2' is full screen refresh,
             if last_width != term.width or last_height != term.height:
                 # screen size has changed, re-calculate rendered contents
                 page_height = term.height - 2
-                rendered_articles = render_article_summaries(term, articles)
                 last_width, last_height = term.width, term.height
-                bottom = len(rendered_articles) - 3
+
+                # we can't actually determine how many articles may be
+                # displayed until render_articles_summary is called; we
+                # just shortcut and say "the last 3 is the end".
+                article_summary = get_article_summaries(term, articles)
+                bottom = len(article_summary) - 3
 
             # display titlebar
             echo(term.home)
@@ -294,10 +354,9 @@ def main(rss_url=None, rss_title=None):
                 rss_title[:term.width].center(term.width)))
 
             # display page summary of articles by scroll index
-            echo(render_summary(
+            echo(render_articles_summary(
                 term=term, scroll_idx=scroll_idx,
-                height=page_height, articles=rendered_articles))
-            echo(term.clear_eos)
+                height=page_height, articles=article_summary))
 
         if dirty > 0:
             # dirty value of '1' or more is context-bar refresh
@@ -322,16 +381,6 @@ def main(rss_url=None, rss_title=None):
                 if inp == u'\x0c':
                     # refresh (^L)
                     dirty = 2
-                elif (inp.code in (term.KEY_DOWN,) or
-                        inp in (u'j',)):
-                    if scroll_idx < bottom:
-                        scroll_idx += 1
-                        dirty = 2
-                elif (inp.code in (term.KEY_UP,) or
-                        inp in (u'k',)):
-                    if scroll_idx > 0:
-                        scroll_idx -= 1
-                        dirty = 2
                 elif inp.lower() in (u'q',):
                     quit = True
                     break
@@ -341,13 +390,38 @@ def main(rss_url=None, rss_title=None):
                         url = {u'v': article.link,
                                u'c': article.comments
                                }[inp]
-                        view_article(term=term, session=session,
-                                     url=url, title=article.title,
-                                     encoding=session.encoding)
+                        view_article(session=session, term=term,
+                                     url=url, title=article.title)
                         dirty = 2
                     else:
-                        # refresh only input bar
+                        # refresh only input bar, to occlude only our
+                        # prompt for an article (selection invalid)
                         dirty = 1
                     break
-
+                else:
+                    _idx = do_movement(inp=inp, scroll_idx=scroll_idx,
+                                       height=page_height, bottom=bottom,
+                                       keyset=keyset)
+                    if scroll_idx != _idx:
+                        scroll_idx = _idx
+                        dirty = 2
                 inp = term.inkey(0)
+
+
+def main(rss_url=None, rss_title=None):
+    """ main entry point. """
+
+    session, term = getsession(), getterminal()
+    session.activity = 'reading hackernews'
+    rss_url = rss_url or RSS_URL
+    rss_title = rss_title or RSS_TITLE
+
+    # move to bottom of screen, reset attribute
+    echo(term.move(term.height, 0) + term.normal)
+
+    # create a new, empty screen
+    echo(u'\r\n' * (term.height + 1))
+
+    with term.hidden_cursor():
+        view_article_summaries(session=session, term=term,
+                               rss_url=rss_url, rss_title=rss_title)
