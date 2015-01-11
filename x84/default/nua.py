@@ -274,7 +274,6 @@ def do_nua(user):
     validation_fields = get_validation_fields(user)
     while idx != len(validation_fields):
         field = validation_fields.values()[idx]
-        print(field)
         echo(fixate_next(term, newlines=1))
         if field.description:
             show_description(field.description)

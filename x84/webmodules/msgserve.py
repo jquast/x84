@@ -140,8 +140,8 @@ def server_error(log_func, log_msg, status, http_msg=None):
     :param str log_msg: log message.
     :param int status: HTTP status code.
     :param str http_msg: HTTP response body.
-    :returns: exception object that should be raised by caller.
-    :rtype: web.HTTPError
+    :returns: dictionary to be returned by web.py handler.
+    :rtype: dict
     """
     http_msg = http_msg or log_msg
     log_func('{0} {1}'.format(status, log_msg))
