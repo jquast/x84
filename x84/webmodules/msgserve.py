@@ -152,7 +152,7 @@ def server_error(log_func, log_msg, status_exc):
     :returns: does not return.
     """
     exc = status_exc()
-    log_func('{0}: {1}'.format(exc.status, log_msg))
+    log_func('{0}: {1}'.format(exc, log_msg))
     raise exc
 
 
