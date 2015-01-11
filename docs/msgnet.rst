@@ -77,6 +77,10 @@ haliphax promises he'd write a script for this::
 
 
 
+    # XX this should be automatic. cryptography.Fernet.generate_key()
+    # XX 'somereallylongkey' encourages not very strong keys ..
+    # XX and we should make a door/sysop script to generate these !
+
 Configuring a leaf hub
 ======================
 
