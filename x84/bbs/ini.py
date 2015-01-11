@@ -352,7 +352,7 @@ def init_log_ini():
     return cfg_log
 
 
-def get_ini(section=None, key=None, getter='get', split=False, splitsep=None):
+def get_ini(section=None, key=None, getter='get', split=False, splitsep=','):
     """
     Get an ini configuration of ``section`` and ``key``.
 
