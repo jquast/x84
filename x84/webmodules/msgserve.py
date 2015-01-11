@@ -49,13 +49,18 @@ def parse_auth(request_data):
 
     :raises ValueError:  token is too far from future or past.
     """
-    board_id, token, when = request_data.get('auth', '').split('|')
+    values = request_data.get('auth', '').split('|')
+    if len(values) != 3:
+        raise ValueError('Token must be 3-part pipe-delimited')
+
+    board_id, token, when = values
     when = int(when)
     if time.time() > when + AUTH_EXPIREY:
         raise ValueError('Token is from the future')
     elif time.time() - when > AUTH_EXPIREY:
         raise ValueError('Token too far in the past')
-    return (board_id, token, when)
+
+    return values
 
 
 class MessageApi(object):
@@ -68,8 +73,10 @@ class MessageApi(object):
         " GET method - pull messages "
         log = logging.getLogger(__name__)
         if 'HTTP_AUTH_X84NET' not in web.ctx.env:
-            log.error(u'Unauthorized connection')
-            raise web.HTTPError('401 Unauthorized', {}, 'Unauthorized')
+            raise server_error(
+                log_func=log.info,
+                log_msg=('request without header Auth-X84net.'),
+                status_exc=web.NoMethod)
 
         # prepare request for message, last is the highest
         # index previously received by client
@@ -87,8 +94,10 @@ class MessageApi(object):
         " PUT method - post messages "
         log = logging.getLogger(__name__)
         if 'HTTP_AUTH_X84NET' not in web.ctx.env:
-            log.error(u'Unauthorized connection')
-            raise web.HTTPError('401 Unauthorized', {}, 'Unauthorized')
+            raise server_error(
+                log_func=log.info,
+                log_msg='request without header Auth-X84net.',
+                status_exc=web.NoMethod)
 
         # parse incoming message
         webdata = web.input()
@@ -132,21 +141,18 @@ def web_module():
 # Below is the method for serving requests and some helper funcs.
 
 
-def server_error(log_func, log_msg, status, http_msg=None):
+def server_error(log_func, log_msg, status_exc):
     """
     Helper function for logging and returning web.HTTPError.
 
     :param callable log_func: logging function.
     :param str log_msg: log message.
-    :param int status: HTTP status code.
-    :param str http_msg: HTTP response body.
-    :returns: dictionary to be returned by web.py handler.
-    :rtype: dict
+    :param web.HTTPError status_exc: exception class
+    :raises: status_exc instance
+    :returns: does not return.
     """
-    http_msg = http_msg or log_msg
-    log_func('{0} {1}'.format(status, log_msg))
-    web.ctx.status = status
-    return {u'response': False, u'message': http_msg}
+    log_func('{0}: {1}'.format(status_exc.status, log_msg))
+    raise status_exc()
 
 
 def serve_messages_for(board_id, request_data, db_source):
@@ -207,18 +213,20 @@ def receive_message_from(board_id, request_data,
     log = logging.getLogger(__name__)
 
     if 'message' not in request_data:
-        return server_error(log.info, u'No message', 400)  # bad request
+        raise server_error(
+            log_func=log.info,
+            log_msg="request data missing 'message' content",
+            status_exc=web.BadRequest)
 
     pullmsg = request_data['message']
 
     # validate
     for key in (_key for _key in VALIDATE_MSG_KEYS if _key not in pullmsg):
-        return server_error(
+        raise server_error(
             log_func=log.info,
-            log_msg=('Missing message sub-field, {key!r}'
+            log_msg=("request data 'message' missing sub-field {key!r}"
                      .format(key=key)),
-            status=400,  # bad request
-        )
+            status_exc=web.BadRequest)
 
     msg = Msg()
     msg.author = pullmsg['author']
@@ -251,36 +259,34 @@ def get_response(request_data):
     # validate primary json request keys
     for key in (_key for _key in VALIDATE_FIELDS
                 if _key not in request_data):
-        return server_error(
-            log_func=log.warn,
-            log_msg=('Missing field, {key!r}, request_data={data!r}'
-                     .format(key=key, data=request_data)),
-            status=400,  # bad request
-        )
+        raise server_error(
+            log_func=log.info,
+            log_msg=("request data 'message' missing sub-field {key!r}"
+                     .format(key=key)),
+            status_exc=web.BadRequest)
 
     # validate this server offers such message network
     server_tags = get_ini(section='msg', key='server_tags', split=True)
 
     if not request_data['network'] in server_tags:
-        return server_error(
+        raise server_error(
             log_func=log.warn,
             log_msg=('[{data[network]}] not in server_tags ({server_tags})'
                      .format(data=request_data, server_tags=server_tags)),
-            http_msg=u'Server error',
-            status=404,  # not found
-        )
+            status_exc=web.NotFound)
+
     tag = request_data['network']
 
     # validate authentication token
     try:
         board_id, token, auth_tmval = parse_auth(request_data)
     except ValueError, err:
-        return server_error(
-            status=401,  # unauthorized
+        raise server_error(
             log_func=log.warn,
             log_msg=('[{data[network]}] Bad token: {err}'
                      .format(data=request_data, err=err)),
-            http_msg=u'Invalid auth token')
+            status_exc=web.Unauthorized)
+
     else:
         log.debug('[{data[network]}] board_id={board_id} request'
                   ': {data[action]}'.format(data=request_data,
@@ -291,26 +297,23 @@ def get_response(request_data):
     try:
         client_key = keysdb[board_id]
     except KeyError:
-        return server_error(
+        raise server_error(
             log_func=log.warn,
             log_msg=('[{data[network]}] board_id={board_id}'
                      ': No such key for this network'
                      .format(data=request_data,
                              board_id=board_id)),
-            http_msg=u'board_id not valid for this server.',
-            status=401,  # unauthorized
-        )
+            status_exc=web.Unauthorized)
     else:
         server_key = hashlib.sha256('{0}{1}'.format(client_key, auth_tmval))
         if token != server_key.hexdigest():
-            return server_error(
+            raise server_error(
                 log_func=log.warn,
                 log_msg=('[{data[network]}] board_id={board_id}'
                          ': auth-key mismatch'
                          .format(data=request_data,
                                  board_id=board_id)),
-                http_msg=u'Invalid board token',
-                status=401,  # Unauthorized
+                status_exc=web.Unauthorized,  # Unauthorized
             )
 
     # these need to be better named for their transmission direction,
@@ -331,11 +334,8 @@ def get_response(request_data):
                                     db_source=db_source,
                                     db_transactions=db_transactions)
 
-    return server_error(
+    raise server_error(
         log_func=log.info,
         log_msg=('[{data[network]}] Unknown action, {data[action]!r}'
                  .format(data=request_data)),
-        http_msg=('action {data[action]!r} invalid.'
-                  .format(data=request_data)),
-        status=405,  # method not allowed
-    )
+        status_exc=web.NoMethod)
