@@ -145,7 +145,7 @@ def server_error(log_func, log_msg, status, http_msg=None):
     """
     http_msg = http_msg or log_msg
     log_func('{0} {1}'.format(status, log_msg))
-    exc_response = web.HTTPError(status=status, message=http_msg)
+    exc_response = web.HTTPError(status=status, data=http_msg)
     return exc_response
 
 
