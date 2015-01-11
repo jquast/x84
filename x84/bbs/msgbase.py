@@ -213,7 +213,7 @@ class Msg(object):
 
             # server networks offered by this server,
             # message is for a network we host
-            if tag in (section='msg', key='server_tags', split=True):
+            if tag in get_ini(section='msg', key='server_tags', split=True):
                 with DBProxy('{0}trans'.format(tag)) as transdb:
                     self.body = u''.join((self.body, format_origin_line()))
                     self.save()
