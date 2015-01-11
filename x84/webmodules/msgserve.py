@@ -224,9 +224,7 @@ def receive_message_from(board_id, request_data,
 
 
 def get_response(request_data):
-    """
-    Serve one API server request and return.
-    """
+    """ Serve one API server request and return. """
     # todo: The caller runs a while loop .. this should be a script
     # that does a while loop and imports x84.webserve.
 
@@ -236,22 +234,20 @@ def get_response(request_data):
     # validate primary json request keys
     for key in (_key for _key in VALIDATE_FIELDS
                 if _key not in request_data):
-        return server_error(log_func=log.warn,
-                            log_msg='Missing field, {key!r}'.format(key=key))
+        return server_error(
+            log_func=log.warn,
+            log_msg=('Missing field, {key!r}, request_data={data!r}'
+                     .format(key=key, data=request_data)))
 
     # validate this server offers such message network
-    server_tags = get_ini(section='msg',
-                          key='server_tags',
-                          split=True,
-                          splitsep=',')
+    server_tags = get_ini(section='msg', key='server_tags', split=True)
 
     if not request_data['network'] in server_tags:
-        return server_error(log_func=log.warn,
-                            log_msg=('[{data[network]}] not in server_tags '
-                                     '({server_tags})'
-                                     .format(data=request_data,
-                                             server_tags=server_tags)),
-                            http_msg=u'Server error')
+        return server_error(
+            log_func=log.warn,
+            log_msg=('[{data[network]}] not in server_tags ({server_tags})'
+                     .format(data=request_data, server_tags=server_tags)),
+            http_msg=u'Server error')
     tag = request_data['network']
 
     # validate authentication token
@@ -263,28 +259,32 @@ def get_response(request_data):
                                      .format(data=request_data, err=err)),
                             http_msg=u'Invalid token')
     else:
-        log.debug('[{data[network]}] client {board_id} request '
-                  '{data[action]}'.format(data=request_data,
-                                          board_id=board_id))
+        log.debug('[{data[network]}] board_id={board_id} request'
+                  ': {data[action]}'.format(data=request_data,
+                                            board_id=board_id))
 
     # validate board auth-key
     keysdb = DBProxy('{0}keys'.format(tag), use_session=False)
     try:
         client_key = keysdb[board_id]
     except KeyError:
-        return server_error(log_func=log.warn,
-                            log_msg=('[{data[network]}] board_id={board_id} '
-                                     ': No such key for this network'
-                                     .format(data=request_data,
-                                             board_id=board_id)),
-                            http_msg=u'board_id not valid for this server.')
+        return server_error(
+            log_func=log.warn,
+            log_msg=('[{data[network]}] board_id={board_id}'
+                     ': No such key for this network'
+                     .format(data=request_data,
+                             board_id=board_id)),
+            http_msg=u'board_id not valid for this server.')
     else:
         server_key = hashlib.sha256('{0}{1}'.format(client_key, auth_tmval))
         if token != server_key.hexdigest():
-            return server_error(log_func=log.warn,
-                                log_msg=('[{data[network]}] auth-key mismatch'
-                                         .format(data=request_data)),
-                                http_msg=u'Invalid token')
+            return server_error(
+                log_func=log.warn,
+                log_msg=('[{data[network]}] board_id={board_id}'
+                         ': auth-key mismatch'
+                         .format(data=request_data,
+                                 board_id=board_id)),
+                http_msg=u'Invalid token')
 
     # these need to be better named for their transmission direction,
     # its very clear how they are consumed as they are currently named.

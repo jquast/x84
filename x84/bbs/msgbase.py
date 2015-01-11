@@ -6,7 +6,7 @@ import logging
 # local
 from x84.bbs.dbproxy import DBProxy
 from x84.bbs.session import getsession
-from x84.bbs.ini import get_ini, CFG
+from x84.bbs.ini import get_ini
 
 # 3rd party
 import dateutil.tz
@@ -186,8 +186,12 @@ class Msg(object):
                 with db_msg:
                     db_msg['%d' % (self.idx)] = self
 
-        if send_net and new and (CFG.has_option('msg', 'network_tags')
-                                 or CFG.has_option('msg', 'server_tags')):
+        # if either any of 'server_tags' or 'network_tags' are enabled,
+        # then queue for potential delivery.
+        if send_net and new and (
+            get_ini(section='msg', key='network_tags') or
+            get_ini(section='msg', key='server_tags')
+        ):
             self.queue_for_network()
 
         log.info(
@@ -201,25 +205,15 @@ class Msg(object):
         """ Queue message for networks, hosting or sending. """
         log = logging.getLogger(__name__)
 
-        # server networks this server is a member of,
-        member_networks = get_ini(section='msg',
-                                  key='network_tags',
-                                  split=True,
-                                  splitsep=',')
-
-        # server networks offered by this server,
-        my_networks = get_ini(section='msg',
-                              key='server_tags',
-                              split=True,
-                              splitsep=',')
-
         # check all tags of message; if they match a message network,
         # either record for hosting servers, or schedule for delivery.
         # pylint: disable=W1202
         #         Use % formatting in logging functions ...
         for tag in self.tags:
+
+            # server networks offered by this server,
             # message is for a network we host
-            if tag in my_networks:
+            if tag in (section='msg', key='server_tags', split=True):
                 with DBProxy('{0}trans'.format(tag)) as transdb:
                     self.body = u''.join((self.body, format_origin_line()))
                     self.save()
@@ -227,8 +221,9 @@ class Msg(object):
                 log.info('[{tag}] Stored for network (msgid {self.idx}).'
                          .format(tag=tag, self=self))
 
+            # server networks this server is a member of,
             # message is for a another network, queue for delivery
-            elif tag in member_networks:
+            elif tag in get_ini(section='msg', key='network_tags', split=True):
                 with DBProxy('{0}queues'.format(tag)) as queuedb:
                     queuedb[self.idx] = tag
                 log.info('[{tag}] Message (msgid {self.idx}) queued '

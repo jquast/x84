@@ -35,7 +35,7 @@ Example *default.ini* configuration::
     origin_line = Sent from a mediocre BBS.
 
     [msgnet_x84net]
-    url_base = https://some.server:8443/api/messages/
+    url_base = https://some.server:8443/api/
     board_id = 1
     token = somereallylongtoken
     poll_interval = 300
@@ -152,8 +152,7 @@ def get_networks():
     # pull list of network-associated tags
     network_list = get_ini(section='msg',
                            key='network_tags',
-                           split=True,
-                           splitsep=',')
+                           split=True)
 
     # expected configuration options,
     net_options = ('url_base token board_id'.split())

@@ -247,10 +247,7 @@ def main(background_daemon=True):
     # ensure the SCRIPT_PATH is in os environment PATH for module lookup.
     sys.path.insert(0, os.path.expanduser(SCRIPT_PATH))
 
-    web_modules = get_ini(section='web',
-                          key='modules',
-                          split=True,
-                          splitsep=',')
+    web_modules = get_ini(section='web', key='modules', split=True)
 
     if not web_modules:
         log.error("web server enabled, but no `modules' "
