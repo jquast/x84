@@ -19,7 +19,6 @@ Firstly, an SSL certificate and matching dnsname of the hub
 is *required*. The following sections assume files, given the
 domain ``1984.ws``, and were created by using sslmate_::
 
-    -rw-r--r-- 1 root root 4103 Jan 01 00:00 /etc/ssl/www.1984.ws.chain.crt
     -rw-r--r-- 1 root root 5982 Jan 01 00:00 /etc/ssl/www.1984.ws.chained.crt
     -rw-r--r-- 1 root root 1879 Jan 01 00:00 /etc/ssl/www.1984.ws.crt
     -rw------- 1 root root 1679 Jan 01 00:00 /etc/ssl/www.1984.ws.key
@@ -33,7 +32,7 @@ following details::
     port = 8443
     key = /etc/ssl/www.1984.ws.key
     cert = /etc/ssl/www.1984.ws.crt
-    chain = /etc/ssl/www.1984.ws.chain.crt
+    chain = /etc/ssl/www.1984.ws.chained.crt
     modules = msgserve
 
     [msg]

@@ -13,6 +13,7 @@ Contents:
    intro
    project_details
    developers
+   msgnet
    default_api
    api/*
    future_direction
