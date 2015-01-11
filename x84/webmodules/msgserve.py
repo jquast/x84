@@ -151,8 +151,9 @@ def server_error(log_func, log_msg, status_exc):
     :raises: status_exc instance
     :returns: does not return.
     """
-    log_func('{0}: {1}'.format(status_exc.status, log_msg))
-    raise status_exc()
+    exc = status_exc()
+    log_func('{0}: {1}'.format(exc.status, log_msg))
+    raise exc
 
 
 def serve_messages_for(board_id, request_data, db_source):
