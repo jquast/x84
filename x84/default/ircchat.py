@@ -461,8 +461,8 @@ def refresh_event(term, scrollback, editor):
         term.move(term.height - 1, 0)]))
 
     # re-wrap chat log
-    lastmost = slice(min(term.height, len(scrollback)) * -1, None)
-    for line in scrollback[lastmost]:
+    lastmost = slice(min(term.height - 1, len(scrollback)) * -1, None)
+    for line in list(scrollback)[lastmost]:
         # note: this will cause more than a screens'-worth to be displayed for
         # lines that wrap.  We should probably build a final 'output' text
         # buffer, from the bottom-up, extending by term.wrap until we've
