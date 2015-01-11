@@ -88,6 +88,10 @@ keysort_by_datetime = lambda oneliner: (
     time.strptime(oneliner['timestamp'], '%Y-%m-%d %H:%M:%S'))
 
 
+# prevents: ImportError: Failed to import _strptime because the import lock is
+# held by another thread. http://bugs.python.org/issue7980
+_ = time.strptime('20110101','%Y%m%d')  # noqa
+
 # -- shroo.ms api functions
 
 class FetchUpdatesShrooMs(threading.Thread):

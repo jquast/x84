@@ -218,7 +218,7 @@ def main():
             dirty = time.time()
             cur_row = 0
         elif inp in (u'q', 'Q', term.KEY_EXIT, unichr(27)):
-            echo('\r\n\r\n')
+            echo(u'\r\n\r\n')
             return
         elif inp in (u'c', 'C'):
             cur_row = 0 if chat(sessions) else cur_row
