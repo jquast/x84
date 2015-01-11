@@ -3,7 +3,7 @@
 import logging
 
 # local
-from x84.ini import get_ini
+from x84.bbs.ini import get_ini
 from x84.db import (
     get_db_filepath,
     get_database,
