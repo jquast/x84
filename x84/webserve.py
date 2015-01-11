@@ -19,6 +19,7 @@ The following attributes are optional:
 Example::
 
     [web]
+    enabled = yes
     addr = 0.0.0.0
     port = 8443
     cert = ~/.x84/ssl.cer
@@ -251,7 +252,8 @@ def main(background_daemon=True):
                           splitsep=',')
 
     if not web_modules:
-        log.debug('No `modules` defined in section [web]')
+        log.error("web server enabled, but no `modules' "
+                  "defined in section [web]")
         return
 
     log.info(u'Ready web modules: {0}'.format(web_modules))
