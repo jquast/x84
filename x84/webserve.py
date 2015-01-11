@@ -61,9 +61,9 @@ import sys
 import os
 
 
-class Favicon:
+class Favicon(object):
 
-    """ Dummy class for preventing /favicon.ico 404 errors """
+    """ Dummy class for preventing 404 of ``/favicon.ico`` """
 
     def GET(self):
         pass

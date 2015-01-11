@@ -1,12 +1,13 @@
-"""
-Database request handler for x/84 http://github.com/jquast/x84
-"""
-# std
+""" Database engine-request handler for x/84. """
+# std imports
 import multiprocessing
 import threading
 import logging
 import errno
 import os
+
+# local
+from x84.bbs.ini import get_ini
 
 # 3rd-party
 import sqlitedict
@@ -40,8 +41,7 @@ def check_db(filepath):
 
 
 def get_db_filepath(schema):
-    import x84.bbs.ini
-    folder = x84.bbs.ini.CFG.get('system', 'datapath')
+    folder = get_ini('system', 'datapath')
     return os.path.join(folder, '{0}.sqlite3'.format(schema))
 
 
@@ -76,11 +76,6 @@ def parse_dbevent(event):
     return iterable, schema
 
 
-def should_tapdb():
-    import x84.bbs.ini
-    return x84.bbs.ini.CFG.getboolean('session', 'tap_db')
-
-
 def log_db_cmd(log, schema, cmd, args):
     s_args = '()'
     if len(args):
@@ -112,7 +107,7 @@ class DBHandler(threading.Thread):
 
         self.iterable, self.schema = parse_dbevent(event)
         self.filepath = get_db_filepath(self.schema)
-        self._tap_db = should_tapdb()
+        self._tap_db = get_ini('session', 'tab_db', getter='getboolean')
 
         threading.Thread.__init__(self)
 
