@@ -57,108 +57,121 @@ bbsname = get_ini(
     section='system', key='bbsname'
 ) or 'Unnamed'
 
-#: A declaration of menu items and their acting gosub script
-MENU = [
-    # most 'expressive' scripts,
-    MenuItem(inp_key=u'irc',
-             text=u'irc chat',
-             script='ircchat',
-             args=(), kwargs={}),
-    MenuItem(inp_key=u'who',
-             text=u"who's online",
-             script='online',
-             args=(), kwargs={}),
-    MenuItem(inp_key=u'fb',
-             text=u'file browser',
-             script='fbrowse',
-             args=(), kwargs={}),
-    MenuItem(inp_key=u'pe',
-             text=u'profile editor',
-             script='profile',
-             args=(), kwargs={}),
-    MenuItem(inp_key=u'weather',
-             text=u'weather forecast',
-             script='weather',
-             args=(), kwargs={}),
-    MenuItem(inp_key=u'hn',
-             text=u'hacker news',
-             script='hackernews',
-             args=(), kwargs={}),
-    MenuItem(inp_key=u'ol',
-             text=u'one-liners',
-             script='ol',
-             args=(), kwargs={}),
-    MenuItem(inp_key=u'tetris',
-             text=u'tetris game',
-             script='tetris',
-             args=(), kwargs={}),
-    MenuItem(inp_key=u'vote',
-             text=u'voting booth',
-             script='vote',
-             args=(), kwargs={}),
-    MenuItem(inp_key=u'lc',
-             text=u'last callers',
-             script='lc',
-             args=(), kwargs={}),
-    MenuItem(inp_key=u'user',
-             text=u'user list',
-             script='userlist',
-             args=(), kwargs={}),
-    MenuItem(inp_key=u'news',
-             text=u'news reader',
-             script='news',
-             args=(), kwargs={}),
-    MenuItem(inp_key=u'si',
-             text=u'system info',
-             script='si',
-             args=(), kwargs={}),
-    MenuItem(inp_key=u'key',
-             text=u'keyboard test',
-             script='extras.test_keyboard_keys',
-             args=(), kwargs={}),
-    MenuItem(inp_key=u'ac',
-             text=u'adjust charset',
-             script='charset',
-             args=(), kwargs={}),
 
-    # writemsg.py will be done from the reader (TODO
-    MenuItem(inp_key=u'read',
-             text=u'read messages',
-             script='readmsgs',
-             args=(), kwargs={}),
+def get_menu_items(session):
+    """ Returns list of MenuItem entries. """
+    #: A declaration of menu items and their acting gosub script
+    menu_items = [
+        # most 'expressive' scripts,
+        MenuItem(inp_key=u'irc',
+                 text=u'irc chat',
+                 script='ircchat',
+                 args=(), kwargs={}),
+        MenuItem(inp_key=u'who',
+                 text=u"who's online",
+                 script='online',
+                 args=(), kwargs={}),
+        MenuItem(inp_key=u'fb',
+                 text=u'file browser',
+                 script='fbrowse',
+                 args=(), kwargs={}),
+        MenuItem(inp_key=u'pe',
+                 text=u'profile editor',
+                 script='profile',
+                 args=(), kwargs={}),
+        MenuItem(inp_key=u'weather',
+                 text=u'weather forecast',
+                 script='weather',
+                 args=(), kwargs={}),
+        MenuItem(inp_key=u'hn',
+                 text=u'hacker news',
+                 script='hackernews',
+                 args=(), kwargs={}),
+        MenuItem(inp_key=u'ol',
+                 text=u'one-liners',
+                 script='ol',
+                 args=(), kwargs={}),
+        MenuItem(inp_key=u'tetris',
+                 text=u'tetris game',
+                 script='tetris',
+                 args=(), kwargs={}),
+        MenuItem(inp_key=u'vote',
+                 text=u'voting booth',
+                 script='vote',
+                 args=(), kwargs={}),
+        MenuItem(inp_key=u'lc',
+                 text=u'last callers',
+                 script='lc',
+                 args=(), kwargs={}),
+        MenuItem(inp_key=u'user',
+                 text=u'user list',
+                 script='userlist',
+                 args=(), kwargs={}),
+        MenuItem(inp_key=u'news',
+                 text=u'news reader',
+                 script='news',
+                 args=(), kwargs={}),
+        MenuItem(inp_key=u'si',
+                 text=u'system info',
+                 script='si',
+                 args=(), kwargs={}),
+        MenuItem(inp_key=u'key',
+                 text=u'keyboard test',
+                 script='extras.test_keyboard_keys',
+                 args=(), kwargs={}),
+        MenuItem(inp_key=u'ac',
+                 text=u'adjust charset',
+                 script='charset',
+                 args=(), kwargs={}),
 
-    MenuItem(inp_key=u'g',
-             text=u'logoff system',
-             script='logoff',
-             args=(), kwargs={}),
+        # writemsg.py will be done from the reader (TODO
+        MenuItem(inp_key=u'read',
+                 text=u'read messages',
+                 script='readmsgs',
+                 args=(), kwargs={}),
 
-]
+        MenuItem(inp_key=u'g',
+                 text=u'logoff system',
+                 script='logoff',
+                 args=(), kwargs={}),
 
-# there doesn't exist any documentation on how this works,
-# only the given examples in the generated default.ini file
-if ini.CFG.has_section('sesame'):
-    from ConfigParser import NoOptionError
-    for door in ini.CFG.options('sesame'):
-        if door.endswith('_key'):
-            # skip entries ending by _key.
-            continue
+    ]
 
-        if not os.path.exists(ini.CFG.get('sesame', door)):
-            # skip entry if path does not resolve
-            continue
+    # there doesn't exist any documentation on how this works,
+    # only the given examples in the generated default.ini file
+    if ini.CFG.has_section('sesame'):
+        from ConfigParser import NoOptionError
+        for door in ini.CFG.options('sesame'):
+            if door.endswith('_key'):
+                # skip entries ending by _key.
+                continue
 
-        try:
-            inp_key = get_ini(section='sesame', key='{0}_key'.format(door))
-        except NoOptionError:
-            # skip entry if there is no {door}_key option
-            continue
+            if not os.path.exists(ini.CFG.get('sesame', door)):
+                # skip entry if path does not resolve
+                continue
 
-        MENU.append(
-            MenuItem(inp_key=inp_key,
-                     text=u'play {0}'.format(door),
-                     script='sesame',
-                     args=(door,),
-                     kwargs={}))
+            try:
+                inp_key = get_ini(section='sesame', key='{0}_key'.format(door))
+            except NoOptionError:
+                # skip entry if there is no {door}_key option
+                continue
+
+            menu_items.append(
+                MenuItem(inp_key=inp_key,
+                         text=u'play {0}'.format(door),
+                         script='sesame',
+                         args=(door,),
+                         kwargs={}))
+
+    # add sysop menu for sysop users, only.
+    if session.user.is_sysop:
+        menu_items.append(
+            MenuItem(inp_key='sysop',
+                     text=u'sysop area',
+                     script='sysop',
+                     args=(), kwargs={}))
+
+    return menu_items
 
 
 def decorate_menu_item(menu_item, term, highlight, lowlight):
@@ -232,12 +245,12 @@ def render_menu_entries(term, top_margin, menu_items):
     return output
 
 
-def get_line_editor(term):
+def get_line_editor(term, menu):
     """ Return a line editor suitable for menu entry prompts. """
     # if inp_key's were CJK characters, you should use term.length to measure
     # printable length of double-wide characters ... this is too costly to
     # enable by default.  Just a note for you east-asian folks.
-    max_inp_length = max([len(item.inp_key) for item in MENU])
+    max_inp_length = max([len(item.inp_key) for item in menu])
     return LineEditor(width=max_inp_length,
                       colors={'highlight': getattr(term, color_prompt)})
 
@@ -261,7 +274,8 @@ def main():
     session, term = getsession(), getterminal()
 
     text, width, height, dirty = u'', -1, -1, 2
-    editor = get_line_editor(term)
+    menu_items = get_menu_items(session)
+    editor = get_line_editor(term, menu_items)
     while True:
         if dirty == 2:
             # set syncterm font, if any
@@ -273,7 +287,7 @@ def main():
             echo(u'\r\n')
             if width != term.width or height != term.height:
                 width, height = term.width, term.height
-                text = render_menu_entries(term, top_margin, MENU)
+                text = render_menu_entries(term, top_margin, menu_items)
             echo(u''.join((text, display_prompt(term), editor.refresh())))
             dirty = 0
 
@@ -293,7 +307,7 @@ def main():
             while inp:
                 if inp.code == term.KEY_ENTER:
                     # find matching menu item,
-                    for item in MENU:
+                    for item in menu_items:
                         if item.inp_key == editor.content.strip():
                             echo(term.normal + u'\r\n')
                             gosub(item.script, *item.args, **item.kwargs)

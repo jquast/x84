@@ -58,28 +58,24 @@ When restarting x/84, we may see the log info message::
     INFO   webserve.py:223 https listening on 88.80.6.213:8443/tcp
 
 Authorizing a leaf hub
-======================
+----------------------
 
-You have to write some code ....
+You have to write some code ....  haliphax promises he'd write a script ...
 
-haliphax promises he'd write a script for this::
+> You must assign each board in the network an ID (an integer) and
+> a key in the keys database. Use a script invoked by gosub() to
+> leverage DBProxy for this, like so::
 
+             from x84.bbs import DBProxy, ini.CFG
+             db = DBProxy(ini.CFG.get('msgnet_x84net', 'keys_db_name'))
+             db.acquire()
+             db['1'] = 'somereallylongkey'
+             db.release()
 
-    # You must assign each board in the network an ID (an integer) and
-    # a key in the keys database. Use a script invoked by gosub() to
-    # leverage DBProxy for this, like so:
-    #
-    #     from x84.bbs import DBProxy, ini.CFG
-    #     db = DBProxy(ini.CFG.get('msgnet_x84net', 'keys_db_name'))
-    #     db.acquire()
-    #     db['1'] = 'somereallylongkey'
-    #     db.release()
+# XX this should be automatic. cryptography.Fernet.generate_key()
+# XX 'somereallylongkey' encourages not very strong keys ..
+# XX and we should make a door/sysop script to generate these !
 
-
-
-    # XX this should be automatic. cryptography.Fernet.generate_key()
-    # XX 'somereallylongkey' encourages not very strong keys ..
-    # XX and we should make a door/sysop script to generate these !
 
 Configuring a leaf hub
 ======================
