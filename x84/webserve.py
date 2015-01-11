@@ -220,7 +220,7 @@ def server(urls, funcs):
 
     web.config.debug = False
 
-    log.info('https listening on {addr}:{port}/tcp'i
+    log.info('https listening on {addr}:{port}/tcp'
              .format(addr=addr, port=port))
 
     # Runs CherryPy WSGI server hosting WSGI app.wsgifunc().
