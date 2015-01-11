@@ -25,6 +25,7 @@ Example::
     cert = ~/.x84/ssl.cer
     key = ~/.x84/ssl.key
     chain = ~/.x84/ca.cer
+    modules = msgserve
 
 You can generate your own self-signed certificate.
 
@@ -219,8 +220,8 @@ def server(urls, funcs):
 
     web.config.debug = False
 
-    log.info(
-        'https listening on {addr}:{port}/tcp'.format(addr=addr, port=port))
+    log.info('https listening on {addr}:{port}/tcp'i
+             .format(addr=addr, port=port))
 
     # Runs CherryPy WSGI server hosting WSGI app.wsgifunc().
     web.httpserver.runsimple(app.wsgifunc(), (addr, port))  # blocking
@@ -256,7 +257,7 @@ def main(background_daemon=True):
                   "defined in section [web]")
         return
 
-    log.info(u'Ready web modules: {0}'.format(web_modules))
+    log.debug(u'Ready web modules: {0}'.format(web_modules))
     urls, funcs = get_urls_funcs(web_modules)
 
     if background_daemon:
