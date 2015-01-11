@@ -145,8 +145,8 @@ def server_error(log_func, log_msg, status, http_msg=None):
     """
     http_msg = http_msg or log_msg
     log_func('{0} {1}'.format(status, log_msg))
-    exc_response = web.HTTPError(status=status, data=http_msg)
-    return exc_response
+    web.ctx.status = status
+    return {u'response': False, u'message': http_msg}
 
 
 def serve_messages_for(board_id, request_data, db_source):
@@ -207,13 +207,13 @@ def receive_message_from(board_id, request_data,
     log = logging.getLogger(__name__)
 
     if 'message' not in request_data:
-        raise server_error(log.info, u'No message', 400)  # bad request
+        return server_error(log.info, u'No message', 400)  # bad request
 
     pullmsg = request_data['message']
 
     # validate
     for key in (_key for _key in VALIDATE_MSG_KEYS if _key not in pullmsg):
-        raise server_error(
+        return server_error(
             log_func=log.info,
             log_msg=('Missing message sub-field, {key!r}'
                      .format(key=key)),
@@ -251,7 +251,7 @@ def get_response(request_data):
     # validate primary json request keys
     for key in (_key for _key in VALIDATE_FIELDS
                 if _key not in request_data):
-        raise server_error(
+        return server_error(
             log_func=log.warn,
             log_msg=('Missing field, {key!r}, request_data={data!r}'
                      .format(key=key, data=request_data)),
@@ -262,7 +262,7 @@ def get_response(request_data):
     server_tags = get_ini(section='msg', key='server_tags', split=True)
 
     if not request_data['network'] in server_tags:
-        raise server_error(
+        return server_error(
             log_func=log.warn,
             log_msg=('[{data[network]}] not in server_tags ({server_tags})'
                      .format(data=request_data, server_tags=server_tags)),
@@ -275,7 +275,7 @@ def get_response(request_data):
     try:
         board_id, token, auth_tmval = parse_auth(request_data)
     except ValueError, err:
-        raise server_error(
+        return server_error(
             status=401,  # unauthorized
             log_func=log.warn,
             log_msg=('[{data[network]}] Bad token: {err}'
@@ -291,7 +291,7 @@ def get_response(request_data):
     try:
         client_key = keysdb[board_id]
     except KeyError:
-        raise server_error(
+        return server_error(
             log_func=log.warn,
             log_msg=('[{data[network]}] board_id={board_id}'
                      ': No such key for this network'
@@ -303,7 +303,7 @@ def get_response(request_data):
     else:
         server_key = hashlib.sha256('{0}{1}'.format(client_key, auth_tmval))
         if token != server_key.hexdigest():
-            raise server_error(
+            return server_error(
                 log_func=log.warn,
                 log_msg=('[{data[network]}] board_id={board_id}'
                          ': auth-key mismatch'
@@ -331,7 +331,7 @@ def get_response(request_data):
                                     db_source=db_source,
                                     db_transactions=db_transactions)
 
-    raise server_error(
+    return server_error(
         log_func=log.info,
         log_msg=('[{data[network]}] Unknown action, {data[action]!r}'
                  .format(data=request_data)),
