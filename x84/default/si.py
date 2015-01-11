@@ -7,7 +7,7 @@ def main():
     #         Too many local variables
     #         Used builtin function 'map'
     #         Too many branches
-    from x84.bbs import getsession, getterminal, echo, getch
+    from x84.bbs import getsession, getterminal, echo, getch, syncterm_setfont
     from x84.engine import __url__ as url
     import platform
     import random
@@ -68,6 +68,9 @@ def main():
 
     def refresh():
         """ Refresh screen and return top-left (x, y) location. """
+        # set syncterm font to cp437
+        if term.kind.startswith('ansi'):
+            echo(syncterm_setfont('cp437'))
         echo(u'\r\n\r\n')
         if term.width < width:
             echo(u''.join((

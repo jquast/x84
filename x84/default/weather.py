@@ -447,9 +447,11 @@ def display_weather(todays, weather, centigrade):
 
     Thanks to xzip, we now have a sortof tv-weather channel art :-)
     """
-    from x84.bbs import getterminal, echo, from_cp437
+    from x84.bbs import getterminal, echo, from_cp437, syncterm_setfont
     term = getterminal()
-
+    # set syncterm font to cp437
+    if term.kind.startswith('ansi'):
+        echo(syncterm_setfont('cp437'))
     echo(term.height * u'\r\n')
     echo(term.move(0, 0))
     at = term.yellow_bold('At')
