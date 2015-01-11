@@ -240,7 +240,7 @@ def ropen(filename, mode='rb'):
 
 
 def showart(filepattern, encoding=None, auto_mode=True, center=False,
-            poll_cancel=False, msg_cancel=None):
+            poll_cancel=False, msg_cancel=None, quiet=False):
     """
     Yield unicode sequences for any given ANSI Art (of art_encoding).
 
@@ -365,16 +365,17 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
 
         if not padding and term.width < line_length:
             # if the artwork is too wide, simply stop displaying it.
-            msg_too_wide = u''.join(
-                (term.normal,
-                 term.bold_black(u'-- '),
-                 (u'canceled {0}, too wide:: {1}'
-                  .format(file_basename, line_length)),
-                 term.bold_black(u' --'),
-                 ))
-            yield (u'\r\n' +
-                   term.center(msg_too_wide).rstrip() +
-                   u'\r\n')
+            if not quiet:
+                msg_too_wide = u''.join(
+                    (term.normal,
+                     term.bold_black(u'-- '),
+                     (u'canceled {0}, too wide:: {1}'
+                      .format(file_basename, line_length)),
+                     term.bold_black(u' --'),
+                     ))
+                yield (u'\r\n' +
+                       term.center(msg_too_wide).rstrip() +
+                       u'\r\n')
             return
         if idx == len(lines) - 1:
             # strip DOS end of file (^Z)
