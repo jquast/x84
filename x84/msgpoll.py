@@ -225,7 +225,7 @@ def poll_network_for_messages(net):
 
     log = logging.getLogger(__name__)
 
-    log.debug(u'[{net[name]}] polling for new messages.'.format(net=net))
+    log.debug(u'[{net[name]}] Polling for new messages.'.format(net=net))
 
     try:
         last_msg_id = get_last_msg_id(net['last_file'])
@@ -237,10 +237,10 @@ def poll_network_for_messages(net):
     msgs = pull_rest(net=net, last_msg_id=last_msg_id)
 
     if msgs:
-        log.info('{net[name]} Retrieved {num} messages'
+        log.info('[{net[name]}] Retrieved {num} messages.'
                  .format(net=net, num=len(msgs)))
     else:
-        log.debug('{net[name]} no messages.'.format(net=net))
+        log.debug('[{net[name]}] No messages.'.format(net=net))
         return
 
     transdb = DBProxy('{0}trans'.format(net['name']), use_session=False)
