@@ -88,6 +88,7 @@ def make_editor_series(winsize, editors):
             yloc=_yloc, xloc=winsize.xloc, width=winsize.width,
             colors=colors, margin_pct=margin_pct, scroll_pct=scroll_pct,
             content=u'' if not editors else editors[_idx].content,
+            max_length=winsize.width)
         ) for _idx, _yloc in enumerate(range(
             winsize.yloc, winsize.yloc + winsize.height + -2))]
 
