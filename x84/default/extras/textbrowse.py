@@ -64,7 +64,7 @@ def displayfile(filename):
         text[counter] = line
         counter = counter + 1
 
-    while 1:
+    while True:
         echo(term.move(0, 0) + term.normal)
         # -2 om man vill spara en rad i botten
         for i in range(0, term.height - 1):
@@ -188,7 +188,7 @@ def main():
         filer, lighty, lightx, lightbarpos, offset, offset + antalrader)
     echo(term.hide_cursor)
 
-    while 1:
+    while True:
 
         keypressed = getch()
 
@@ -225,7 +225,8 @@ def main():
             echo(term.blue_reverse + term.move(lighty + lightbarpos - 1,
                                                lightx) + filer[lightbarpos + offset] + term.normal)
 
-        if keypressed == term.KEY_DOWN and lightbarpos + offset < len(filer) - 1:
+        if keypressed == term.KEY_DOWN and lightbarpos + \
+                offset < len(filer) - 1:
             echo(term.white + term.move(lighty + lightbarpos - 1, lightx) +
                  filer[lightbarpos + offset])  # restore colour on the old coordnate
             lightbarpos = lightbarpos + 1

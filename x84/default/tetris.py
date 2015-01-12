@@ -279,13 +279,13 @@ def play():
             return val
 
         def merge(r, x1, y1, x2, y2):
-            if r.x1 == None or r.x1 > x1:
+            if r.x1 is None or r.x1 > x1:
                 r.x1 = r.min(x1, 0)
-            if r.y1 == None or r.y1 > y1:
+            if r.y1 is None or r.y1 > y1:
                 r.y1 = r.min(y1, 0)
-            if r.x2 == None or r.x2 < x2:
+            if r.x2 is None or r.x2 < x2:
                 r.x2 = r.max(x2, field_width)
-            if r.y2 == None or r.y2 < y2:
+            if r.y2 is None or r.y2 < y2:
                 r.y2 = r.max(y2, field_height)
             # print r.x1,r.y1,r.x2,r.y2
 
@@ -348,7 +348,7 @@ def play():
     def redrawfieldbig(rr):
         # rr.merge(0,0,field_width,field_height)
         lastcolor = ''
-        if rr.x1 == None or rr.y1 == None:
+        if rr.x1 is None or rr.y1 is None:
             return
         # Only draw the parts which have been marked by the
         # redraw rectangle
@@ -504,7 +504,7 @@ def play():
     rr.merge(0, 0, field_width, field_height)
 
     buf = ''
-    while 1:
+    while True:
         drawfield()
         # gotoxy(0,0)
         # echo('\33[37mx: %d, y: %d, p: %d         '%(xpos,ypos,p))

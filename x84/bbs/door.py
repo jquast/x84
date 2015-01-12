@@ -378,9 +378,9 @@ class Door(object):
         """
         self._session, self._term = getsession(), getterminal()
         self.cmd = cmd
-        if type(args) is tuple:
+        if isinstance(args, tuple):
             self.args = (self.cmd,) + args
-        elif type(args) is list:
+        elif isinstance(args, list):
             self.args = [self.cmd, ] + args
         else:
             raise ValueError('args must be tuple or list')
@@ -404,7 +404,7 @@ class Door(object):
             import termios
             import fcntl
             import pty
-        except ImportError, err:
+        except ImportError as err:
             raise OSError('door support not (yet) supported on {0} platform.'
                           .format(sys.platform.lower()))
 
@@ -460,9 +460,9 @@ class Door(object):
         try:
             logger.info('exec/%s: %s', pid, ' '.join(self.args))
             self._loop()
-        except IOError, err:
+        except IOError as err:
             logger.error('IOError: %s', err)
-        except OSError, err:
+        except OSError as err:
             # match occurs on read() after child closed sys.stdout. (ok)
             if 'Errno 5' not in str(err):
                 # otherwise log as an error,

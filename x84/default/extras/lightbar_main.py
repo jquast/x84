@@ -1,5 +1,5 @@
 """
- Example code of a simple, lightbar based main menu for x/84, 
+ Example code of a simple, lightbar based main menu for x/84,
  http://github.com/jquast/x84
 
  Please note: this is a 3rdparty module, so use at your own risk!

@@ -398,12 +398,12 @@ class Session(object):
                 self._script_stack = [goto_script.value]
                 continue
 
-            except Disconnected, err:
+            except Disconnected as err:
                 self.log.info('Disconnected: %s', err)
                 self.close()
                 return None
 
-            except Exception, err:
+            except Exception as err:
                 # Pokemon exception, log and Cc: telnet client, then resume.
                 e_type, e_value, e_tb = sys.exc_info()
                 if self.show_traceback:

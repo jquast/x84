@@ -166,7 +166,9 @@ class IRCChat(object):
         """ Show /HELP text """
 
         # pylint:disable=W0141
-        commands = map(self.term.bold, [u'/HELP', u'/ME', u'/TOPIC', u'/NAMES'])
+        commands = map(
+            self.term.bold, [
+                u'/HELP', u'/ME', u'/TOPIC', u'/NAMES'])
         self.queue(u'{0} Use {1} to quit. Other commands: {2}'.format(
             self._indicator(),
             self.term.bold(u'/QUIT'),

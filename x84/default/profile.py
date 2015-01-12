@@ -422,7 +422,8 @@ def locate_user(term, point):
                         _color2(str(len(handles))), u', '.join(
                             _color2(handle) for handle in handles)))
                 echo(term.move(*point))
-                for y_offset, txt in enumerate(term.wrap(matches_text, width=width)):
+                for y_offset, txt in enumerate(
+                        term.wrap(matches_text, width=width)):
                     echo(term.move(point.y + y_offset, point.x))
                     echo(txt + term.clear_eol)
                     if point.y + y_offset > term.height - 3:
@@ -535,7 +536,8 @@ def main():
                 tgt_user = get_next_user(tgt_user)
                 break
             elif inp in string.letters:
-                if do_command(term, session, inp, fields, tgt_user, point_prompt):
+                if do_command(
+                        term, session, inp, fields, tgt_user, point_prompt):
                     # when returning True, perform full-screen refresh,
                     break
                 else:

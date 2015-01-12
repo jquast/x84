@@ -177,6 +177,7 @@ class SshClient(BaseClient):
 
 
 class ConnectSsh(BaseConnect):
+
     """
     ssh protocol connection handler.
 
@@ -283,6 +284,7 @@ class ConnectSsh(BaseConnect):
 
 
 class SshSessionServer(paramiko.ServerInterface):
+
     def __init__(self, client):
         self.shell_requested = threading.Event()
         self.sftp_requested = threading.Event()
@@ -405,6 +407,7 @@ class SshSessionServer(paramiko.ServerInterface):
 
 
 class SshServer(BaseServer):
+
     """
     Poll sockets for new connections and sending/receiving data from clients.
     """

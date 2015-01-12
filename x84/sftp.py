@@ -56,6 +56,7 @@ class X84SFTPHandle (SFTPHandle):
 
 
 class X84SFTPServer (SFTPServerInterface):
+
     def __init__(self, *args, **kwargs):
         from x84.bbs import get_ini
         self.log = logging.getLogger(__name__)
@@ -175,7 +176,7 @@ class X84SFTPServer (SFTPServerInterface):
                 (uploads_dirname in path and os.path.exists(path))):
             return SFTP_PERMISSION_DENIED
         try:
-            binary_flag = getattr(os, 'O_BINARY',  0)
+            binary_flag = getattr(os, 'O_BINARY', 0)
             flags |= binary_flag
             fd = os.open(path, flags, self.mode)
         except OSError as err:

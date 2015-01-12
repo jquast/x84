@@ -153,7 +153,7 @@ def render_article(term, html_text):
             for _subsq_indent, char in enumerate(line):
                 if not char.isspace():
                     break
-            _indent = u' '*_subsq_indent
+            _indent = u' ' * _subsq_indent
             text_wrapped.extend(textwrap.wrap(line, term.width - 1,
                                               subsequent_indent=_indent))
     final = [_text.rstrip() for _text in text_wrapped]

@@ -16,7 +16,7 @@ def ynprompt():
     term = getterminal()
     echo(term.magenta + ' (' + term.cyan + 'yes' + term.magenta +
          '/' + term.cyan + 'no' + term.magenta + ')' + term.white)
-    while 1:
+    while True:
         svar = getch()
         if (svar == 'y') or (svar == 'Y'):
             yn = True
@@ -67,7 +67,7 @@ def query_question():
 
     echo(term.bold_black + '* = already voted\r\n\r\n' + term.normal)
 
-    while 1:
+    while True:
         echo(
             term.magenta + '\rselect one of the questions above or press enter to return: ')
         le = LineEditor(30)
@@ -100,7 +100,7 @@ def list_results(questionnumber):
     counter = 0
 
     echo(term.clear())
-    echo(term.white + questions[questionnumber] + term.move_x(max(0,term.width - 10)) + ' index: ' + str(index[questionnumber]) +
+    echo(term.white + questions[questionnumber] + term.move_x(max(0, term.width - 10)) + ' index: ' + str(index[questionnumber]) +
          '\r\n' + term.blue + '-' * len(questions[questionnumber]) + '\r\n\r\n')
     echo(term.magenta + '(alternatives)' + term.move_x(49) +
          '(votes)' + term.move_x(57) + '(percentage)\r\n')
@@ -156,12 +156,13 @@ def vote(questionnumber):
     echo(term.magenta + '(' + term.cyan + str(amount_of_alternatives[
          questionnumber]) + term.magenta + ')' + term.bold_black + ' Add your own answer..\r\n\r\n')
 
-    while 1:
+    while True:
         echo(term.normal + term.magenta + '\rYour choice:: ')
         le = LineEditor(30)
         le.colors['highlight'] = term.cyan
         inp = le.read()
-        if inp.isnumeric() and int(inp) <= amount_of_alternatives[questionnumber]:
+        if inp.isnumeric() and int(
+                inp) <= amount_of_alternatives[questionnumber]:
 
             # create database for user if the user hasn't made any votes
             if not session.user.handle in db:
@@ -236,7 +237,7 @@ def add_question():
     echo(
         term.bold_black + '\r\n\r\nLeave a blank line when you are finished..')
     new_amount = 0
-    while 1:
+    while True:
         echo(term.normal + term.white + '\r\nchoice ' +
              term.red + str(new_amount) + term.white + ': ')
         le = LineEditor(48)
@@ -299,7 +300,7 @@ def delete_question(questionnumber):
     if inp == 'a':  # delete answer alternative..
         echo(term.clear)
         echo(term.white + questions[questionnumber] + term.move_x(max(0,
-            term.width - 12)) + ' index: ' + str(index[questionnumber]) + '\r\n\r\n')
+                                                                      term.width - 12)) + ' index: ' + str(index[questionnumber]) + '\r\n\r\n')
         for i in range(0, amount_of_alternatives[questionnumber]):
             echo(term.cyan + str(i) + '. ' + term.white +
                  alternatives[(questionnumber, i)] + '\r\n')
@@ -310,9 +311,11 @@ def delete_question(questionnumber):
         le.colors['highlight'] = term.cyan
         inp2 = le.read()
 
-        if inp2.isnumeric() and int(inp2) < amount_of_alternatives[questionnumber]:
+        if inp2.isnumeric() and int(
+                inp2) < amount_of_alternatives[questionnumber]:
             if int(inp2) + 1 < amount_of_alternatives[questionnumber]:
-                for i in range(int(inp2), amount_of_alternatives[questionnumber] - 1):
+                for i in range(
+                        int(inp2), amount_of_alternatives[questionnumber] - 1):
                     alternatives[(questionnumber, i)] = alternatives[
                         (questionnumber, i + 1)]
                     results[(questionnumber, i)] = results[
@@ -395,8 +398,9 @@ def main():
     while True:
         # clears the screen and displays the vote art header
         echo(term.clear())
-        for line in showart(os.path.join(os.path.dirname(__file__), 'art', 'vote.ans'), 'cp437'):
-            echo(term.cyan + term.move_x(max(0,(term.width / 2) - 40)) + line)
+        for line in showart(
+                os.path.join(os.path.dirname(__file__), 'art', 'vote.ans'), 'cp437'):
+            echo(term.cyan + term.move_x(max(0, (term.width / 2) - 40)) + line)
 
         if 'sysop' in session.user.groups:
             spacing = 1
@@ -423,19 +427,19 @@ def main():
         inp = inp.lower()
 
         if 'sysop' in session.user.groups and inp == 'd':
-            while 1:
+            while True:
                 questionnumber = query_question()
                 if questionnumber == 999:
                     break
                 delete_question(questionnumber)
         elif inp == 'r':
-            while 1:
+            while True:
                 questionnumber = query_question()
                 if questionnumber == 999:
                     break
                 list_results(questionnumber)
         elif inp == 'v':
-            while 1:
+            while True:
                 questionnumber = query_question()
                 if questionnumber == 999:
                     break

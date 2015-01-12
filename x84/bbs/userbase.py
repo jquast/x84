@@ -177,7 +177,7 @@ class User(object):
         """
         from x84.bbs import ini
         pass_ucase = ini.CFG.getboolean('system', 'pass_ucase')
-        assert type(try_pass) is unicode
+        assert isinstance(try_pass, unicode)
         assert len(try_pass) > 0
         assert self.password != (None, None), ('account is without password')
         salt = self.password[0]
@@ -280,7 +280,7 @@ class User(object):
         automatically persist.  A call to the .save() method must be done.
         """
         log = logging.getLogger(__name__)
-        assert type(self._handle) is unicode, ('handle must be unicode')
+        assert isinstance(self._handle, unicode), ('handle must be unicode')
         assert len(self._handle) > 0, ('handle must be non-zero length')
         assert (None, None) != self._password, ('password must be set')
         assert self._handle != u'anonymous', ('anonymous may not be saved.')

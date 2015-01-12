@@ -42,7 +42,7 @@ class Terminal(BlessedTerminal):
             self._keyboard_decoder = codecs.getincrementaldecoder(encoding)()
             self._encoding = encoding
             log.debug('keyboard encoding is {!r}'.format(encoding))
-        except Exception, err:
+        except Exception as err:
             log.exception(err)
 
     def kbhit(self, timeout=0, *_):
@@ -309,7 +309,7 @@ def start_process(sid, env, CFG, child_pipes, kind, addrport,
         # signal exit to engine
         try:
             writer.send(('exit', None))
-        except IOError, err:
+        except IOError as err:
             # ignore [Errno 232] The pipe is being closed,
             # only occurs on win32 platform after early exit
             if err.errno != 232:

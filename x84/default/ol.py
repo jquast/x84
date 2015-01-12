@@ -90,7 +90,7 @@ keysort_by_datetime = lambda oneliner: (
 
 # prevents: ImportError: Failed to import _strptime because the import lock is
 # held by another thread. http://bugs.python.org/issue7980
-_ = time.strptime('20110101','%Y%m%d')  # noqa
+_ = time.strptime('20110101', '%Y%m%d')  # noqa
 
 
 class FetchUpdatesShrooMs(threading.Thread):

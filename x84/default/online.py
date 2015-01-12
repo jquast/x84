@@ -20,8 +20,9 @@ def banner():
     import os
     term = getterminal()
     banner = '\r\n'
-    for line in showart(os.path.join(os.path.dirname(__file__), 'art', 'online.ans'), 'cp437'):
-        banner = banner + term.move_x(max(0,(term.width / 2) - 40)) + line
+    for line in showart(
+            os.path.join(os.path.dirname(__file__), 'art', 'online.ans'), 'cp437'):
+        banner = banner + term.move_x(max(0, (term.width / 2) - 40)) + line
     return (banner)
 
 
@@ -36,7 +37,7 @@ def describe(sessions):
     max_user = ini.CFG.getint('nua', 'max_user')
 
     text = u'\r\n'.join(([u''.join((
-        term.move_x(max(0,(term.width / 2) - 40)), term.green,
+        term.move_x(max(0, (term.width / 2) - 40)), term.green,
         u'%*d' % (5 + slen(sessions), node), u' ' * 7, term.normal,
         u'%4is' % (attrs.get('idle', 0),), u' ', u' ' * 8,
         (term.bold_red(u'%-*s' % (max_user, (
@@ -66,8 +67,9 @@ def heading(sessions):
     import os
     term = getterminal()
     bar = ''
-    for line in showart(os.path.join(os.path.dirname(__file__), 'art', 'onlinebar.ans'), 'topaz'):
-        bar = bar + term.move_x(max(0,(term.width / 2) - 40)) + line
+    for line in showart(
+            os.path.join(os.path.dirname(__file__), 'art', 'onlinebar.ans'), 'topaz'):
+        bar = bar + term.move_x(max(0, (term.width / 2) - 40)) + line
     return u'\r\n'.join((
         u'\r\n'.join([term.center(pline, (term.width))
                       for pline in prompt()]),

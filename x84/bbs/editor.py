@@ -164,7 +164,7 @@ class LineEditor(object):
             self._carriage_returned = True
         elif keystroke in self.keyset['exit']:
             self._quit = True
-        elif type(keystroke) is int:
+        elif isinstance(keystroke, int):
             return u''
         elif (ord(keystroke) >= ord(' ') and
                 (self._term.length(self.content) < self.width
@@ -395,7 +395,7 @@ class ScrollingEditor(AnsiWindow):
         elif keystroke in self.keyset['exit']:
             self._quit = True
             rstr = u''
-        elif type(keystroke) is int:
+        elif isinstance(keystroke, int):
             rstr = u''
         else:
             if ord(keystroke) >= 0x20:

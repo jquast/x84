@@ -86,7 +86,7 @@ def main():
 
             ask(u'submit your text as a public message? ')
 
-            while 1:
+            while True:
                 inp = term.inkey()
                 if inp.lower() == u'n':
                     return

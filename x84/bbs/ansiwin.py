@@ -289,5 +289,5 @@ class AnsiWindow(object):
     def moved(self, value):
         # pylint: disable=C0111
         #         Missing docstring
-        assert type(value) is bool
+        assert isinstance(value, bool)
         self._moved = value

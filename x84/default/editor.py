@@ -378,7 +378,7 @@ def main(save_key=None, continue_draft=False):
 
         # buffer keystrokes for repeat
         if (not edit and inp is not None
-                and type(inp) is not int
+                and not isinstance(inp, int)
                 and inp.isdigit()):
             digbuf += inp
             if len(digbuf) > 10:
@@ -580,6 +580,6 @@ def main(save_key=None, continue_draft=False):
                 if lneditor.moved:
                     echo(statusline(lightbar))
 
-        if inp is not None and type(inp) is not int and not inp.isdigit():
+        if inp is not None and not isinstance(inp, int) and not inp.isdigit():
             # commands were processed, reset num_repeat to 1
             num_repeat = -1

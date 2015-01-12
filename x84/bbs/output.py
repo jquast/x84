@@ -36,20 +36,20 @@ SYNCTERM_FONTMAP = (
 #: :func:`showart` to automatically determine which codepage to be used
 #: by utf8 terminals to provide an approximate translation.
 SAUCE_FONT_MAP = {
-    'Amiga MicroKnight':  'amiga',
+    'Amiga MicroKnight': 'amiga',
     'Amiga MicroKnight+': 'amiga',
-    'Amiga mOsOul':       'amiga',
-    'Amiga P0T-NOoDLE':   'amiga',
-    'Amiga Topaz 1':      'amiga',
-    'Amiga Topaz 1+':     'amiga',
-    'Amiga Topaz 2':      'amiga',
-    'Amiga Topaz 2+':     'amiga',
-    'Atari ATASCII':      'atari',
-    'IBM EGA43':          'cp437',
-    'IBM EGA':            'cp437',
-    'IBM VGA25G':         'cp437',
-    'IBM VGA50':          'cp437',
-    'IBM VGA':            'cp437',
+    'Amiga mOsOul': 'amiga',
+    'Amiga P0T-NOoDLE': 'amiga',
+    'Amiga Topaz 1': 'amiga',
+    'Amiga Topaz 1+': 'amiga',
+    'Amiga Topaz 2': 'amiga',
+    'Amiga Topaz 2+': 'amiga',
+    'Atari ATASCII': 'atari',
+    'IBM EGA43': 'cp437',
+    'IBM EGA': 'cp437',
+    'IBM VGA25G': 'cp437',
+    'IBM VGA50': 'cp437',
+    'IBM VGA': 'cp437',
 }
 
 # IBM-PC code pages
@@ -288,7 +288,9 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
         if _folder:
             rel_folder = os.path.join(rel_folder, _folder)
         if os.path.isdir(rel_folder):
-            filepattern = os.path.join(rel_folder, os.path.basename(filepattern))
+            filepattern = os.path.join(
+                rel_folder,
+                os.path.basename(filepattern))
 
     # Open the piece
     try:
