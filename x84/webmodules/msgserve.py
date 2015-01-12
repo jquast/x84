@@ -281,7 +281,7 @@ def get_response(request_data):
     # validate authentication token
     try:
         board_id, token, auth_tmval = parse_auth(request_data)
-    except ValueError, err:
+    except ValueError as err:
         raise server_error(
             log_func=log.warn,
             log_msg=('[{data[network]}] Bad token: {err}'
