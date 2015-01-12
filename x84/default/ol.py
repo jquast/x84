@@ -92,7 +92,6 @@ keysort_by_datetime = lambda oneliner: (
 # held by another thread. http://bugs.python.org/issue7980
 _ = time.strptime('20110101','%Y%m%d')  # noqa
 
-# -- shroo.ms api functions
 
 class FetchUpdatesShrooMs(threading.Thread):
 
@@ -400,9 +399,13 @@ def generate_recent_oneliners(term, n_liners, offset):
                 txt_field = left_part
                 break
             max_msglen -= 2
-        final_text_field = u''.join((final_text_field,
-                                     term.move_x(max(0, (term.width / 2) - 45)),
-                                     txt_field, term.clear_eol, u'\r\n'))
+        final_text_field = u''.join((
+            final_text_field,
+            term.move_x(max(0, (term.width / 2) - 45)),
+            txt_field,
+            term.clear_eol,
+            u'\r\n')
+        )
 
     # return text, vertical height, and adjusted offset
     return final_text_field, count, offset
@@ -431,7 +434,7 @@ def do_prompt(term, session):
         thread.start()
 
     while True:
-        if session.poll_event('refresh') or dirty == -1:
+        if dirty == -1:
             # re-display entire screen on-load, only. there
             # should never be any need to re-draw the art here-forward.
             top_margin = display_banner(art_file, encoding=art_encoding)
@@ -439,7 +442,7 @@ def do_prompt(term, session):
             top_margin += 1
             dirty = 1
 
-        if session.poll_event('oneliner') or dirty == 1:
+        if dirty == 1:
             # re-display all oneliners on update, or dirty == 1
             # if any shroo-ms oneliners were received, merge them
             # into the database from the main thread.
@@ -449,8 +452,10 @@ def do_prompt(term, session):
                     echo(term.center(term.bold_red('This just in!')).rstrip())
                     do_merge_shroo_ms(thread.new_content)
                 thread = None
+
             with term.hidden_cursor():
-                bot_margin, offset = display_oneliners(term, top_margin, offset)
+                bot_margin, offset = display_oneliners(
+                    term, top_margin, offset)
             dirty = 1
 
         if dirty:
@@ -459,48 +464,55 @@ def do_prompt(term, session):
             display_prompt(term, yloc=bot_margin)
             dirty = 0
 
-        # prompt for input, timeout each second allowing time
-        # to poll for screen resize or shroo-ms api return value
-        inp = term.inkey(timeout=0.25)
-
-        if inp is None:
-            # timeout, re-poll for updates/refresh
+        event, data = session.read_events(
+            ('input', 'oneliner', 'refresh'))
+        if event == 'refresh':
+            dirty = -1
             continue
+        elif event == 'oneliner':
+            dirty = 1
+            continue
+        elif event == 'input':
+            session.buffer_input(data, pushback=True)
 
-        elif inp.lower() in (u'y',):
-            # say something, refresh after
-            echo(inp)
-            say_retval = say_something(term, session)
-            if isinstance(say_retval, FetchUpdatesShrooMs):
-                # a rather strange hack, we track the thread of
-                # api calls so that we can merge its final content
-                # into our local database. See __init__ for
-                # bug id and description
-                thread = say_retval
-            elif say_retval:
-                # user has said something to the local database,
-                # refresh it so that they can beam with pride ...
-                dirty = 1
-                continue
+            inp = term.inkey(0)
+            while inp:
+                if inp.lower() in (u'y',):
+                    # say something, refresh after
+                    echo(inp)
+                    say_retval = say_something(term, session)
+                    if isinstance(say_retval, FetchUpdatesShrooMs):
+                        # a rather strange hack, we track the thread of
+                        # api calls so that we can merge its final content
+                        # into our local database. See __init__ for
+                        # bug id and description
+                        thread = say_retval
+                    elif say_retval:
+                        # user has said something to the local database,
+                        # refresh it so that they can beam with pride ...
+                        dirty = 1
+                        continue
 
-            # only redraw prompt (user canceled)
-            dirty = 2
+                    # only redraw prompt (user canceled)
+                    dirty = 2
+                elif inp.lower() in (u'n', u'q'):
+                    # quit
+                    echo(inp + u'\r\n')
+                    break
 
-        elif inp.lower() in (u'n', u'q'):
-            # quit
-            echo(inp + u'\r\n')
-            break
-        elif len(inp):
-            # maybe scroll, a bit convoluted ...
-            height = bot_margin - top_margin
-            sequence_keymap, vanilla_keymap = get_keymap(term, offset, height)
-            if ((inp.is_sequence and inp.code in sequence_keymap) or
-                    inp in vanilla_keymap):
-                trans = sequence_keymap.get(vanilla_keymap.get(inp, None), offset)
-                n_offset = sequence_keymap.get(inp.code, trans)
-                if n_offset != offset:
-                    offset = n_offset
-                    dirty = 1
+                elif len(inp):
+                    # maybe scroll, really quite convoluted ...
+                    height = bot_margin - top_margin
+                    sequence_keymap, keymap = get_keymap(term, offset, height)
+                    if ((inp.is_sequence and inp.code in sequence_keymap) or
+                            inp in keymap):
+                        _noff = sequence_keymap.get(
+                            keymap.get(inp, None), offset)
+                        n_offset = sequence_keymap.get(
+                            inp.code, _noff)
+                        if n_offset != offset:
+                            offset = n_offset
+                            dirty = 1
 
 
 def main():
