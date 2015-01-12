@@ -197,8 +197,8 @@ def init_bbs_ini():
     cfg_bbs.set('door', 'path', '/usr/local/bin:/usr/games')
 
     cfg_bbs.add_section('matrix')
-    cfg_bbs.set('matrix', 'newcmds', 'new apply')
-    cfg_bbs.set('matrix', 'byecmds', 'exit logoff bye quit')
+    cfg_bbs.set('matrix', 'newcmds', 'new, apply')
+    cfg_bbs.set('matrix', 'byecmds', 'exit, logoff, bye, quit')
     cfg_bbs.set('matrix', 'anoncmds', 'anonymous')
     cfg_bbs.set('matrix', 'script', 'matrix')
     cfg_bbs.set('matrix', 'script_telnet', 'matrix')
@@ -236,10 +236,11 @@ def init_bbs_ini():
     cfg_bbs.set('nua', 'max_email', '30')
     cfg_bbs.set('nua', 'max_location', '24')
     cfg_bbs.set('nua', 'allow_apply', 'yes')
-    cfg_bbs.set('nua', 'invalid_handles', ' '.join(
-        (cfg_bbs.get('matrix', 'byecmds'),
-         cfg_bbs.get('matrix', 'newcmds'),
-         'sysop anonymous',)))
+    invalid_handles = u','.join((
+        ','.join(cfg_bbs.get('matrix', 'byecmds').split()),
+        ','.join(cfg_bbs.get('matrix', 'newcmds').split()),
+        'anonymous', 'sysop',))
+    cfg_bbs.set('nua', 'invalid_handles', invalid_handles)
     cfg_bbs.set('nua', 'handle_validation', '^[A-Za-z0-9]{3,11}$')
 
     cfg_bbs.add_section('msg')
@@ -248,10 +249,12 @@ def init_bbs_ini():
     # as each get_msg() is a lookup, thread-related sorting could
     # become too expensive.
     cfg_bbs.set('msg', 'max_depth', '8')
+
+    # not implemented
     # by default, anybody can make up a new tag. otherwise, only
     # those of groups specified may.
-    cfg_bbs.set('msg', 'moderated_tags', 'no')
-    cfg_bbs.set('msg', 'tag_moderators', 'sysop moderator')
+#    cfg_bbs.set('msg', 'moderated_tags', 'no')
+#    cfg_bbs.set('msg', 'tag_moderators', 'sysop, moderator')
 
     cfg_bbs.add_section('dosemu')
     cfg_bbs.set('dosemu', 'enabled', 'no')
