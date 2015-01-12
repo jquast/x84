@@ -513,6 +513,7 @@ def do_prompt(term, session):
                         if n_offset != offset:
                             offset = n_offset
                             dirty = 1
+                inp = term.inkey(0)
 
 
 def main():
