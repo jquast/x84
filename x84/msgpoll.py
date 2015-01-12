@@ -127,7 +127,7 @@ def push_rest(net, msg, parent):
                       .format(net=net, err=err))
         return False
 
-    if req.status_code != 200:
+    if req.status_code not in (200, 201):
         log.error('{net[name]} HTTP error, code={req.status_code}'
                   .format(net=net, req=req))
         return False
@@ -332,7 +332,7 @@ def publish_network_messages(net):
         trans_id = push_rest(net=net, msg=msg, parent=trans_parent)
         if trans_id is False:
             log.error('{net[name]} Message not posted (msg_id={msg_id})'
-                      .format(net=net['name'], msg_id=msg_id))
+                      .format(net=net, msg_id=msg_id))
             continue
 
         if trans_id in transdb.keys():
