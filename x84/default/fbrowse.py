@@ -554,7 +554,7 @@ def main():
                         colors={'border': getattr(term, COLOR_BORDER),
                                 'highlight': getattr(term, COLOR_HIGHLIGHT)})
     draw_interface(term, lightbar)
-    with term.cursor_hidden():
+    with term.hidden_curosr():
         browse_dir(session, db_desc, term, lightbar, ROOT)
     echo(term.move(term.height, term.width))
     echo(u'\r\n\r\n' + term.normal)
