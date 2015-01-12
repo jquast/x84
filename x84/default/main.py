@@ -129,6 +129,10 @@ def get_menu_items(session):
                  text=u'read messages',
                  script='readmsgs',
                  args=(), kwargs={}),
+        MenuItem(inp_key=u'post',
+                 text=u'write message',
+                 script='writemsg',
+                 args=(), kwargs={}),
 
         MenuItem(inp_key=u'g',
                  text=u'logoff system',
