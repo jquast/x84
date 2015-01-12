@@ -7,11 +7,17 @@ __license__ = 'Public Domain'
 
 
 def main():
-    from x84.bbs import getsession, getterminal
+    from x84.bbs import getsession, getterminal, echo
     session, term = getsession(), getterminal()
     session.activity = 'playing tetris'
 
-    assert term.width >= 79 and term.height >= 23
+    if term.width < 79 or term.height < 24:
+        echo(u'Sorry, your terminal is not large enough (72x22), ')
+        echo(u'your size: {term.width}x{term.height}'.format(term=term))
+        echo(u'\r\n\r\nPress any key.')
+        term.inkey()
+        return
+
     with term.hidden_cursor():
         score = play()
         if score[0] > 0:

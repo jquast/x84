@@ -415,7 +415,7 @@ def display_panel(weather, column, centigrade):
         echo(art_row)
     echo(term.normal)
 
-    degree = from_cp437(''.join([chr(248)]))
+    degree = chr(248).decode('cp437_art')
     # display days' high,
     echo(term.move(panel_height + top_margin + 1, column))
     high = weather.get('High_Temperature', None)
