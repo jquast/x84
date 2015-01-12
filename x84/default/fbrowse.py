@@ -542,7 +542,7 @@ def main():
 
     # remove missing files/dirs from flagged files, just in case
     if len(browser.flagged_files):
-        for filepath in browser.flagged_files[:]:
+        for filepath in list(browser.flagged_files)[:]:
             if not os.path.exists(filepath):
                 browser.flagged_files.remove(filepath)
         session.user['flaggedfiles'] = browser.flagged_files
