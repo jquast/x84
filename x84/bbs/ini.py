@@ -172,6 +172,11 @@ def init_bbs_ini():
     cfg_bbs.set('sftp', 'enabled', 'no')
     cfg_bbs.set('sftp', 'root', os.path.expanduser(
         os.path.join('~', 'x84-sftp_root')))
+    try:
+        os.makedirs(
+            os.path.join(cfg_bbs.get('sftp', 'root'), "__uploads__"))
+    except OSError:
+        pass
     cfg_bbs.set('sftp', 'uploads_filemode', '644')
 
     # rlogin only works on port 513
