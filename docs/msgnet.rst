@@ -57,31 +57,28 @@ When restarting x/84, we may see the log info message::
 
     INFO   webserve.py:223 https listening on 88.80.6.213:8443/tcp
 
-Authorizing a leaf hub
-----------------------
-
-You have to write some code ....  haliphax promises he'd write a script ...
-
-> You must assign each board in the network an ID (an integer) and
-> a key in the keys database. Use a script invoked by gosub() to
-> leverage DBProxy for this, like so::
-
-             from x84.bbs import DBProxy, ini.CFG
-             db = DBProxy(ini.CFG.get('msgnet_x84net', 'keys_db_name'))
-             db.acquire()
-             db['1'] = 'somereallylongkey'
-             db.release()
-
-# XX this should be automatic. cryptography.Fernet.generate_key()
-# XX 'somereallylongkey' encourages not very strong keys ..
-# XX and we should make a door/sysop script to generate these !
-
-
 Configuring a leaf hub
 ======================
 
+On the hub system as a user of the 'sysop' group, enter the 'sysop' menu
+from the main menu, and choose 'a'dd new leaf node.
 
+It's output will be the recommended configuration for the leaf node's
+``default.ini``. You may need to adjust the ``base_url`` value to reflect
+your external dnsname (the local bind address is used, by default)::
 
+        [msgnet_defnet]
+        url_base = https://88.80.6.213:8443/
+        board_id = 1
+        token = 6MvmGtvMfDF9mkuCfyGxU2IBMmFPhP8ZC70oI0hwKBk=
+        poll_interval = 300
+
+        [msg]
+        network_tags = defnet
+
+Then, provide the sysop of the client bbs this output, and suggest
+to augment their ``default.ini`` with its contents and restart the
+leaf node.
 
 Authorship
 ==========
