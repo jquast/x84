@@ -423,17 +423,16 @@ def display_oneliners(term, top_margin, offset):
 
 
 def do_prompt(term, session):
-    dirty = -1
-    top_margin = bot_margin = 0
-    offset = 0
-
     thread = None
     if shroo_ms_enabled:
         # fetch shroo-ms api oneliners
         thread = FetchUpdatesShrooMs()
         thread.start()
-
-    while True:
+    dirty = -1
+    top_margin = bot_margin = 0
+    offset = 0
+    quit = False
+    while not quit:
         if dirty == -1:
             # re-display entire screen on-load, only. there
             # should never be any need to re-draw the art here-forward.
@@ -496,8 +495,8 @@ def do_prompt(term, session):
                     # only redraw prompt (user canceled)
                     dirty = 2
                 elif inp.lower() in (u'n', u'q'):
-                    # quit
                     echo(inp + u'\r\n')
+                    quit = True
                     break
 
                 elif len(inp):
