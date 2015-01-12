@@ -258,20 +258,20 @@ def poll_network_for_messages(net):
         store_msg.tags.add(u''.join((net['name'])))
 
         if msg['recipient'] is None and u'public' not in msg['tags']:
-            log.warn("{net[name]} No recipient (msg_id={msg[id]}), "
+            log.warn("[{net[name]}] No recipient (msg_id={msg[id]}), "
                      "adding 'public' tag".format(net=net, msg=msg))
             store_msg.tags.add(u'public')
 
         if (msg['parent'] is not None and
                 str(msg['parent']) not in transkeys):
-            log.warn('{net[name]} No such parent message ({msg[parent]}, '
+            log.warn('[{net[name]}] No such parent message ({msg[parent]}, '
                      'msg_id={msg[id]}), removing reference.'
                      .format(net=net, msg=msg))
         elif msg['parent'] is not None:
             store_msg.parent = int(transdb[msg['parent']])
 
         if msg['id'] in transkeys:
-            log.warn('{net[name]} dupe (msg_id={msg[id]}) discarded.'
+            log.warn('[{net[name]}] dupe (msg_id={msg[id]}) discarded.'
                      .format(net=net, msg=msg))
         else:
             # do not save this message to network, we already received
@@ -280,7 +280,7 @@ def poll_network_for_messages(net):
             with transdb:
                 transdb[msg['id']] = store_msg.idx
             transkeys.append(msg['id'])
-            log.info('{net[name]} Processed (msg_id={msg[id]}) => {new_id}'
+            log.info('[{net[name]}] Processed (msg_id={msg[id]}) => {new_id}'
                      .format(net=net, msg=msg, new_id=store_msg.idx))
 
         if 'last' not in net.keys() or int(net['last']) < int(msg['id']):
@@ -310,7 +310,7 @@ def publish_network_messages(net):
     for msg_id in sorted(queuedb.keys(),
                          cmp=lambda x, y: cmp(int(x), int(y))):
         if msg_id not in msgdb:
-            log.warn('{net[name]} No such message (msg_id={msg_id})'
+            log.warn('[{net[name]}] No such message (msg_id={msg_id})'
                      .format(net=net, msg_id=msg_id))
             del queuedb[msg_id]
             continue
@@ -325,18 +325,18 @@ def publish_network_messages(net):
             if len(matches) > 0:
                 trans_parent = matches[0]
             else:
-                log.warn('{net[name]} Parent ID {msg.parent} '
+                log.warn('[{net[name]}] Parent ID {msg.parent} '
                          'not in translation-DB (msg_id={msg_id})'
                          .format(net=net, msg=msg, msg_id=msg_id))
 
         trans_id = push_rest(net=net, msg=msg, parent=trans_parent)
         if trans_id is False:
-            log.error('{net[name]} Message not posted (msg_id={msg_id})'
+            log.error('[{net[name]}] Message not posted (msg_id={msg_id})'
                       .format(net=net, msg_id=msg_id))
             continue
 
         if trans_id in transdb.keys():
-            log.error('{net[name]} trans_id={trans_id} conflicts with '
+            log.error('[{net[name]}] trans_id={trans_id} conflicts with '
                       '(msg_id={msg_id})'
                       .format(net=net, trans_id=trans_id, msg_id=msg_id))
             with queuedb:
@@ -349,7 +349,7 @@ def publish_network_messages(net):
             msg.body = u''.join((msg.body, format_origin_line()))
             msgdb[msg_id] = msg
             del queuedb[msg_id]
-        log.info('{net[name]} Published (msg_id={msg_id}) => {trans_id}'
+        log.info('[{net[name]}] Published (msg_id={msg_id}) => {trans_id}'
                  .format(net=net, msg_id=msg_id, trans_id=trans_id))
 
 
