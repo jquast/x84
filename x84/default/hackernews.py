@@ -223,8 +223,13 @@ def view_article(session, term, url, title):
 
     # perform get request,
     headers = {'User-Agent': USER_AGENT}
-    req = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
-
+    try:
+        req = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
+    except requests.adapters.ReadTimeout as err:
+        echo(term.move(term.height, 0))
+        echo(term.center('failed: {0}'.format(err)))
+        term.inkey()
+        return
     if 200 != req.status_code:
         # display 404, 500, or whatever non-200 code returned.
         echo(term.move(term.height, 0))
