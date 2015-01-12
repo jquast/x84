@@ -480,8 +480,10 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
             # save diz in raw format, but display decoded
             save_diz = False
             db_desc[relativename] = diz
+            decoder = 'cp43_art'
             if session.encoding == 'utf8':
-                diz = [line.decode(COLLY_DECODING) for line in diz]
+                decoder = COLLY_DECODING
+            diz = [line.decode(decoder) for line in diz]
 
         elif is_flagged_dir(filename):
             # is pseudo-folder for flagged files
