@@ -66,8 +66,6 @@ def main():
         from x84 import webserve
         webserve.main()
 
-    # 3.0: This should be a separate section all together
-    #      with an enables = yes option.
     if get_ini(section='msg', key='network_tags'):
         # start background timer to poll for new messages
         # of message networks we may be a member of.
