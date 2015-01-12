@@ -158,9 +158,9 @@ def get_instructions(term):
         u'{0}     Unflag all files'
         .format(term.reverse(u'(-)')),
         u'{0}     Upload file(s)'
-        .format(term.reverse(u'(U)')),
+        .format(term.reverse(u'(u)')),
         u'{0}     Quit'
-        .format(term.reverse(u'(Q)')),
+        .format(term.reverse(u'(q)')),
         u' ',
         u'Files are also available via {0}'
         .format(term.bold(u'SFTP')),
@@ -554,6 +554,7 @@ def main():
                         colors={'border': getattr(term, COLOR_BORDER),
                                 'highlight': getattr(term, COLOR_HIGHLIGHT)})
     draw_interface(term, lightbar)
-    browse_dir(session, db_desc, term, lightbar, ROOT)
-    echo(term.move(term.height - 1, 0))
+    with term.cursor_hidden():
+        browse_dir(session, db_desc, term, lightbar, ROOT)
+    echo(term.move(term.height, term.width))
     echo(u'\r\n\r\n' + term.normal)
