@@ -7,7 +7,9 @@ import json
 from x84.bbs import DBProxy
 from x84.bbs.ini import CFG
 
+
 class OnelinersApi(object):
+
     """ Oneliners demonstration API endpoint """
 
     def GET(self, num=10):
@@ -16,7 +18,7 @@ class OnelinersApi(object):
         num = int(num)
         oneliners = DBProxy('oneliner', use_session=False).items()
         oneliners = [(int(k), v) for (k, v) in
-            DBProxy('oneliner', use_session=False).items()]
+                     DBProxy('oneliner', use_session=False).items()]
         last = oneliners[-num:]
 
         # output JSON instead?

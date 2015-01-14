@@ -46,19 +46,26 @@ VALIDATE_MSG_KEYS = (u'author', u'recipient', u'subject',
 def parse_auth(request_data):
     """
     Parse and return tuple of 'auth' token if valid.
-    Otherwise, throw ValueError.
+
+    :raises ValueError:  token is too far from future or past.
     """
-    board_id, token, when = request_data.get('auth', '').split('|')
+    values = request_data.get('auth', '').split('|')
+    if len(values) != 3:
+        raise ValueError('Token must be 3-part pipe-delimited')
+
+    board_id, token, when = values
     when = int(when)
     if time.time() > when + AUTH_EXPIREY:
         raise ValueError('Token is from the future')
     elif time.time() - when > AUTH_EXPIREY:
         raise ValueError('Token too far in the past')
-    return (board_id, token, when)
+
+    return values
 
 
 class MessageApi(object):
-    " message network web API endpoint "
+
+    """ message network web API endpoint """
 
     # todo: validate messages much earlier (here, not below the scissor-line)
 
@@ -66,8 +73,10 @@ class MessageApi(object):
         " GET method - pull messages "
         log = logging.getLogger(__name__)
         if 'HTTP_AUTH_X84NET' not in web.ctx.env:
-            log.error(u'Unauthorized connection')
-            raise web.HTTPError('401 Unauthorized', {}, 'Unauthorized')
+            raise server_error(
+                log_func=log.info,
+                log_msg=('request without header Auth-X84net.'),
+                status_exc=web.NoMethod)
 
         # prepare request for message, last is the highest
         # index previously received by client
@@ -78,15 +87,17 @@ class MessageApi(object):
             'last': max(0, int(last)),
         })
 
-        # return response data as json
+        # return response data as json (200 OK)
         return self._jsonify(response_data, log)
 
     def PUT(self, network, *args):
         " PUT method - post messages "
         log = logging.getLogger(__name__)
         if 'HTTP_AUTH_X84NET' not in web.ctx.env:
-            log.error(u'Unauthorized connection')
-            raise web.HTTPError('401 Unauthorized', {}, 'Unauthorized')
+            raise server_error(
+                log_func=log.info,
+                log_msg='request without header Auth-X84net.',
+                status_exc=web.NoMethod)
 
         # parse incoming message
         webdata = web.input()
@@ -130,11 +141,19 @@ def web_module():
 # Below is the method for serving requests and some helper funcs.
 
 
-def server_error(log_func, log_msg, http_msg=None):
-    " helper method for logging and returning errors "
-    http_msg = http_msg or log_msg
-    log_func(log_msg)
-    return {u'response': False, u'message': http_msg}
+def server_error(log_func, log_msg, status_exc):
+    """
+    Helper function for logging and returning web.HTTPError.
+
+    :param callable log_func: logging function.
+    :param str log_msg: log message.
+    :param web.HTTPError status_exc: exception class
+    :raises: status_exc instance
+    :returns: does not return.
+    """
+    exc = status_exc()
+    log_func('{0}: {1}'.format(exc, log_msg))
+    raise exc
 
 
 def serve_messages_for(board_id, request_data, db_source):
@@ -142,7 +161,7 @@ def serve_messages_for(board_id, request_data, db_source):
     from x84.bbs import DBProxy, msgbase
     from x84.bbs.msgbase import to_utctime
     log = logging.getLogger(__name__)
-    #log.error(msg)
+    # log.error(msg)
     db_tags = DBProxy(msgbase.TAGDB, use_session=False)
     db_messages = DBProxy(msgbase.MSGDB, use_session=False)
 
@@ -195,15 +214,20 @@ def receive_message_from(board_id, request_data,
     log = logging.getLogger(__name__)
 
     if 'message' not in request_data:
-        return server_error(log.info, u'No message')
+        raise server_error(
+            log_func=log.info,
+            log_msg="request data missing 'message' content",
+            status_exc=web.BadRequest)
 
     pullmsg = request_data['message']
 
     # validate
     for key in (_key for _key in VALIDATE_MSG_KEYS if _key not in pullmsg):
-        return server_error(log_func=log.info,
-                            log_msg=('Missing message sub-field, {key!r}'
-                                     .format(key=key)))
+        raise server_error(
+            log_func=log.info,
+            log_msg=("request data 'message' missing sub-field {key!r}"
+                     .format(key=key)),
+            status_exc=web.BadRequest)
 
     msg = Msg()
     msg.author = pullmsg['author']
@@ -212,19 +236,21 @@ def receive_message_from(board_id, request_data,
     msg.parent = pullmsg['parent']
     msg.tags = set(pullmsg['tags'] + [request_data['network']])
     msg.body = pullmsg['body']
+
     # ?? is this removing millesconds, or ?
     _ctime = to_localtime(pullmsg['ctime'].split('.', 1)[0])
+
     msg.save(send_net=False, ctime=_ctime)
     with db_source, db_transactions:
         db_source[msg.idx] = board_id
         db_transactions[msg.idx] = msg.idx
+
+    web.ctx.status = '201 Created'
     return {u'response': True, u'id': msg.idx}
 
 
 def get_response(request_data):
-    """
-    Serve one API server request and return.
-    """
+    """ Serve one API server request and return. """
     # todo: The caller runs a while loop .. this should be a script
     # that does a while loop and imports x84.webserve.
 
@@ -234,55 +260,62 @@ def get_response(request_data):
     # validate primary json request keys
     for key in (_key for _key in VALIDATE_FIELDS
                 if _key not in request_data):
-        return server_error(log_func=log.warn,
-                            log_msg='Missing field, {key!r}'.format(key=key))
+        raise server_error(
+            log_func=log.info,
+            log_msg=("request data 'message' missing sub-field {key!r}"
+                     .format(key=key)),
+            status_exc=web.BadRequest)
 
     # validate this server offers such message network
-    server_tags = get_ini(section='msg',
-                          key='server_tags',
-                          split=True,
-                          splitsep=',')
+    server_tags = get_ini(section='msg', key='server_tags', split=True)
 
     if not request_data['network'] in server_tags:
-        return server_error(log_func=log.warn,
-                            log_msg=('[{data[network]}] not in server_tags '
-                                     '({server_tags})'
-                                     .format(data=request_data,
-                                             server_tags=server_tags)),
-                            http_msg=u'Server error')
+        raise server_error(
+            log_func=log.warn,
+            log_msg=('[{data[network]}] not in server_tags ({server_tags})'
+                     .format(data=request_data, server_tags=server_tags)),
+            status_exc=web.NotFound)
+
     tag = request_data['network']
 
     # validate authentication token
     try:
         board_id, token, auth_tmval = parse_auth(request_data)
-    except ValueError, err:
-        return server_error(log_func=log.warn,
-                            log_msg=('[{data[network]}] Bad token: {err}'
-                                     .format(data=request_data, err=err)),
-                            http_msg=u'Invalid token')
+    except ValueError as err:
+        raise server_error(
+            log_func=log.warn,
+            log_msg=('[{data[network]}] Bad token: {err}'
+                     .format(data=request_data, err=err)),
+            status_exc=web.Unauthorized)
+
     else:
-        log.debug('[{data[network]}] client {board_id} request '
-                  '{data[action]}'.format(data=request_data,
-                                          board_id=board_id))
+        log.debug('[{data[network]}] board_id={board_id} request'
+                  ': {data[action]}'.format(data=request_data,
+                                            board_id=board_id))
 
     # validate board auth-key
     keysdb = DBProxy('{0}keys'.format(tag), use_session=False)
     try:
         client_key = keysdb[board_id]
     except KeyError:
-        return server_error(log_func=log.warn,
-                            log_msg=('[{data[network]}] board_id={board_id} '
-                                     ': No such key for this network'
-                                     .format(data=request_data,
-                                             board_id=board_id)),
-                            http_msg=u'board_id not valid for this server.')
+        raise server_error(
+            log_func=log.warn,
+            log_msg=('[{data[network]}] board_id={board_id}'
+                     ': No such key for this network'
+                     .format(data=request_data,
+                             board_id=board_id)),
+            status_exc=web.Unauthorized)
     else:
         server_key = hashlib.sha256('{0}{1}'.format(client_key, auth_tmval))
         if token != server_key.hexdigest():
-            return server_error(log_func=log.warn,
-                                log_msg=('[{data[network]}] auth-key mismatch'
-                                         .format(data=request_data)),
-                                http_msg=u'Invalid token')
+            raise server_error(
+                log_func=log.warn,
+                log_msg=('[{data[network]}] board_id={board_id}'
+                         ': auth-key mismatch'
+                         .format(data=request_data,
+                                 board_id=board_id)),
+                status_exc=web.Unauthorized,  # Unauthorized
+            )
 
     # these need to be better named for their transmission direction,
     # its very clear how they are consumed as they are currently named.
@@ -302,26 +335,8 @@ def get_response(request_data):
                                     db_source=db_source,
                                     db_transactions=db_transactions)
 
-    else:
-        return server_error(
-            log_func=log.info,
-            log_msg=('[{data[network]}] Unknown action, {data[action]!r}'
-                     .format(data=request_data)),
-            http_msg=('action {data[action]!r} invalid.'
-                      .format(data=request_data)))
-
-# XX this should be automatic. cryptography.Fernet.generate_key()
-# XX 'somereallylongkey' encourages not very strong keys ..
-# XX and we should make a door/sysop script to generate these !
-#
-# You must assign each board in the network an ID (an integer) and
-# a key in the keys database. Use a script invoked by gosub() to
-# leverage DBProxy for this, like so:
-#
-#     from x84.bbs import DBProxy, ini.CFG
-#     db = DBProxy(ini.CFG.get('msgnet_x84net', 'keys_db_name'))
-#     db.acquire()
-#     db['1'] = 'somereallylongkey'
-#     db.release()
-# XX
-# XX
+    raise server_error(
+        log_func=log.info,
+        log_msg=('[{data[network]}] Unknown action, {data[action]!r}'
+                 .format(data=request_data)),
+        status_exc=web.NoMethod)

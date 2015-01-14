@@ -10,7 +10,6 @@ import logging
 import select
 import socket
 import array
-import errno
 import time
 
 # local
@@ -25,6 +24,7 @@ from x84.terminal import spawn_client_session
 
 
 class RLoginClient(BaseClient):
+
     '''
     rlogin protocol client handler.
     '''
@@ -73,6 +73,7 @@ class RLoginClient(BaseClient):
 
 
 class ConnectRLogin(BaseConnect):
+
     '''
     rlogin protocol connection handler.
 
@@ -158,8 +159,8 @@ class ConnectRLogin(BaseConnect):
         """
         Receive four null-terminated strings transmitted by client on-connect.
 
+        :return: bytes received, containing at least 4 NUL-terminated strings.
         :rtype: str
-        :returns: bytes received, containing at least 4 NUL-terminated strings.
         :raises ValueError: on-connect data timeout or bandwidth exceeded.
         """
         established_msg = ('{client.addrport}: rlogin connection established'
@@ -212,8 +213,8 @@ class ConnectRLogin(BaseConnect):
         """
         Cherry-pick rlogin values into client environment variables.
 
-        :type parsed: dict
-        :param parsed: values identified by class method parse_connect_data()
+        :param dict parsed: values identified by class method
+                            ``parse_connect_data()``
         :rtype: None
         """
         # Only terminal-type environment variable is propagated from client, we
@@ -227,9 +228,8 @@ class ConnectRLogin(BaseConnect):
         """
         Parse and return raw data received by client on-connect.
 
-        :param data: bytes received by class method get_connect_data().
-        :type data: str
-        :returns: dictionary containing pertinent key/values
+        :param str data: bytes received by class method get_connect_data().
+        :return: dictionary containing pertinent key/values
         :rtype: dict
         """
         parsed = dict()
@@ -275,6 +275,7 @@ class ConnectRLogin(BaseConnect):
 
 
 class RLoginServer(BaseServer):
+
     '''
     RLogin/RSH protocol server.
     '''

@@ -34,8 +34,9 @@ prompt_text = (u"Chose an encoding and set font until artwork "
                u"will appear as '?'.  "
 
                u"OSX Clients should chose an Andale Mono font. Linux "
-               u"fonts should chose an <...> font. ")
+               u"fonts should chose an Deja Vu Sans Mono font. ")
 
+#: horizontal margin from window edge for prompt
 prompt_padding = 10
 
 
@@ -82,14 +83,15 @@ def do_select_encoding(term, session):
 
         if inp is None or inp.lower() == 'd':
             break
-        elif len(inp) == 1:
-            # position cursor for next call to LineEditor()
+        elif len(inp):
+            # bad input -- reposition cursor for next LineEditor()
             echo(u'\b')
-
         if inp.lower() == u'u' and session.encoding != 'utf8':
+            # switch to utf8,
             session.encoding = 'utf8'
             dirty = True
         elif inp.lower() == 'c' and session.encoding != 'cp437':
+            # or cp437
             session.encoding = 'cp437'
             dirty = True
 
@@ -100,7 +102,7 @@ def main():
     session.activity = u'Selecting character set'
 
     # set syncterm font, if any
-    if syncterm_font and term._kind.startswith('ansi'):
+    if syncterm_font and term.kind.startswith('ansi'):
         echo(syncterm_setfont(syncterm_font))
 
     do_select_encoding(term, session)

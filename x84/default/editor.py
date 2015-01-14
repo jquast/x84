@@ -1,13 +1,10 @@
-"""
-editor script for X/84, https://github.com/jquast/x84
-"""
+""" Editor script for X/84, https://github.com/jquast/x84 """
 # std
-import codecs
 import os
 
 # local
 from x84.bbs import getsession, getterminal, encode_pipe, echo, getch
-from x84.bbs import Pager, Lightbar, Selector, ScrollingEditor, showart
+from x84.bbs import Lightbar, Selector, ScrollingEditor, showart
 
 # This is probably the fourth or more ansi multi-line editor
 # I've written for python. I did the least-effort this time.
@@ -26,10 +23,9 @@ UNDOLEVELS = 9
 
 here = os.path.dirname(__file__)
 
+
 def save_draft(key, ucs):
-    """
-    Persist draft to database and stack changes to UNDO buffer
-    """
+    """ Persist draft to database and stack changes to UNDO buffer. """
     save(key, ucs)
     # pylint: disable=W0602
     #         Using global for 'UNDO' but no assignment is done
@@ -40,36 +36,26 @@ def save_draft(key, ucs):
 
 
 def get_contents(lightbar):
-    """
-    Return well-formatted document given the lightbar
-    """
+    """ Return well-formatted document given the lightbar. """
     return HARDWRAP.join([softwrap_join(_ucs)
                           for _ucs in get_lbcontent(lightbar).split(HARDWRAP)])
 
 
 def save(key, content):
-    """
-    Persist message to user attrs database
-    """
+    """ Persist message to user attrs database. """
     getsession().user[key] = content
 
 
 def show_help(term, center=True):
-    """
-    Returns help text.
-    """
+    """ Returns help text. """
     # clear screen
     echo(term.normal + ('\r\n' * (term.height + 1)) + term.home)
 
     map(echo, showart(os.path.join(here, 'art', 'po-help.ans')))
-#    return codecs.open(, 'r',
-#                       'cp437_art').read()
 
 
 def wrap_rstrip(value):
-    """
-    Remove hardwrap u'\r\n' and softwrap u'\n' from value
-    """
+    r""" Remove hardwrap ``u'\r\n'`` and softwrap ``u'\n'`` from value """
     if value[-len(HARDWRAP):] == HARDWRAP:
         value = value[:-len(HARDWRAP)]
     if value[-len(SOFTWRAP):] == SOFTWRAP:
@@ -78,30 +64,22 @@ def wrap_rstrip(value):
 
 
 def softwrap_join(value):
-    """
-    Return whitespace-joined string from value split by softwrap '\n'.
-    """
+    r""" Return whitespace-joined string from value split by softwrap ``'\n'``. """
     return WHITESPACE.join(value.split(SOFTWRAP))
 
 
 def is_hardwrapped(ucs):
-    """
-    Returns true if string is hardwrapped with '\r\n'.
-    """
+    r""" Returns true if string is hardwrapped with ``'\r\n'``. """
     return ucs[-(len(HARDWRAP)):] == HARDWRAP
 
 
 def is_softwrapped(ucs):
-    """
-    Returns true if string is softwrapped with '\n'.
-    """
+    r""" Returns true if string is softwrapped with ``'\n'``. """
     return ucs[-(len(SOFTWRAP)):] == SOFTWRAP
 
 
 def get_lbcontent(lightbar):
-    """
-    Returns ucs string for content of Lightbar instance, ``lightbar``.
-    """
+    """ Returns ucs string for content of Lightbar instance, ``lightbar``. """
     # a custom 'soft newline' versus 'hard newline' is implemented,
     # '\n' == 'soft', '\r\n' == 'hard'
     lines = list()
@@ -123,10 +101,7 @@ def get_lbcontent(lightbar):
 
 
 def set_lbcontent(lightbar, ucs):
-    """
-    Sets content of Lightbar instance, ``lightbar`` for given
-    Unicode string, ``ucs``.
-    """
+    """ Sets content for given Unicode string, ``ucs``. """
     # a custom 'soft newline' versus 'hard newline' is implemented,
     # '\n' == 'soft', '\r\n' == 'hard'
     term = getterminal()
@@ -184,10 +159,7 @@ def yes_no(lightbar, msg, prompt_msg='are you sure? ', attr=None):
 
 
 def get_lightbar(ucs):
-    """
-    Returns lightbar instance with content of given
-    Unicode string, ``ucs``.
-    """
+    """ Returns lightbar with content of given Unicode string, ``ucs``. """
     term = getterminal()
     width = min(80, max(term.width, 40))
     yloc = 0
@@ -201,10 +173,7 @@ def get_lightbar(ucs):
 
 
 def get_lneditor(lightbar):
-    """
-    Returns ScrollingEditor instance positioned at location of current
-    selection in Lightbar instance, ``lightbar``.
-    """
+    """ Returns editor positioned at location of current selection. """
     term = getterminal()
     width = min(80, max(term.width, 40))
     yloc = (lightbar.yloc + lightbar.ypadding + lightbar.position[0] - 1)
@@ -223,7 +192,8 @@ def get_lneditor(lightbar):
 
 
 def main(save_key=None, continue_draft=False):
-    """ Main Editor procedure.
+    """
+    Main Editor procedure.
 
     When argument ``save_key`` is non-None, the result is saved
     to the user attribute of the same name.  When unset, the
@@ -408,7 +378,7 @@ def main(save_key=None, continue_draft=False):
 
         # buffer keystrokes for repeat
         if (not edit and inp is not None
-                and type(inp) is not int
+                and not isinstance(inp, int)
                 and inp.isdigit()):
             digbuf += inp
             if len(digbuf) > 10:
@@ -461,7 +431,7 @@ def main(save_key=None, continue_draft=False):
         elif not edit and inp in keyset['insert']:
             for _ in count_repeat():
                 lightbar.content.insert(lightbar.index,
-                                       (lightbar.index, HARDWRAP,))
+                                        (lightbar.index, HARDWRAP,))
                 set_lbcontent(lightbar, get_lbcontent(lightbar))
             save_draft(save_key, get_lbcontent(lightbar))
             dirty = True
@@ -477,7 +447,7 @@ def main(save_key=None, continue_draft=False):
         # command mode; insert-before (switch to edit mode)
         elif not edit and inp in keyset['insert-before']:
             lightbar.content.insert(lightbar.index,
-                                   (lightbar.index, HARDWRAP,))
+                                    (lightbar.index, HARDWRAP,))
             set_lbcontent(lightbar, get_lbcontent(lightbar))
             edit = dirty = True
             # switched to edit mode, save draft,
@@ -489,7 +459,7 @@ def main(save_key=None, continue_draft=False):
         # command mode; insert-after (switch to edit mode)
         elif not edit and inp in keyset['insert-after']:
             lightbar.content.insert(lightbar.index + 1,
-                                   (lightbar.index + 1, HARDWRAP,))
+                                    (lightbar.index + 1, HARDWRAP,))
             set_lbcontent(lightbar, get_lbcontent(lightbar))
             edit = dirty = True
             # switched to edit mode, save draft,
@@ -515,9 +485,10 @@ def main(save_key=None, continue_draft=False):
                 if lightbar.index + 1 < len(lightbar.content):
                     idx = lightbar.index
                     lightbar.content[idx] = (idx,
-                            WHITESPACE.join((
-                                lightbar.content[idx][1].rstrip(),
-                                lightbar.content[idx + 1][1].lstrip(),)))
+                                             WHITESPACE.join((
+                                                 lightbar.content[
+                                                     idx][1].rstrip(),
+                                                 lightbar.content[idx + 1][1].lstrip(),)))
                     del lightbar.content[idx + 1]
                     prior_length = len(lightbar.content)
                     set_lbcontent(lightbar, get_lbcontent(lightbar))
@@ -553,18 +524,18 @@ def main(save_key=None, continue_draft=False):
             elif inp in (u'?',):
                 show_help(term)
                 term.inkey()
-                #pager = Pager(lightbar.height, lightbar.width,
+                # pager = Pager(lightbar.height, lightbar.width,
                 #              lightbar.yloc, lightbar.xloc)
-                #pager.update(get_help())
+                # pager.update(get_help())
                 #pager.colors['border'] = term.bold_blue
-                #echo(pager.border() + pager.title(u''.join((
+                # echo(pager.border() + pager.title(u''.join((
                 #    term.bold_blue(u'-( '),
                 #    term.white_on_blue(u'r'), u':', term.bold(u'eturn'),
                 #    u' ',
                 #    term.bold_blue(u' )-'),))))
                 #pager.keyset['exit'].extend([u'r', u'R'])
-                #pager.read()
-                #echo(pager.erase_border())
+                # pager.read()
+                # echo(pager.erase_border())
                 dirty = True
             else:
                 moved = False
@@ -609,6 +580,6 @@ def main(save_key=None, continue_draft=False):
                 if lneditor.moved:
                     echo(statusline(lightbar))
 
-        if inp is not None and type(inp) is not int and not inp.isdigit():
+        if inp is not None and not isinstance(inp, int) and not inp.isdigit():
             # commands were processed, reset num_repeat to 1
             num_repeat = -1

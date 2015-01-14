@@ -16,13 +16,15 @@ def request_info(sid):
 
 def banner():
     """ Returns string suitable for displaying banner """
-    from x84.bbs import getterminal, showart, echo
+    from x84.bbs import getterminal, showart
     import os
-    term = getterminal()    
+    term = getterminal()
     banner = '\r\n'
-    for line in showart(os.path.join(os.path.dirname(__file__),'art','online.ans'),'topaz'):
-        banner = banner + term.move_x((term.width/2)-40) + line
-    return (banner)  
+    for line in showart(
+            os.path.join(os.path.dirname(__file__), 'art', 'online.ans'), 'cp437'):
+        banner = banner + term.move_x(max(0, (term.width / 2) - 40)) + line
+    return (banner)
+
 
 def describe(sessions):
     """
@@ -35,21 +37,22 @@ def describe(sessions):
     max_user = ini.CFG.getint('nua', 'max_user')
 
     text = u'\r\n'.join(([u''.join((
-        term.move_x((term.width/2)-40), term.green,
-        u'%*d' % (5 + slen(sessions), node), u' '*7, term.normal,
-        u'%4is' % (attrs.get('idle', 0),), u' ',u' '*8,
+        term.move_x(max(0, (term.width / 2) - 40)), term.green,
+        u'%*d' % (5 + slen(sessions), node), u' ' * 7, term.normal,
+        u'%4is' % (attrs.get('idle', 0),), u' ', u' ' * 8,
         (term.bold_red(u'%-*s' % (max_user, (
-        u'** diSCONNECtEd' if 'delete' in attrs
-        else attrs.get('handle', u'** CONNECtiNG')),)
+            u'** diSCONNECtEd' if 'delete' in attrs
+            else attrs.get('handle', u'** CONNECtiNG')),)
         ) if attrs.get('handle', u'') != session.user.handle
             else term.red(u'%-*s' % (max_user, session.user.handle))),
         term.green(u'       '),
         term.yellow((attrs.get('activity', u''))
-                        if attrs.get('sid') != session.sid else
-                        term.yellow(session.activity)),
+                    if attrs.get('sid') != session.sid else
+                    term.yellow(session.activity)),
     )) for node, (_sid, attrs) in get_nodes(sessions)]))
 
-    return text+'\r\n'
+    return text + '\r\n'
+
 
 def get_nodes(sessions):
     """ Given an array of sessions, assign an arbitrary 'node' number """
@@ -62,17 +65,15 @@ def heading(sessions):
     """
     from x84.bbs import getterminal, ini, showart
     import os
-    slen = lambda sessions: len(u'%d' % (len(sessions),))
     term = getterminal()
-    max_user = ini.CFG.getint('nua', 'max_user')
-
     bar = ''
-    for line in showart(os.path.join(os.path.dirname(__file__),'art','onlinebar.ans'),'topaz'):
-        bar = bar + term.move_x((term.width/2)-40) + line
+    for line in showart(
+            os.path.join(os.path.dirname(__file__), 'art', 'onlinebar.ans'), 'topaz'):
+        bar = bar + term.move_x(max(0, (term.width / 2) - 40)) + line
     return u'\r\n'.join((
         u'\r\n'.join([term.center(pline, (term.width))
                       for pline in prompt()]),
-    u'\r\n',bar))
+        u'\r\n', bar))
 
 
 def prompt():
@@ -91,12 +92,10 @@ def prompt():
         decorate('c', 'hAt USR'),
         decorate('s', 'ENd MSG'),
         (u''.join((
-        decorate('p', 'lAYbACk REC'),
-        decorate('w', 'AtCh liVE'),
-        decorate('d', 'iSCONNECt SiD'),
-        decorate('e', 'diT USR'),
-        decorate('v', 'iEW SiD AttRS'),
-        u' ',)) if 'sysop' in session.user.groups else u''),
+            decorate('d', 'iSCONNECt SiD'),
+            decorate('e', 'diT USR'),
+            decorate('v', 'iEW SiD AttRS'),
+            u' ',)) if 'sysop' in session.user.groups else u''),
         decorate('Escape/q', 'Uit'),
         decorate('Spacebar', 'REfRESh'),
     )), int(term.width * .8), subsequent_indent=u' ' * 8)
@@ -133,28 +132,6 @@ def edit(sessions):
         return True
 
 
-def playback(sessions):
-    """ Prompt for node and gosub ttyplay script for ttyrec of target session.
-    """
-    from x84.bbs import gosub
-    (node, tgt_session) = get_node(sessions)
-    if node is not None:
-        gosub('ttyplay', tgt_session['ttyrec'])
-        return True
-
-
-def watch(sessions):
-    """
-    Prompt for node and gosub ttyplay script for ttyrec of target session,
-    with 'peek' boolean set to True.
-    """
-    from x84.bbs import gosub
-    (node, tgt_session) = get_node(sessions)
-    if node is not None:
-        gosub('ttyplay', tgt_session['ttyrec'], True)
-        return True
-
-
 def chat(sessions):
     """
     Prompt for node and page target session for chat.
@@ -163,15 +140,9 @@ def chat(sessions):
     from x84.bbs import gosub, getsession
     session = getsession()
     (node, tgt_session) = get_node(sessions)
-    if node is not None:
-        # page other user,
-        channel = tgt_session['sid']
-        sender = (session.user.handle
-                  if not 'sysop' in session.user.groups else -1)
-        session.send_event('route', (
-            tgt_session['sid'], 'page', channel, sender))
-        gosub('chat', channel)
-        return True
+    if tgt_session and tgt_session != session:
+        gosub('chat', dial=tgt_session['handle'],
+              other_sid=tgt_session['sid'])
 
 
 def view(sessions):
@@ -226,7 +197,7 @@ def main():
     #         Too many branches
     #         Too many local variables
     #         Too many statements
-    from x84.bbs import getsession, getterminal, getch, echo, syncterm_setfont
+    from x84.bbs import getsession, getterminal, getch, echo
     session, term = getsession(), getterminal()
     ayt_lastfresh = 0
 
@@ -241,9 +212,6 @@ def main():
     dirty = time.time()
     cur_row = 0
 
-    # tells syncterm to change to topaz, then delete the output to avoid the code to be shown in other clients
-    echo(syncterm_setfont('topaz')+u'\r'+term.clear_eol)
-
     while True:
         ayt_lastfresh = broadcast_ayt(ayt_lastfresh)
         inp = getch(POLL_KEY)
@@ -252,6 +220,7 @@ def main():
             dirty = time.time()
             cur_row = 0
         elif inp in (u'q', 'Q', term.KEY_EXIT, unichr(27)):
+            echo(u'\r\n\r\n')
             return
         elif inp in (u'c', 'C'):
             cur_row = 0 if chat(sessions) else cur_row
@@ -262,12 +231,6 @@ def main():
         elif inp is not None and 'sysop' in session.user.groups:
             if inp in (u'e', u'E'):
                 cur_row = 0 if edit(sessions) else cur_row
-                dirty = time.time()
-            elif inp in (u'p', u'P'):
-                cur_row = 0 if playback(sessions) else cur_row
-                dirty = time.time()
-            elif inp in (u'w', u'W'):
-                cur_row = 0 if watch(sessions) else cur_row
                 dirty = time.time()
             elif inp in (u'v', u'V'):
                 cur_row = 0 if view(sessions) else cur_row + 3
@@ -330,7 +293,7 @@ def main():
                 otxt_b = banner()
                 otxt_h = heading(sessions)
                 cur_row = len(otxt_b.splitlines()) + len(otxt_h.splitlines())
-                echo(u''.join((otxt_b, '\r\n',otxt_h, u'\r\n',otxt)))
+                echo(u''.join((otxt_b, '\r\n', otxt_h, u'\r\n', otxt)))
             else:
                 echo(u''.join((
                     u'\r\n',

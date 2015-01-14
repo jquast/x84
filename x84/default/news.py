@@ -26,7 +26,7 @@ news_contents = None
 art_file = os.path.join(here, 'art', 'news.ans')
 
 #: encoding used to display artfile
-art_encoding = 'topaz'
+art_encoding = 'cp437'
 
 #: fontset for SyncTerm emulator
 syncterm_font = 'topaz'
@@ -41,8 +41,8 @@ def main(quick=False):
     """
     Script entry point.
 
-    :param quick: When True, returns early if this news has already been read.
-    :type quick: bool
+    :param bool quick: When True, returns early if this news has already
+                       been read.
     """
     session, term = getsession(), getterminal()
 
@@ -57,7 +57,7 @@ def main(quick=False):
         return
 
     # set syncterm font, if any
-    if syncterm_font and term._kind == 'ansi':
+    if syncterm_font and term.kind == 'ansi':
         echo(syncterm_setfont(syncterm_font))
 
     session.activity = 'Reading news'

@@ -30,7 +30,7 @@ def temp_conv(val, centigrade):
     """
     try:
         val = int(val)
-    except:
+    except ValueError:
         return '', ''
     if not centigrade:
         return val, u'F'
@@ -49,7 +49,7 @@ def speed_conv(val, centigrade):
     # we simply use the 'centigrade' measurement as imperial vs. metric
     try:
         val = int(val)
-    except:
+    except ValueError:
         return '', ''
     if not centigrade:
         return val, u'MPH'
@@ -70,13 +70,10 @@ def disp_notfound():
     """ Display 'bad request -/- not found in red. """
     from x84.bbs import getsession, getterminal, echo, getch
     term = getterminal()
-    bad_req = term.bold(u'bAd REQUESt')
-    decorator = term.bold_red(u'-/-')
-    not_found = term.bold(u'NOt fOUNd.')
     echo(u'\r\n\r\n{bad_req} {decorator} {not_found}'.format(
-        bad_req=bad_req, decorator=decorator, not_found=not_found))
-    if not getsession().user.get('expert', False):
-        getch(1.7)
+        bad_req=term.bold(u'bad request'),
+        decorator=term.bold_red(u'-/-'),
+        not_found=term.bold(u'not found.')))
 
 
 def disp_found(num):
@@ -157,7 +154,7 @@ def do_search(search):
         echo(u'\r\n\r\n' + 'Press any key')
         getch()
     else:
-        #print resp.content
+        # print resp.content
         xml_stream = StringIO.StringIO(resp.content)
         locations = list([dict(elem.attrib.items())
                           for _event, elem in ET.iterparse(xml_stream)
@@ -217,29 +214,32 @@ def get_centigrade():
     from x84.bbs import getterminal, getsession, echo, getch
     term = getterminal()
     session = getsession()
-    echo(u'\r\n\r\n')
-    echo(term.yellow(u'Celcius'))
-    echo(term.bold_yellow(u'('))
-    echo(term.bold_yellow_reverse(u'C'))
-    echo(term.bold_yellow(u')'))
-    echo(u' or ')
-    echo(term.yellow(u'Fahrenheit'))
-    echo(term.bold_yellow(u'('))
-    echo(term.bold_yellow_reverse(u'F'))
-    echo(term.bold_yellow(u')'))
-    echo(u'? ')
-    anonymous = bool(session.user.handle == 'anonymous')
+    if bool(session.user.handle == 'anonymous'):
+        # anonymous cannot set a preference.
+        return
+
+    echo(u''.join((
+        u'\r\n\r\n',
+        term.yellow(u'Celcius'),
+        term.bold_yellow(u'('),
+        term.bold_yellow_reverse(u'C'),
+        term.bold_yellow(u')'),
+        u' or ',
+        term.yellow(u'Fahrenheit'),
+        term.bold_yellow(u'('),
+        term.bold_yellow_reverse(u'F'),
+        term.bold_yellow(u')'),
+        u'? ')))
+
     while True:
         inp = getch()
         if inp in (u'c', u'C'):
             session.user['centigrade'] = True
-            if not anonymous:
-                session.user.save()
+            session.user.save()
             break
         elif inp in (u'f', u'F'):
             session.user['centigrade'] = False
-            if not anonymous:
-                session.user.save()
+            session.user.save()
             break
         elif inp in (u'q', u'Q', term.KEY_EXIT):
             break
@@ -258,11 +258,13 @@ def chk_centigrade():
     else:
         echo(term.yellow(u'Fahrenheit'))
     echo(term.bold_black('...'))
-    echo(u' press ')
-    echo(term.bold_yellow_reverse(cf_key))
-    echo(u' to change.')
-    if getch(timeout=timeout_fch) == cf_key:
-        get_centigrade()
+
+    if bool(session.user.handle != 'anonymous'):
+        echo(u' press ')
+        echo(term.bold_yellow_reverse(cf_key))
+        echo(u' to change.')
+        if getch(timeout=timeout_fch) == cf_key:
+            get_centigrade()
 
 
 def chk_save_location(location):
@@ -312,61 +314,6 @@ def get_zipsearch(zipcode=u''):
     return LineEditor(width=min(30, term.width - 5), content=zipcode).read()
 
 
-def chose_location_dummy(locations):
-    """
-    dummy pager to chose location
-    """
-    from x84.bbs import getterminal, echo, getch, LineEditor
-    term = getterminal()
-    msg_enteridx = (
-        term.bold_yellow(u'('),
-        term.underline_yellow(u'0'),
-        term.yellow(u'-'),
-        term.underline_yellow(u'%d' % (len(locations) - 1,)),
-        term.yellow(u','),
-        term.underline_yellow('Escape'),
-        term.bold_white(u':'),
-        term.yellow('exit'),
-        term.bold_yellow(u')'), u' ',
-        term.reverse_yellow(':'),)
-    max_nwidth = len('%d' % (len(locations) - 1,))
-
-    def disp_entry(num, loc):
-        """ Display City, State.  """
-        return u''.join((
-            term.bold_yellow(u'['),
-            u'%*d' % (max_nwidth, num),
-            term.bold_yellow(u']'), u' ',
-            term.yellow(loc['city']), u', ',
-            term.yellow(loc['state']), u'\r\n',))
-    echo(u'\r\n\r\n')
-    lno = 3
-    for num, loc in enumerate(locations):
-        echo(disp_entry(num, loc))
-        lno += 1
-        if lno != 0 and (0 == lno % (term.height)):
-            echo(term.yellow_reverse('--MORE--'))
-            if getch() is None:
-                break
-            echo(u'\r\n')
-            lno += 1
-    idx = u''
-    while True:
-        echo(u'\r\n' + u''.join(msg_enteridx))
-        idx = LineEditor(width=max_nwidth, content=idx).read()
-        if idx is None or len(idx) == 0:
-            return None
-        try:
-            int_idx = int(idx)
-        except ValueError as err:
-            echo(term.bold_red(u'\r\n%s' % (err,)))
-            continue
-        if int_idx < 0 or int_idx > len(locations) - 1:
-            echo(term.bold_red(u'\r\nValue out of range'))
-            continue
-        return locations[int_idx]
-
-
 def chose_location_lightbar(locations):
     """
     Lightbar pager for chosing a location.
@@ -412,18 +359,12 @@ def chose_location(locations):
     """
     Prompt user to chose a location.
     """
-    from x84.bbs import getterminal, getsession, echo
-    session, term = getsession(), getterminal()
-    assert len(locations) > 0, (
-        u'Cannot chose from empty list')
-    msg_chosecity = (
-        term.yellow(u'ChOSE A'),
-        term.bold_yellow('CitY'),
-        term.yellow_reverse(':'), u' ',)
-    echo(u'\r\n\r\n')
-    echo(u' '.join(msg_chosecity))
-    if (session.user.get('expert', False) or 0 == term.number_of_colors):
-        return chose_location_dummy(locations)
+    from x84.bbs import getterminal, echo
+    term = getterminal()
+    assert len(locations) > 0, locations
+    echo(u'\r\n\r\n {chose_a} {city}: '
+         .format(chose_a=term.yellow(u'chose a'),
+                 city=term.bold_yellow('city'))),
     return chose_location_lightbar(locations)
 
 
@@ -431,7 +372,7 @@ def location_prompt(location, msg='WEAthER'):
     """
     Prompt user to display weather or forecast.
     """
-    from x84.bbs import getterminal, echo, getch
+    from x84.bbs import getterminal, echo
     term = getterminal()
     echo(u''.join((u'\r\n\r\n',
                    term.yellow(u'Display %s for ' % (msg,)),
@@ -442,26 +383,21 @@ def location_prompt(location, msg='WEAthER'):
                    term.bold_yellow(u']'),
                    u': '),))
     while True:
-        inp = getch()
-        if inp is None or inp in (u'n', u'N', u'q', u'Q', term.KEY_EXIT):
+        inp = term.inkey()
+        if inp.lower() in (u'n', 'q', '\x1b'):
             return False
-        if inp in (u'y', u'Y', u' ', term.KEY_ENTER):
+        elif inp.lower() in (u'y', u' ', u'\r', u'\n'):
             return True
 
 
 def get_icon(weather):
-    from x84.bbs import from_cp437
-
     # attribute 'WeatherIcon' is mapped to one of the {}.ans files
     icon = int(weather.get('WeatherIcon', '1'))
     artfile = os.path.join(weather_icons, '{}.ans'.format(icon))
     if not os.path.exists(artfile):
         warnings.warn('{} not found'.format(artfile))
-        art = u'[ .{:>2}. ]'.format(icon)
-    else:
-        art = [from_cp437(line.rstrip())
-               for line in open(artfile, 'r').readlines()]
-    return art
+        return u'[ .{:>2}. ]'.format(icon)
+    return open(artfile, 'r').read().decode('cp437_art').splitlines()
 
 
 def display_panel(weather, column, centigrade):
@@ -479,7 +415,7 @@ def display_panel(weather, column, centigrade):
         echo(art_row)
     echo(term.normal)
 
-    degree = from_cp437(''.join([chr(248)]))
+    degree = chr(248).decode('cp437_art')
     # display days' high,
     echo(term.move(panel_height + top_margin + 1, column))
     high = weather.get('High_Temperature', None)
@@ -511,9 +447,11 @@ def display_weather(todays, weather, centigrade):
 
     Thanks to xzip, we now have a sortof tv-weather channel art :-)
     """
-    from x84.bbs import getterminal, echo, from_cp437
+    from x84.bbs import getterminal, echo, from_cp437, syncterm_setfont
     term = getterminal()
-
+    # set syncterm font to cp437
+    if term.kind.startswith('ansi'):
+        echo(syncterm_setfont('cp437'))
     echo(term.height * u'\r\n')
     echo(term.move(0, 0))
     at = term.yellow_bold('At')

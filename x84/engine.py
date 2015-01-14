@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 """
-Command-line launcher and main event loop for x/84
+Command-line launcher and event loop for x/84, https://github.com/jquast/x84
 """
 # Place ALL metadata in setup.py, except where not suitable, place here.
 # For any contributions, feel free to tag __author__ etc. at top of such file.
 __author__ = "Johannes Lundberg (jojo), Jeff Quast (dingo)"
 __url__ = u'https://github.com/jquast/x84/'
-__copyright__ = "Copyright 2014"
+__copyright__ = "Copyright 2003"
 __credits__ = [
     # use 'scene' names unless preferred or unavailable.
     "zipe",
@@ -35,8 +35,9 @@ def main():
     x84 main entry point. The system begins and ends here.
 
     Command line arguments to engine.py:
-      --config= location of alternate configuration file
-      --logger= location of alternate logging.ini file
+
+    - ``--config=`` location of alternate configuration file
+    - ``--logger=`` location of alternate logging.ini file
     """
     import x84.bbs.ini
 
@@ -46,21 +47,22 @@ def main():
     from x84.bbs.ini import CFG
 
     if sys.maxunicode == 65535:
+        # apple is the only known bastardized variant that does this;
+        # presumably for memory/speed savings (UCS-2 strings are faster
+        # than UCS-4).  Python 3 dynamically allocates string types by
+        # their widest content, so such things aren't necessary ...
         import warnings
-        warnings.warn('Python not built with wide unicode support!')
+        warnings.warn('This python is built without wide unicode support. '
+                      'some internationalized languages will not be possible.')
 
     # retrieve list of managed servers
     servers = get_servers(CFG)
 
     # begin unmanaged servers
-    if get_ini(section='web', key='modules'):
+    if (CFG.has_section('web') and
+            (not CFG.has_option('web', 'enabled')
+             or CFG.getboolean('web', 'enabled'))):
         # start https server for one or more web modules.
-        #
-        # may raise an ImportError for systems where pyOpenSSL and etc. could
-        # not be installed (due to any issues with missing python-dev, libffi,
-        # cc, etc.).  Allow it to raise naturally, the curious user should
-        # either discover and resolve the root issue, or disable web modules if
-        # it cannot be resolved.
         from x84 import webserve
         webserve.main()
 
@@ -84,6 +86,7 @@ def main():
             for key, client in server.clients.items()[:]:
                 kill_session(client, 'server shutdown')
                 del server.clients[key]
+    return 0
 
 
 def parse_args():
@@ -131,16 +134,18 @@ def get_servers(CFG):
     Given a configuration file, instantiate and return a list of enabled
     servers.
     """
-    log = logging.getLogger('x84.engine')
-
     servers = []
 
-    if CFG.has_section('telnet'):
+    if (CFG.has_section('telnet') and
+            (not CFG.has_option('telnet', 'enabled')
+             or CFG.getboolean('telnet', 'enabled'))):
         # start telnet server instance
         from x84.telnet import TelnetServer
         servers.append(TelnetServer(config=CFG))
 
-    if CFG.has_section('ssh'):
+    if (CFG.has_section('ssh') and
+            not CFG.has_option('ssh', 'enabled')
+            or CFG.getboolean('ssh', 'enabled')):
         # start ssh server instance
         #
         # may raise an ImportError for systems where pyOpenSSL and etc. could
@@ -151,7 +156,9 @@ def get_servers(CFG):
         from x84.ssh import SshServer
         servers.append(SshServer(config=CFG))
 
-    if CFG.has_section('rlogin'):
+    if (CFG.has_section('rlogin') and
+            (not CFG.has_option('rlogin', 'enabled')
+             or CFG.getboolean('rlogin', 'enabled'))):
         # start rlogin server instance
         from x84.rlogin import RLoginServer
         servers.append(RLoginServer(config=CFG))
@@ -207,13 +214,12 @@ def accept(log, server, check_ban):
 
         # connecting IP is banned
         if check_ban(address_pair[0]) is False:
+            log.debug('{addr}: refused, banned.'.format(addr=address_pair[0]))
             try:
                 sock.shutdown(socket.SHUT_RDWR)
             except socket.error:
                 pass
             sock.close()
-            log.error('{addr}: refused, banned.'
-                      .format(addr=address_pair[0]))
             return
 
         # instantiate a client of this type
@@ -244,7 +250,7 @@ def get_session_output_fds(servers):
     return session_fds
 
 
-def client_recv(servers, log):
+def client_recv(servers, ready_fds, log):
     """
     Test all clients for recv_ready(). If any data is available, then
     socket_recv() is called, buffering the data for the session which
@@ -253,14 +259,13 @@ def client_recv(servers, log):
     from x84.bbs.exception import Disconnected
     from x84.terminal import kill_session
     for server in servers:
-        for client in server.clients.values():
-            if client.recv_ready():
-                try:
-                    client.socket_recv()
-                except Disconnected as err:
-                    log.debug('{client.addrport}: disconnect on recv: {err}'
-                              .format(client=client, err=err))
-                    kill_session(client, 'disconnected: {err}'.format(err=err))
+        for client in server.clients_ready(ready_fds):
+            try:
+                client.socket_recv()
+            except Disconnected as err:
+                log.debug('{client.addrport}: disconnect on recv: {err}'
+                          .format(client=client, err=err))
+                kill_session(client, 'disconnected: {err}'.format(err=err))
 
 
 def client_send(terminals, log):
@@ -435,7 +440,7 @@ def session_recv(locks, terminals, log, tap_events):
             # 'remote-disconnect' event, hunt and destroy
             elif event == 'remote-disconnect':
                 send_to = data[0]
-                reason = 'remote-disconnect by {sid.tty}'.format(sid=sid)
+                reason = 'remote-disconnect by {sid}'.format(sid=sid)
                 for _sid, _tty in terminals:
                     if send_to == _sid:
                         kill_session(tty.client, reason)
@@ -487,14 +492,13 @@ def _loop(servers):
     """
     # pylint: disable=R0912,R0914,R0915
     #         Too many local variables (24/15)
-    import logging
     import select
     import sys
     from x84.terminal import get_terminals, kill_session
     from x84.bbs.ini import CFG
     from x84.fail2ban import get_fail2ban_function
 
-    SELECT_POLL = 0.02 # polling time is 20ms
+    SELECT_POLL = 0.02  # polling time is 20ms
 
     # WIN32 has no session_fds (multiprocess queues are not polled using
     # select), use a persistently empty set; for WIN32, sessions are always
@@ -526,16 +530,19 @@ def _loop(servers):
                            if _thread.stopped][:]:
                 server.threads.remove(thread)
 
-        server_fds = [server.server_socket.fileno() for server in servers]
-        client_fds = [fd for fd in server.client_fds() for server in servers]
-        check_r = server_fds + client_fds
+        check_r = list()
+        for server in servers:
+            check_r.append(server.server_socket.fileno())
+            check_r.extend(server.client_fds())
         if not WIN32:
+            # WIN32's IPC is not done using sockets, so it
+            # is not possible to use select.select() on them
             session_fds = get_session_output_fds(servers)
-            check_r += session_fds
+            check_r.extend(session_fds)
 
         # We'd like to use timeout 'None', but the registration of
         # a new client in terminal.start_process surprises us with new
-        # file descriptors for the session i/o. unless we loop for
+        # file descriptors for the session i/o.  Unless we loop for
         # additional `session_fds', a connecting client would block.
         ready_r, _, _ = select.select(check_r, [], [], SELECT_POLL)
 
@@ -546,14 +553,14 @@ def _loop(servers):
                 accept(log, server, check_ban)
 
         # receive new data from tcp clients.
-        client_recv(servers, log)
+        client_recv(servers, ready_r, log)
         terms = get_terminals()
 
         # receive new data from session terminals
         if WIN32 or set(session_fds) & set(ready_r):
             try:
                 session_recv(locks, terms, log, tap_events)
-            except IOError, err:
+            except IOError as err:
                 # if the ipc closes while we poll, warn and continue
                 log.warn(err)
 

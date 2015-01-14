@@ -1,145 +1,131 @@
-Developer Environment
-=====================
+==========
+Developers
+==========
 
-If you're new to python, the following is step-by-step instructions for
-creating a developer environment for making your own customizations of
-x/84's engine and api.  You may also simply install x/84 using pip_ or
-easy_install_.
+The x/84 telnet system is written in the Python_ programming language. With
+prior programming experience you should be able to pick up the language quickly
+by looking at the provided sample mods in the ``x84/default`` folder. If you
+are completely new to Python_, it's recommended to read more about the
+language, like provided by the free `Dive Into Python`_ book by Mark Pilgrim.
+
+Requirements
+============
+
+The following is step-by-step instructions for creating a developer environment
+for making your own customizations of x/84's engine and api and building your
+own ``'scriptpath'`` (defined by ``~/.x84/default.ini``).  You may also simply
+install x/84 using pip_.
+
+**Debian / Ubuntu**
+
+You should install the following packages::
+
+    $ sudo apt-get install git python python-pip python-virtualenv virtualenvwrapper
+
+**Arch Linux**
+
+You should install the following packages::
+
+    $ sudo pacman -S git python2 python2-pip python2-virtualenv python2-virtualenvwrapper
+
+And please make sure you're using an up-to-date version of pip::
+
+    $ pip-2.7 --upgrade pip
 
 Virtualenv
-``````````
+----------
 
-Optional but recommended. Using virtualenv and virtualenvwrapper_ ensures
-you can install x/84 and its dependencies without root access, and quickly
-activate the environment at any time.
+Optional but recommended, using virtualenv and/or virtualenvwrapper_ ensures
+you can install x/84 and its dependencies without root access and quickly
+activate the environment at any time, but without affecting system libraries
+or other python projects.
 
 1. Install virtualenvwrapper_::
 
-   pip install virtualenvwrapper
+      pip install virtualenvwrapper
 
 2. Load virtualenvwrapper_::
 
-   . `which virtualenvwrapper.sh`
+      . `which virtualenvwrapper.sh`
 
-3. And add the following to your ``~/.profile`` to make this automatic for all
-  login shells::
+   There are techniques to automatically load virtualenvwrapper
+   from your shell profile, or to active a virtualenv when
+   you change to a project folder. See `virtualenv tips and tricks`_
+   if you're interested.
 
-   [ ! -z `which virtualenvwrapper.sh` ] && . `which virtualenvwrapper.sh`
+3. Finally, make a virtualenv (named 'x84') using python version 2.7::
 
-4. Finally, make a virtualenv (named 'x84') using python version 2.7::
+      mkvirtualenv -p `which python2.7` x84
 
-   mkvirtualenv -p `which python2.7` x84
+Anytime you want to load x/84 environment in a new login shell,
+source ``virtualenvwrapper.sh`` (as in step #2) and activate using
+command::
 
-5. Anytime you want to develop x/84, use the command::
+      workon x84
 
-   workon x84
+Install editable version
+------------------------
 
-There are techniques to automatically load the x84 virtualenv when
-you change to the project's folder. See `virtualenv tips and tricks`_
-if you're interested.
+Instead of installing x84 as a complete package, we use ``pip`` to install
+an *editable* version -- this is so that when a modification is done to the
+files in our local project directory, they are immediately reflected in the
+``x84`` server anytime the virtualenv is activated::
 
-Clone from Github
-`````````````````
+   pip install --editable .[with_crypto]
 
-Clone the latest master branch from the github repository::
-
-  git clone 'https://github.com/jquast/x84.git'``
-  cd x84
-
-Run setup.py develop
-````````````````````
-
-Run 'setup.py develop'::
-
-   ./setup.py develop
 
 Starting x/84
-`````````````
+-------------
 
-1. Active your virtualenv if you haven't already::
+::
 
-   workon x84
-
-2. And Launch x/84 server::
-
-   x84
+      x84
 
 
-Engine and Internals
-====================
+As another user
+---------------
 
-x/84 is designed in three distinct parts: The Engine_, Userland_, and
-the default 'bbs board'.
+When installing x84 as an *editable* version inside a virtualenv, some
+care must be taken in regards to using sudo and privbind.  This is the
+method used by the default board::
 
-Userland
-````````
+    PYTHON_EGG_CACHE=/tmp/.python-eggs sudo privbind -u nobody -g nogroup `which python` -mx84.engine
 
-The following are helper modules used by the internal API but are not
-published as such. Their use or documentation isn't considered very
-useful to a general audience.
+The ``\`which python\``` ensures the vitualenv-activated python version
+of the current user is used, and instead of running the ``x84`` script
+which would be not be found in the system path of target user *nobody*,
+we instead load the *x84.engine* module directly.
 
-log.py
-------
 
-.. automodule:: x84.bbs.log
-  :members:
-
-ipc.py
-------
-
-.. automodule:: x84.bbs.ipc
-  :members:
-
-ini.py
-------
-
-.. automodule:: x84.bbs.ini
-  :members:
-
-exception.py
-------------
-
-.. automodule:: x84.bbs.exception
-   :members:
-
-Engine
-``````
-
-The engine launches the configured servers and begins the subprocess
-for connecting sessions. Its internal structure should not be of concern
-for most customizations, but contributions welcome!
-
-engine.py
+x84 Usage
 ---------
 
-.. automodule:: x84.engine
-   :members:
+Optional command line arguments,
 
-terminal.py
------------
+    ``--config=`` alternate bbs configuration filepath
 
-.. automodule:: x84.terminal
-   :members:
+    ``--logger=`` alternate logging configuration filepath
 
-telnet.py
----------
+By default these are, in order of preference: ``/etc/x84/default.ini``
+and ``/etc/x84/logging.ini``, or ``~/.x84/default.ini`` and
+``~/.x84/logging.ini``.
 
-.. automodule:: x84.telnet
-   :members:
 
-ssh.py
----------
+Contributing using git
+======================
 
-.. automodule:: x84.telnet
-   :members:
+If you intend to contribute patches or new mods to the x/84 telnet system, you
+should `fork the repository <https://help.github.com/articles/fork-a-repo>`_
+and clone over ssh.
 
-db.py
------
+Features should be developed into a branch, pushed to github, and when satisfied
+with your changes and you wish to have them included in the base distribution,
+you should
+`create a pull request <https://help.github.com/articles/creating-a-pull-request>`_.
 
-.. automodule:: x84.db
-   :members:
-
+.. _git: http://git-scm.org/
 .. _virtualenvwrapper: https://pypi.python.org/pypi/virtualenvwrapper
 .. _`virtualenv tips and tricks`: http://virtualenvwrapper.readthedocs.org/en/latest/tips.html#automatically-run-workon-when-entering-a-directory
-.. _pip: https://pypi.python.org/pypi/pip
-.. _easy_install: https://pypi.python.org/pypi/setuptools
+.. _pip: http://guide.python-distribute.org/installation.html#installing-pip
+.. _Python: http://www.python.org/
+.. _Dive Into Python: http://www.diveintopython.net/

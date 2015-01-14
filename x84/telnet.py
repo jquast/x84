@@ -1,25 +1,32 @@
 """
-Handle Asynchronous Telnet Connections.
-Single-process, threads for on-connect negotiation, select-based.
+Telnet server for x84, https://github.com/jquast/x84
 
 Limitations:
- - No linemode support, character-at-a-time only.
- - No out-of-band / data mark (DM) / sync supported
-   (no ^C, ^S, ^Q helpers)
 
-This is a modified version of miniboa retrieved from
-svn address http://miniboa.googlecode.com/svn/trunk/miniboa
-which is meant for MUD's. This server would not be safe for MUD clients.
+- No linemode support, character-at-a-time only.
+- No out-of-band / data mark (DM) / sync supported
+- No flow control (``^S``, ``^Q``)
+
+This is a modified version of miniboa retrieved from svn address
+http://miniboa.googlecode.com/svn/trunk/miniboa which is meant for
+MUD's. This server would not be safe for most (linemode) MUD clients.
+
+Changes from miniboa:
+
+- character-at-a-time input instead of linemode
+- encoding option on send
+- strict rejection of linemode
+- terminal type detection
+- environment variable support
+- GA and SGA
+- utf-8 safe
 """
-#  Copyright 2012 Jeff Quast, whatever Jim's license is; changes from miniboa:
-#    character-at-a-time input instead of linemode, encoding option on send,
-#    strict rejection of linemode, terminal type detection, environment
-#    variable support, GA and SGA, utf-8 safe
-
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 #   miniboa/async.py
 #   miniboa/telnet.py
+#
 #   Copyright 2009 Jim Storch
+#
 #   Licensed under the Apache License, Version 2.0 (the "License"); you may
 #   not use this file except in compliance with the License. You may obtain a
 #   copy of the License at http://www.apache.org/licenses/LICENSE-2.0
@@ -28,7 +35,7 @@ which is meant for MUD's. This server would not be safe for MUD clients.
 #   WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #   License for the specific language governing permissions and limitations
 #   under the License.
-#------------------------------------------------------------------------------
+# ------------------------------------------------------------------------------
 
 from __future__ import absolute_import
 
@@ -90,7 +97,7 @@ UNSUPPORTED_WILL = (LINEMODE, LFLOW, TSPEED, ENCRYPT, AUTHENTICATION)
 # If a party receives a request to enter a mode that it is already in, the
 # request should not be acknowledged.
 
-## Where you see DE in my comments I mean 'Distant End', e.g. the client.
+# Where you see DE in my comments I mean 'Distant End', e.g. the client.
 
 UNKNOWN = -1
 
@@ -98,15 +105,19 @@ UNKNOWN = -1
 
 
 class TelnetOption(object):
+
     """
     Simple class used to track the status of an extended Telnet option.
-    Attributes and values:
-        local_option: UNKNOWN (default), True, or False.
-        remote_option: UNKNOWN (default), True, or False.
-        reply_pending: True or Fale.
+
+    Attributes and their state values:
+
+    - ``local_option``: UNKNOWN (default), True, or False.
+    - ``remote_option``: UNKNOWN (default), True, or False.
+    - ``reply_pending``: True or Fale.
     """
     # pylint: disable=R0903
     #         Too few public methods (0/2)
+
     def __init__(self):
         """
         Set attribute defaults on init.
@@ -151,6 +162,7 @@ def debug_option(func):
 #------------------------------------------------------------------------Telnet
 
 class TelnetClient(BaseClient):
+
     """
     Represents a remote Telnet Client, instantiated from TelnetServer.
     """
@@ -349,6 +361,9 @@ class TelnetClient(BaseClient):
             # Stop capturing a sub-negotiation string
             self.telnet_got_sb = False
             self._sb_decoder()
+        elif cmd == IAC:
+            # IAC, IAC is used for a literal \xff character.
+            self._recv_byte(IAC)
         elif cmd == IP:
             self.deactivate()
             self.log.info('{self.addrport} received (IAC, IP): closing.'
@@ -729,8 +744,6 @@ class TelnetClient(BaseClient):
             columns = old_columns
         self.env['LINES'] = str(rows)
         self.env['COLUMNS'] = str(columns)
-        self.log.debug('{self.addrport}: NAWS is {cols}x{rows}'
-                       .format(self=self, cols=columns, rows=rows))
         if self.on_naws is not None:
             self.on_naws(self)
 
@@ -814,6 +827,7 @@ class TelnetClient(BaseClient):
 
 
 class ConnectTelnet(BaseConnect):
+
     """
     Accept new Telnet Connection and negotiate options.
     """
@@ -999,6 +1013,7 @@ class ConnectTelnet(BaseConnect):
 
 
 class TelnetServer(BaseServer):
+
     """
     Poll sockets for new connections and sending/receiving data from clients.
     """
@@ -1014,8 +1029,9 @@ class TelnetServer(BaseServer):
         """
         Create a new Telnet Server.
 
-        :param config: configuration section 'telnet', w/options 'addr', 'port'
-        :type config: RawConfigParser
+        :param ConfigParser.ConfigParser config: configuration section
+                                         ``[telnet]``, with options ``'addr'``,
+                                         ``'port'``
         """
         self.log = logging.getLogger(__name__)
         self.address = config.get('telnet', 'addr')

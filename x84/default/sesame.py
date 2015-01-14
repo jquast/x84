@@ -1,8 +1,36 @@
+"""Sesame is a wrapper for the :class:`x84.bbs.door.Door` class.
+
+It takes care of resizing the users' terminal to the correct dimensions or
+otherwise emulate the correct terminal size.
+
+Configuration in `default.ini` is as follows::
+
+    [sesame]
+    NameOfTheGame = /path/to/binary
+    NameOfTheGame_key = $
+    NameOfTheGame_cols = 80
+    NameOfTheGame_rows = 25
+
+The suffixes for the configuration keys are as follows:
+
+ * `_key`, character that gives access to the door from the BBS menu.
+ * `_cols`, the minimal number of terminal columns required by the door.
+ * `_rows`, the minimal number of terminal rows required by the door.
+ * `_env_*`, additional environment settings required by the door.
+
+The value of the `_env_*` configuration settings are passed to a Python
+string formatting function. The session is available as `session` and
+the configuration items from the `system` configuration section are
+exposed.
+"""
+
 import ConfigParser
 import shlex
 import os
 
+
 def main(name):
+    """Sesame runs a named door."""
     from x84.bbs import getsession, getterminal, echo, ini
     from x84.bbs import Door
 
@@ -18,15 +46,15 @@ def main(name):
             echo(u'\x1b[8;%d;%dt' % (want_rows, want_cols,))
         disp = 1
         while not (term.width == want_cols
-                and term.height == want_cols):
+                   and term.height == want_cols):
             if disp:
                 echo(term.bold_blue('\r\n^\r\n'))
                 echo(term.bold_blue('\r\n'.join([u'|'] * (want_rows - 3))))
                 echo(u'\r\n')
                 echo(term.bold_blue(u'|' + (u'=' * 78) + u'|\r\n'))
                 echo(u'for best "screen output", please '
-                    'resize window to %s x %s (or press return).' % (
-                        want_cols, want_rows,))
+                     'resize window to %s x %s (or press return).' % (
+                         want_cols, want_rows,))
                 disp = 0
             ret = term.inkey(2)
             if ret in (term.KEY_ENTER, u'\r', u'\n'):
@@ -37,7 +65,7 @@ def main(name):
                 term.width, term.height, want_cols, want_rows,))
             # hand-hack, its ok ... really
             store_cols, store_rows = term.width, term.height
-            term.columns, term.rows= want_cols, want_rows
+            term.columns, term.rows = want_cols, want_rows
             term.inkey(1)
 
     except ConfigParser.NoOptionError:

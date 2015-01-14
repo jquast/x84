@@ -8,7 +8,9 @@ import json
 from x84.bbs import DBProxy
 from x84.bbs.ini import CFG
 
+
 class LastCallersApi(object):
+
     """ Last callers demonstration API endpoint """
 
     def GET(self, num=10):
@@ -30,10 +32,10 @@ class LastCallersApi(object):
 
         for caller in last:
             callers_html += ''.join(('<li><b>{who}</b> {affil} ',
-                '<small>at {when}</small></li>')).format(
-                    who=caller[0],
-                    affil='(%s)' % caller[1][2] if caller[1][2] else '',
-                    when=datetime.fromtimestamp(caller[1][0]))
+                                     '<small>at {when}</small></li>')).format(
+                who=caller[0],
+                affil='(%s)' % caller[1][2] if caller[1][2] else '',
+                when=datetime.fromtimestamp(caller[1][0]))
 
         web.header('Content-Type', 'text/html; charset=utf-8', unique=True)
         output = """

@@ -1,1 +1,1 @@
-""" Package for x/84, https://github.com/jquast/x84 """
+""" top-level module package for x/84. """

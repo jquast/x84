@@ -16,7 +16,7 @@ here = os.path.dirname(__file__)
 art_file = os.path.join(here, 'art', 'callers*.ans')
 
 #: encoding used to display artfile
-art_encoding = 'topaz'
+art_encoding = 'cp437'
 
 #: fontset for SyncTerm emulator
 syncterm_font = 'topaz'
@@ -53,8 +53,7 @@ def main(last=10):
     """
     Script entry point.
 
-    :param last: Number of last callers to display
-    :type last: int
+    :param int last: Number of last callers to display
     """
     session, term = getsession(), getterminal()
     session.activity = u'Viewing last callers'
@@ -63,7 +62,7 @@ def main(last=10):
               term.cyan, term.bold_black]
 
     # set syncterm font, if any
-    if syncterm_font and term._kind.startswith('ansi'):
+    if syncterm_font and term.kind.startswith('ansi'):
         echo(syncterm_setfont(syncterm_font))
 
     # display banner
@@ -106,4 +105,3 @@ def main(last=10):
                          'lowlight': term.cyan, },
                  width=max(term.length(txt) for txt in callers_txt),
                  breaker=None)
-

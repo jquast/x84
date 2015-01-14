@@ -2,39 +2,43 @@
 """
 x84net message poll for x/84, https://github.com/jquast/x84
 
-To configure message polling, add a tag for the network to the 'server_tags'
-attribute in the [msg] section of your default.ini.  Optionally include a
-custom 'origin' line.  If not provided, "Sent from <bbsname>" will be used.
+To configure message polling, add a tag for the network to the ``'server_tags'``
+attribute in the ``[msg]`` section of your default.ini.  Optionally include a
+custom 'origin' line.  If not provided, ``"Sent from <bbsname>"`` will be
+used.
 
-Next, create a section using the name of that tag, prefixed with 'msgnet_'.
-(Example: if the tag is 'x84net', create a 'msgnet_x84net' section.)
+Next, create a section using the name of that tag, prefixed with
+``'msgnet_'``.  For example, if the tag is ``'x84net'``, create a
+``'msgnet_x84net'`` section.
 
 The following attributes are required:
- - url_base: The base URL for the message network's REST API.
- - board_id: Your board's ID in the network.
- - token: Your board's secure token, assigned to you by the network admin.
+
+ - ``url_base``: The base URL for the message network's REST API.
+ - ``board_id``: Your board's ID in the network.
+ - ``token``: Your board's secure token, assigned to you by the network admin.
 
 The following attributes are optional:
- - ca_path: The path to a CA bundle if the server's CA is not already
+
+ - ``ca_path``: The path to a CA bundle if the server's CA is not already
    included in your operating system.
- - poll_interval: The number of seconds elapsed between polling a message
+ - ``poll_interval``: The number of seconds elapsed between polling a message
    network for new messages (default is 1984, ~33 minutes).
 
 If you wish to tag your messages with a custom origin line when they are
-delivered to the network hub, add an 'origin_line' attribute to the [msg]
-section of your default.ini.
+delivered to the network hub, add an 'origin_line' attribute to the ``[msg]``
+section of your ``default.ini``.
 
-Example default.ini configuration:
+Example *default.ini* configuration::
 
-[msg]
-network_tags = x84net
-origin_line = Sent from a mediocre BBS.
+    [msg]
+    network_tags = x84net
+    origin_line = Sent from a mediocre BBS.
 
-[msgnet_x84net]
-url_base = https://some.server:8443/api/messages/
-board_id = 1
-token = somereallylongtoken
-poll_interval = 300
+    [msgnet_x84net]
+    url_base = https://some.server:8443/api/
+    board_id = 1
+    token = somereallylongtoken
+    poll_interval = 300
 """
 
 # local imports
@@ -82,7 +86,11 @@ def pull_rest(net, last_msg_id):
         req = requests.get(url,
                            headers={'Auth-X84net': get_token(net)},
                            verify=net['verify'])
-    except Exception, err:
+    except requests.ConnectionError as err:
+        log.warn('[{net[name]}] ConnectionError in pull_rest: {err}'
+                 .format(net=net, err=err))
+        return False
+    except Exception as err:
         log.exception('[{net[name]}] exception in pull_rest: {err}'
                       .format(net=net, err=err))
         return False
@@ -95,7 +103,7 @@ def pull_rest(net, last_msg_id):
     try:
         response = json.loads(req.text)
         return response['messages'] if response['response'] else []
-    except Exception, err:
+    except Exception as err:
         log.exception('[{net[name]}] JSON error: {err}'
                       .format(net=net, err=err))
         return False
@@ -114,19 +122,19 @@ def push_rest(net, msg, parent):
                            headers={'Auth-X84net': get_token(net)},
                            data=data,
                            verify=net['verify'])
-    except Exception, err:
+    except Exception as err:
         log.exception('[{net[name]}] exception in push_rest: {err}'
                       .format(net=net, err=err))
         return False
 
-    if req.status_code != 200:
+    if req.status_code not in (200, 201):
         log.error('{net[name]} HTTP error, code={req.status_code}'
                   .format(net=net, req=req))
         return False
 
     try:
         response = json.loads(req.text)
-    except Exception, err:
+    except Exception as err:
         log.exception('[{net[name]}] JSON error: {err}'
                       .format(net=net, err=err))
     else:
@@ -144,8 +152,7 @@ def get_networks():
     # pull list of network-associated tags
     network_list = get_ini(section='msg',
                            key='network_tags',
-                           split=True,
-                           splitsep=',')
+                           split=True)
 
     # expected configuration options,
     net_options = ('url_base token board_id'.split())
@@ -200,7 +207,7 @@ def get_last_msg_id(last_file):
         with open(last_file, 'r') as last_fp:
             last_msg_id = int(last_fp.read().strip())
 
-    except IOError as err:
+    except IOError:
         # So, create it; but this too, may raise an
         # OSError (Permission Denied), handled by caller.
         with open(last_file, 'w') as last_fp:
@@ -218,7 +225,7 @@ def poll_network_for_messages(net):
 
     log = logging.getLogger(__name__)
 
-    log.debug(u'[{net[name]}] polling for new messages.'.format(net=net))
+    log.debug(u'[{net[name]}] Polling for new messages.'.format(net=net))
 
     try:
         last_msg_id = get_last_msg_id(net['last_file'])
@@ -229,11 +236,11 @@ def poll_network_for_messages(net):
 
     msgs = pull_rest(net=net, last_msg_id=last_msg_id)
 
-    if msgs is not False:
-        log.info('{net[name]} Retrieved {num} messages'
+    if msgs:
+        log.info('[{net[name]}] Retrieved {num} messages.'
                  .format(net=net, num=len(msgs)))
     else:
-        log.debug('{net[name]} no messages.'.format(net=net))
+        log.debug('[{net[name]}] No messages.'.format(net=net))
         return
 
     transdb = DBProxy('{0}trans'.format(net['name']), use_session=False)
@@ -251,20 +258,20 @@ def poll_network_for_messages(net):
         store_msg.tags.add(u''.join((net['name'])))
 
         if msg['recipient'] is None and u'public' not in msg['tags']:
-            log.warn("{net[name]} No recipient (msg_id={msg[id]}), "
+            log.warn("[{net[name]}] No recipient (msg_id={msg[id]}), "
                      "adding 'public' tag".format(net=net, msg=msg))
             store_msg.tags.add(u'public')
 
         if (msg['parent'] is not None and
                 str(msg['parent']) not in transkeys):
-            log.warn('{net[name]} No such parent message ({msg[parent]}, '
+            log.warn('[{net[name]}] No such parent message ({msg[parent]}, '
                      'msg_id={msg[id]}), removing reference.'
                      .format(net=net, msg=msg))
         elif msg['parent'] is not None:
             store_msg.parent = int(transdb[msg['parent']])
 
         if msg['id'] in transkeys:
-            log.warn('{net[name]} dupe (msg_id={msg[id]}) discarded.'
+            log.warn('[{net[name]}] dupe (msg_id={msg[id]}) discarded.'
                      .format(net=net, msg=msg))
         else:
             # do not save this message to network, we already received
@@ -273,7 +280,7 @@ def poll_network_for_messages(net):
             with transdb:
                 transdb[msg['id']] = store_msg.idx
             transkeys.append(msg['id'])
-            log.info('{net[name]} Processed (msg_id={msg[id]}) => {new_id}'
+            log.info('[{net[name]}] Processed (msg_id={msg[id]}) => {new_id}'
                      .format(net=net, msg=msg, new_id=store_msg.idx))
 
         if 'last' not in net.keys() or int(net['last']) < int(msg['id']):
@@ -303,7 +310,7 @@ def publish_network_messages(net):
     for msg_id in sorted(queuedb.keys(),
                          cmp=lambda x, y: cmp(int(x), int(y))):
         if msg_id not in msgdb:
-            log.warn('{net[name]} No such message (msg_id={msg_id})'
+            log.warn('[{net[name]}] No such message (msg_id={msg_id})'
                      .format(net=net, msg_id=msg_id))
             del queuedb[msg_id]
             continue
@@ -318,18 +325,18 @@ def publish_network_messages(net):
             if len(matches) > 0:
                 trans_parent = matches[0]
             else:
-                log.warn('{net[name]} Parent ID {msg.parent} '
+                log.warn('[{net[name]}] Parent ID {msg.parent} '
                          'not in translation-DB (msg_id={msg_id})'
                          .format(net=net, msg=msg, msg_id=msg_id))
 
         trans_id = push_rest(net=net, msg=msg, parent=trans_parent)
         if trans_id is False:
-            log.error('{net[name]} Message not posted (msg_id={msg_id})'
-                      .format(net=net['name'], msg_id=msg_id))
+            log.error('[{net[name]}] Message not posted (msg_id={msg_id})'
+                      .format(net=net, msg_id=msg_id))
             continue
 
         if trans_id in transdb.keys():
-            log.error('{net[name]} trans_id={trans_id} conflicts with '
+            log.error('[{net[name]}] trans_id={trans_id} conflicts with '
                       '(msg_id={msg_id})'
                       .format(net=net, trans_id=trans_id, msg_id=msg_id))
             with queuedb:
@@ -342,7 +349,7 @@ def publish_network_messages(net):
             msg.body = u''.join((msg.body, format_origin_line()))
             msgdb[msg_id] = msg
             del queuedb[msg_id]
-        log.info('{net[name]} Published (msg_id={msg_id}) => {trans_id}'
+        log.info('[{net[name]}] Published (msg_id={msg_id}) => {trans_id}'
                  .format(net=net, msg_id=msg_id, trans_id=trans_id))
 
 
@@ -365,10 +372,9 @@ def main(background_daemon=True):
 
     Called by x84/engine.py, function main() as unmanaged thread.
 
-    :param background_daemon: When True (default), this function returns and
-      web modules are served in an unmanaged, background (daemon) thread.
-      Otherwise, function call to ``main()`` is blocking.
-    :type background_daemon: bool
+    :param bool background_daemon: When True (default), this function returns
+                and web modules are served in an unmanaged, background (daemon)
+                thread.  Otherwise, function call to ``main()`` is blocking.
     :rtype: None
     """
     from threading import Thread

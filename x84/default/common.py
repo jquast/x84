@@ -1,6 +1,6 @@
 """ common interface module for x/84, https://github.com/jquast/x84 """
 from __future__ import division
-import math
+import os
 
 from x84.bbs import echo, showart
 from x84.bbs import getterminal, LineEditor
@@ -11,8 +11,8 @@ def waitprompt():
     from x84.bbs import echo, getch, getterminal
     term = getterminal()
 
-    echo (term.normal+'\n\r'+term.magenta+'('+term.green+'..'+term.white+
-          ' press any key to continue '+term.green+'..'+term.magenta+')')
+    echo(term.normal + '\n\r' + term.magenta + '(' + term.green + '..' + term.white +
+         ' press any key to continue ' + term.green + '..' + term.magenta + ')')
     getch()
     echo(term.normal_cursor)
     return
@@ -21,19 +21,16 @@ def waitprompt():
 def display_banner(filepattern, encoding=None, vertical_padding=0):
     """ Start new screen and show artwork, centered.
 
-    :param filepattern: file to display
-    :type filepattern: str
-    :param encoding: encoding of art file(s).
-    :type encoding: str or None
-    :param vertical_padding: number of blank lines to prefix art
-    :type vertical_padding: int
-    :returns: number of lines displayed
+    :param str filepattern: file to display
+    :param str encoding: encoding of art file(s).
+    :param int vertical_padding: number of blank lines to prefix art
+    :return: number of lines displayed
     :rtype: int
     """
     term = getterminal()
 
     # move to bottom of screen, reset attribute
-    echo(term.pos(term.height) + term.normal)
+    echo(term.move(term.height, 0) + term.normal)
 
     # create a new, empty screen
     echo(u'\r\n' * (term.height + 1))
@@ -41,9 +38,7 @@ def display_banner(filepattern, encoding=None, vertical_padding=0):
     # move to home, insert vertical padding
     echo(term.home + (u'\r\n' * vertical_padding))
 
-    # show art
-    art_generator = showart(filepattern, encoding=encoding,
-                            auto_mode=False, center=True)
+    art_generator = showart(filepattern, encoding=encoding, center=True)
     line_no = 0
     for line_no, txt in enumerate(art_generator):
         echo(txt)
@@ -55,11 +50,12 @@ def display_banner(filepattern, encoding=None, vertical_padding=0):
 def prompt_pager(content, line_no=0, colors=None, width=None, breaker=u'- '):
     """ Display text, using a command-prompt pager.
 
-    :param content: iterable of text contents.
-    :param line_no: line number to offset beginning of pager.
-    :param colors: optional dictionary containing terminal styling
-                   attributes, for keys 'highlight' and 'lowlight'.
-                   When unset, yellow and green are used.
+    :param iterable content: iterable of text contents.
+    :param int line_no: line number to offset beginning of pager.
+    :param dict colors: optional dictionary containing terminal styling
+                        attributes, for keys ``'highlight'`` and
+                        ``'lowlight'``.  When unset, yellow and green
+                        are used.
     """
     term = getterminal()
     colors = colors or {
@@ -125,8 +121,7 @@ def prompt_pager(content, line_no=0, colors=None, width=None, breaker=u'- '):
     inp = LineEditor(0, colors=colors).read()
 
 
-def prompt_input(term, key, content=u'',
-                 sep_ok=u'::', sep_bad=u'::',
+def prompt_input(term, key, content=u'', sep_ok=u'::',
                  width=None, colors=None):
     """ Prompt for and return input, up to given width and colorscheme.
     """
@@ -139,6 +134,7 @@ def prompt_input(term, key, content=u'',
 
     echo(u'{sep} {key:<8}: '.format(sep=sep_ok, key=key))
     return LineEditor(colors=colors, width=width).read() or u''
+
 
 def coerce_terminal_encoding(term, encoding):
     # attempt to coerce encoding of terminal to match session.
@@ -156,3 +152,37 @@ def coerce_terminal_encoding(term, encoding):
     }.get(encoding, u''))
     # remove possible artifacts, at least, %G may print a raw G
     echo(term.move_x(0) + term.clear_eol)
+
+
+def show_description(description, color='white', width=80):
+    term = getterminal()
+    wide = min(width, term.width)
+    line_no = 0
+    for line_no, txt in enumerate(term.wrap(description, width=wide)):
+        echo(term.move_x(max(0, (term.width // 2) - (width // 2))))
+        if color is not None:
+            echo(getattr(term, color))
+        echo(txt.rstrip())
+        echo(u'\r\n')
+    return line_no
+
+
+def filesize(filename):
+    """ display a file's size in human-readable format """
+
+    from os import stat
+    stat = stat(filename)
+    filesize = None
+    # file is > 400 megabytes; display in gigabytes
+    if stat.st_size > 1024000 * 400:
+        filesize = '%.2fG' % (stat.st_size / 1024000000)
+    # file is > 400 kilobytes; display in megabytes
+    if stat.st_size > 1024 * 400:
+        filesize = '%.2fM' % (stat.st_size / 1024000)
+    # file is at least 1 kilobyte; display in kilobytes
+    elif stat.st_size >= 1024:
+        filesize = '%.2fK' % (stat.st_size / 1024)
+    # display in bytes
+    else:
+        filesize = '%dB' % stat.st_size
+    return filesize

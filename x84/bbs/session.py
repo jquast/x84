@@ -1,51 +1,85 @@
 # -*- coding: utf-8 -*-
-"""
-Session engine for x/84, http://github.com/jquast/x84/
-"""
+""" Session engine for x/84. """
+
+# std imports
 import collections
 import traceback
 import logging
-import inspect
 import time
 import imp
 import sys
 import os
 
-SESSION = None
+# local
+from x84.bbs.exception import Disconnected, Goto
+from x84.bbs.script_def import Script
 
-Script = collections.namedtuple('Script', ['name', 'args', 'kwargs'])
+#: singleton representing the session connected by current process
+SESSION = None
 
 
 def getsession():
-    """
-    Return session, after a .run() method has been called on any 1 instance.
-    """
+    """ Returns session of current process.  """
     return SESSION
 
 
 def getterminal():
-    """
-    Return blessed terminal instance of this session.
-    """
+    """ Return blessed.Terminal class instance of this session. """
     return getsession().terminal
 
 
 def getnode():
-    """
-    Returns unique session identifier for this session as integer.
-    """
+    """ Return unique session identifier for this session as integer.  """
     return getsession().node
 
 
+def goto(script, *args, **kwargs):
+    """ Change bbs script. Does not return. """
+    raise Goto(script, *args, **kwargs)
+
+
+def disconnect(reason=u''):
+    """ Disconnect session. Does not return. """
+    raise Disconnected(reason,)
+
+
+def getch(timeout=None):
+    """
+    A deprecated form of getterminal().inkey().
+
+    This is old behavior -- upstream blessed project does the correct
+    thing. please use term.inkey() and see the documentation for
+    blessed's inkey() method, it **always** returns unicode, never None,
+    and definitely never an integer. However some internal UI libraries
+    were built upon getch(), and as such, this remains ...
+    """
+    # mark deprecate in v2.1; remove entirely in v3.0
+    # warnings.warn('getch() is deprecated, use getterminal().inkey()')
+    keystroke = getterminal().inkey(timeout)
+    if keystroke == u'':
+        return None
+    if keystroke.is_sequence:
+        return keystroke.code
+    return keystroke
+
+
+def gosub(script, *args, **kwargs):
+    """ Call bbs script with optional arguments, Returns value. """
+    from x84.bbs.session import Script
+    script = Script(name=script, args=args, kwargs=kwargs)
+    return getsession().runscript(script)
+
+
 class Session(object):
+
     """
     A BBS Session engine. Workflow begins in the ``run()`` method.
     """
+
     # pylint: disable=R0902,R0904,R0913
     #        Too many instance attributes
     #        Too many public methods
     #        Too many arguments
-    TRIM_CP437 = bytes(chr(14) + chr(15))  # HACK
     _encoding = None
     _decoder = None
     _activity = None
@@ -62,32 +96,25 @@ class Session(object):
 
         Only one session may be instantiated per process.
 
-        :param terminal: interactive terminal associated with this session.
-        :type terminal: blessed.Terminal.
-        :param sid: session identification string
-        :type sid: str
-        :param env: transport-negotiated environment variables, should
-           contain at least values for TERM and 'encoding'.
-        :type env: dict
-        :param child_pipes: tuple of (writer, reader)
-        :type child_pipes: tuple
-        :param kind: transport description string (ssh, telnet)
-        :type kind: str
-        :param addrport: transport ip address and port as string
-        :type addrport: str
-        :param matrix_args: When non-None, a tuple of positional arguments
-           that should be passed to the matrix script.
-        :param matrix_kwargs: When non-None, a dictionary of keyword arguments
-           that should be passed to the matrix script.
-        :type matrix_kwargs: dict
+        :param blessed.Terminal terminal: interactive terminal associated with
+                                          this session.
+        :param str sid: session identification string
+        :param dict env: transport-negotiated environment variables, should
+                         contain at least values for TERM and 'encoding'.
+        :param tuple child_pipes: tuple of ``(writer, reader)``.
+        :param str kind: transport description string (ssh, telnet)
+        :param str addrport: transport ip address and port as string
+        :param tuple matrix_args: When non-None, a tuple of positional
+                                  arguments passed to the matrix script.
+        :param dict matrix_kwargs: When non-None, a dictionary of keyword
+                                   arguments passed to the matrix script.
         """
         self.log = logging.getLogger(__name__)
 
         # pylint: disable=W0603
         #        Using the global statement
         global SESSION
-        assert SESSION is None, ('Session may be instantiated only once '
-                                 'per sub-process')
+        assert SESSION is None, 'Only one Session per process allowed'
         SESSION = self
 
         # public attributes
@@ -320,7 +347,6 @@ class Session(object):
             # put it in sys.path for relative imports
             if self.script_path not in sys.path:
                 sys.path.insert(0, self.script_path)
-                self.log.debug("sys.path[0] <- {!r}".format(self.script_path))
 
             # discover import path to __init__.py, store result
             lookup = imp.find_module('__init__', [self.script_path])
@@ -333,7 +359,7 @@ class Session(object):
         if 0 != len(self._script_stack):
             # recover from exception
             fault = self._script_stack.pop()
-            stop = False
+            prefix = u'stop'
             if len(self._script_stack):
                 # scripts remaining on the script_stack, resume the script that
                 # called us. Make sure your calling script queries for input or
@@ -341,9 +367,6 @@ class Session(object):
                 # end up in an infinite loop of gosub() followed by a crash (!)
                 resume = self.current_script
                 prefix = u'resume {resume.name}'.format(resume=resume)
-            else:
-                stop = True
-                prefix = u'stop'
 
             # display error to local log handler and to the user,
             msg = (u'{prefix} after general exception in {fault.name}'
@@ -375,12 +398,12 @@ class Session(object):
                 self._script_stack = [goto_script.value]
                 continue
 
-            except Disconnected, err:
+            except Disconnected as err:
                 self.log.info('Disconnected: %s', err)
                 self.close()
                 return None
 
-            except Exception, err:
+            except Exception as err:
                 # Pokemon exception, log and Cc: telnet client, then resume.
                 e_type, e_value, e_tb = sys.exc_info()
                 if self.show_traceback:
@@ -404,37 +427,18 @@ class Session(object):
         self.close()
         return None
 
-    def write(self, ucs):
+    def write(self, ucs, encoding=None):
         """
-        Write unicode data to telnet client. Take special care to encode
-        as 'iso8859-1' actually intended for 'cp437'-encoded terminals.
+        Write unicode data ``ucs`` to telnet client.
+
+        Take special care to encode as 'cp437_art', but report as 'iso8859-1'
+        for those 8-bit binary (presumably, cp437-encoded) terminals, so that
+        all bytes of the 0x00-0xff spectrum are writable.
         """
-        from x84.bbs.cp437 import CP437
-        if 0 == len(ucs):
+        # do not write empty strings
+        if not ucs:
             return
-        assert isinstance(ucs, unicode)
-        if self.encoding == 'cp437':
-            encoding = 'iso8859-1'
-            # out output terminal is cp437, so we need to take special care to
-            # re-encode things as "iso8859-1" but really encoded for cp437.
-            # For example, u'\u2591' becomes u'\xb0' (unichr(176)),
-            # -- the original ansi shaded block for cp437 terminals.
-            #
-            # additionally, the 'shift-in' and 'shift-out' characters
-            # display as '*' on SyncTerm, I think they stem from curses:
-            # http://lkml.indiana.edu/hypermail/linux/kernel/0602.2/0868.html
-            # regardless, remove them (self.TRIM_CP437)
-            text = ucs.encode(encoding, 'replace')
-            ucs = u''.join([(unichr(CP437.index(glyph))
-                             if glyph in CP437
-                             and glyph not in self.TRIM_CP437
-                             else unicode(
-                                 text[idx].translate(None, self.TRIM_CP437),
-                                 encoding, 'replace'))
-                            for (idx, glyph) in enumerate(ucs)])
-        else:
-            encoding = self.encoding
-        self.terminal.stream.write(ucs, encoding)
+        self.terminal.stream.write(ucs, encoding or self.encoding)
 
         if self.log.isEnabledFor(logging.DEBUG) and self.tap_output:
             self.log.debug('--> {!r}'.format(ucs))
@@ -474,8 +478,8 @@ class Session(object):
     def buffer_event(self, event, data=None):
         """
         Push data into buffer keyed by event. Handle special events:
-            'exception', 'global' AYT (are you there),
-            'page', 'info-req', 'refresh', and 'input'.
+        'exception', 'global' AYT (are you there), 'page', 'info-req',
+        'refresh', and 'input'.
         """
         # exceptions aren't buffered; they are thrown!
         if event == 'exception':
@@ -483,6 +487,9 @@ class Session(object):
             #        Raising NoneType while only classes, (..) allowed
             raise data
 
+        # these callback-responsive session events should be handled by
+        # another method, or by a configurable 'event: callback' registration
+        # system.
         # respond to global 'AYT' requests
         if event == 'global' and data[0] == 'AYT':
             reply_to = data[1]
@@ -491,19 +498,29 @@ class Session(object):
                 self.sid, self.user.handle,))
             return True
 
-        # accept 'page' as instant chat when 'mesg' is True, or sender is -1
-        # -- intent is that sysop can always 'chat' a user ..
-        if (event == 'page' and len(self._script_stack) and
-                self.current_script.name != 'chat'):
-            channel, sender = data
-            if self.user.get('mesg', True) or sender == -1:
-                self.log.info('page from {0}.'.format(sender))
-                chat_script = Script(name='chat', args=(channel, sender,))
-                if not self.runscript(chat_script):
-                    self.log.info('rejected page from {0}.'.format(sender))
-                # buffer refresh event for any asyncronous event UI's
-                self.buffer_event('refresh', 'page-return')
-                return True
+        # accept 'gosub' as a literal command to run a new script directly
+        # from this buffer_event method.  I'm sure it's fine ...
+        if event == 'gosub':
+            save_activity = self.activity
+            self.log.info('event-driven gosub: {0}'.format(data))
+            _height, _width = self.terminal.height, self.terminal.width
+            try:
+                self.runscript(Script(*data))
+            finally:
+                self.activity = save_activity
+                n_height, n_width = self.terminal.height, self.terminal.width
+                if ((_height, _width) != (n_height, n_width)):
+                    # RECURSIVE: we call buffer_event to push-in a duplicate
+                    # "resize" event, so the script that was interrupted has
+                    # an opportunity to adjust to the new terminal dimensions
+                    # if the script that was event-driven as gosub had already
+                    # acquired and reacted to any refresh-resize events.
+                    data = ('resize', n_height, n_width)
+                    self.buffer_event('refresh', data)
+                # otherwise its fine to not require the calling function to
+                # refresh -- so long as the target script makes sure(!) to
+                # use the "with term.fullscreen()" context manager.
+            return True
 
         # respond to 'info-req' events by returning pickled session info
         if event == 'info-req':
@@ -511,9 +528,16 @@ class Session(object):
             self.send_event('route', (sid, 'info-ack', self.sid, self.info(),))
             return True
 
-        # init new unmanaged & unlimited-sized buffer ;p
         if event not in self._buffer:
-            self._buffer[event] = list()
+            # " Once a bounded length deque is full, when new items are added,
+            # a corresponding number of items are discarded from the opposite
+            # end." -- global events are meant to be disregarded, so a much
+            # shorter queue length is used. only the foremost refresh event is
+            # important in the case of screen resize.
+            self._buffer[event] = collections.deque(
+                maxlen={'global': 128,
+                        'refresh': 1,
+                        }.get(event, 65534))
 
         # buffer input
         if event == 'input':
@@ -525,30 +549,35 @@ class Session(object):
             if data[0] == 'resize':
                 # inherit terminal dimensions values
                 (self.terminal.columns, self.terminal.rows) = data[1]
-            # store only most recent 'refresh' event
-            self._buffer[event] = list((data,))
-            return True
 
         # buffer all else
-        self._buffer[event].insert(0, data)
+        self._buffer[event].appendleft(data)
 
-        # global events are meant to be missed if unwanted, so
-        # we keep only the 100 most recent.
-        if event == 'global' and len(self._buffer[event]) > 150:
-            self._buffer[event] = self._buffer[event][:100]
-
-    def buffer_input(self, data):
+    def buffer_input(self, data, pushback=False):
         """
-        Update idle time, buffering raw bytes received from telnet client
-        via event queue
+        Update idle time, buffering raw bytes received from
+        telnet client via event queue.  Sometimes a script may
+        poll for, and receive keyboard data, but wants to push
+        it back in to the top of the stack to be decoded by
+        a later call to term.inkey(); in such case, ``pushback``
+        should be set.
         """
         self._last_input_time = time.time()
 
         if self.log.isEnabledFor(logging.DEBUG) and self.tap_input:
             self.log.debug('<-- {!r}'.format(data))
 
-        for keystroke in data:
-            self._buffer['input'].insert(0, keystroke)
+        if 'input' not in self._buffer:
+            # a rare scenario: inkey() causes a first-event of 'input' to
+            # be received without buffering from read_events(); then wants
+            # to push it back.  Here, too, we must check and construct the
+            # input buffer.  It wouldn't be bad to do this on __init__,
+            # either.
+            self._buffer['input'] = collections.deque(maxlen=65534)
+        if pushback:
+            self._buffer['input'].appendleft(data)
+        else:
+            self._buffer['input'].append(data)
         return
 
     def send_event(self, event, data):
@@ -560,7 +589,6 @@ class Session(object):
                'logger': Data is logging record, used by IPCLogHandler.
                'output': Unicode data to write to client.
                'global': Broadcast event to other sessions.
-               XX 'pos': Request cursor position.
                'db-<schema>': Request sqlite dict method result.
                'db=<schema>': Request sqlite dict method result as iterable.
                'lock-<name>': Fine-grained global bbs locking.
@@ -572,7 +600,7 @@ class Session(object):
         Non-blocking poll for session event, returns value, if any. None
         otherwise.
         """
-        return self.read_event(event, -1)
+        return self.read_event(event, timeout=-1)
 
     def read_event(self, event, timeout=None):
         """
@@ -588,51 +616,47 @@ class Session(object):
         return self.read_events(events=(event,), timeout=timeout)[1]
 
     def read_events(self, events, timeout=None):
-        """
-           S.read_events (events, timeout=None) --> (event, data)
+        """S.read_events (events, timeout=None) --> (event, data)
 
-           Return the first matched IPC data for any event specified in tuple
-           events, in the form of (event, data).
+        Return the first matched IPC data for any event specified in tuple
+        events, in the form of (event, data).
+
+        ``timeout`` value of ``None`` is blocking, ``-1`` is non-blocking
+        poll. All other values are blocking up to value of timeout.
         """
-        (event, data) = (None, None)
         # return immediately any events that are already buffered
-        for (event, data) in ((e, self._event_pop(e))
-                              for e in events if e in self._buffer
-                              and 0 != len(self._buffer[e])):
+        (event, data) = next(
+            ((_event, self._buffer[_event].pop())
+             for _event in events
+             if len(self._buffer.get(_event, []))),
+            (None, None))
+        if event:
             return (event, data)
-        stime = time.time()
+
         timeleft = lambda cmp_time: (
-            float('inf') if timeout is None else
+            None if timeout is None else
             timeout if timeout < 0 else
             timeout - (time.time() - cmp_time))
+
+        # begin scanning for matching `events' up to timeout.
+        stime = time.time()
+        # XXX poll is needed because of timeout=-1, shit.
         waitfor = timeleft(stime)
-        while waitfor > 0:
-            poll = None if waitfor == float('inf') else waitfor
-            if self.reader.poll(poll):
+        while waitfor is None or waitfor > 0:
+            # ask engine process for new event data,
+            if self.reader.poll(waitfor):
                 event, data = self.reader.recv()
-                retval = self.buffer_event(event, data)
-                if self.log.isEnabledFor(logging.DEBUG) and self.tap_events:
-                    stack = inspect.stack()
-                    caller_mod, caller_func = stack[2][1], stack[2][3]
-                    self.log.debug('event %s %s by %s in %s.', event,
-                                   'caught' if event in events else
-                                   'handled' if retval is not None else
-                                   'buffered', caller_func, caller_mod,)
-                if event in events:
-                    return (event, self._event_pop(event))
+                # it is necessary to always buffer an event, as some
+                # side-effects may occur by doing so.  When buffer_event
+                # returns True, those side-effects caused no data to be
+                # buffered, and one should not try to return any data for it.
+                if not self.buffer_event(event, data):
+                    if event in events:
+                        return event, self._buffer[event].pop()
             elif timeout == -1:
                 return (None, None)
             waitfor = timeleft(stime)
         return (None, None)
-
-    def _event_pop(self, event):
-        """
-        S._event_pop (event) --> data
-
-        Returns foremost item buffered for event. When event is ``input``,
-        an artificial pause is used for decoding of MBS when received multipart
-        """
-        return self._buffer[event].pop()
 
     def runscript(self, script):
         """
@@ -640,13 +664,25 @@ class Session(object):
         *script*, an instance of the ``Script`` namedtuple.
         """
         from x84.bbs.exception import ScriptError
-        self._script_stack.append(script)
-        self.log.info("runscript name={0}".format(script.name))
 
-        # pylint: disable=W0142
-        #        Used * or ** magic
-        lookup = imp.find_module(script.name, [self.script_module.__path__])
-        module = imp.load_module(script.name, *lookup)
+        self.log.info("runscript {0!r}".format(script.name))
+        self._script_stack.append(script)
+
+        # if given a script name such as 'extras.target', adjust the lookup
+        # path to be extended by {default_scriptdir}/extras, and adjust
+        # script_name to be just 'target'.
+        script_relpath = self.script_module.__path__
+        lookup_paths = [script_relpath]
+        if '.' not in script.name:
+            script_name = script.name
+        else:
+            # build another system path, relative to `script_module'
+            remaining, script_name = script.name.rsplit('.', 1)
+            _lookup_path = os.path.join(script_relpath, *remaining.split('.'))
+            lookup_paths.append(_lookup_path)
+
+        lookup = imp.find_module(script_name, lookup_paths)
+        module = imp.load_module(script_name, *lookup)
 
         # ensure main() function exists!
         if not hasattr(module, 'main'):

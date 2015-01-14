@@ -35,6 +35,7 @@ def find_user(handle):
 
 
 class Group(object):
+
     """
     A simple group record object with properties name', and 'members'.
     Use methods 'add' and 'remove' to add and remove users by handle,
@@ -104,6 +105,7 @@ class Group(object):
 
 
 class User(object):
+
     """
     A simple user record object with setter and getter properties, 'handle',
     'location', 'email', 'password', 'groups', 'calls', 'lastcall', and 'plan'.
@@ -175,7 +177,7 @@ class User(object):
         """
         from x84.bbs import ini
         pass_ucase = ini.CFG.getboolean('system', 'pass_ucase')
-        assert type(try_pass) is unicode
+        assert isinstance(try_pass, unicode)
         assert len(try_pass) > 0
         assert self.password != (None, None), ('account is without password')
         salt = self.password[0]
@@ -278,7 +280,7 @@ class User(object):
         automatically persist.  A call to the .save() method must be done.
         """
         log = logging.getLogger(__name__)
-        assert type(self._handle) is unicode, ('handle must be unicode')
+        assert isinstance(self._handle, unicode), ('handle must be unicode')
         assert len(self._handle) > 0, ('handle must be non-zero length')
         assert (None, None) != self._password, ('password must be set')
         assert self._handle != u'anonymous', ('anonymous may not be saved.')
@@ -466,7 +468,7 @@ def get_digestpw():
 
 
 def check_new_user(username):
-    """ Boolean return when username matches `newcmds' ini cfg. """
+    """ Boolean return when username matches ``newcmds`` ini cfg. """
     from x84.bbs import get_ini
     matching = get_ini(section='matrix',
                        key='newcmds',
@@ -478,7 +480,7 @@ def check_new_user(username):
 
 
 def check_bye_user(username):
-    """ Boolean return when username matches `byecmds' in ini cfg. """
+    """ Boolean return when username matches ``byecmds`` in ini cfg. """
     from x84.bbs import get_ini
     matching = get_ini(section='matrix', key='byecmds', split=True)
     return matching and username in matching
@@ -548,8 +550,8 @@ def check_user_pubkey(username, public_key):
         return False
     user_pubkey = get_user(handle).get('pubkey', False)
     if not user_pubkey:
-        log.debug('{0} attempted pubkey authentication, '
-                  'but no public key on record for the user.'
+        log.debug('pubkey authentication by {0!r} but no '
+                  'public key on record for the user.'
                   .format(username))
         return False
     try:

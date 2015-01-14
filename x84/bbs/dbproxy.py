@@ -1,63 +1,64 @@
-"""
-Database proxy helper for X/84.
-"""
-# std
+""" Database proxy helper for x/84. """
+# std imports
 import logging
 
-# for session-based ipc
-
-# for drect-db access
+# local
+from x84.bbs.ini import get_ini
 from x84.db import (
     get_db_filepath,
-    should_tapdb,
     get_database,
     get_db_func,
     get_db_lock,
     log_db_cmd,
 )
+from x84.bbs.session import getsession
 
 
 class DBProxy(object):
+
     """
-    Provide dictionary-like object interface to a database. a database call,
-    such as __len__() or keys() is issued as a command to the main engine,
-    which spawns a thread to acquire a lock on the database and return the
-    results via IPC pipe transfer.
+    Provide dictionary-like object interface to shared database.
+
+    A database call, such as __len__() or keys() is issued as a command
+    to the main engine when ``use_session`` is True, which spawns a thread
+    to acquire a lock on the database and return the results via IPC pipe
+    transfer.
     """
 
     def __init__(self, schema, table='unnamed', use_session=True):
         """
-        Arguments:
-            schema: database key, to become basename of .sqlite3 files.
+        Class constructor.
+
+        :param str scheme: database key, becomes basename of .sqlite3 file.
+        :param str table: optional database table.
+        :param bool use_session: Whether iterable returns should be sent over
+                                 an IPC pipe (client is a
+                                 :class:`x84.bbs.session.Session` instance),
+                                 or returned directly (such as used by the main
+                                 thread engine components.)
         """
-        from x84.bbs.session import getsession
         self.log = logging.getLogger(__name__)
         self.schema = schema
         self.table = table
-        self._tap_db = should_tapdb()
+        self._tap_db = get_ini('session', 'tab_db', getter='getboolean')
         self.session = use_session and getsession()
 
     def proxy_iter_session(self, method, *args):
-        """
-        Proxy for iterable dictionary method calls over session IPC pipe.
-        """
-        if self.session:
-            event = 'db=%s' % (self.schema,)
-            self.session.flush_event(event)
-            self.session.send_event(event, (self.table, method, args))
+        """ Proxy for iterable-return method calls over session IPC pipe. """
+        event = 'db={0}'.format(self.schema)
+        self.session.flush_event(event)
+        self.session.send_event(event, (self.table, method, args))
+        data = self.session.read_event(event)
+        assert data == (None, 'StartIteration'), (
+            'iterable proxy used on non-iterable, {0!r}'.format(data))
+        data = self.session.read_event(event)
+        while data != (None, StopIteration):
+            yield data
             data = self.session.read_event(event)
-            assert data == (None, 'StartIteration'), (
-                'iterable proxy used on non-iterable, %r' % (data,))
-            data = self.session.read_event(event)
-            while data != (None, StopIteration):
-                yield data
-                data = self.session.read_event(event)
-            self.session.flush_event(event)
+        self.session.flush_event(event)
 
     def proxy_method_direct(self, method, *args):
-        """
-        Proxy for direct dictionary method calls.
-        """
+        """ Proxy for direct dictionary method calls. """
         dictdb = get_database(filepath=get_db_filepath(self.schema),
                               table=self.table)
         try:
@@ -69,47 +70,44 @@ class DBProxy(object):
             dictdb.close()
 
     def proxy_iter(self, method, *args):
-        """
-        Proxy for iterable dictionary method calls.
-        """
+        """ Proxy for iterable dictionary method calls. """
         if self.session:
             return self.proxy_iter_session(method, *args)
 
         return self.proxy_method_direct(method, *args)
 
     def proxy_method(self, method, *args):
-        """
-        Proxy for dictionary method calls.
-        """
+        """ Proxy for dictionary method calls. """
         if self.session:
             return self.proxy_method_session(method, *args)
 
         return self.proxy_method_direct(method, *args)
 
     def proxy_method_session(self, method, *args):
-        """
-        Proxy for dictionary method calls over IPC pipe.
-        """
-        event = 'db-%s' % (self.schema,)
+        """ Proxy for dictionary method calls over IPC pipe. """
+        event = 'db-{0}'.format(self.schema)
         self.session.send_event(event, (self.table, method, args))
         return self.session.read_event(event)
 
     def acquire(self):
+        """ Acquire system-wide lock on database. """
         lock = get_db_lock(schema=self.schema, table=self.table)
         if self._tap_db:
-            self.log.debug('lock acquire schema={0}, table={1}'
-                           .format(self.schema, self.table))
+            self.log.debug('lock acquire schema=%s, table=%s',
+                           self.schema, self.table)
         lock.acquire()
 
     def release(self):
+        """ Release system-wide lock on database. """
         lock = get_db_lock(schema=self.schema, table=self.table)
         if self._tap_db:
-            self.log.debug('lock release schema={0}, table={1}'
-                           .format(self.schema, self.table))
+            self.log.debug('lock release schema=%s, table=%s',
+                           self.schema, self.table)
         lock.release()
 
     def __enter__(self):
         self.acquire()
+        return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.release()
@@ -183,3 +181,9 @@ class DBProxy(object):
     def popitem(self):
         return self.proxy_method('popitem')
     popitem.__doc__ = dict.popitem.__doc__
+
+    def copy(self):
+        # https://github.com/piskvorky/sqlitedict/issues/20
+        # @jquast: should sqlitedict have a .copy() method? "no."
+        return dict(self.proxy_method('items'))
+    copy.__doc__ = dict.copy.__doc__

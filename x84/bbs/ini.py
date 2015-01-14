@@ -1,10 +1,15 @@
-"""
- Configuration for x/84 BBS, https://github.com/jquast/x84/
-"""
-
+""" Configuration package x/84. """
+# std imports
+from __future__ import print_function
 import logging.config
-import os.path
+import ConfigParser
+import warnings
+import inspect
+import getpass
+import socket
+import os
 
+#: Singleton representing configuration after load
 CFG = None
 
 # pylint: disable=R0915,R0912,W0603
@@ -15,21 +20,16 @@ CFG = None
 
 def init(lookup_bbs, lookup_log):
     """
-    Initialize global 'CFG' variable, a singleton to contain bbs properties and
-    settings across all modules, as well as the logger. Each variable is tuple
-    lookup path of in-order preferences for .ini files.
+    Initialize global 'CFG' variable, a singleton to contain bbs settings.
 
-    If none our found, defaults are initialized, and the last item of each
-    tuple is created.
+    Each variable (``lookup_bbs``, ``lookup_log``) is tuple lookup path of
+    in-order preferences for .ini files.  If none are found, defaults are
+    initialized, and the last item of each tuple is created.
     """
-    import ConfigParser
-    root = logging.getLogger()
     log = logging.getLogger(__name__)
 
     def write_cfg(cfg, filepath):
-        """
-        Write Config to filepath.
-        """
+        """ Write Config to filepath. """
         if not os.path.exists(os.path.dirname(os.path.expanduser(filepath))):
             dir_name = os.path.dirname(os.path.expanduser(filepath))
             print('Creating folder {0}'.format(dir_name))
@@ -60,7 +60,7 @@ def init(lookup_bbs, lookup_log):
                 log.warn(err)
         try:
             write_cfg(cfg_log, cfg_logfile)
-            log.info('Saved {0}'.format(cfg_logfile))
+            log.info('Saved %s', cfg_logfile)
         except IOError as err:
             log.error(err)
         logging.config.fileConfig(cfg_logfile)
@@ -86,7 +86,7 @@ def init(lookup_bbs, lookup_log):
                 log.warn(err)
         try:
             write_cfg(cfg_bbs, cfg_bbsfile)
-            log.info('Saved {0}'.format(cfg_bbsfile))
+            log.info('Saved %s', cfg_bbsfile)
         except IOError as err:
             log.error(err)
 
@@ -95,12 +95,19 @@ def init(lookup_bbs, lookup_log):
 
 
 def init_bbs_ini():
-    """
-    Returns ConfigParser instance of bbs system defaults
-    """
-    import ConfigParser
-    import getpass
-    import socket
+    """ Returns ConfigParser instance of bbs system defaults. """
+    # ### How this should have been written ...
+    # ###
+    # ### each module should provide a declaration, probably based on a
+    # ### collections.namedtuple that simply states the various fields,
+    # ### a help description, and its default values.  Then, this program
+    # ### simply "walks" the module path, importing everybody and finding
+    # ### this declaration to build up the "default" configuration file.
+    # ###
+    # ### at least, in this way, the module defines its configuration scheme
+    # ### where it is used.
+    # wouldn't it be nice if we could use comments in the file .. ?
+    # in such cases, it might be better to use jinja2 or something
     cfg_bbs = ConfigParser.SafeConfigParser()
 
     cfg_bbs.add_section('system')
@@ -113,11 +120,10 @@ def init_bbs_ini():
     cfg_bbs.set('system', 'datapath', os.path.expanduser(os.path.join(
         os.path.join('~', '.x84', 'data'))))
     cfg_bbs.set('system', 'timeout', '1984')
-    # for very slow systems, you may need to increase IPC timeout for acquiring
-    # locks and sending input to sub-processes -- this can happen when the
-    # system is under very heavy load -- like pasting wikipedia into the editor
-    ## cfg_bbs.set('system', 'timeout_ipc', '1')  # XXX disabled
+
     try:
+        # pylint: disable=W0612
+        #         Unused variable 'bcrypt'
         import bcrypt  # NOQA
     except ImportError:
         cfg_bbs.set('system', 'password_digest', 'internal')
@@ -133,50 +139,76 @@ def init_bbs_ini():
     # 'ansi' can changed to any other value; so we could be
     # unidirectional: a value of 'ansi' will translate ansi-bbs -> ansi,
     # and a value of 'ansi-bbs' will translate ansi -> ansi-bbs.
-    ## cfg_bbs.set('system', 'termcap-ansi', 'ansi-bbs')
     cfg_bbs.set('system', 'termcap-ansi', 'ansi')
     # change 'unknown' termcaps to 'ansi': for dumb terminals
     cfg_bbs.set('system', 'termcap-unknown', 'ansi')
     # could be information leak to sensitive sysops
-    cfg_bbs.set('system', 'show_traceback', 'no')
+    cfg_bbs.set('system', 'show_traceback', 'yes')
     # store passwords in uppercase, facebook and mystic bbs does this ..
     cfg_bbs.set('system', 'pass_ucase', 'no')
     # default encoding for the showart function on UTF-8 capable terminals
     cfg_bbs.set('system', 'art_utf8_codec', 'cp437')
 
     cfg_bbs.add_section('telnet')
+    cfg_bbs.set('telnet', 'enabled', 'yes')
     cfg_bbs.set('telnet', 'addr', '127.0.0.1')
     cfg_bbs.set('telnet', 'port', '6023')
 
+    cfg_bbs.add_section('ssh')
     try:
-        import ssh  # NOQA
+        # pylint: disable=W0612
+        #         Unused variable 'x84'
+        import x84.ssh  # noqa
+        cfg_bbs.set('ssh', 'enabled', 'yes')
     except ImportError:
-        pass
-    else:
-        cfg_bbs.add_section('ssh')
-        cfg_bbs.set('ssh', 'addr', '127.0.0.1')
-        cfg_bbs.set('ssh', 'port', '6022')
-        cfg_bbs.set('ssh', 'hostkey', os.path.expanduser(
-            os.path.join('~', '.x84', 'ssh_host_rsa_key')))
-        # 4096 took quite a while on my machine, so, if you're paranoid enough
-        # for something longer, then you can buy your own patience !
-        cfg_bbs.set('ssh', 'hostkeybits', '2048')
+        cfg_bbs.set('ssh', 'enabled', 'no')
+    cfg_bbs.set('ssh', 'addr', '127.0.0.1')
+    cfg_bbs.set('ssh', 'port', '6022')
+    cfg_bbs.set('ssh', 'hostkey', os.path.expanduser(
+        os.path.join('~', '.x84', 'ssh_host_rsa_key')))
+    cfg_bbs.set('ssh', 'hostkeybits', '2048')
 
+    cfg_bbs.add_section('sftp')
+    cfg_bbs.set('sftp', 'enabled', 'no')
+    cfg_bbs.set('sftp', 'root', os.path.expanduser(
+        os.path.join('~', 'x84-sftp_root')))
+    try:
+        os.makedirs(
+            os.path.join(cfg_bbs.get('sftp', 'root'), "__uploads__"))
+    except OSError:
+        pass
+    cfg_bbs.set('sftp', 'uploads_filemode', '644')
+
+    # rlogin only works on port 513
     cfg_bbs.add_section('rlogin')
+    cfg_bbs.set('rlogin', 'enabled', 'no')
     cfg_bbs.set('rlogin', 'addr', '127.0.0.1')
-    cfg_bbs.set('rlogin', 'port', '6513')
+    cfg_bbs.set('rlogin', 'port', '513')
+
+    # web
+    cfg_bbs.add_section('web')
+    cfg_bbs.set('web', 'enabled', 'no')
+    cfg_bbs.set('web', 'port', '443')
+    cfg_bbs.set('web', 'cert', os.path.expanduser(
+        os.path.join('~', '.x84', 'ssl.cer')))
+    cfg_bbs.set('web', 'key', os.path.expanduser(
+        os.path.join('~', '.x84', 'ssl.key')))
+    cfg_bbs.set('web', 'chain', os.path.expanduser(
+        os.path.join('~', '.x84', 'ca.cer')))
+    cfg_bbs.set('web', 'modules', 'msgserve')
 
     # default path if cmd argument is not absolute,
     cfg_bbs.add_section('door')
     cfg_bbs.set('door', 'path', '/usr/local/bin:/usr/games')
 
     cfg_bbs.add_section('matrix')
-    cfg_bbs.set('matrix', 'newcmds', 'new apply')
-    cfg_bbs.set('matrix', 'byecmds', 'exit logoff bye quit')
+    cfg_bbs.set('matrix', 'newcmds', 'new, apply')
+    cfg_bbs.set('matrix', 'byecmds', 'exit, logoff, bye, quit')
     cfg_bbs.set('matrix', 'anoncmds', 'anonymous')
     cfg_bbs.set('matrix', 'script', 'matrix')
     cfg_bbs.set('matrix', 'script_telnet', 'matrix')
     cfg_bbs.set('matrix', 'script_ssh', 'matrix_ssh')
+    cfg_bbs.set('matrix', 'script_sftp', 'matrix_sftp')
     cfg_bbs.set('matrix', 'topscript', 'top')
     cfg_bbs.set('matrix', 'enable_anonymous', 'no')
     cfg_bbs.set('matrix', 'enable_pwreset', 'yes')
@@ -192,25 +224,28 @@ def init_bbs_ini():
     cfg_bbs.set('irc', 'server', 'irc.efnet.org')
     cfg_bbs.set('irc', 'port', '6667')
     cfg_bbs.set('irc', 'channel', '#1984')
+    cfg_bbs.set('irc', 'ssl', 'no')
 
-    cfg_bbs.add_section('nethack')
-    cfg_bbs.set('nethack', 'enabled', 'yes')
-    cfg_bbs.set('nethack', 'path', '/nh343/nethack.343-nao')
-    cfg_bbs.set('nethack', 'logfile', '/nh343/var/xlogfile')
+    cfg_bbs.add_section('shroo-ms')
+    cfg_bbs.set('shroo-ms', 'enabled', 'no')
+    cfg_bbs.set('shroo-ms', 'idkey', '')
+    cfg_bbs.set('shroo-ms', 'restkey', '')
 
+    # new user account script
     cfg_bbs.add_section('nua')
     cfg_bbs.set('nua', 'script', 'nua')
     cfg_bbs.set('nua', 'min_user', '3')
     cfg_bbs.set('nua', 'min_pass', '4')
     cfg_bbs.set('nua', 'max_user', '11')
     cfg_bbs.set('nua', 'max_pass', '16')
-    cfg_bbs.set('nua', 'max_email', '50')
+    cfg_bbs.set('nua', 'max_email', '30')
     cfg_bbs.set('nua', 'max_location', '24')
     cfg_bbs.set('nua', 'allow_apply', 'yes')
-    cfg_bbs.set('nua', 'invalid_handles', ' '.join(
-        (cfg_bbs.get('matrix', 'byecmds'),
-         cfg_bbs.get('matrix', 'newcmds'),
-         'sysop anonymous',)))
+    invalid_handles = u','.join((
+        ','.join(cfg_bbs.get('matrix', 'byecmds').split()),
+        ','.join(cfg_bbs.get('matrix', 'newcmds').split()),
+        'anonymous', 'sysop',))
+    cfg_bbs.set('nua', 'invalid_handles', invalid_handles)
     cfg_bbs.set('nua', 'handle_validation', '^[A-Za-z0-9]{3,11}$')
 
     cfg_bbs.add_section('msg')
@@ -219,20 +254,22 @@ def init_bbs_ini():
     # as each get_msg() is a lookup, thread-related sorting could
     # become too expensive.
     cfg_bbs.set('msg', 'max_depth', '8')
+
+    # not implemented
     # by default, anybody can make up a new tag. otherwise, only
     # those of groups specified may.
-    cfg_bbs.set('msg', 'moderated_tags', 'no')
-    cfg_bbs.set('msg', 'tag_moderators', 'sysop moderator')
+#    cfg_bbs.set('msg', 'moderated_tags', 'no')
+#    cfg_bbs.set('msg', 'tag_moderators', 'sysop, moderator')
 
     cfg_bbs.add_section('dosemu')
     cfg_bbs.set('dosemu', 'enabled', 'no')
     cfg_bbs.set('dosemu', 'bin', '/usr/bin/dosemu')
     cfg_bbs.set('dosemu', 'home', '/DOS')
-    # set to a valid folder to enable lord; dropfile is placed in lord folder.
-    cfg_bbs.set('dosemu', 'lord_path', '/DOS/X/lord')
-    cfg_bbs.set('dosemu', 'lord_dropfile', 'DORINFO')
-    cfg_bbs.set('dosemu', 'lord_args',
-            '-quiet -I \'$_com1 = "virtual"\' \'X:\\LORD\\START.BAT %%#\'')
+#    # set to a valid folder to enable lord; dropfile is placed in lord folder.
+#    cfg_bbs.set('dosemu', 'lord_path', '/DOS/X/lord')
+#    cfg_bbs.set('dosemu', 'lord_dropfile', 'DORINFO')
+#    cfg_bbs.set('dosemu', 'lord_args',
+#                '-quiet -I \'$_com1 = "virtual"\' \'X:\\LORD\\START.BAT %%#\'')
 
     cfg_bbs.add_section('sesame')
     cfg_bbs.set('sesame', 'CavesOfPhear', '/usr/bin/phear')
@@ -240,18 +277,17 @@ def init_bbs_ini():
     cfg_bbs.set('sesame', 'FrozenDepths', '/usr/bin/frozendepths')
     cfg_bbs.set('sesame', 'FrozenDepths_key', '@')
     cfg_bbs.set('sesame', 'DopeWars',
-        '/usr/bin/dopewars -a -P {session[handle]} --single-player -u none')
+                ('/usr/bin/dopewars -a -P {session[handle]} '
+                 '--single-player -u none'))
     cfg_bbs.set('sesame', 'DopeWars_key', '$')
     cfg_bbs.set('sesame', 'MyMan', '/usr/bin/myman')
     cfg_bbs.set('sesame', 'MyMan_key', '&')
 
     return cfg_bbs
 
+
 def init_log_ini():
-    """
-    Returns ConfigParser instance of logger defaults
-    """
-    import ConfigParser
+    """ Return ConfigParser instance of logger defaults. """
     cfg_log = ConfigParser.RawConfigParser()
     cfg_log.add_section('formatters')
     cfg_log.set('formatters', 'keys', 'default')
@@ -260,7 +296,7 @@ def init_log_ini():
     # for multiprocessing/threads, use: %(processName)s %(threadName) !
     cfg_log.set('formatter_default', 'format',
                 u'%(asctime)s %(levelname)-6s '
-                u'%(filename)15s:%(lineno)-3s %(message)s')
+                u'%(filename)10s:%(lineno)-3s %(message)s')
     cfg_log.set('formatter_default', 'class', 'logging.Formatter')
     cfg_log.set('formatter_default', 'datefmt', '%a-%m-%d %I:%M%p')
 
@@ -285,7 +321,8 @@ def init_log_ini():
                 '("' + daily_log + '", "midnight", 1, 60)')
 
     cfg_log.add_section('loggers')
-    cfg_log.set('loggers', 'keys', 'root, sqlitedict, paramiko')
+    cfg_log.set('loggers', 'keys',
+                'root, sqlitedict, paramiko, xmodem, requests')
 
     cfg_log.add_section('logger_root')
     cfg_log.set('logger_root', 'level', 'INFO')
@@ -298,7 +335,6 @@ def init_log_ini():
     cfg_log.set('logger_sqlitedict', 'formatter', 'default')
     cfg_log.set('logger_sqlitedict', 'handlers', 'console, rotate_daily')
     cfg_log.set('logger_sqlitedict', 'qualname', 'sqlitedict')
-    cfg_log.set('logger_sqlitedict', 'propagate', '0')
 
     # squelch paramiko.transport info, also too verbose
     cfg_log.add_section('logger_paramiko')
@@ -306,6 +342,55 @@ def init_log_ini():
     cfg_log.set('logger_paramiko', 'formatter', 'default')
     cfg_log.set('logger_paramiko', 'handlers', 'console, rotate_daily')
     cfg_log.set('logger_paramiko', 'qualname', 'paramiko.transport')
-    cfg_log.set('logger_paramiko', 'propagate', '0')
+
+    # squelch xmodem's debug, too verbose
+    cfg_log.add_section('logger_xmodem')
+    cfg_log.set('logger_xmodem', 'level', 'INFO')
+    cfg_log.set('logger_xmodem', 'formatter', 'default')
+    cfg_log.set('logger_xmodem', 'handlers', 'console, rotate_daily')
+    cfg_log.set('logger_xmodem', 'qualname', 'xmodem')
+
+    # squelch requests to warn, too verbose
+    cfg_log.add_section('logger_requests')
+    cfg_log.set('logger_requests', 'level', 'WARN')
+    cfg_log.set('logger_requests', 'formatter', 'default')
+    cfg_log.set('logger_requests', 'handlers', 'console, rotate_daily')
+    cfg_log.set('logger_requests', 'qualname', 'requests')
 
     return cfg_log
+
+
+def get_ini(section=None, key=None, getter='get', split=False, splitsep=','):
+    """
+    Get an ini configuration of ``section`` and ``key``.
+
+    If the option does not exist, an empty list, string, or False
+    is returned -- return type decided by the given arguments.
+
+    The ``getter`` method is 'get' by default, returning a string.
+    For booleans, use ``getter='get_boolean'``.
+
+    To return a list, use ``split=True``.
+    """
+    assert section is not None, section
+    assert key is not None, key
+    if CFG is None:
+        # when building documentation, 'get_ini' at module-level
+        # imports is not really an error.  However, if you're importing
+        # a module that calls get_ini before the config system is
+        # initialized, then you're going to get an empty value! warning!!
+        stack = inspect.stack()
+        caller_mod, caller_func = stack[2][1], stack[2][3]
+        warnings.warn('ini system not (yet) initialized, '
+                      'caller = {0}:{1}'.format(caller_mod, caller_func))
+    elif CFG.has_option(section, key):
+        getter = getattr(CFG, getter)
+        value = getter(section, key)
+        if split and hasattr(value, 'split'):
+            return [_value.strip() for _value in value.split(splitsep)]
+        return value
+    if getter == 'getboolean':
+        return False
+    if split:
+        return []
+    return u''

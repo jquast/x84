@@ -1,6 +1,7 @@
 """
 Terminal handler for x/84 bbs.  http://github.com/jquast/x84
 """
+import contextlib
 import logging
 import codecs
 import sys
@@ -29,9 +30,9 @@ class Terminal(BlessedTerminal):
     def inkey(self, timeout=None, esc_delay=0.35):
         try:
             return BlessedTerminal.inkey(self, timeout, esc_delay=0.35)
-        except UnicodeDecodeError, err:
+        except UnicodeDecodeError as err:
             log = logging.getLogger(__name__)
-            log.warn('UnicodeDecodeError: {}'.format(err))
+            log.warn('UnicodeDecodeError: {0}'.format(err))
             return u'?'
     inkey.__doc__ = BlessedTerminal.inkey.__doc__
 
@@ -40,8 +41,8 @@ class Terminal(BlessedTerminal):
         try:
             self._keyboard_decoder = codecs.getincrementaldecoder(encoding)()
             self._encoding = encoding
-            log.info('keyboard encoding is {!r}'.format(encoding))
-        except Exception, err:
+            log.debug('keyboard encoding is {!r}'.format(encoding))
+        except Exception as err:
             log.exception(err)
 
     def kbhit(self, timeout=0, *_):
@@ -50,7 +51,7 @@ class Terminal(BlessedTerminal):
 
         # if available, place back into buffer and return True,
         if val is not None:
-            self.session._buffer['input'].append(val)
+            self.session.buffer_input(val, pushback=True)
             return True
 
         # no value available within timeout.
@@ -64,7 +65,26 @@ class Terminal(BlessedTerminal):
 
     def _height_and_width(self):
         from blessed.terminal import WINSZ
-        return WINSZ(ws_row=self.rows, ws_col=self.columns,
+        _rows = self.rows
+        if (self.kind.startswith('ansi') and
+                self.columns == 80 and _rows in (24, 25)):
+            # All other teminal emulators, you can write 'x' at
+            # (0, 0) and (height, width), and both x's will appear.
+            #
+            # Not so on SyncTerm. This will cause it to scroll: twice.
+            #
+            # Once, because it misinterprets the 0-based nature of
+            # cursor movement, and the final line causes scroll --
+            # Twice, because writing to the final column of the final
+            # line causes yet another scroll.
+            #
+            # For this reason, it is not recommended to ever write to
+            # the final 2 lines of SyncTerm, which really just appears
+            # to the user as the final 1 line.
+            #
+            # https://github.com/jquast/x84/issues/188
+            _rows -= 2
+        return WINSZ(ws_row=_rows, ws_col=self.columns,
                      ws_xpixel=None, ws_ypixel=None)
     _height_and_width.__doc__ = BlessedTerminal._height_and_width.__doc__
 
@@ -72,29 +92,37 @@ class Terminal(BlessedTerminal):
         from blessed.sequences import Sequence
         return Sequence(text, self).padd()
 
+    @contextlib.contextmanager
+    def raw(self):
+        yield
+
+    @contextlib.contextmanager
+    def cbreak(self):
+        yield
+
     @property
     def is_a_tty(self):
         return True
 
 
 def translate_ttype(ttype):
-    from x84.bbs.ini import CFG
+    from x84.bbs import get_ini
     log = logging.getLogger(__name__)
 
-    termcap_unknown = CFG.get('system', 'termcap-unknown')
-    termcap_ansi = CFG.get('system', 'termcap-ansi')
+    termcap_unknown = get_ini('system', 'termcap-unknown') or 'ansi'
+    termcap_ansi = get_ini('system', 'termcap-ansi') or 'ansi'
 
     if termcap_unknown != 'no' and ttype == 'unknown':
         log.debug("terminal-type {0!r} => {1!r}"
                   .format(ttype, termcap_unknown))
         return termcap_unknown
 
-    elif termcap_ansi != 'no' and ttype.lower().startswith('ansi'):
+    elif (termcap_ansi != 'no' and ttype.lower().startswith('ansi')
+          and ttype != termcap_ansi):
         log.debug("terminal-type {0!r} => {1!r}"
                   .format(ttype, termcap_ansi))
         return termcap_ansi
 
-    log.info("terminal type is {0!r}".format(ttype))
     return ttype
 
 
@@ -103,9 +131,10 @@ def determine_encoding(env):
     Determine and return preferred encoding given session env.
     """
     from x84.bbs import get_ini
-    default_encoding = get_ini(section='session',
-                               key='default_encoding'
-                               ) or 'utf8'
+    default_encoding = get_ini(
+        section='session', key='default_encoding'
+    ) or 'utf8'
+
     fallback_encoding = {
         'ansi': 'cp437',
         'ansi-bbs': 'cp437',
@@ -126,26 +155,44 @@ def init_term(writer, env):
     A blessed-abstracted curses terminal is returned.
     """
     from x84.bbs.ipc import IPCStream
+    from x84.bbs import get_ini
+    log = logging.getLogger(__name__)
     env['TERM'] = translate_ttype(env.get('TERM', 'unknown'))
     env['encoding'] = determine_encoding(env)
-    return Terminal(kind=env['TERM'],
+    term = Terminal(kind=env['TERM'],
                     stream=IPCStream(writer=writer),
                     rows=int(env.get('LINES', '24')),
                     columns=int(env.get('COLUMNS', '80')))
 
+    if term.kind is None:
+        # the given environment's TERM failed curses initialization
+        # because, more than likely, the TERM type was not found.
+        termcap_unknown = get_ini('system', 'termcap-unknown') or 'ansi'
+        log.debug('terminal-type {0} failed, using {1} instead.'
+                  .format(env['TERM'], termcap_unknown))
+        term = Terminal(kind=termcap_unknown,
+                        stream=IPCStream(writer=writer),
+                        rows=int(env.get('LINES', '24')),
+                        columns=int(env.get('COLUMNS', '80')))
+
+    log.info("terminal type is {0!r}".format(term.kind))
+    return term
+
 
 class TerminalProcess(object):
+
     """
     Class record for tracking global processes and their
     various attributes. These are stored using register_tty()
     and unregister_tty(), and retrieved using terminals().
     """
+
     def __init__(self, client, sid, master_pipes):
-        from x84.bbs.ini import CFG
+        from x84.bbs import get_ini
         self.client = client
         self.sid = sid
         (self.master_write, self.master_read) = master_pipes
-        self.timeout = CFG.getint('system', 'timeout')
+        self.timeout = get_ini('system', 'timeout') or 0
 
 
 def flush_queue(queue):
@@ -168,16 +215,15 @@ def register_tty(tty):
     Register a global instance of TerminalProcess
     """
     log = logging.getLogger(__name__)
-    log.debug('registered tty: %s', tty.sid)
+    log.debug('[{tty.sid}] registered tty'.format(tty=tty))
     TERMINALS[tty.sid] = tty
 
 
 def unregister_tty(tty):
     """
-    Unregister a Terminal, described by its telnet.TelnetClient,
+    Unregister a Terminal, described by its Client,
     input and output Queues, and Lock.
     """
-    log = logging.getLogger(__name__)
     try:
         flush_queue(tty.master_read)
         tty.master_read.close()
@@ -188,7 +234,6 @@ def unregister_tty(tty):
         # signal tcp socket to close
         tty.client.deactivate()
     del TERMINALS[tty.sid]
-    log.debug('unregistered tty: %s', tty.sid)
 
 
 def get_terminals():
@@ -216,27 +261,35 @@ def kill_session(client, reason='killed'):
     from x84.terminal import unregister_tty
     client.shutdown()
 
+    log = logging.getLogger(__name__)
     tty = find_tty(client)
     if tty is not None:
         try:
             tty.master_write.send(('exception', Disconnected(reason),))
-        except (EOFError, IOError) as err:
+        except (EOFError, IOError):
             pass
+        log.info('[{tty.sid}] goodbye: {reason}'
+                 .format(tty=tty, reason=reason))
         unregister_tty(tty)
 
 
 def start_process(sid, env, CFG, child_pipes, kind, addrport,
                   matrix_args=None, matrix_kwargs=None):
     """
-    A multiprocessing.Process target. Arguments:
-        sid: string describing session source (fe. IP address & Port)
-        env: dictionary of client environment variables (requires 'TERM')
-        CFG: ConfigParser instance of bbs configuration
-        child_pipes: tuple of (writer, reader) for the engine IPC.
-        kind: what kind of connection? 'telnet', 'ssh', etc.,
-        addrport: tuple of (client-ip, client-port)
-        matrix_args: optional positional arguments to pass to matrix script.
-        matrix_kwargs: optional keyward arguments to pass to matrix script.
+    A ``multiprocessing.Process`` target.
+
+    :param str sid: string describing session source (IP address & port).
+    :param dict env: dictionary of client environment variables
+                     (must contain at least ``'TERM'``).
+    :param ConfigParser.ConfigParser CFG: bbs configuration
+    :param tuple child_pipes: tuple of ``(writer, reader)`` for engine IPC.
+    :param str kind: what kind of connection as string, ``'telnet'``,
+                     ``'ssh'``, etc.
+    :param tuple addrport: ``(client-ip, client-port)`` as string and integer.
+    :param tuple matrix_args: optional positional arguments to pass to matrix
+                              script.
+    :param dict matrix_kwargs: optional keyward arguments to pass to matrix
+                               script.
     """
     import x84.bbs.ini
     from x84.bbs.ipc import make_root_logger
@@ -275,7 +328,7 @@ def start_process(sid, env, CFG, child_pipes, kind, addrport,
         # signal exit to engine
         try:
             writer.send(('exit', None))
-        except IOError, err:
+        except IOError as err:
             # ignore [Errno 232] The pipe is being closed,
             # only occurs on win32 platform after early exit
             if err.errno != 232:
@@ -321,7 +374,6 @@ def on_naws(client):
     that a new window size is read in interfaces where they may be changed
     accordingly.
     """
-    log = logging.getLogger(__name__)
     for _sid, tty in get_terminals():
         if client == tty.client:
             columns = int(client.env['COLUMNS'])

@@ -19,10 +19,12 @@ def main():
     max_user = ini.CFG.getint('nua', 'max_user')
     prompt_msg = u'[spnG]: ' if session.user.get('expert', False) else (
         u'%s:AY SOMEthiNG %s:REViOUS %s:EXt %s:Et thE fUCk Off !\b' % (
-        term.bold_blue_underline(u's'), term.blue_underline(u'p'),
-        term.blue_underline(u'n'), term.red_underline(u'Escape/g'),))
+            term.bold_blue_underline(u's'),
+            term.bold_blue_underline(u'p'),
+            term.bold_blue_underline(u'n'),
+            term.red_underline(u'Escape/g'),))
     prompt_say = u''.join((term.bold_blue(handle),
-                           term.blue(u' SAYS WhAt'), term.bold(': '),))
+                           term.bold_blue(u' SAYS WhAt'), term.bold(': '),))
     boards = (('1984.ws', 'x/84 dEfAUlt bOARd', 'Dingo',),
               ('htc.zapto.org', 'Haunting the Chapel', 'Mercyful fate',),
               ('bbs.pharcyde.org', 'Pharcyde BBS', 'Access Denied',),
@@ -30,8 +32,7 @@ def main():
               ('blackflag.acid.org:2627', 'Piranha: Black Flag', 'Caphood',),
               ('oddnetwork.org', '79 columns', 'Haliphax'),
               ('bbs.beardy.se', 'The Swamp', 'Beardy'),
-              ('maze.io', 'rANDOM nOIZE', 'Maze')
-              ,)
+              ('maze.io', 'rANDOM nOIZE', 'Maze'),)
     board_fmt = u'%25s %-30s %-15s\r\n'
     goodbye_msg = u''.join((
         term.move(term.height, 0),
@@ -76,13 +77,13 @@ def main():
         tm_ago, handle, msg = automsgs[idx]
         asc_ago = u'%s ago' % (timeago(time.time() - tm_ago))
         disp = u''.join(('\r\n\r\n',
-                          term.bold(handle.rjust(max_user)),
-                          term.bold_blue(u'/'),
-                          term.blue(u'%*d' % (len('%d' % (dblen,)), idx,)),
-                          term.bold_blue(u':'),
-                          term.blue_reverse(msg.ljust(automsg_len)),
-                          term.bold(u'\\'),
-                          term.blue(asc_ago),))
+                         term.bold(handle.rjust(max_user)),
+                         term.bold_blue(u'/'),
+                         term.bold_blue(u'%*d' % (len('%d' % (dblen,)), idx,)),
+                         term.bold_blue(u':'),
+                         term.bold_green(msg.ljust(automsg_len)),
+                         term.bold(u'\\'),
+                         term.bold_blue(asc_ago),))
         echo(u'\r\n'.join(term.wrap(disp)))
         return idx
 
@@ -91,7 +92,8 @@ def main():
         refresh screen, database, and return database index
         """
         echo(u''.join((u'\r\n\r\n', term.clear_eol,)))
-        for line in showart(os.path.join(os.path.dirname(__file__), 'art','logoff.ans'),'topaz'):
+        for line in showart(
+                os.path.join(os.path.dirname(__file__), 'art', 'logoff.ans'), 'cp437'):
             echo(line)
         idx = refresh_automsg(-1 if idx is None else idx)
         refresh_prompt(prompt_msg)

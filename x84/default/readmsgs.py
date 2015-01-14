@@ -18,11 +18,13 @@ def quote_body(msg, width=79, quote_txt=u'> ', hardwrap=u'\r\n'):
     for line in msg.body.splitlines():
         ucs += u''.join((
             quote_txt,
-            u'\r\n'.join(term.wrap(line, width - len(quote_txt), subsequent_indent=quote_txt)),
+            u'\r\n'.join(
+                term.wrap(line, width - len(quote_txt), subsequent_indent=quote_txt)),
             hardwrap,))
     return u''.join((
         'On ',
-        msg.stime.replace(tzinfo=dateutil.tz.tzlocal()).astimezone(dateutil.tz.tzutc()).strftime(TIME_FMT), u' UTC ',
+        msg.stime.replace(tzinfo=dateutil.tz.tzlocal()).astimezone(
+            dateutil.tz.tzutc()).strftime(TIME_FMT), u' UTC ',
         msg.author, u' wrote:',
         hardwrap, ucs, hardwrap))
 
@@ -220,9 +222,9 @@ def prompt_tags(tags):
             inp = getch()
             if inp in (unichr(27), term.KEY_EXIT):
                 return None
-            if inp in (unichr(24),): # ^A:all
+            if inp in (unichr(24),):  # ^A:all
                 return set()
-            if inp in (unichr(1),): # ^X:autoscan
+            if inp in (unichr(1),):  # ^X:autoscan
                 return session.user.get('autoscan', set())
             else:
                 echo(lne.process_keystroke(inp))
@@ -242,7 +244,7 @@ def prompt_tags(tags):
                 echo(u'\r\n'.join((term.wrap(u', '.join(([u'%s(%s)' % (
                     term.red(tag),
                     term.yellow(str(len(msgs))),)
-                        for (tag, msgs) in all_tags])), (term.width - 2)))))
+                    for (tag, msgs) in all_tags])), (term.width - 2)))))
             continue
         elif (inp_tags.strip().lower() == '/nofilter'
                 and 'sysop' in session.user.groups):
@@ -322,8 +324,8 @@ def main(autoscan_tags=None):
     echo(u'\r\n  REAd [%s]ll %d%s message%s [qa%s] ?\b\b' % (
         term.yellow_underline(u'a'),
         len(msgs), (
-        u' or %d [%s]EW ' % (
-        len(new), term.yellow_underline(u'n'),)
+            u' or %d [%s]EW ' % (
+                len(new), term.yellow_underline(u'n'),)
             if new else u''),
         u's' if 1 != len(msgs) else u'',
         u'n' if new else u'',))
@@ -362,7 +364,8 @@ def read_messages(msgs, new):
     len_author = ini.CFG.getint('nua', 'max_user')
     len_ago = 9
     len_subject = ini.CFG.getint('msg', 'max_subject')
-    len_preview = min(len_idx + len_author + len_ago + len_subject + -1, term.width - 2)
+    len_preview = min(
+        len_idx + len_author + len_ago + len_subject + -1, term.width - 2)
     reply_depth = ini.CFG.getint('msg', 'max_depth')
     indent_start, indent, indent_end = u'\\', u'-', u'> '
 
@@ -409,8 +412,8 @@ def read_messages(msgs, new):
                 term.bold_black(':'),)
             msg_list.append((head(msg), idx, row_txt, subj))
         msg_list.sort(reverse=True)
-        return [(idx, row_txt + thread_indent(depth) + subj)
-                for (_threadid, depth), idx, row_txt, subj in msg_list]
+        return [(idx, _row_txt + thread_indent(depth) + subj)
+                for (_threadid, depth), idx, _row_txt, subj in msg_list]
 
     def get_selector(mailbox, prev_sel=None):
         """
@@ -438,8 +441,8 @@ def read_messages(msgs, new):
         reader_height = (term.height - (term.height / 3) - 2)
         reader_indent = 2
         reader_width = min(term.width - 1, min(term.width - reader_indent, 80))
-        reader_ypos = ((term.height - 1 ) - reader_height if
-                      (term.width - reader_width) < len_preview else 2)
+        reader_ypos = ((term.height - 1) - reader_height if
+                       (term.width - reader_width) < len_preview else 2)
         reader_height = term.height - reader_ypos - 1
         msg_reader = Pager(
             height=reader_height,
@@ -473,8 +476,8 @@ def read_messages(msgs, new):
                         if _tag in SEARCH_TAGS
                         else term.yellow(_tag)
                         for _tag in msg.tags])),
-                            reader.visible_width,
-                            subsequent_indent=u' ' * 6)))),
+                reader.visible_width,
+                subsequent_indent=u' ' * 6)))),
             (term.yellow_underline(
                 (u'SUbj: %s' % (msg.subject,)).ljust(reader.visible_width)
             )),
@@ -540,9 +543,6 @@ def read_messages(msgs, new):
         """
         Returns unicode string suitable for refreshing the screen.
         """
-        from x84.bbs import getsession
-        session = getsession()
-
         if READING:
             reader.colors['border'] = term.bold_yellow
             selector.colors['border'] = term.bold_black
@@ -555,7 +555,7 @@ def read_messages(msgs, new):
         sel_padd_right = padd_attr(
             u'-'
             + selector.glyphs['bot-horiz'] * (
-            selector.visible_width - term.length(title) - 7)
+                selector.visible_width - term.length(title) - 7)
             + u'-\u25a0-' if READING else u'- -')
         sel_padd_left = padd_attr(
             selector.glyphs['bot-horiz'] * 3)
@@ -621,7 +621,8 @@ def read_messages(msgs, new):
             msg = get_msg(idx)
             if x84.default.writemsg.prompt_tags(msg):
                 msg.save()
-                session.user['msgs_sent'] = session.user.get('msgs_sent', 0) + 1
+                session.user['msgs_sent'] = session.user.get(
+                    'msgs_sent', 0) + 1
             dirty = 2
 
         # spacebar marks as read, goes to next message

@@ -7,13 +7,14 @@ To enable, add to default.ini::
     enabled = yes
 
 The following options are available, but not required:
-- ip_blacklist: space-separated list of IPs on permanent blacklist.
-- ip_whitelist: space-separated list of IPs to always allow.
-- max_attempted_logins: max no. of logins allowed for given time window
-- max_attempted_logins_window: the length (in seconds) of the time window
+
+- ``ip_blacklist``: space-separated list of IPs on permanent blacklist.
+- ``ip_whitelist``: space-separated list of IPs to always allow.
+- ``max_attempted_logins``: max no. of logins allowed for given time window
+- ``max_attempted_logins_window``: the length (in seconds) of the time window
   for which logins will be tracked (sliding scale).
-- initial_ban_length: ban length (in seconds) when an IP is blacklisted.
-- ban_increment_length: amount of time (in seconds) to add to a ban on
+- ``initial_ban_length``: ban length (in seconds) when an IP is blacklisted.
+- ``ban_increment_length``: amount of time (in seconds) to add to a ban on
   subsequent login attempts
 """
 
@@ -35,8 +36,8 @@ def get_fail2ban_function():
     Returns a function which may be passed an IP address, returning True
     if the connection from address ``ip`` should be accepted.
 
-    @returns: function accepting ip address, returning boolean
-    @rtype: callable
+    :return: function accepting ip address, returning boolean
+    :rtype: callable
     """
     # local imports
     from x84.bbs import get_ini
@@ -98,7 +99,7 @@ def get_fail2ban_function():
                 ATTEMPTED_LOGINS[ip] = {
                     'attempts': 1,
                     'expiry': now + max_attempted_logins_window
-                    }
+                }
                 log.debug('Banned IP expired: {ip}'.format(ip=ip))
             else:
                 # increase the expiry and kick them out
@@ -136,10 +137,7 @@ def get_fail2ban_function():
             ATTEMPTED_LOGINS[ip] = {
                 'attempts': 1,
                 'expiry': now + max_attempted_logins_window,
-                }
+            }
         return True
 
     return wrapper
-
-
-

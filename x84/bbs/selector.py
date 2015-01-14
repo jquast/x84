@@ -14,6 +14,7 @@ VI_KEYSET = {
 
 
 class Selector(AnsiWindow):
+
     """
     A two-state horizontal lightbar interface.
     """
@@ -62,11 +63,9 @@ class Selector(AnsiWindow):
         self.keyset['exit'].append(term.KEY_ESCAPE)
 
     def process_keystroke(self, keystroke):
-        """
-        Process a keystroke, toggling self.selection and returning string
-        suitable for refresh when changed.
-        """
+        """ Process the keystroke and return string to refresh. """
         self._moved = False
+        keystroke = hasattr(keystroke, 'code') and keystroke.code or keystroke
         if keystroke in self.keyset['refresh']:
             return self.refresh()
         elif keystroke in self.keyset['left']:
@@ -109,7 +108,7 @@ class Selector(AnsiWindow):
         # pylint: disable=C0111
         #         Missing docstring
         # this setter should only be used to reset to 'False' for recycling
-        assert type(value) is bool
+        assert isinstance(value, bool)
         self._selected = value
 
     @property

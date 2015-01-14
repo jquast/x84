@@ -7,10 +7,17 @@ __license__ = 'Public Domain'
 
 
 def main():
-    from x84.bbs import getsession, getterminal
+    from x84.bbs import getsession, getterminal, echo
     session, term = getsession(), getterminal()
     session.activity = 'playing tetris'
-    assert term.width >= 79 and term.height >= 23
+
+    if term.width < 79 or term.height < 24:
+        echo(u'Sorry, your terminal is not large enough (72x22), ')
+        echo(u'your size: {term.width}x{term.height}'.format(term=term))
+        echo(u'\r\n\r\nPress any key.')
+        term.inkey()
+        return
+
     with term.hidden_cursor():
         score = play()
         if score[0] > 0:
@@ -24,7 +31,7 @@ def register_score(handle, score):
     if not handle in db:
         db[handle] = score
     elif score[0] > db[handle][0]:
-            db[handle] = score
+        db[handle] = score
 
 
 def show_scores(my_score):
@@ -108,7 +115,7 @@ def play():
     import time
     from random import randint
     import os
-    from x84.bbs import getterminal, getch, from_cp437, AnsiWindow
+    from x84.bbs import getterminal, getch, from_cp437, AnsiWindow, syncterm_setfont
     from x84.bbs import echo as echo_unbuffered
     term = getterminal()
     field = []
@@ -123,22 +130,22 @@ def play():
         #  ##
         #  ##
         [
-        [
-        [1, 1, ],
-        [1, 1, ],
+            [
+                [1, 1, ],
+                [1, 1, ],
+            ],
         ],
-        ],
         #  #
         #  #
         #  #
         #  #
         [
-        [
-        [0, 1, 0, 0],
-        [0, 1, 0, 0],
-        [0, 1, 0, 0],
-        [0, 1, 0, 0],
-        ],
+            [
+                [0, 1, 0, 0],
+                [0, 1, 0, 0],
+                [0, 1, 0, 0],
+                [0, 1, 0, 0],
+            ],
             [
                 [0, 0, 0, 0],
                 [1, 1, 1, 1],
@@ -149,11 +156,11 @@ def play():
         #  ###
         #   #
         [
-        [
-        [0, 0, 0],
-        [1, 1, 1],
-        [0, 1, 0],
-        ],
+            [
+                [0, 0, 0],
+                [1, 1, 1],
+                [0, 1, 0],
+            ],
             [
                 [0, 1, 0],
                 [0, 1, 1],
@@ -272,13 +279,13 @@ def play():
             return val
 
         def merge(r, x1, y1, x2, y2):
-            if r.x1 == None or r.x1 > x1:
+            if r.x1 is None or r.x1 > x1:
                 r.x1 = r.min(x1, 0)
-            if r.y1 == None or r.y1 > y1:
+            if r.y1 is None or r.y1 > y1:
                 r.y1 = r.min(y1, 0)
-            if r.x2 == None or r.x2 < x2:
+            if r.x2 is None or r.x2 < x2:
                 r.x2 = r.max(x2, field_width)
-            if r.y2 == None or r.y2 < y2:
+            if r.y2 is None or r.y2 < y2:
                 r.y2 = r.max(y2, field_height)
             # print r.x1,r.y1,r.x2,r.y2
 
@@ -302,7 +309,10 @@ def play():
         u'%s PRESS ANY kEY' % (term.bold_black('...'),),
     )))
     getch()
-    artfile = os.path.join(os.path.dirname(__file__), 'tetris.ans')
+    # set syncterm font to cp437
+    if term.kind.startswith('ansi'):
+        echo(syncterm_setfont('cp437'))
+    artfile = os.path.join(os.path.dirname(__file__), 'art', 'tetris.ans')
     echo_unbuffered(u'\r\n' * term.height)  # cls
     if os.path.exists(artfile):
         echo_unbuffered(from_cp437(open(artfile).read()).rstrip())
@@ -338,7 +348,7 @@ def play():
     def redrawfieldbig(rr):
         # rr.merge(0,0,field_width,field_height)
         lastcolor = ''
-        if rr.x1 == None or rr.y1 == None:
+        if rr.x1 is None or rr.y1 is None:
             return
         # Only draw the parts which have been marked by the
         # redraw rectangle
@@ -494,7 +504,7 @@ def play():
     rr.merge(0, 0, field_width, field_height)
 
     buf = ''
-    while 1:
+    while True:
         drawfield()
         # gotoxy(0,0)
         # echo('\33[37mx: %d, y: %d, p: %d         '%(xpos,ypos,p))

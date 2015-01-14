@@ -1,3 +1,6 @@
+2.0
+  - you will need to ensure to set 'enabled = yes' for the shroo-ms api,
+    previously this was enabled if the section alone existed
 1.2.0
   - the meaning of [system] option 'termcap-ansi', when not valued 'no', now
     coerces any reported terminal types *beginning* with 'ansi' to

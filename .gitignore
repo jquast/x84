@@ -9,4 +9,5 @@ run
 *.pyc
 *.swp
 *~
+.tox
 MANIFEST

@@ -12,7 +12,7 @@ import glob
 import os
 
 # local
-from x84.bbs import getterminal, showart, echo
+from x84.bbs import getterminal, showart, echo, get_ini
 from x84.bbs import getsession, get_user, User, LineEditor
 from x84.bbs import goto, gosub, DBProxy, syncterm_setfont
 from x84.default.common import coerce_terminal_encoding
@@ -37,6 +37,12 @@ art_speed = 0.04
 
 #: which sauce records to display
 sauce_records = set(['author', 'title', 'group', 'date', 'filename'])
+
+#: ssh port configured, this is displayed to the user, if you're using NAT port
+#: forwarding or something like that, you'll want to set the configuration
+#: value of section [ssh] for key 'advertise_port'.
+ssh_port = (get_ini(section='ssh', key='advertise_port') or
+            get_ini(section='ssh', key='port'))
 
 #: maximum number of sauce columns for wide displays
 max_sauce_columns = 2
@@ -183,6 +189,9 @@ def login(session, user):
     user.calls += 1
     user.lastcall = time.time()
 
+    # store "from" (session id, telnet-<host>:<port>, fe.)
+    user['last_from'] = session.sid
+
     # save user record
     if user.handle != u'anonymous':
         user.save()
@@ -202,10 +211,8 @@ def do_intro_art(term, session):
 
     Bonus: allow chosing other artfiles with '<' and '>'.
     """
-    editor_colors = {'highlight': term.black_on_red}
-
     # set syncterm font, if any
-    if syncterm_font and term._kind.startswith('ansi'):
+    if syncterm_font and term.kind.startswith('ansi'):
         echo(syncterm_setfont(syncterm_font))
 
     index = int(time.time()) % len(art_files)
@@ -218,7 +225,7 @@ def do_intro_art(term, session):
             display_prompt(term)
             dirty = False
         dirty = True
-        inp = LineEditor(1, colors=editor_colors).read()
+        inp = LineEditor(1, colors={'highlight': term.normal}).read()
         if inp is None or inp.lower() == u'y':
             # escape/yes: quick login
             return True
@@ -237,6 +244,43 @@ def do_intro_art(term, session):
             index += 1
         else:
             dirty = False
+
+
+def describe_ssh_availability(term, session):
+    from x84.bbs.ini import CFG
+    if session.kind == 'ssh':
+        # what a good citizen!
+        return
+
+    if not (CFG.has_section('ssh') and
+            not CFG.has_option('ssh', 'enabled')
+            or CFG.getboolean('ssh', 'enabled')):
+        # ssh not enabled
+        return
+
+    about_key = (u"You may even use an ssh key, which you can configure from "
+                 u"your user profile, " if not session.user.get('pubkey')
+                 else u'')
+    big_msg = term.bold_blue("Big Brother is Watching You")
+    description = (
+        "    {term.red}You are using {session.kind}, but ssh is available "
+        "on port {ssh_port} of this server.  If you want a secure connection "
+        "with shorter latency, we recommend instead to use ssh!  {about_key}"
+        "Remember: {big_msg}!"
+        .format(term=term,
+                session=session,
+                ssh_port=ssh_port,
+                about_key=about_key,
+                big_msg=big_msg)
+    )
+
+    echo(u'\r\n\r\n')
+    for txt in term.wrap(description, width=min(80, term.width)):
+        echo(term.move_x(max(0, (term.width // 2) - 40)))
+        echo(term.red(txt.rstrip() + '\r\n'))
+    echo(u'\r\n\r\n')
+    echo(term.center(term.bold_black('Press any key to continue: ')).rstrip())
+    term.inkey()
 
 
 def main(handle=None):
@@ -262,11 +306,13 @@ def main(handle=None):
 
     echo(term.move_down() * 3)
 
-    # only display news if the account has not
-    # yet read the news since last update.
-    gosub('news', quick=True)
-
     if not quick:
+        describe_ssh_availability(term, session)
+
+        # only display news if the account has not
+        # yet read the news since last update.
+        gosub('news', quick=True)
+
         # display last 10 callers, if any
         gosub('lc')
 
@@ -282,13 +328,13 @@ def main(handle=None):
     #session.activity = 'top'
 
     # 8. one-liners
-    #gosub('ol')
+    # gosub('ol')
     #session.activity = 'top'
 
     # 9. weather
-    #if session.user.get('location', None):
+    # if session.user.get('location', None):
     #    gosub('weather')
     #session.activity = 'top'
 
     # 10. automsg
-    #gosub('automsg')
+    # gosub('automsg')

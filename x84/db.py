@@ -1,11 +1,13 @@
-"""
-Database request handler for x/84 http://github.com/jquast/x84
-"""
-# std
+""" Database engine-request handler for x/84. """
+# std imports
 import multiprocessing
 import threading
 import logging
+import errno
 import os
+
+# local
+from x84.bbs.ini import get_ini
 
 # 3rd-party
 import sqlitedict
@@ -35,17 +37,15 @@ def check_db(filepath):
         'Must have rw access to db_folder:', db_folder)
     if os.path.exists(filepath):
         assert os.access(filepath, os.F_OK | os.R_OK | os.W_OK), (
-            'Must have r+w access to fb file:', filepath)
+            'Must have r+w access to db file:', filepath)
 
 
 def get_db_filepath(schema):
-    import x84.bbs.ini
-    folder = x84.bbs.ini.CFG.get('system', 'datapath')
+    folder = get_ini('system', 'datapath')
     return os.path.join(folder, '{0}.sqlite3'.format(schema))
 
 
 def get_db_lock(schema, table):
-    log = logging.getLogger(__name__)
     key = (schema, table)
     global DATALOCK, FILELOCK
     with FILELOCK:
@@ -76,11 +76,6 @@ def parse_dbevent(event):
     return iterable, schema
 
 
-def should_tapdb():
-    import x84.bbs.ini
-    return x84.bbs.ini.CFG.getboolean('session', 'tap_db')
-
-
 def log_db_cmd(log, schema, cmd, args):
     s_args = '()'
     if len(args):
@@ -91,6 +86,7 @@ def log_db_cmd(log, schema, cmd, args):
 
 
 class DBHandler(threading.Thread):
+
     """
     This handler receives a "database command", in the form of a dictionary
     method name and its arguments, and the return value is sent to the session
@@ -111,7 +107,7 @@ class DBHandler(threading.Thread):
 
         self.iterable, self.schema = parse_dbevent(event)
         self.filepath = get_db_filepath(self.schema)
-        self._tap_db = should_tapdb()
+        self._tap_db = get_ini('session', 'tab_db', getter='getboolean')
 
         threading.Thread.__init__(self)
 
@@ -140,9 +136,16 @@ class DBHandler(threading.Thread):
         # pylint: disable=W0703
         #         Catching too general exception
         except Exception as err:
-            # Pokemon exception; package & raise from session process,
-            self.queue.send(('exception', err,))
-            self.log.exception(err)
+            # Pokemon exception, send to session
+            try:
+                self.queue.send(('exception', err,))
+            except IOError as err:
+                if err.errno == errno.EBADF:
+                    # our pipe/queue has been disconnected (the session
+                    # has disconnected), heck this might be the cause of
+                    # our first exception
+                    return
+                raise
         finally:
             dictdb.close()
         return

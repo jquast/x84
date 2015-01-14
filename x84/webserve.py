@@ -1,29 +1,34 @@
 #!/usr/bin/env python2.7
-"""
+r"""
 web server for x/84, https://github.com/jquast/x84
 
 To configure the web server, add a ``[web]`` section to your default.ini.
 
 The following attributes are required:
-- cert: An SSL certificate filepath.
-- key: An SSL certificate key filepath.
-- modules: A list of webmodules to load.
+
+- ``cert``: An SSL certificate filepath.
+- ``key``: An SSL certificate key filepath.
+- ``modules``: A list of webmodules to load.
 
 The following attributes are optional:
-- addr: A single address to bind to, defaults to 0.0.0.0 (ANY).
-- port: A single port number to bind to, defaults to 8443.
-- chain: An SSL chain certificate filepath.
+
+- ``addr``: A single address to bind to, defaults to 0.0.0.0 (ANY).
+- ``port``: A single port number to bind to, defaults to 8443.
+- ``chain``: An SSL chain certificate filepath.
 
 Example::
 
     [web]
+    enabled = yes
     addr = 0.0.0.0
     port = 8443
     cert = ~/.x84/ssl.cer
     key = ~/.x84/ssl.key
     chain = ~/.x84/ca.cer
+    modules = msgserve
 
 You can generate your own self-signed certificate.
+
 First, generate a server key::
 
     openssl genrsa -des3 -out server.key 1024
@@ -38,16 +43,15 @@ And remove the passphrase from the certificate::
 
     openssl rsa -in server.key.org -out server.key
 
-Finally, generate a self-signed certificate::
+Then, generate a self-signed certificate::
 
     openssl x509 -req -days 1984 -in server.csr \
         -signkey server.key -out server.crt
 
-Install::
+Then, install to paths specified by *.ini* potions ``cert`` and ``key``::
 
     cp server.crt ~/.x84/ssl.cer
     cp server.key ~/.x84/ssl.key
-
 """
 import threading
 import traceback
@@ -57,8 +61,9 @@ import sys
 import os
 
 
-class Favicon:
-    """ Dummy class for preventing /favicon.ico 404 errors """
+class Favicon(object):
+
+    """ Dummy class for preventing 404 of ``/favicon.ico`` """
 
     def GET(self):
         pass
@@ -183,7 +188,7 @@ def server(urls, funcs):
 
     try:
         CherryPyWSGIServer.ssl_adapter.context.use_certificate_file(cert)
-    except:
+    except Exception:
         # wrap exception to contain filepath to 'cert' file, which will
         # hopefully help the user better understand what otherwise be very
         # obscure.
@@ -196,7 +201,7 @@ def server(urls, funcs):
 
     try:
         CherryPyWSGIServer.ssl_adapter.context.use_privatekey_file(key)
-    except:
+    except Exception:
         # also wrap exception to contain filepath to 'key' file.
         error = ''.join(
             traceback.format_exception_only(
@@ -215,7 +220,8 @@ def server(urls, funcs):
 
     web.config.debug = False
 
-    log.info('https listening on {addr}:{port}/tcp'.format(addr=addr, port=port))
+    log.info('https listening on {addr}:{port}/tcp'
+             .format(addr=addr, port=port))
 
     # Runs CherryPy WSGI server hosting WSGI app.wsgifunc().
     web.httpserver.runsimple(app.wsgifunc(), (addr, port))  # blocking
@@ -227,10 +233,9 @@ def main(background_daemon=True):
 
     Called by x84/engine.py, function main() as unmanaged thread.
 
-    :param background_daemon: When True (default), this function returns and
-      web modules are served in an unmanaged, background (daemon) thread.
-      Otherwise, function call to ``main()`` is blocking.
-    :type background_daemon: bool
+    :param bool background_daemon: When True (default), this function returns
+       and web modules are served in an unmanaged, background (daemon) thread.
+       Otherwise, function call to ``main()`` is blocking.
     :rtype: None
     """
     from x84.bbs import get_ini
@@ -242,16 +247,14 @@ def main(background_daemon=True):
     # ensure the SCRIPT_PATH is in os environment PATH for module lookup.
     sys.path.insert(0, os.path.expanduser(SCRIPT_PATH))
 
-    web_modules = get_ini(section='web',
-                          key='modules',
-                          split=True,
-                          splitsep=',')
+    web_modules = get_ini(section='web', key='modules', split=True)
 
     if not web_modules:
-        log.debug('No `modules` defined in section [web]')
+        log.error("web server enabled, but no `modules' "
+                  "defined in section [web]")
         return
 
-    log.info(u'Ready web modules: {0}'.format(web_modules))
+    log.debug(u'Ready web modules: {0}'.format(web_modules))
     urls, funcs = get_urls_funcs(web_modules)
 
     if background_daemon:
