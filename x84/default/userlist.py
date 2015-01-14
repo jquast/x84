@@ -69,7 +69,7 @@ def main():
 
     # display users, using a command-prompt pager.
     prompt_pager(content=userlist,
-                 line_no=line_no + 1
+                 line_no=line_no + 1,
                  colors={'highlight': term.red,
                          'lowlight': term.green,
                          },
