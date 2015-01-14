@@ -84,8 +84,6 @@ class Terminal(BlessedTerminal):
             #
             # https://github.com/jquast/x84/issues/188
             _rows -= 2
-        else:
-            print((self.columns, _rows))
         return WINSZ(ws_row=_rows, ws_col=self.columns,
                      ws_xpixel=None, ws_ypixel=None)
     _height_and_width.__doc__ = BlessedTerminal._height_and_width.__doc__
