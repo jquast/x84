@@ -368,7 +368,7 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
 
         line_length = term.length(line.rstrip())
 
-        if force == False and not padding and term.width < line_length:
+        if force is False and not padding and term.width < line_length:
             # if the artwork is too wide and force=False, simply stop displaying it.
             msg_too_wide = u''.join(
                 (term.normal,
