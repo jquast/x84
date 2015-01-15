@@ -129,8 +129,8 @@ def show_banner():
 
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'main.ans')
 
-    # displays a centered main menu header in topaz encoding for utf8
-    for line in showart(artfile, 'topaz', center=True):
+    # displays a centered main menu header in amiga encoding for utf8
+    for line in showart(artfile, 'amiga', center=True):
         echo(line)
 
 

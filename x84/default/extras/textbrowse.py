@@ -17,7 +17,7 @@ __version__ = 1.11
 def banner():
     banner = ''
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'bulletins.ans')
-    for line in showart(artfile, 'topaz'):
+    for line in showart(artfile, 'amiga'):
         banner = banner + line
     return banner
 

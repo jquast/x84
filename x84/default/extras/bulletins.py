@@ -24,7 +24,7 @@ def waitprompt():
 
 def showansi(filename):
     for line in showart(
-            os.path.dirname(__file__) + '../art/' + filename, 'topaz'):
+            os.path.dirname(__file__) + '../art/' + filename, 'amiga'):
         echo(line)
 
 # ---------------------------------------------------
