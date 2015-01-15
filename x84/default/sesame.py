@@ -65,7 +65,7 @@ def main(name):
                 term.width, term.height, want_cols, want_rows,))
             # hand-hack, its ok ... really
             store_cols, store_rows = term.width, term.height
-            term.columns, term.rows = want_cols, want_rows
+            term._columns, term._rows = want_cols, want_rows
             term.inkey(1)
 
     except ConfigParser.NoOptionError:
@@ -109,6 +109,6 @@ def main(name):
     echo(term.clear)
     if not (store_cols is None and store_rows is None):
         echo(u'Restoring dimensions to %s by %s !' % (store_cols, store_rows))
-        term.rows, term.columns = store_rows, store_cols
+        term._rows, term._columns = store_rows, store_cols
     echo(u'\r\n')
     term.inkey(0.5)

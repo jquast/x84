@@ -224,6 +224,7 @@ def init_bbs_ini():
     cfg_bbs.set('irc', 'server', 'irc.efnet.org')
     cfg_bbs.set('irc', 'port', '6667')
     cfg_bbs.set('irc', 'channel', '#1984')
+    cfg_bbs.set('irc', 'maxnick', '9')
     cfg_bbs.set('irc', 'ssl', 'no')
 
     cfg_bbs.add_section('shroo-ms')

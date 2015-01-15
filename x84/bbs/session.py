@@ -548,7 +548,7 @@ class Session(object):
         if event == 'refresh':
             if data[0] == 'resize':
                 # inherit terminal dimensions values
-                (self.terminal.columns, self.terminal.rows) = data[1]
+                (self.terminal._columns, self.terminal._rows) = data[1]
 
         # buffer all else
         self._buffer[event].appendleft(data)
