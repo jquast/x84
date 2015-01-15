@@ -121,6 +121,8 @@ def echo(ucs):
 
 def timeago(secs, precision=0):
     """
+    Return human-readable string of seconds elapsed.
+
     :param int secs: number of seconds "ago".
     :param int precision: optional decimal precision of returned seconds.
 

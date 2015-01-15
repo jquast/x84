@@ -27,7 +27,7 @@ class DBProxy(object):
 
     def __init__(self, schema, table='unnamed', use_session=True):
         """
-        Class constructor.
+        Class initializer.
 
         :param str scheme: database key, becomes basename of .sqlite3 file.
         :param str table: optional database table.
