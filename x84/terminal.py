@@ -14,8 +14,8 @@ class Terminal(BlessedTerminal):
     _session = None
 
     def __init__(self, kind, stream, rows, columns):
-        self.rows = rows
-        self.columns = columns
+        self._rows = rows
+        self._columns = columns
         BlessedTerminal.__init__(self, kind, stream)
         if sys.platform.lower().startswith('win32'):
             self._normal = '\x1b[m'
@@ -65,26 +65,7 @@ class Terminal(BlessedTerminal):
 
     def _height_and_width(self):
         from blessed.terminal import WINSZ
-        _rows = self.rows
-        if (self.kind.startswith('ansi') and
-                self.columns == 80 and _rows in (24, 25)):
-            # All other teminal emulators, you can write 'x' at
-            # (0, 0) and (height, width), and both x's will appear.
-            #
-            # Not so on SyncTerm. This will cause it to scroll: twice.
-            #
-            # Once, because it misinterprets the 0-based nature of
-            # cursor movement, and the final line causes scroll --
-            # Twice, because writing to the final column of the final
-            # line causes yet another scroll.
-            #
-            # For this reason, it is not recommended to ever write to
-            # the final 2 lines of SyncTerm, which really just appears
-            # to the user as the final 1 line.
-            #
-            # https://github.com/jquast/x84/issues/188
-            _rows -= 2
-        return WINSZ(ws_row=_rows, ws_col=self.columns,
+        return WINSZ(ws_row=self._rows, ws_col=self._columns,
                      ws_xpixel=None, ws_ypixel=None)
     _height_and_width.__doc__ = BlessedTerminal._height_and_width.__doc__
 

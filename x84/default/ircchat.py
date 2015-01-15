@@ -1,18 +1,5 @@
-"""
-IRC chat script for x/84 bbs, https://github.com/jquast/x84
+""" IRC chat script for x/84. """
 
-To use something other than the default values, add an [irc] section to your
-configuration file and assign it a server, port, and channel, like so:
-
-default.ini
----
-[irc]
-server = irc.shaw.ca
-port = 6697
-channel = #1984
-max_nick = 9
-enable_ssl = True
-"""
 # std imports
 import collections
 import warnings
@@ -47,7 +34,7 @@ CHANNEL = get_ini('irc', 'channel') or '#1984'
 MAX_NICK = get_ini('irc', 'max_nick', getter='getint') or 9
 
 #: whether irc server requires ssl
-ENABLE_SSL = get_ini('irc', 'enable_ssl', getter='getboolean')
+ENABLE_SSL = get_ini('irc', 'ssl', getter='getboolean')
 
 #: Whether to display PRIVNOTICE messages (such as motd)
 ENABLE_PRIVNOTICE = get_ini('irc', 'enable_privnotice', getter='getboolean')
@@ -471,10 +458,10 @@ def refresh_event(term, scrollback, editor):
             break
     output = output[numlines * -1:]
     echo(u''.join([
-                   term.normal, term.home, term.clear_eos,
-                   term.move(editor.yloc + 1, 0),
-                   u'\r\n'.join(output),
-                   u'\r\n', editor.refresh()]))
+        term.normal, term.home, term.clear_eos,
+        term.move(editor.yloc + 1, 0),
+        u'\r\n'.join(output),
+        u'\r\n', editor.refresh()]))
 
 
 def irc_event(term, data, scrollback, editor):

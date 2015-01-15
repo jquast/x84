@@ -857,7 +857,7 @@ def launch(dos=None, cp437=True, drop_type=None,
 
                     # hand-hack, its ok ... really
                     store_cols, store_rows = term.width, term.height
-                    term.columns, term.rows = want_cols, want_rows
+                    term._columns, term._rows = want_cols, want_rows
                     term.inkey(timeout=1)
 
             if activity is not None:
@@ -894,9 +894,10 @@ def launch(dos=None, cp437=True, drop_type=None,
                             env_term=env_term)
 
             door.run()
+
         finally:
             if store_rows is not None and store_cols is not None:
-                term.rows, term.columns = store_rows, store_cols
+                term._rows, term._columns = store_rows, store_cols
                 echo(u'\x1b[8;%d;%dt' % (store_rows, store_cols,))
                 term.inkey(timeout=0.25)
 

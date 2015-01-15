@@ -74,7 +74,7 @@ def main():
             term.width, term.height, want_cols, want_rows,))
         # hand-hack, its ok ... really
         store_cols, store_rows = term.width, term.height
-        term.columns, term.rows = want_cols, want_rows
+        term._columns, term._rows = want_cols, want_rows
         term.inkey(1)
 
     session.activity = 'Playing LORD'
