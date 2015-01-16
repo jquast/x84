@@ -1,18 +1,5 @@
-"""
-IRC chat script for x/84 bbs, https://github.com/jquast/x84
+""" IRC chat script for x/84. """
 
-To use something other than the default values, add an [irc] section to your
-configuration file and assign it a server, port, and channel, like so:
-
-default.ini
----
-[irc]
-server = irc.shaw.ca
-port = 6697
-channel = #1984
-max_nick = 9
-enable_ssl = True
-"""
 # std imports
 import collections
 import warnings
@@ -47,7 +34,7 @@ CHANNEL = get_ini('irc', 'channel') or '#1984'
 MAX_NICK = get_ini('irc', 'max_nick', getter='getint') or 9
 
 #: whether irc server requires ssl
-ENABLE_SSL = get_ini('irc', 'enable_ssl', getter='getboolean')
+ENABLE_SSL = get_ini('irc', 'ssl', getter='getboolean')
 
 #: Whether to display PRIVNOTICE messages (such as motd)
 ENABLE_PRIVNOTICE = get_ini('irc', 'enable_privnotice', getter='getboolean')
@@ -455,15 +442,12 @@ def establish_connection(term, session):
 def refresh_event(term, scrollback, editor):
     """ Screen resized, adjust layout """
 
-    editor.width = term.width + 2
+    editor.width = term.width + 1
     editor.xloc = -1
-    editor.yloc = term.height
-    echo(u''.join([
-        term.normal, term.home, term.clear_eos,
-        term.move(term.height - 1, 0)]))
+    editor.yloc = term.height - 1
 
     # re-wrap chat log
-    numlines = min(term.height - 2, len(scrollback))
+    numlines = term.height - 2
     sofar = 0
     output = list()
     for line in reversed(scrollback):
@@ -473,7 +457,11 @@ def refresh_event(term, scrollback, editor):
         if sofar >= numlines:
             break
     output = output[numlines * -1:]
-    echo(u''.join([u'\r\n'.join(output), u'\r\n', editor.refresh()]))
+    echo(u''.join([
+        term.normal, term.home, term.clear_eos,
+        term.move(editor.yloc + 1, 0),
+        u'\r\n'.join(output),
+        u'\r\n', editor.refresh()]))
 
 
 def irc_event(term, data, scrollback, editor):
@@ -483,16 +471,18 @@ def irc_event(term, data, scrollback, editor):
     # add it to our scrollback and trim
     scrollback.append(data)
 
-    # blank out the message with the input bar, wrap output, redraw input bar
+    # blank out the line with the input bar, wrap output, redraw input bar
     echo(u''.join([
         term.normal,
-        term.move(term.height - 1, 0),
+        term.move(editor.yloc + 1, 0),
         term.clear_eol,
-        term.move(term.height - 1, 0),
+        term.move_x(0),
         u'\r\n'.join(term.wrap(data, term.width - 1,
                                break_long_words=True)),
+        term.move(editor.yloc + 1, 0),
         u'\r\n',
-        editor.refresh()
+        term.move(editor.yloc, 0),
+        editor.refresh(),
     ]))
 
 
@@ -561,6 +551,7 @@ def main():
 
     term, session = getterminal(), getsession()
     session.activity = u'Chatting on IRC'
+    session.flush_event('irc')
 
     # move to bottom of screen, reset attribute
     echo(term.pos(term.height) + term.normal)
@@ -571,6 +562,7 @@ def main():
     # move to home, set font
     echo(term.home)
     if SYNCTERM_FONT and term.kind.startswith('ansi'):
+        echo(term.clear)
         echo(syncterm_setfont(SYNCTERM_FONT))
 
     scrollback = collections.deque(maxlen=MAX_SCROLLBACK)
@@ -583,7 +575,7 @@ def main():
         editor = ScrollingEditor(
             width=term.width + 1,
             xloc=-1,
-            yloc=term.height - 2,
+            yloc=term.height,
             colors={'highlight': getattr(term, COLOR_INPUTBAR)},
             max_length=MAX_INPUT
         )

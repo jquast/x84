@@ -43,7 +43,7 @@ class Dropfile(object):
 
     def __init__(self, filetype=None):
         """
-        Class constructor.
+        Class initializer.
 
         :param int filetype: dropfile type. One of ``Dropfile.DOORSYS``,
                              ``Dropfile.DOOR32``, ``Dropfile.CALLINFOBBS``,
@@ -355,7 +355,7 @@ class Door(object):
                  env_term=None, env_path=None, env_home=None, cp437=False,
                  env=None):
         """
-        Class constructor.
+        Class initializer.
 
         :param str cmd: full path of command to execute.
         :param tuple args: command arguments as tuple.
@@ -490,7 +490,7 @@ class Door(object):
         Filter output (performs cp437 encoding).
 
         Given door output in bytes, if 'cp437' is specified in class
-        constructor, convert to utf8 glyphs using cp437 encoding;
+        initializer, convert to utf8 glyphs using cp437 encoding;
         otherwise decode output naturally as utf8.
         """
         if self.cp437:
@@ -605,7 +605,7 @@ class DOSDoor(Door):
     def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
                  env_term=None, env_path=None, env_home=None, cp437=True):
         """
-        Class constructor.
+        Class initializer.
 
         :param str cmd: full path of command to execute.
         :param tuple args: command arguments as tuple.
@@ -857,7 +857,7 @@ def launch(dos=None, cp437=True, drop_type=None,
 
                     # hand-hack, its ok ... really
                     store_cols, store_rows = term.width, term.height
-                    term.columns, term.rows = want_cols, want_rows
+                    term._columns, term._rows = want_cols, want_rows
                     term.inkey(timeout=1)
 
             if activity is not None:
@@ -894,9 +894,10 @@ def launch(dos=None, cp437=True, drop_type=None,
                             env_term=env_term)
 
             door.run()
+
         finally:
             if store_rows is not None and store_cols is not None:
-                term.rows, term.columns = store_rows, store_cols
+                term._rows, term._columns = store_rows, store_cols
                 echo(u'\x1b[8;%d;%dt' % (store_rows, store_cols,))
                 term.inkey(timeout=0.25)
 

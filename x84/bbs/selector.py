@@ -15,15 +15,31 @@ VI_KEYSET = {
 
 class Selector(AnsiWindow):
 
-    """
-    A two-state horizontal lightbar interface.
-    """
+    """ A two-state horizontal lightbar interface. """
+
     # pylint: disable=R0902,R0913,R0904
     #        Too many instance attributes (8/7)
     #        Too many arguments (6/5)
     #        Too many public methods (25/20)
 
     def __init__(self, yloc, xloc, width, left, right, **kwargs):
+        """
+        Class initializer.
+
+        Initialize a selector of width, y x, and left/right values.
+
+        :param int width: width of window.
+        :param int yloc: y-location of selector.
+        :param int xloc: x-location of selector.
+        :param dict colors: color theme, only key value of ``selected``
+                            and ``unselected`` is used.
+        :param dict keyset: command keys, global ``VI_KEYSET`` is
+                            used by default, augmented by application
+                            keys such as home, end, pgup, etc.
+        :param str left: text string of left-side selection.
+        :param str right: text string of right-side selection.
+        """
+
         """
         Set screen position of Selector UI and display width of both. The
         highlighted selection is displayed using the self.highlight attribute,
@@ -63,7 +79,13 @@ class Selector(AnsiWindow):
         self.keyset['exit'].append(term.KEY_ESCAPE)
 
     def process_keystroke(self, keystroke):
-        """ Process the keystroke and return string to refresh. """
+        """
+        Process the keystroke and return string to refresh.
+
+        :param blessed.keyboard.Keystroke keystroke: input from ``inkey()``.
+        :rtype: str
+        :returns: string sequence suitable for refresh.
+        """
         self._moved = False
         keystroke = hasattr(keystroke, 'code') and keystroke.code or keystroke
         if keystroke in self.keyset['refresh']:
@@ -81,10 +103,7 @@ class Selector(AnsiWindow):
         return u''
 
     def read(self):
-        """
-        Reads input until the ENTER or ESCAPE key is pressed (Blocking).
-        Allows backspacing. Returns unicode text, or None when cancelled.
-        """
+        """ Reads input until the ENTER or ESCAPE key is pressed (Blocking). """
         from x84.bbs import getch
         from x84.bbs.output import echo
         self._selected = False
@@ -98,9 +117,7 @@ class Selector(AnsiWindow):
 
     @property
     def selected(self):
-        """
-        Returns True when keyset['enter'] key detected in process_keystroke
-        """
+        """ Whether the carriage return character has been handled. """
         return self._selected
 
     @selected.setter
@@ -113,9 +130,7 @@ class Selector(AnsiWindow):
 
     @property
     def selection(self):
-        """
-        Current selection.
-        """
+        """ Current selection. """
         return self._selection
 
     @selection.setter
@@ -129,9 +144,7 @@ class Selector(AnsiWindow):
 
     @property
     def left(self):
-        """
-        Left-side value
-        """
+        """ Left-side value. """
         return self._left
 
     @left.setter
@@ -142,9 +155,7 @@ class Selector(AnsiWindow):
 
     @property
     def right(self):
-        """
-        Right-side value
-        """
+        """ Right-side value. """
         return self._right
 
     @right.setter
@@ -154,9 +165,7 @@ class Selector(AnsiWindow):
         self._right = value
 
     def refresh(self):
-        """
-        Return terminal sequence suitable for re-drawing left/right menubar.
-        """
+        """ Return string sequence suitable for refresh. """
         import math
         import x84.bbs.session
         term = x84.bbs.session.getterminal()
@@ -174,29 +183,21 @@ class Selector(AnsiWindow):
             term.normal,))
 
     def move_right(self):
-        """
-        Force state to right, returning unicode string suitable for refresh.
-        If state is unchanged, an empty string is returned.
-        """
+        """ Move selection right, return string suitable for refresh. """
         if self.selection != self.right:
             self.selection = self.right
             return self.refresh()
         return u''
 
     def move_left(self):
-        """
-        Force state to left, returning unicode string suitable for refresh.
-        If state is unchanged, an empty string is returned.
-        """
+        """ Move selection left, return string suitable for refresh. """
         if self.selection != self.left:
             self.selection = self.left
             return self.refresh()
         return u''
 
     def toggle(self):
-        """
-        Toggle selection and return unicode string suitable for refresh.
-        """
+        """ Toggle selection, return string suitable for refresh. """
         if self.selection == self.left:
             self.selection = self.right
         else:
@@ -205,8 +206,5 @@ class Selector(AnsiWindow):
 
     @property
     def quit(self):
-        """
-        Returns: True if a terminating or quit character was handled by
-        process_keystroke(), such as the escape key, or 'q' by default.
-        """
+        """ Whether a 'quit' character has been handled, such as escape. """
         return self._quit

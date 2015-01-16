@@ -34,7 +34,7 @@ class Lightbar(AnsiWindow):
     #         Too many public methods (29/20)
     def __init__(self, *args, **kwargs):
         """
-        Class constructor.
+        Class initializer.
 
         Initialize a lightbar of height, width, y and x, and position.
 
@@ -116,7 +116,7 @@ class Lightbar(AnsiWindow):
 
         def fit_row(ucs):
             """ Strip a unicode row to fit window boundry, if necessary """
-            column = self.visible_width + 1
+            column = self.visible_width - 1
             wrapped = term.wrap(ucs, column)
             if len(wrapped) > 1:
                 marker = self.glyphs.get('strip', u' $')
@@ -177,7 +177,13 @@ class Lightbar(AnsiWindow):
         return u''
 
     def process_keystroke(self, key):
-        """ Process the keystroke and return string to refresh. """
+        """
+        Process the keystroke and return string to refresh.
+
+        :param blessed.keyboard.Keystroke keystroke: input from ``inkey()``.
+        :rtype: str
+        :returns: string sequence suitable for refresh.
+        """
         self._moved = False
         self._selected = False
         self._vitem_lastidx = self.vitem_idx
@@ -360,7 +366,7 @@ class Lightbar(AnsiWindow):
             self.vitem_idx -= 1
 
     def move_down(self):
-        """ Move selection down one row. """
+        """ Move selection down one row, return string suitable for refresh. """
         if self.at_bottom:
             # bounds check
             return u''
@@ -390,7 +396,7 @@ class Lightbar(AnsiWindow):
         return self.refresh_quick()
 
     def move_up(self):
-        """ Move selection up one row. """
+        """ Move selection up one row, return string suitable for refresh. """
         if self.at_top:
             # bounds check
             return u''
@@ -403,7 +409,7 @@ class Lightbar(AnsiWindow):
         return self.refresh_quick()
 
     def move_pagedown(self):
-        """ Move selection down one page. """
+        """ Move selection down one page, return string suitable for refresh. """
         if len(self.content) < self.visible_height:
             # move to last entry
             if self.vitem_idx == len(self.content) - 1:
@@ -422,7 +428,7 @@ class Lightbar(AnsiWindow):
         return self.refresh_quick()
 
     def move_pageup(self):
-        """ Move selection up one page. """
+        """ Move selection up one page, return string suitable for refresh. """
         if len(self.content) < self.visible_height - 1:
             self.vitem_idx = 0
         if self.vitem_shift - self.visible_height > 0:
@@ -437,7 +443,7 @@ class Lightbar(AnsiWindow):
         return self.refresh_quick()
 
     def move_home(self):
-        """ Move selection to the first entry. """
+        """ Move selection to first row, return string suitable for refresh. """
         if (0, 0) == (self.vitem_idx, self.vitem_shift):
             return u''  # already at home
         self.vitem_idx = 0
@@ -445,7 +451,7 @@ class Lightbar(AnsiWindow):
         return self.refresh_quick()
 
     def move_end(self):
-        """ Move selection to the final entry. """
+        """ Move selection to final row, return string suitable for refresh. """
         if len(self.content) < self.visible_height:
             if self.vitem_idx == len(self.content) - 1:
                 return u''  # already at end

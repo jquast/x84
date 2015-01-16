@@ -226,8 +226,8 @@ def draw_interface(term, lightbar):
     lightbar.width = max(10, int(term.width * 0.25))
     # +1 for spacing between lightbar and diz
     browser.diz_location = lightbar.width + 1
-    # -4 for lightbar borders and space before/after diz area
-    browser.max_diz_width = term.width - lightbar.width - 4
+    # -2 for spacing between the lightbar, the diz, and the edge of the screen
+    browser.max_diz_width = term.width - lightbar.width - 2
     # -4 for space above/below diz area and info line (filename, size)
     browser.max_diz_height = term.height - 4
     echo(u''.join([term.clear,
@@ -264,13 +264,17 @@ def describe_file(term, diz, directory, filename, isdir=None):
                                txt_Size=term.bold(u'Size'),
                                size=_size))
 
+    description = term.wrap(description, browser.max_diz_width)
     echo(u''.join((term.move(1, browser.diz_location),
-                   description,
-                   term.move(3, browser.diz_location))))
+                   u''.join(['{0}{1}\r\n'.format(
+                             term.move_x(browser.diz_location), line)
+                             for line in description]),
+                   term.move(2 + len(description), browser.diz_location))))
 
     wrapped_diz = []
-    for line in diz[:browser.max_diz_height]:
+    for line in diz:
         wrapped_diz += term.wrap(line, browser.max_diz_width)
+    wrapped_diz = wrapped_diz[:browser.max_diz_height - len(description) + 1]
 
     output = u''
     for line in wrapped_diz:
@@ -480,8 +484,10 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
             # save diz in raw format, but display decoded
             save_diz = False
             db_desc[relativename] = diz
+            decoder = 'cp43_art'
             if session.encoding == 'utf8':
-                diz = [line.decode(COLLY_DECODING) for line in diz]
+                decoder = COLLY_DECODING
+            diz = [line.decode(decoder) for line in diz]
 
         elif is_flagged_dir(filename):
             # is pseudo-folder for flagged files

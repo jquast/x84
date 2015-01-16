@@ -30,16 +30,14 @@ class Pager(AnsiWindow):
         Initialize a pager of height, width, y, and x position.
         """
         self._quit = False
+        self._position_last = 0
 
         self.init_keystrokes(keyset=kwargs.pop('keyset', VI_KEYSET.copy()))
 
-        content = kwargs.pop('content', u'') or u''
-        position = kwargs.pop('position', 0) or 0
+        self.content = kwargs.pop('content', u'') or u''
+        self.position = kwargs.pop('position', 0) or 0
 
         AnsiWindow.__init__(self, *args, **kwargs)
-
-        self.position = position
-        self.content = content
 
     def init_keystrokes(self, keyset):
         """
@@ -58,65 +56,55 @@ class Pager(AnsiWindow):
 
     @property
     def quit(self):
-        """
-        Returns: True if a terminating or quit character was handled by
-        process_keystroke(), such as the escape key, or 'q' by default.
-        """
+        """ Whether a 'quit' character has been handled, such as escape. """
         return self._quit
 
     @property
     def position_last(self):
-        """
-        Previous position before last move
-        """
+        """ Previous position before last move. """
         return self._position_last
 
     @property
     def position(self):
-        """
-        Index of content buffer displayed at top of window.
-        """
+        """ Index of content buffer displayed at top of window. """
         return self._position
 
     @position.setter
     def position(self, pos):
         # pylint: disable=C0111
         #         Missing docstring
-        self._position_last = (self._position
-                               if hasattr(self, '_position')
-                               else pos)
+        self._position_last = self._position
+
         # assign and bounds check
         self._position = min(max(0, pos), self.bottom)
         self.moved = (self._position_last != self._position)
 
     @property
     def visible_content(self):
-        """
-        Returns content that is visible in window
-        """
+        """ Content that is visible in window. """
         return self._content[self.position:self.position + self.visible_height]
 
     @property
     def visible_bottom(self):
-        """
-        Returns bottom-most window row that contains content
-        """
+        """ Bottom-most window row that contains content. """
         if self.bottom < self.visible_height:
             return self.bottom
         return len(self.visible_content) - 1
 
     @property
     def bottom(self):
-        """
-        Returns bottom-most position that contains content
-        """
-        maximum = (
-            hasattr(self, '_content') and len(self._content)
-            or self.visible_height)
+        """ Bottom-most position that contains content. """
+        maximum = self.visible_height
         return max(0, maximum - self.visible_height)
 
     def process_keystroke(self, keystroke):
-        """ Process the keystroke and return string to refresh. """
+        """
+        Process the keystroke and return string to refresh.
+
+        :param blessed.keyboard.Keystroke keystroke: input from ``inkey()``.
+        :rtype: str
+        :returns: string sequence suitable for refresh.
+        """
         self.moved = False
         rstr = u''
         keystroke = hasattr(keystroke, 'code') and keystroke.code or keystroke

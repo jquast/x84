@@ -121,6 +121,8 @@ def echo(ucs):
 
 def timeago(secs, precision=0):
     """
+    Return human-readable string of seconds elapsed.
+
     :param int secs: number of seconds "ago".
     :param int precision: optional decimal precision of returned seconds.
 
@@ -240,7 +242,7 @@ def ropen(filename, mode='rb'):
 
 
 def showart(filepattern, encoding=None, auto_mode=True, center=False,
-            poll_cancel=False, msg_cancel=None, quiet=False):
+            poll_cancel=False, msg_cancel=None, force=False):
     """
     Yield unicode sequences for any given ANSI Art (of art_encoding).
 
@@ -266,6 +268,9 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
 
     If ``center`` is set to ``True``, the piece will be centered respecting the
     current terminal's width.
+
+    If ``force`` is set to true then the artwork will be displayed even if it's
+    wider than the screen.
 
     """
     # pylint: disable=R0913,R0914
@@ -365,19 +370,18 @@ def showart(filepattern, encoding=None, auto_mode=True, center=False,
 
         line_length = term.length(line.rstrip())
 
-        if not padding and term.width < line_length:
-            # if the artwork is too wide, simply stop displaying it.
-            if not quiet:
-                msg_too_wide = u''.join(
-                    (term.normal,
-                     term.bold_black(u'-- '),
-                     (u'canceled {0}, too wide:: {1}'
-                      .format(file_basename, line_length)),
-                     term.bold_black(u' --'),
-                     ))
-                yield (u'\r\n' +
-                       term.center(msg_too_wide).rstrip() +
-                       u'\r\n')
+        if force is False and not padding and term.width < line_length:
+            # if the artwork is too wide and force=False, simply stop displaying it.
+            msg_too_wide = u''.join(
+                (term.normal,
+                 term.bold_black(u'-- '),
+                 (u'canceled {0}, too wide:: {1}'
+                  .format(file_basename, line_length)),
+                 term.bold_black(u' --'),
+                 ))
+            yield (u'\r\n' +
+                   term.center(msg_too_wide).rstrip() +
+                   u'\r\n')
             return
         if idx == len(lines) - 1:
             # strip DOS end of file (^Z)

@@ -157,7 +157,12 @@ def validate_password(user, password):
 def validate_password_again(user, password):
     """ Validate 2nd round of ``password`` for ``user``. """
     errmsg = None
-    if not user.auth(password):
+    if password == u'':
+        errmsg = u'Password is required.'
+    elif len(password) < password_min_length:
+        errmsg = (u'Password too short, must be at least {0} characters.'
+                  .format(password_min_length))
+    elif not user.auth(password):
         errmsg = u'Password does not match, try again!'
 
     # returns -1 as modifier, to return to password prompt.

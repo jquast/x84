@@ -73,7 +73,7 @@ def query_question():
         le = LineEditor(30)
         le.colors['highlight'] = term.cyan
         inp = le.read()
-        if inp.isnumeric() and int(inp) < len(questions):
+        if inp is not None and inp.isnumeric() and int(inp) < len(questions):
             return int(inp)
         else:
             # 999 in this case means that no valid option was chosen.. break
@@ -161,11 +161,11 @@ def vote(questionnumber):
         le = LineEditor(30)
         le.colors['highlight'] = term.cyan
         inp = le.read()
-        if inp.isnumeric() and int(
+        if inp is not None and inp.isnumeric() and int(
                 inp) <= amount_of_alternatives[questionnumber]:
 
             # create database for user if the user hasn't made any votes
-            if not session.user.handle in db:
+            if session.user.handle not in db:
                 db[session.user.handle] = {}
 
             uservotingdata = {}
@@ -295,7 +295,7 @@ def delete_question(questionnumber):
     inp = le.read()
     # makes the input indifferent to wheter you used lower case when typing in
     # a command or not..
-    inp = inp.lower()
+    inp = (inp or u'').lower()
 
     if inp == 'a':  # delete answer alternative..
         echo(term.clear)
@@ -311,7 +311,7 @@ def delete_question(questionnumber):
         le.colors['highlight'] = term.cyan
         inp2 = le.read()
 
-        if inp2.isnumeric() and int(
+        if inp2 is not None and inp2.isnumeric() and int(
                 inp2) < amount_of_alternatives[questionnumber]:
             if int(inp2) + 1 < amount_of_alternatives[questionnumber]:
                 for i in range(
@@ -424,7 +424,7 @@ def main():
         inp = le.read()
         # makes the input indifferent to wheter you used lower case when typing
         # in a command or not..
-        inp = inp.lower()
+        inp = (inp or u'').lower()
 
         if 'sysop' in session.user.groups and inp == 'd':
             while True:

@@ -14,8 +14,8 @@ class Terminal(BlessedTerminal):
     _session = None
 
     def __init__(self, kind, stream, rows, columns):
-        self.rows = rows
-        self.columns = columns
+        self._rows = rows
+        self._columns = columns
         BlessedTerminal.__init__(self, kind, stream)
         if sys.platform.lower().startswith('win32'):
             self._normal = '\x1b[m'
@@ -65,7 +65,7 @@ class Terminal(BlessedTerminal):
 
     def _height_and_width(self):
         from blessed.terminal import WINSZ
-        return WINSZ(ws_row=self.rows, ws_col=self.columns,
+        return WINSZ(ws_row=self._rows, ws_col=self._columns,
                      ws_xpixel=None, ws_ypixel=None)
     _height_and_width.__doc__ = BlessedTerminal._height_and_width.__doc__
 

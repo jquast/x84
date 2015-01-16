@@ -1,12 +1,9 @@
 |06Sun Jan 11 19:05:31 PST 2015
 |01============================
 
-Well, here we are, after nearly a year we've finally released
-a new version of x/84, version 1.9.84.  This is a preview release
-for a final v2.0.
+Well, here we are, after nearly a year we've finally released a new version of x/84, version 1.9.84.  This is a preview release for a final v2.0.
 
-It's been a tough road, we've gotten a lot of new additions
-since the last release to pypi:
+It's been a tough road, we've gotten a lot of new additions since the last release to pypi:
 
    - sftp and ssh server
    - intra-bbs messaging

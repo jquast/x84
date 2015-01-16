@@ -1,9 +1,36 @@
+"""Sesame is a wrapper for the :class:`x84.bbs.door.Door` class.
+
+It takes care of resizing the users' terminal to the correct dimensions or
+otherwise emulate the correct terminal size.
+
+Configuration in `default.ini` is as follows::
+
+    [sesame]
+    NameOfTheGame = /path/to/binary
+    NameOfTheGame_key = $
+    NameOfTheGame_cols = 80
+    NameOfTheGame_rows = 25
+
+The suffixes for the configuration keys are as follows:
+
+ * `_key`, character that gives access to the door from the BBS menu.
+ * `_cols`, the minimal number of terminal columns required by the door.
+ * `_rows`, the minimal number of terminal rows required by the door.
+ * `_env_*`, additional environment settings required by the door.
+
+The value of the `_env_*` configuration settings are passed to a Python
+string formatting function. The session is available as `session` and
+the configuration items from the `system` configuration section are
+exposed.
+"""
+
 import ConfigParser
 import shlex
 import os
 
 
 def main(name):
+    """Sesame runs a named door."""
     from x84.bbs import getsession, getterminal, echo, ini
     from x84.bbs import Door
 
@@ -38,7 +65,7 @@ def main(name):
                 term.width, term.height, want_cols, want_rows,))
             # hand-hack, its ok ... really
             store_cols, store_rows = term.width, term.height
-            term.columns, term.rows = want_cols, want_rows
+            term._columns, term._rows = want_cols, want_rows
             term.inkey(1)
 
     except ConfigParser.NoOptionError:
@@ -82,6 +109,6 @@ def main(name):
     echo(term.clear)
     if not (store_cols is None and store_rows is None):
         echo(u'Restoring dimensions to %s by %s !' % (store_cols, store_rows))
-        term.rows, term.columns = store_rows, store_cols
+        term._rows, term._columns = store_rows, store_cols
     echo(u'\r\n')
     term.inkey(0.5)

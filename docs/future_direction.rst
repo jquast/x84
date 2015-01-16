@@ -15,5 +15,6 @@ basic v3.0 roadmap:
 * start as daemon (-d)
 * Convert messaging to data modeling format (schematics?) and rfc-compliant
   mail messaging.
+* cron-like scheduling of scripts (fe., msgpoll.py)
 
 Feel free to contribute ideas as a github issue.

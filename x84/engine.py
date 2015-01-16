@@ -440,7 +440,7 @@ def session_recv(locks, terminals, log, tap_events):
             # 'remote-disconnect' event, hunt and destroy
             elif event == 'remote-disconnect':
                 send_to = data[0]
-                reason = 'remote-disconnect by {sid.tty}'.format(sid=sid)
+                reason = 'remote-disconnect by {sid}'.format(sid=sid)
                 for _sid, _tty in terminals:
                     if send_to == _sid:
                         kill_session(tty.client, reason)

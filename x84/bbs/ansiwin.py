@@ -46,7 +46,7 @@ class AnsiWindow(object):
 
     def __init__(self, height, width, yloc, xloc, colors=None, glyphs=None):
         """
-        Class constructor for base windowing class.
+        Class initializer for base windowing class.
 
         :param int width: width of window.
         :param int height: height of window.
@@ -78,7 +78,7 @@ class AnsiWindow(object):
         """
         Set glyphs and colors appropriate for "theming".
 
-        This is called by the class constructor.
+        This is called by the class initializer.
         """
         # set defaults,
         term = getterminal()
