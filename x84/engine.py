@@ -544,7 +544,13 @@ def _loop(servers):
         # a new client in terminal.start_process surprises us with new
         # file descriptors for the session i/o.  Unless we loop for
         # additional `session_fds', a connecting client would block.
-        ready_r, _, _ = select.select(check_r, [], [], SELECT_POLL)
+        try:
+            ready_r, _, _ = select.select(check_r, [], [], SELECT_POLL)
+        except select.error as err:
+            # more than likely EBADF (9, 'Bad file descriptor'), it would seem
+            # the socket we've just decided to poll has just gone bad.
+            log.debug('continue after select.error: {0}'.format(err))
+            continue
 
         for fd in ready_r:
             # see if any new tcp connections were made
