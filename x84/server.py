@@ -1,8 +1,11 @@
+""" Package provides base server for x/84. """
+
+
 class BaseServer(object):
 
-    '''
+    """
     Base class for server implementations.
-    '''
+    """
 
     #: Maximum number of clients
     MAX_CONNECTIONS = 100
@@ -31,27 +34,29 @@ class BaseServer(object):
     @classmethod
     def client_factory_kwargs(cls, instance):
         """
-        Keyword arguments for the client_factory.
+        Return keyword arguments for the client_factory.
 
-        A dictionary may be substituted.
+        Method should be derived and modified, A dictionary may be substituted.
         The default return value is an empty dictionary.
+
+        :rtype dict
         """
         return dict()
 
     @classmethod
     def connect_factory_kwargs(cls, instance):
         """
-        Keyword arguments for the connect_factory.
+        Return keyword arguments for the connect_factory.
 
-        A dictionary may be substituted.
+        Method should be derived and modified, A dictionary may be substituted.
         The default return value is an empty dictionary.
+
+        :rtype dict
         """
         return dict()
 
     def client_count(self):
-        """
-        Returns the number of active connections.
-        """
+        """ Return number of active connections.  """
         return len(self.clients)
 
     def client_list(self):
@@ -61,17 +66,14 @@ class BaseServer(object):
         return self.clients.values()
 
     def client_fds(self):
-        """
-        Returns a list of client file descriptors.
-        """
+        """ Return list of client file descriptors.  """
         return [client.fileno() for client in self.clients.values()]
 
     def clients_ready(self, ready_fds=None):
         """
-        Return a list of clients with data ready to be receive.
+        Return list of clients with data ready to be receive.
 
-        :type ready_fds: list
-        :param ready_fds: file descriptors already known to be ready
+        :param list ready_fds: file descriptors already known to be ready
         """
         if ready_fds is None:
             # given no file descriptors, we must iterate them all by hand.
