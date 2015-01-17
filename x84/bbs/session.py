@@ -624,12 +624,7 @@ class Session(object):
         ``timeout`` value of ``None`` is blocking, ``-1`` is non-blocking
         poll. All other values are blocking up to value of timeout.
         """
-        # return immediately any events that are already buffered
-        (event, data) = next(
-            ((_event, self._buffer[_event].pop())
-             for _event in events
-             if len(self._buffer.get(_event, []))),
-            (None, None))
+        event, data = self._pop_event_buffer(events)
         if event:
             return (event, data)
 
@@ -640,11 +635,11 @@ class Session(object):
 
         # begin scanning for matching `events' up to timeout.
         stime = time.time()
-        # XXX poll is needed because of timeout=-1, shit.
         waitfor = timeleft(stime)
         while waitfor is None or waitfor > 0:
             # ask engine process for new event data,
-            if self.reader.poll(waitfor):
+            poll = min(0.5, waitfor) or 0.01
+            if self.reader.poll(poll):
                 event, data = self.reader.recv()
                 # it is necessary to always buffer an event, as some
                 # side-effects may occur by doing so.  When buffer_event
@@ -653,10 +648,22 @@ class Session(object):
                 if not self.buffer_event(event, data):
                     if event in events:
                         return event, self._buffer[event].pop()
-            elif timeout == -1:
-                return (None, None)
+            else:
+                event, data = self._pop_event_buffer(events)
+                if event is not None:
+                    return (event, data)
+                elif timeout == -1:
+                    return (None, None)
             waitfor = timeleft(stime)
         return (None, None)
+
+    def _pop_event_buffer(self, events):
+        """ return immediately any event-data already buffered. """
+        return next(
+            ((_event, self._buffer[_event].pop())
+             for _event in events
+             if len(self._buffer.get(_event, []))),
+            (None, None))
 
     def runscript(self, script):
         """

@@ -138,7 +138,7 @@ class IRCChat(object):
             self.term.bold_black(u'{0}:{1}'.format(
                 '%02d' % now.hour, '%02d' % now.minute)),
             self._mirc_convert(message))
-        self.session.send_event('route', (self.session.sid, 'irc', data))
+        self.session.buffer_event('irc', (data,))
 
     def _indicator(self, color=None, character=None):
         """ Construct an indicator to be used in output """
@@ -170,12 +170,12 @@ class IRCChat(object):
         """ Disconnected; send quit event to end the main loop """
         # pylint:disable=R0201,W0613
         why = filter(None, event.arguments + [event.target])
-        self.session.send_event('route', (self.session.sid, 'irc-quit', why))
+        self.session.buffer_event('irc-quit', ' '.join(why))
 
     def on_nicknameinuse(self, connection, event):
         """ Nick is being used; pick another one. """
         # pylint:disable=W0613
-        self.session.send_event('route', (self.session.sid, 'irc-connected'))
+        self.session.buffer_event('irc-connected')
         self.connected = True
         echo(u''.join([self.term.normal, u'\r\n',
                        u'Your nickname is in use or illegal. Pick a new one '
@@ -184,7 +184,7 @@ class IRCChat(object):
         newnick = led.read()
         echo(u'\r\n')
         if not newnick:
-            self.session.send_event('route', (self.session.sid, 'irc-quit'))
+            self.session.buffer_event('irc-quit', 'canceled')
             return
         connection.nick(newnick)
 
@@ -197,10 +197,9 @@ class IRCChat(object):
         # pylint:disable=W0613
 
         if not self.connected:
-            self.session.send_event(
-                'route', (self.session.sid, 'irc-connected'))
+            self.session.buffer_event('irc-connected')
         self.nick = connection.get_nickname()
-        self.session.send_event('route', (self.session.sid, 'irc-welcome'))
+        self.session.buffer_event('irc-welcome')
         self.help()
         self.queue(u'{0} Server: {1}'.format(
             self._indicator(),
@@ -372,6 +371,7 @@ def establish_connection(term, session):
 
     Returns IRCChat instance or False depending on whether it was successful.
     """
+    scrollback = collections.deque(maxlen=MAX_SCROLLBACK)
     kwargs = dict()
     if ENABLE_SSL:
         from ssl import wrap_socket
@@ -390,7 +390,7 @@ def establish_connection(term, session):
     except irc.client.ServerConnectionError:
         echo(term.bold_red(u'Connection error!'))
         term.inkey(3)
-        return False
+        raise EOFError()
 
     while True:
         client.reactor.process_once()
@@ -399,6 +399,7 @@ def establish_connection(term, session):
         if event == 'irc':
             # show on-connect motd data if any received
             echo(u'\r\n{0}'.format(data[0]))
+            scrollback.append(data[0])
         elif event == 'irc-connected':
             break
         elif event == 'input':
@@ -407,12 +408,12 @@ def establish_connection(term, session):
             while inp is not None:
                 if inp.lower() == u'q' or inp.code == term.KEY_ESCAPE:
                     echo(u'Canceled!')
-                    return False
+                    raise EOFError()
                 inp = term.inkey(0)
         elif event == 'irc-quit':
             echo(term.bold_red(u'\r\nConnection failed: {0}!'.format(data)))
             term.inkey(3)
-            return False
+            raise EOFError()
 
     while True:
         client.reactor.process_once()
@@ -421,20 +422,21 @@ def establish_connection(term, session):
         if event == 'irc':
             # show on-connect motd data if any received
             echo(u'\r\n{0}'.format(data[0]))
+            scrollback.append(data[0])
         if event == 'irc-quit':
             echo(term.bold_red(u'\r\nConnection lost: {0}!'.format(data)))
             term.inkey(3)
-            return False
+            raise EOFError()
         elif event == 'input':
             session.buffer_input(data, pushback=True)
             inp = term.inkey(0)
             while inp is not None:
                 if inp.lower() == u'q' or inp.code == term.KEY_ESCAPE:
                     echo(u'Canceled!')
-                    return False
+                    raise EOFError()
                 inp = term.inkey(0)
         elif event == 'irc-welcome':
-            return client
+            return client, scrollback
 
 
 def refresh_event(term, scrollback, editor):
@@ -560,10 +562,9 @@ def main():
     if SYNCTERM_FONT and term.kind.startswith('ansi'):
         echo(syncterm_setfont(SYNCTERM_FONT))
 
-    scrollback = collections.deque(maxlen=MAX_SCROLLBACK)
-
-    client = establish_connection(term, session)
-    if not client:
+    try:
+        client, scrollback = establish_connection(term, session)
+    except EOFError:
         # connection failed,
         return clean_up(term)
 
@@ -578,8 +579,7 @@ def main():
             max_length=MAX_INPUT
         )
 
-    # delete 'Connecting' message
-    echo(u''.join([term.home, term.clear, editor.refresh()]))
+    refresh_event(term, scrollback, editor)
 
     while True:
         client.reactor.process_once()
