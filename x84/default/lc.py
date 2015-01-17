@@ -72,10 +72,8 @@ def main(last=10):
     last_callers = get_lastcallers(last=last)
     echo(u'\r\n\r\n')
 
-    # format callers, header:
-    callers_txt = [
-        '{handle} {location} {num_calls} {timeago}'
-        .format(
+    def make_header(fmt):
+        return fmt.format(
             handle=term.bold_underline(
                 term.ljust('handle', username_max_length + 1)),
             location=term.underline(
@@ -83,19 +81,30 @@ def main(last=10):
             num_calls=term.bold_underline(
                 term.ljust('# calls', numcalls_max_length)),
             timeago=term.underline('time ago'))
-    ]
+
+    call_fmt = '{handle} {location} {num_calls} {timeago}'
+    header = make_header(call_fmt)
+    header_length = term.length(header)
+    if header_length > term.width:
+        call_fmt = '{handle} {num_calls} {timeago}'
+        header = make_header(call_fmt)
+        header_length = term.length(header)
+
+    # format callers, header:
+    callers_txt = [header] + [' ' * header_length]
+
     # content:
     callers_txt.extend([
-        u'{handle} {location} {num_calls} {timeago}'
-        .format(handle=lc.handle.ljust(username_max_length + 1),
-                location=term.ljust(colors[idx % len(colors)](
-                    lc.location or '-' * location_max_length),
-                    location_max_length),
-                num_calls='{0}'.format(
-                    lc.num_calls).rjust(numcalls_max_length),
-                timeago=colors[idx % len(colors)](
-                    timeago(lc.timeago))
-                ) for idx, lc in enumerate(last_callers)
+        call_fmt.format(
+            handle=lc.handle.ljust(username_max_length + 1),
+            location=term.ljust(colors[idx % len(colors)](
+                lc.location or '-' * location_max_length),
+                location_max_length),
+            num_calls='{0}'.format(
+                lc.num_calls).rjust(numcalls_max_length),
+            timeago=colors[idx % len(colors)](
+                timeago(lc.timeago))
+        ) for idx, lc in enumerate(last_callers)
     ])
 
     # display file contents, decoded, using a command-prompt pager.
