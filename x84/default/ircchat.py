@@ -60,8 +60,7 @@ class IRCChat(object):
     # pylint:disable=R0904
 
     def __init__(self, term, session):
-        """ IRC Chat client class constructor. """
-
+        """ Class initializer. """
         self.log = logging.getLogger(__name__)
         self.reactor = irc.client.Reactor()
         self.connection = self.reactor.server()
@@ -81,7 +80,8 @@ class IRCChat(object):
             mirc_colors = [
                 'bold_white', 'black', 'blue', 'green', 'bold_red', 'red',
                 'magenta', 'yellow', 'bold_yellow', 'bold_green', 'cyan',
-                'bold_cyan', 'bold_blue', 'bold_magenta', 'bold_black', 'white',
+                'bold_cyan', 'bold_blue', 'bold_magenta', 'bold_black',
+                'white',
             ]
             num_colors = len(mirc_colors)
             bgc = None
@@ -108,7 +108,6 @@ class IRCChat(object):
 
         def mode_repl(match):
             """ Regex function for replacing 'modes'. """
-
             translate = {
                 '\x0f': self.term.normal,
                 '\x02': self.term.bold,
@@ -170,14 +169,15 @@ class IRCChat(object):
     def on_disconnect(self, connection, event):
         """ Disconnected; send quit event to end the main loop """
         # pylint:disable=R0201,W0613
-        self.session.send_event('route', (self.session.sid, 'irc-quit'))
+        why = filter(None, event.arguments + [event.target])
+        self.session.send_event('route', (self.session.sid, 'irc-quit', why))
 
     def on_nicknameinuse(self, connection, event):
         """ Nick is being used; pick another one. """
         # pylint:disable=W0613
         self.session.send_event('route', (self.session.sid, 'irc-connected'))
         self.connected = True
-        echo(u''.join([self.term.normal, self.term.clear,
+        echo(u''.join([self.term.normal, u'\r\n',
                        u'Your nickname is in use or illegal. Pick a new one '
                        u'(blank to quit):\r\n']))
         led = LineEditor(width=MAX_NICK)
@@ -197,8 +197,8 @@ class IRCChat(object):
         # pylint:disable=W0613
 
         if not self.connected:
-            self.session.send_event('route', (self.session.sid,
-                                              'irc-connected'))
+            self.session.send_event(
+                'route', (self.session.sid, 'irc-connected'))
         self.nick = connection.get_nickname()
         self.session.send_event('route', (self.session.sid, 'irc-welcome'))
         self.help()
@@ -379,12 +379,8 @@ def establish_connection(term, session):
         kwargs['connect_factory'] = Factory(wrapper=wrap_socket)
 
     echo(u'Connecting to {server}:{port} for channel {chan}.\r\n\r\n'
-         'press {key_q} or {key_esc} to abort ... '
-         .format(server=SERVER,
-                 port=PORT,
-                 chan=CHANNEL,
-                 key_q=term.bold(u'Q'),
-                 key_esc=term.bold(u'ESC')))
+         'press [{key_q}] to abort ... '.format(
+             server=SERVER, port=PORT, chan=CHANNEL, key_q=term.bold(u'q')))
 
     client = IRCChat(term, session)
     irc_handle = session.user.handle.replace(' ', '_')
@@ -404,7 +400,6 @@ def establish_connection(term, session):
             # show on-connect motd data if any received
             echo(u'\r\n{0}'.format(data[0]))
         elif event == 'irc-connected':
-            echo(u'Connected!')
             break
         elif event == 'input':
             session.buffer_input(data, pushback=True)
@@ -415,16 +410,19 @@ def establish_connection(term, session):
                     return False
                 inp = term.inkey(0)
         elif event == 'irc-quit':
-            echo(term.bold_red(u'Connection failed!'))
+            echo(term.bold_red(u'\r\nConnection failed: {0}!'.format(data)))
             term.inkey(3)
             return False
 
     while True:
         client.reactor.process_once()
         event, data = session.read_events(
-            ('irc-welcome', 'irc-quit', 'input'), timeout=0.2)
+            ('irc', 'irc-welcome', 'irc-quit', 'input'), timeout=0.2)
+        if event == 'irc':
+            # show on-connect motd data if any received
+            echo(u'\r\n{0}'.format(data[0]))
         if event == 'irc-quit':
-            echo(term.bold_red(u'Connection lost!'))
+            echo(term.bold_red(u'\r\nConnection lost: {0}!'.format(data)))
             term.inkey(3)
             return False
         elif event == 'input':
@@ -486,14 +484,12 @@ def irc_event(term, data, scrollback, editor):
     ]))
 
 
-def input_event(term, session, client, data, editor):
+def input_event(term, session, client, editor):
     """
     React to input event, processing /commands.
 
     Returns True, unless the caller should exit, then False.
     """
-
-    session.buffer_input(data, pushback=True)
     retval = True
     inp = term.inkey(0)
     while inp:
@@ -558,17 +554,19 @@ def main():
 
     # create a new, empty screen
     echo(u'\r\n' * (term.height + 1))
+    echo(term.home + term.clear)
 
-    # move to home, set font
-    echo(term.home)
+    # set font
     if SYNCTERM_FONT and term.kind.startswith('ansi'):
-        echo(term.clear)
         echo(syncterm_setfont(SYNCTERM_FONT))
 
     scrollback = collections.deque(maxlen=MAX_SCROLLBACK)
+
     client = establish_connection(term, session)
     if not client:
+        # connection failed,
         return clean_up(term)
+
     # ignore "not in view" warning for AnsiWindow
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -593,7 +591,8 @@ def main():
         elif event == 'irc':
             irc_event(term, data, scrollback, editor)
         elif event == 'input':
-            if not input_event(term, session, client, data, editor):
+            session.buffer_input(data, pushback=True)
+            if not input_event(term, session, client, editor):
                 break
         elif event == 'irc-quit':
             time.sleep(0.5)
