@@ -24,6 +24,11 @@ art_file = get_ini(
     section='nua', key='art_file'
 ) or os.path.join(here, 'art', 'nua*.ans')
 
+#: encoding of artfile
+art_encoding = get_ini(
+    section='nua', key='art_encoding'
+) or 'ascii'
+
 #: preferred fontset for SyncTerm emulator
 syncterm_font = get_ini(
     section='nua', key='syncterm_font'
@@ -333,7 +338,7 @@ def main(handle=u''):
 
     # create new user record for manipulation
     while True:
-        display_banner(art_file, encoding='ascii')
+        display_banner(art_file, encoding=art_encoding)
         user = do_nua(user)
 
         # user canceled.
