@@ -88,10 +88,10 @@ def main(name):
 
     # Now setup the environment (if any exists)
     env = dict()
-    env_prefix = '_'.join([name, 'env', ''])
+    env_prefix = '{0}_env_'.format(name)
     for option in ini.CFG.options('sesame'):
         if option.startswith(env_prefix):
-            key = option.replace(env_prefix, '')
+            key = option.replace(env_prefix, '').upper()
             env[key] = ini.CFG.get('sesame', option).format(
                 session=session_info,
                 **system_info

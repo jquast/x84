@@ -40,7 +40,7 @@ color_lowlight = get_ini(
 #: filepath to artfile displayed for this script
 art_file = get_ini(
     section='main', key='art_file'
-) or 'art/main*.asc'
+) or 'art/main1.asc'
 
 #: encoding used to display artfile
 art_encoding = get_ini(
@@ -125,14 +125,21 @@ def get_menu_items(session):
                  args=(), kwargs={}),
 
         # writemsg.py will be done from the reader (TODO
-        MenuItem(inp_key=u'read',
-                 text=u'read messages',
-                 script='readmsgs',
+        MenuItem(inp_key=u'msg',
+                 text=u'message area',
+                 script='msgarea',
                  args=(), kwargs={}),
+
         MenuItem(inp_key=u'post',
                  text=u'write message',
                  script='writemsg',
                  args=(), kwargs={}),
+
+        MenuItem(inp_key=u'read',
+                 text=u'read messages',
+                 script='readmsgs',
+                 args=(), kwargs={}),
+
 
         MenuItem(inp_key=u'g',
                  text=u'logoff system',
@@ -160,11 +167,19 @@ def get_menu_items(session):
                 # skip entry if there is no {door}_key option
                 continue
 
+            if get_ini(section='sesame', key='{0}_sysop_only'.format(door),
+                       getter='getboolean') and not session.user.is_sysop:
+                # this 'door' has option _sysop_only = True, and we
+                # are not a sysop: do not add to main menu.
+                continue
+
+            door_text = get_ini(section='sesame', key='{0}_text'.format(door),
+                                ) or door
+
             menu_items.append(
                 MenuItem(inp_key=inp_key,
-                         text=u'play {0}'.format(door),
-                         script='sesame',
-                         args=(door,),
+                         text=door_text,
+                         script='sesame', args=(door,),
                          kwargs={}))
 
     # add sysop menu for sysop users, only.
