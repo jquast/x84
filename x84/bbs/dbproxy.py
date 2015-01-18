@@ -11,8 +11,6 @@ from x84.db import (
     get_db_lock,
     log_db_cmd,
 )
-from x84.bbs.session import getsession
-
 
 class DBProxy(object):
 
@@ -41,21 +39,23 @@ class DBProxy(object):
         self.schema = schema
         self.table = table
         self._tap_db = get_ini('session', 'tab_db', getter='getboolean')
-        self.session = use_session and getsession()
+
+        from x84.bbs.session import getsession
+        self._session = use_session and getsession()
 
     def proxy_iter_session(self, method, *args):
         """ Proxy for iterable-return method calls over session IPC pipe. """
         event = 'db={0}'.format(self.schema)
-        self.session.flush_event(event)
-        self.session.send_event(event, (self.table, method, args))
-        data = self.session.read_event(event)
+        self._session.flush_event(event)
+        self._session.send_event(event, (self.table, method, args))
+        data = self._session.read_event(event)
         assert data == (None, 'StartIteration'), (
             'iterable proxy used on non-iterable, {0!r}'.format(data))
-        data = self.session.read_event(event)
+        data = self._session.read_event(event)
         while data != (None, StopIteration):
             yield data
-            data = self.session.read_event(event)
-        self.session.flush_event(event)
+            data = self._session.read_event(event)
+        self._session.flush_event(event)
 
     def proxy_method_direct(self, method, *args):
         """ Proxy for direct dictionary method calls. """
@@ -71,14 +71,14 @@ class DBProxy(object):
 
     def proxy_iter(self, method, *args):
         """ Proxy for iterable dictionary method calls. """
-        if self.session:
+        if self._session:
             return self.proxy_iter_session(method, *args)
 
         return self.proxy_method_direct(method, *args)
 
     def proxy_method(self, method, *args):
         """ Proxy for dictionary method calls. """
-        if self.session:
+        if self._session:
             return self.proxy_method_session(method, *args)
 
         return self.proxy_method_direct(method, *args)
@@ -86,8 +86,8 @@ class DBProxy(object):
     def proxy_method_session(self, method, *args):
         """ Proxy for dictionary method calls over IPC pipe. """
         event = 'db-{0}'.format(self.schema)
-        self.session.send_event(event, (self.table, method, args))
-        return self.session.read_event(event)
+        self._session.send_event(event, (self.table, method, args))
+        return self._session.read_event(event)
 
     def acquire(self):
         """ Acquire system-wide lock on database. """

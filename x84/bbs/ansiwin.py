@@ -1,10 +1,4 @@
 """ Ansi Windowing package for x/84. """
-# std imports
-import warnings
-
-# local
-from x84.bbs.session import getterminal
-
 
 GLYPHSETS = {
     'ascii': {
@@ -52,7 +46,7 @@ class AnsiWindow(object):
         :param int height: height of window.
         :param int yloc: y-location of window.
         :param int xloc: x-location of window.
-        :param dict colors: color theme, only key value of ``highlight`` is used.
+        :param dict colors: color theme.
         :param dict glyphs: bordering window character glyphs.
         """
         self.height = height
@@ -66,13 +60,8 @@ class AnsiWindow(object):
         self._alignment = 'left'
         self._moved = False
 
-#        if not self.isinview():
-#            # https://github.com/jquast/x84/issues/161
-#            warnings.warn(
-#                'AnsiWindow(height={self.height}, width={self.width}, '
-#                'yloc={self.yloc}, xloc={self.xloc}) not in viewport '
-#                'Terminal(height={term.height}, width={term.width})'
-#                .format(self=self, term=getterminal()), FutureWarning)
+        from x84.bbs.session import getterminal
+        self._term = getterminal()
 
     def init_theme(self, colors=None, glyphs=None):
         """
@@ -81,10 +70,10 @@ class AnsiWindow(object):
         This is called by the class initializer.
         """
         # set defaults,
-        term = getterminal()
         self.colors = {
-            'normal': term.normal,
-            'border': term.number_of_colors and term.cyan or term.normal,
+            'normal': self._term.normal,
+            'border': (self._term.number_of_colors and
+                       self._term.cyan or self._term.normal),
         }
         self.glyphs = GLYPHSETS['thin'].copy()
         # allow user override
@@ -133,11 +122,10 @@ class AnsiWindow(object):
 
         When None (default), the visible width of this window is used.
         """
-        term = getterminal()
         width = width if width is not None else (self.visible_width)
-        return (term.rjust(text, width) if self.alignment == 'right' else
-                term.ljust(text, width) if self.alignment == 'left' else
-                term.center(text, width)
+        return (self._term.rjust(text, width) if self.alignment == 'right' else
+                self._term.ljust(text, width) if self.alignment == 'left' else
+                self._term.center(text, width)
                 )
 
     @property
@@ -163,11 +151,10 @@ class AnsiWindow(object):
 
     def isinview(self):
         """ Whether this window is in bounds of terminal dimensions. """
-        term = getterminal()
         return (self.xloc >= 0
-                and self.xloc + self.width <= term.width
+                and self.xloc + self.width <= self._term.width
                 and self.yloc >= 0
-                and self.yloc + self.height <= term.height)
+                and self.yloc + self.height <= self._term.height)
 
     def willfit(self, win):
         """ Whether target window, ``win`` is within this windows bounds. """
@@ -181,20 +168,19 @@ class AnsiWindow(object):
 
     def pos(self, yloc=None, xloc=None):
         """ Return sequence to move cursor to window-relative position.  """
-        term = getterminal()
-        return term.move((yloc and yloc or 0) + self.yloc,
-                         (xloc and xloc or 0) + self.xloc)
+        return self._term.move((yloc and yloc or 0) + self.yloc,
+                               (xloc and xloc or 0) + self.xloc)
 
     def title(self, ansi_text):
         """ Return sequence for displaying text on top border of window. """
-        term = getterminal()
-        xloc = self.width / 2 - min(term.length(ansi_text) / 2, self.width / 2)
+        xloc = self.width / 2 - min(self._term.length(ansi_text) / 2,
+                                    self.width / 2)
         return self.pos(0, max(0, xloc)) + ansi_text
 
     def footer(self, text):
         """ Return sequence for displaying text on bottom border of window. """
-        term = getterminal()
-        xloc = self.width / 2 - min(term.length(text) / 2, self.width / 2)
+        xloc = self.width / 2 - min(self._term.length(text) / 2,
+                                    self.width / 2)
         return self.pos(max(0, self.height - 1), max(0, xloc)) + text
 
     def border(self):

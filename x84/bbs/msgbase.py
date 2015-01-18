@@ -117,7 +117,7 @@ class Msg(object):
         self.author = None
         session = getsession()
         if session:
-            self.author = session.handle
+            self.author = session.user.handle
 
         self._ctime = datetime.datetime.now()
         self._stime = None

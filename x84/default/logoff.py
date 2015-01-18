@@ -13,9 +13,7 @@ def main():
     import os
     session, term = getsession(), getterminal()
     session.activity = 'logging off'
-    handle = session.handle if (
-        session.handle is not None
-    ) else 'anonymous'
+    handle = session.user.handle or 'anonymous'
     max_user = ini.CFG.getint('nua', 'max_user')
     prompt_msg = u'[spnG]: ' if session.user.get('expert', False) else (
         u'%s:AY SOMEthiNG %s:REViOUS %s:EXt %s:Et thE fUCk Off !\b' % (

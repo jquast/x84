@@ -1,10 +1,8 @@
-"""
-Write public or private posts for x/84, https://github.com/jquast/x84/
-"""
+""" Write public or private posts for x/84. """
 
 
 def getstyle():
-    """ Returns a dictionary providing various terminal styles """
+    """ Returns a dictionary providing various terminal styles. """
     from x84.bbs import getterminal
     term = getterminal()
     return {
@@ -15,7 +13,7 @@ def getstyle():
 
 
 def banner():
-    """ Display banner/art ... nothing for now """
+    """ Display banner/art ... nothing for now. """
     from x84.bbs import echo, getterminal
     term = getterminal()
     echo(u'\r\n\r\n')
@@ -24,7 +22,7 @@ def banner():
 
 
 def display_msg(msg):
-    """ Display full message """
+    """ Display full message. """
     from x84.bbs import getterminal, getsession, echo, decode_pipe
     session, term = getsession(), getterminal()
     body = msg.body.splitlines()
@@ -142,9 +140,10 @@ def prompt_tags(msg):
                                            ).split())
     except ConfigParser.NoOptionError:
         moderated_groups = ('sysop', 'moderator',)
-    msg_onlymods = (u"\r\nONlY MEMbERS Of GROUPS %s MAY CREAtE NEW tAGS." % (
-        ", ".join(["'%s'".format(term.bold_yellow(grp)
-                                 for grp in moderated_groups)])))
+    mod_groups = ", ".join(["'{0}'".format(term.bold_yellow(grp)
+                                           for grp in moderated_groups)])
+    msg_onlymods = (u"\r\nONlY MEMbERS Of GROUPS {0} MAY CREAtE NEW tAGS."
+                    .format(mod_groups))
     msg_invalidtag = u"\r\n'%s' is not a valid tag."
     prompt_tags1 = u"ENtER %s, COMMA-dEliMitEd. " % (term.bold_red('TAG(s)'),)
     prompt_tags2 = u"OR '/list', %s:quit\r\n : " % (
@@ -170,9 +169,10 @@ def prompt_tags(msg):
             if 0 == len(all_tags):
                 echo(u'None !'.center(term.width / 2))
             else:
-                echo(u', '.join((term.wrap([u'%s(%d)' % (_key, len(_value),)
-                                            for (_key, _value) in all_tags]))
-                                ), term.width - 2)
+                echo(u', '.join((term.wrap(
+                    [u'{0}({1})'.format(_key, len(_value))
+                     for (_key, _value) in all_tags]))
+                ), term.width - 2)
             continue
         echo(u'\r\n')
 
@@ -185,7 +185,7 @@ def prompt_tags(msg):
         if moderated_tags:
             err = False
             for tag in tags.copy():
-                if not tag in tagdb and not (
+                if tag not in tagdb and not (
                         session.users.groups & moderated_groups):
                     tags.remove(tag)
                     echo(msg_invalidtag % (term.bold_red(tag),))
@@ -282,7 +282,7 @@ def prompt_body(msg):
 
 
 def prompt_send():
-    """ Prompt for continue/cancel """
+    """ Prompt for continue/cancel. """
     from x84.bbs import echo, Selector, getterminal
     term = getterminal()
     inp = Selector(yloc=term.height - 1,
@@ -300,7 +300,7 @@ def prompt_send():
 
 
 def prompt_abort():
-    """ Prompt for continue/abort """
+    """ Prompt for continue/abort. """
     from x84.bbs import echo, Selector, getterminal
     term = getterminal()
     inp = Selector(yloc=term.height - 1,
@@ -319,7 +319,7 @@ def prompt_abort():
 
 
 def prompt_network(msg, network_tags):
-    """ Prompt for network message """
+    """ Prompt for network message. """
     from x84.bbs import getterminal, echo, Lightbar, Selector
 
     term = getterminal()

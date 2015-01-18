@@ -48,12 +48,17 @@ class Dropfile(object):
         :param int filetype: dropfile type. One of ``Dropfile.DOORSYS``,
                              ``Dropfile.DOOR32``, ``Dropfile.CALLINFOBBS``,
                              or ``Dropfile.DORINFO``.
+        :param int node: A node number specified by caller; for some DOS
+                         doors, this is a very specific and limited number
+                         bounded and lock-acquired per-door by sesame.py.
+                         For others, it is inconsequential, in which case
+                         the session's system-wide node number is used.
         """
         self._filetype = filetype
         self._node = node
 
     def save(self, folder):
-        """ Save dropfile to destination ``folder`` """
+        """ Save dropfile to destination ``folder``. """
         f_path = os.path.join(folder, self.filename)
         with codecs.open(f_path, 'w', 'ascii', 'replace') as out_p:
             out_p.write(self.__str__())
@@ -198,7 +203,7 @@ class Dropfile(object):
             raise ValueError('filetype is unknown: {0}'.format(self._filetype))
 
     def __str__(self):
-        """ Returns dropfile content. """
+        """ Return dropfile content. """
         method = {
             self.DOORSYS: self._get_doorsys,
             self.DOOR32: self._get_door32,
@@ -619,6 +624,7 @@ class DOSDoor(Door):
         return data if time.time() - self._stime > self.START_BLOCK else u''
 
     def resize(self):
+        """ Signal resize of terminal to DOS -- does nothing. """
         pass
 
     def run(self):

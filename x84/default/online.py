@@ -1,6 +1,5 @@
 """ Who's online script for X/84, https://github.com/jquast/x84 """
 import time
-SELF_ID = -1
 POLL_KEY = 0.25  # blocking ;; how often to poll keyboard
 POLL_INF = 2.00  # seconds elapsed until re-ask clients for more details
 POLL_AYT = 4.00  # seconds elapsed until global 'are you there?' is checked,
@@ -108,16 +107,23 @@ def get_node(sessions):
     invalid = u'\r\ninvalid.'
     echo(u'\r\n\r\nNOdE: ')
     node = LineEditor(max_user).read()
+
     if node is None or 0 == len(node):
+        # cancel
         return (None, None)
+
     try:
         node = int(node)
     except ValueError:
+        # not an int
         echo(invalid)
         return (None, None)
+
     for tgt_node, (_sid, attrs) in get_nodes(sessions):
         if tgt_node == node:
             return (tgt_node, attrs)
+
+    # not found
     echo(invalid)
     return (None, None)
 
@@ -199,6 +205,7 @@ def main():
     #         Too many statements
     from x84.bbs import getsession, getterminal, getch, echo
     session, term = getsession(), getterminal()
+    SELF_ID = session.sid
     ayt_lastfresh = 0
 
     def broadcast_ayt(last_update):
@@ -264,7 +271,7 @@ def main():
             sessions[sid]['lastfresh'] = time.time()
 
         # update our own session
-        sessions[SELF_ID] = session.info()
+        sessions[SELF_ID] = session.to_dict()
         sessions[SELF_ID]['lastfresh'] = time.time()
 
         # request that all sessions update if more stale than POLL_INF,

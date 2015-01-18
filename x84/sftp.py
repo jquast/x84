@@ -1,5 +1,5 @@
 """
-SFTP server for x/84 bbs https://github.com/jquast/x84
+SFTP server for x/84.
 
 In order to configure x/84 as an SFTP server, you will need to add an [sftp]
 section to your default.ini file and add a `root` option. This points to the
@@ -30,10 +30,10 @@ uploads_dirname = '__uploads__'
 
 class X84SFTPHandle(SFTPHandle):
 
-    """ SFTP File handle for x/84 BBS """
+    """ SFTP File handler for x/84. """
 
     def __init__(self, *args, **kwargs):
-        """ Constructor """
+        """ Class initializer. """
         self.log = logging.getLogger(__name__)
         self.user = kwargs.pop('user')
         SFTPHandle.__init__(self, *args, **kwargs)
@@ -62,10 +62,10 @@ class X84SFTPHandle(SFTPHandle):
 
 class X84SFTPServer(SFTPServerInterface):
 
-    """ SFTP server for x/84 BBS """
+    """ SFTP server for x/84. """
 
     def __init__(self, *args, **kwargs):
-        """ Constructor """
+        """ Class initializer. """
         from x84.bbs import get_ini
         self.log = logging.getLogger(__name__)
 
@@ -109,6 +109,9 @@ class X84SFTPServer(SFTPServerInterface):
                 if fstripped == pstripped:
                     self.log.debug('file is actually {0}'.format(fname))
                     return fname
+
+        # pylint: disable=E1101
+        #         Instance of 'X84SFTPServer' has no 'canonicalize' member
         return self.root + self.canonicalize(path)
 
     def _is_uploaddir(self, path):

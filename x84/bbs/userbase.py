@@ -1,6 +1,4 @@
-"""
-Userbase record access for x/84, https://github.com/jquast/x84/
-"""
+""" Userbase record database and utility functions for x/84. """
 import logging
 from x84.bbs.dbproxy import DBProxy
 

@@ -327,21 +327,21 @@ def handle_lock(locks, tty, event, data, tap_events, log):
                 # though this is not currently used in the demonstration
                 # system.
                 locks[event] = (time.time(), tty.sid)
-                tty.master_write.send((event, True,))
                 log.warn('[{tty.sid}] {event} re-acquiring stale lock, '
                          'previously held active session {holder} after '
                          '{elapsed}s elapsed (stale={stale})'
                          .format(tty=tty, event=event, holder=holder,
                                  elapsed=elapsed, stale=stale))
+                tty.master_write.send((event, True,))
 
             # signal busy with matching event, data=False
             else:
+                log.debug('[{tty.sid}] {event} lock rejected; already held '
+                          'by active session {holder} for {elapsed} seconds '
+                          '(stale={stale})'
+                          .format(tty=tty, event=event, holder=holder,
+                                  elapsed=elapsed, stale=stale))
                 tty.master_write.send((event, False,))
-                log.warn('[{tty.sid}] {event} lock rejected; already held '
-                         'by active session {holder} for {elapsed} seconds '
-                         '(stale={stale})'
-                         .format(tty=tty, event=event, holder=holder,
-                                 elapsed=elapsed, stale=stale))
 
     elif method == 'release':
         if event not in locks:
