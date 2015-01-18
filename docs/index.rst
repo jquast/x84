@@ -12,8 +12,9 @@ Contents:
 
    intro
    project_details
-   developers
    msgnet
+   doors
+   developers
    default_api
    api/*
    future_direction
