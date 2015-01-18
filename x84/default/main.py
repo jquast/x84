@@ -58,6 +58,42 @@ bbsname = get_ini(
 ) or 'Unnamed'
 
 
+def get_sesame_menu_items(session):
+    # there doesn't exist any documentation on how this works,
+    # only the given examples in the generated default.ini file
+    menu_items = []
+    if ini.CFG.has_section('sesame'):
+        for name in filter(lambda _name: '_' not in _name,
+                           ini.CFG.options('sesame')):
+
+            sesame_kwargs = {'name': name}
+
+            door_cmd = ini.CFG.get('sesame', name).split(None, 1)[0]
+            if door_cmd.lower() == 'no' or not os.path.exists(door_cmd):
+                # skip entry if path does not resolve, or set to 'no'
+                continue
+
+            inp_key = get_ini(section='sesame', key='{0}_key'.format(name))
+            if not inp_key:
+                raise ValueError('sesame configuration for "{0}" requires '
+                                 'complimenting value "{0}_key" for menu '
+                                 'input key.'.format(name))
+
+            if get_ini(section='sesame', key='{0}_sysop_only'.format(name),
+                       getter='getboolean') and not session.user.is_sysop:
+                continue
+
+            text = get_ini(
+                section='sesame', key='{0}_text'.format(name)
+            ) or name
+
+            menu_items.append(
+                MenuItem(inp_key=inp_key, text=text, script='sesame',
+                         args=(), kwargs=sesame_kwargs))
+
+    return menu_items
+
+
 def get_menu_items(session):
     """ Returns list of MenuItem entries. """
     #: A declaration of menu items and their acting gosub script
@@ -148,40 +184,6 @@ def get_menu_items(session):
 
     ]
 
-    # there doesn't exist any documentation on how this works,
-    # only the given examples in the generated default.ini file
-    if ini.CFG.has_section('sesame'):
-        from ConfigParser import NoOptionError
-        for door in ini.CFG.options('sesame'):
-            if door.endswith('_key'):
-                # skip entries ending by _key.
-                continue
-
-            if not os.path.exists(ini.CFG.get('sesame', door)):
-                # skip entry if path does not resolve
-                continue
-
-            try:
-                inp_key = get_ini(section='sesame', key='{0}_key'.format(door))
-            except NoOptionError:
-                # skip entry if there is no {door}_key option
-                continue
-
-            if get_ini(section='sesame', key='{0}_sysop_only'.format(door),
-                       getter='getboolean') and not session.user.is_sysop:
-                # this 'door' has option _sysop_only = True, and we
-                # are not a sysop: do not add to main menu.
-                continue
-
-            door_text = get_ini(section='sesame', key='{0}_text'.format(door),
-                                ) or door
-
-            menu_items.append(
-                MenuItem(inp_key=inp_key,
-                         text=door_text,
-                         script='sesame', args=(door,),
-                         kwargs={}))
-
     # add sysop menu for sysop users, only.
     if session.user.is_sysop:
         menu_items.append(
@@ -189,6 +191,9 @@ def get_menu_items(session):
                      text=u'sysop area',
                      script='sysop',
                      args=(), kwargs={}))
+
+    # add sesame doors, if any.
+    menu_items.extend(get_sesame_menu_items(session))
 
     return menu_items
 

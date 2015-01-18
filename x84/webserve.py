@@ -1,58 +1,5 @@
 #!/usr/bin/env python2.7
-r"""
-web server for x/84, https://github.com/jquast/x84
-
-To configure the web server, add a ``[web]`` section to your default.ini.
-
-The following attributes are required:
-
-- ``cert``: An SSL certificate filepath.
-- ``key``: An SSL certificate key filepath.
-- ``modules``: A list of webmodules to load.
-
-The following attributes are optional:
-
-- ``addr``: A single address to bind to, defaults to 0.0.0.0 (ANY).
-- ``port``: A single port number to bind to, defaults to 8443.
-- ``chain``: An SSL chain certificate filepath.
-
-Example::
-
-    [web]
-    enabled = yes
-    addr = 0.0.0.0
-    port = 8443
-    cert = ~/.x84/ssl.cer
-    key = ~/.x84/ssl.key
-    chain = ~/.x84/ca.cer
-    modules = msgserve
-
-You can generate your own self-signed certificate.
-
-First, generate a server key::
-
-    openssl genrsa -des3 -out server.key 1024
-
-(The password doesn't matter, so long as you can remember it until prompted.)
-
-Then, create a certificate signing request::
-
-    openssl req -new -key server.key -out server.csr
-
-And remove the passphrase from the certificate::
-
-    openssl rsa -in server.key.org -out server.key
-
-Then, generate a self-signed certificate::
-
-    openssl x509 -req -days 1984 -in server.csr \
-        -signkey server.key -out server.crt
-
-Then, install to paths specified by *.ini* potions ``cert`` and ``key``::
-
-    cp server.crt ~/.x84/ssl.cer
-    cp server.key ~/.x84/ssl.key
-"""
+""" web server for x/84. """
 import threading
 import traceback
 import logging
@@ -271,9 +218,9 @@ if __name__ == '__main__':
     # as we are running outside of the 'engine' context, it is necessary
     # for us to initialize the .ini configuration scheme so that the list
     # of web modules and ssl options may be gathered.
-    import x84.engine
     import x84.bbs.ini
-    x84.bbs.ini.init(*x84.engine.parse_args())
+    import x84.cmdline
+    x84.bbs.ini.init(*x84.cmdline.parse_args())
 
     # do not execute webserver as a background thread.
     main(background_daemon=False)

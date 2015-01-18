@@ -1,9 +1,9 @@
-'''
-Atari ST codec for X/84, https://github.com/jquast/x84
+"""
+Atari ST codec for x/84.
 
 Generated from:
 ftp://ftp.unicode.org/Public/MAPPINGS/VENDORS/MISC/ATARIST.TXT
-'''
+"""
 
 import codecs
 
