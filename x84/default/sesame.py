@@ -97,7 +97,8 @@ def get_env(session, name):
 
 def do_dropfile(name, node):
     dropfile_path = get_ini('sesame', '{0}_droppath'.format(name))
-    dropfile_type = get_ini('sesame', '{0}_droptype'.format(name)) or 'doorsys'
+    dropfile_type = get_ini('sesame', '{0}_droptype'.format(name)
+                            ) or 'door.sys'
     if not dropfile_path:
         return
 
