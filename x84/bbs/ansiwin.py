@@ -66,13 +66,13 @@ class AnsiWindow(object):
         self._alignment = 'left'
         self._moved = False
 
-        if not self.isinview():
-            # https://github.com/jquast/x84/issues/161
-            warnings.warn(
-                'AnsiWindow(height={self.height}, width={self.width}, '
-                'yloc={self.yloc}, xloc={self.xloc}) not in viewport '
-                'Terminal(height={term.height}, width={term.width})'
-                .format(self=self, term=getterminal()), FutureWarning)
+#        if not self.isinview():
+#            # https://github.com/jquast/x84/issues/161
+#            warnings.warn(
+#                'AnsiWindow(height={self.height}, width={self.width}, '
+#                'yloc={self.yloc}, xloc={self.xloc}) not in viewport '
+#                'Terminal(height={term.height}, width={term.width})'
+#                .format(self=self, term=getterminal()), FutureWarning)
 
     def init_theme(self, colors=None, glyphs=None):
         """
