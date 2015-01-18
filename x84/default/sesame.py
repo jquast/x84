@@ -20,7 +20,7 @@ def prompt_resize_term(session, term, name):
                           u'current size is {term.width} x {term.height} '
                           u'(or press return).'.format(
                               want_cols, want_rows, term=term))
-            echo(term.normal + term.home + term.clear_eos)
+            echo(term.normal + term.home + term.clear_eos + term.home)
             pager = Pager(yloc=0, xloc=0, width=term.width, height=term.height,
                           content=resize_msg, glyphs={'erase': u'.'},
                           colors={'border': term.bold_red})
@@ -33,11 +33,10 @@ def prompt_resize_term(session, term, name):
                 session.buffer_input(data, pushback=True)
                 if term.inkey(0).code == term.KEY_ENTER:
                     break
-        echo(term.normal + term.home + term.clear_eos)
+        echo(term.normal + term.home + term.clear_eos + term.home)
 
 
 def restore_screen(term, cols, rows):
-    print((term._columns, term._rows, cols, rows))
     term._columns, term._rows = cols, rows
 
 
