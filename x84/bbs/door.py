@@ -12,7 +12,6 @@ import logging
 import select
 import codecs
 import struct
-import shlex
 import time
 import sys
 import os

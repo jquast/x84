@@ -169,7 +169,7 @@ class SshClient(BaseClient):
             if 0 == recv:
                 raise Disconnected('Closed by client (EOF)')
         except socket.error as err:
-            raise Disconnected('socket error: {err}'.format(err))
+            raise Disconnected('socket error: {err}'.format(err=err))
         self.bytes_received += recv
         self.last_input_time = time.time()
         self.recv_buffer.fromstring(data)
@@ -384,8 +384,8 @@ class SshSessionServer(paramiko.ServerInterface):
                 self.sftp = True
                 # XXX not returning True ?!
 
-        return (super(SshSessionServer, self)
-                .check_channel_subsystem_request(channel, name))
+        return (paramiko.ServerInterface.
+                check_channel_subsystem_request(channel, name))
 
     def check_channel_pty_request(self, channel, term, width, height, *_):
         self.client.env['TERM'] = term

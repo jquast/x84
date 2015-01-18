@@ -210,6 +210,7 @@ def unregister_tty(tty):
         tty.master_read.close()
         tty.master_write.close()
     except (EOFError, IOError) as err:
+        log = logging.getLogger(__name__)
         log.exception(err)
     if tty.client.active:
         # signal tcp socket to close

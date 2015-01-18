@@ -17,6 +17,8 @@ DATALOCK = {}
 
 
 def get_database(filepath, table):
+    # pylint: disable=W0602
+    #          Using global for 'FILELOCK' but no assignment is done
     global FILELOCK
     with FILELOCK:
         # if the bbs is run as root, file ownerships become read-only
@@ -47,6 +49,8 @@ def get_db_filepath(schema):
 
 def get_db_lock(schema, table):
     key = (schema, table)
+    # pylint: disable=W0602
+    #          Using global for 'FILELOCK' but no assignment is done
     global DATALOCK, FILELOCK
     with FILELOCK:
         if key not in DATALOCK:

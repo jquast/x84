@@ -152,7 +152,7 @@ def get_networks():
                          "option {key}, value={ca_path}.  default ca_verify "
                          "will be used. ".format(section=section,
                                                  key='ca_path',
-                                                 value=ca_path))
+                                                 ca_path=ca_path))
             else:
                 net['verify'] = ca_path
 

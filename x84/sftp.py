@@ -33,7 +33,7 @@ class X84SFTPHandle (SFTPHandle):
     def __init__(self, *args, **kwargs):
         self.log = logging.getLogger(__name__)
         self.user = kwargs.pop('user')
-        super(X84SFTPHandle, self).__init__(*args, **kwargs)
+        SFTPHandle.__init__(*args, **kwargs)
 
     def stat(self):
         self.log.debug('stat')

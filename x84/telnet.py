@@ -868,7 +868,6 @@ class ConnectTelnet(BaseConnect):
         Negotiate and inquire about terminal type, telnet options, window size,
         and tcp socket options before spawning a new session.
         """
-        from x84.bbs.exception import Disconnected
         try:
             self._set_socket_opts()
             mrk_bytes = self.client.bytes_received

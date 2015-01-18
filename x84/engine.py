@@ -23,8 +23,11 @@ __credits__ = [
 __license__ = 'ISC'
 
 # std
-import sys
 import logging
+import select
+import socket
+import time
+import sys
 
 # local
 __import__('encodings')  # provides alternate encodings
@@ -144,8 +147,6 @@ def accept(log, server, check_ban):
     using connect_factory, with optional keyword arguments
     server.connect_factory_kwargs.
     """
-    import socket
-
     if None in (server.client_factory, server.connect_factory):
         raise NotImplementedError(
             "No accept for server class {server.__class__.__name__}"
@@ -278,7 +279,6 @@ def handle_lock(locks, tty, event, data, tap_events, log):
     """
     handle locking event of (lock-key, (method, stale))
     """
-    import time
     from x84.terminal import get_terminals
     method, stale = data
     if method == 'acquire':
@@ -453,8 +453,6 @@ def _loop(servers):
     """
     # pylint: disable=R0912,R0914,R0915
     #         Too many local variables (24/15)
-    import select
-    import sys
     from x84.terminal import get_terminals, kill_session
     from x84.bbs.ini import CFG
     from x84.fail2ban import get_fail2ban_function

@@ -165,7 +165,7 @@ def get_user_record(handle):
     If handle is ``anonymous``, Create and return a new User object.
     """
     if handle == u'anonymous':
-        log.debug('anonymous login'.format(handle))
+        log.debug('anonymous login')
         return User(u'anonymous')
 
     log.debug('login by {0!r}'.format(handle))

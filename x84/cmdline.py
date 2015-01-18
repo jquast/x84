@@ -5,6 +5,7 @@ import os
 
 
 def parse_args():
+    """ Parse system arguments and return lookup path for bbs and log ini. """
     if sys.platform.lower().startswith('win32'):
         system_path = os.path.join('C:', 'x84')
     else:
