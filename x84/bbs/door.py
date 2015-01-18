@@ -196,7 +196,7 @@ class Dropfile(object):
                 assert ord(nodeid) <= ord('z')
             return 'DORINFO{0}.DEF'.format(nodeid).upper()
         else:
-            raise ValueError('filetype is unknown')
+            raise ValueError('filetype is unknown: {0}'.format(self._filetype))
 
     def __str__(self):
         """ Returns dropfile content. """
