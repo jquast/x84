@@ -50,7 +50,7 @@ def display_banner(filepattern, encoding=None, vertical_padding=0):
     return line_no + vertical_padding
 
 
-def prompt_pager(content, line_no=0, colors=None, width=None, breaker=u'- '):
+def prompt_pager(content, line_no=0, colors=None, width=None, breaker=u'- ', noprompt=False):
     """ Display text, using a command-prompt pager.
 
     :param iterable content: iterable of text contents.
@@ -59,6 +59,7 @@ def prompt_pager(content, line_no=0, colors=None, width=None, breaker=u'- '):
                         attributes, for keys ``'highlight'`` and
                         ``'lowlight'``.  When unset, yellow and green
                         are used.
+    :param noprompt: disables the 'press enter prompt' at the end of the list.
     """
     term = getterminal()
     colors = colors or {
@@ -116,9 +117,10 @@ def prompt_pager(content, line_no=0, colors=None, width=None, breaker=u'- '):
                 echo(term.move_up() + term.clear_eol)
 
     show_breaker()
+    if noprompt: return
     echo(u'\r\n')
     if term.width > 80:
-        echo(term.move_x((term.width // 2) - 40))
+        echo(term.move_x(max(0,(term.width / 2) - 40)))
     echo(u'Press {enter}.'.format(
         enter=colors['highlight'](u'return')))
     inp = LineEditor(0, colors=colors).read()
