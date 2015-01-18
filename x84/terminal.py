@@ -240,7 +240,6 @@ def kill_session(client, reason='killed'):
     Given a client, shutdown its socket and signal subprocess exit.
     """
     from x84.bbs.exception import Disconnected
-    from x84.terminal import unregister_tty
     client.shutdown()
 
     log = logging.getLogger(__name__)
