@@ -260,30 +260,20 @@ def init_bbs_ini():
     # not implemented
     # by default, anybody can make up a new tag. otherwise, only
     # those of groups specified may.
-#    cfg_bbs.set('msg', 'moderated_tags', 'no')
-#    cfg_bbs.set('msg', 'tag_moderators', 'sysop, moderator')
+    #    cfg_bbs.set('msg', 'moderated_tags', 'no')
+    #    cfg_bbs.set('msg', 'tag_moderators', 'sysop, moderator')
 
-    cfg_bbs.add_section('dosemu')
-    cfg_bbs.set('dosemu', 'enabled', 'no')
-    cfg_bbs.set('dosemu', 'bin', '/usr/bin/dosemu')
-    cfg_bbs.set('dosemu', 'home', '/DOS')
-#    # set to a valid folder to enable lord; dropfile is placed in lord folder.
-#    cfg_bbs.set('dosemu', 'lord_path', '/DOS/X/lord')
-#    cfg_bbs.set('dosemu', 'lord_dropfile', 'DORINFO')
-#    cfg_bbs.set('dosemu', 'lord_args',
-#                '-quiet -I \'$_com1 = "virtual"\' \'X:\\LORD\\START.BAT %%#\'')
-
-    cfg_bbs.add_section('sesame')
-    cfg_bbs.set('sesame', 'CavesOfPhear', '/usr/bin/phear')
-    cfg_bbs.set('sesame', 'CavesOfPhear_key', '!')
-    cfg_bbs.set('sesame', 'FrozenDepths', '/usr/bin/frozendepths')
-    cfg_bbs.set('sesame', 'FrozenDepths_key', '@')
-    cfg_bbs.set('sesame', 'DopeWars',
-                ('/usr/bin/dopewars -a -P {session[handle]} '
-                 '--single-player -u none'))
-    cfg_bbs.set('sesame', 'DopeWars_key', '$')
-    cfg_bbs.set('sesame', 'MyMan', '/usr/bin/myman')
-    cfg_bbs.set('sesame', 'MyMan_key', '&')
+    # cfg_bbs.add_section('sesame')
+    # cfg_bbs.set('sesame', 'CavesOfPhear', '/usr/bin/phear')
+    # cfg_bbs.set('sesame', 'CavesOfPhear_key', '!')
+    # cfg_bbs.set('sesame', 'FrozenDepths', '/usr/bin/frozendepths')
+    # cfg_bbs.set('sesame', 'FrozenDepths_key', '@')
+    # cfg_bbs.set('sesame', 'DopeWars',
+    #            ('/usr/bin/dopewars -a -P {session[handle]} '
+    #             '--single-player -u none'))
+    # cfg_bbs.set('sesame', 'DopeWars_key', '$')
+    # cfg_bbs.set('sesame', 'MyMan', '/usr/bin/myman')
+    # cfg_bbs.set('sesame', 'MyMan_key', '&')
 
     return cfg_bbs
 

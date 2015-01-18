@@ -186,7 +186,7 @@ class Dropfile(object):
         elif self._filetype == self.CALLINFOBBS:
             return 'CALLINFO.BBS'
         elif self._filetype == self.DORINFO:
-            # n in DORINFOn.DEF is 1-9,0,a-z
+            # n in DORINFO<n>.DEF is 1-9,0,a-z
             if self.node == 10:
                 nodeid = '0'
             elif self.node < 10:
@@ -194,7 +194,7 @@ class Dropfile(object):
             else:
                 nodeid = chr(ord('a') + (self.node - 11))
                 assert ord(nodeid) <= ord('z')
-            return 'DORINFO{0}.DEF'.format(nodeid)
+            return 'DORINFO{0}.DEF'.format(nodeid).upper()
         else:
             raise ValueError('filetype is unknown')
 
