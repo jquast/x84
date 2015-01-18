@@ -109,7 +109,8 @@ def do_dropfile(name, node):
                          'format of {0!r} but value is not supported '
                          'by class Dropfile.'.format(dropfile_type))
 
-    Dropfile(dropfile_type, node).save(dropfile_path)
+    _dropfile_type = getattr(Dropfile, dropfile_type)
+    Dropfile(_dropfile_type, node).save(dropfile_path)
 
 
 def main(name):
