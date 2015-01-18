@@ -35,6 +35,11 @@ http://en.wikipedia.org/wiki/Color_Graphics_Adapter#Color_palette
   - Or other utf-8 rxvt and xterm variants: urxvt, dtterm.
     Recommended font is **Deja Vu Sans Mono**.
 
+- Amtelnet (Amiga workbench)
+
+- Enable the tool type NOSCROLLER in the Amtelnet icon file in order to disable
+  the scrollbar and enter full screen width.
+
 - Non-unicode Terminals
 
   - Other than UTF-8, only IBM CP437 encoding is supported. Any telnet client
