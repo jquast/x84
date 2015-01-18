@@ -37,8 +37,8 @@ http://en.wikipedia.org/wiki/Color_Graphics_Adapter#Color_palette
 
 - Amtelnet (Amiga workbench)
 
-- Enable the tool type NOSCROLLER in the Amtelnet icon file in order to disable
-  the scrollbar and enter full screen width.
+  - Enable the tool type NOSCROLLER in the Amtelnet icon file in order to disable
+    the scrollbar and enter full screen width.
 
 - Non-unicode Terminals
 
