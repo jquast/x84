@@ -515,7 +515,7 @@ class Session(object):
                     # an opportunity to adjust to the new terminal dimensions
                     # if the script that was event-driven as gosub had already
                     # acquired and reacted to any refresh-resize events.
-                    data = ('resize', n_height, n_width)
+                    data = ('resize', (n_height, n_width))
                     self.buffer_event('refresh', data)
                 # otherwise its fine to not require the calling function to
                 # refresh -- so long as the target script makes sure(!) to
