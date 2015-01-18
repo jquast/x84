@@ -1,25 +1,28 @@
 """ common interface module for x/84, https://github.com/jquast/x84 """
+# std imports
 from __future__ import division
 import os
 
+# local
 from x84.bbs import echo, showart
 from x84.bbs import getterminal, LineEditor
 
 
 def waitprompt():
-    # Displays a simple "press enter to continue prompt". Very handy!
-    from x84.bbs import echo, getch, getterminal
+    """ Display simple "press enter to continue prompt". """
     term = getterminal()
-
-    echo(term.normal + '\n\r' + term.magenta + '(' + term.green + '..' + term.white +
-         ' press any key to continue ' + term.green + '..' + term.magenta + ')')
-    getch()
-    echo(term.normal_cursor)
+    echo(u''.join((
+        term.normal, '\r\n',
+        term.magenta('('), term.green('..'),
+        'press any key to continue', term.green('..'), term.magenta(')')
+    )))
+    term.inkey()
     return
 
 
 def display_banner(filepattern, encoding=None, vertical_padding=0):
-    """ Start new screen and show artwork, centered.
+    """
+    Start new screen and show artwork, centered.
 
     :param str filepattern: file to display
     :param str encoding: encoding of art file(s).
@@ -125,7 +128,6 @@ def prompt_input(term, key, content=u'', sep_ok=u'::',
                  width=None, colors=None):
     """ Prompt for and return input, up to given width and colorscheme.
     """
-    from x84.bbs import getterminal
     term = getterminal()
     colors = colors or {
         'highlight': term.yellow,
@@ -169,20 +171,14 @@ def show_description(description, color='white', width=80):
 
 def filesize(filename):
     """ display a file's size in human-readable format """
-
-    from os import stat
-    stat = stat(filename)
-    filesize = None
-    # file is > 400 megabytes; display in gigabytes
-    if stat.st_size > 1024000 * 400:
-        filesize = '%.2fG' % (stat.st_size / 1024000000)
-    # file is > 400 kilobytes; display in megabytes
-    if stat.st_size > 1024 * 400:
-        filesize = '%.2fM' % (stat.st_size / 1024000)
-    # file is at least 1 kilobyte; display in kilobytes
-    elif stat.st_size >= 1024:
-        filesize = '%.2fK' % (stat.st_size / 1024)
-    # display in bytes
-    else:
-        filesize = '%dB' % stat.st_size
-    return filesize
+    size = float(os.stat(filename).st_size)
+    for scale in u'BKMGT':
+        if size < 1000 or scale == u'T':
+            if scale in u'BK':
+                # no precision for bytees or kilobytes
+                return (u'{size:d}{scale}'
+                        .format(size=int(size), scale=scale))
+            # 2-decimal precision
+            return (u'{size:0.2f}{scale}'
+                    .format(size=size, scale=scale))
+        size /= 1024
