@@ -213,86 +213,87 @@ class Dropfile(object):
 
     def _get_doorsys(self):
         """ Return door.sys-formatted dropfile content. """
-        return (u'{s.comport}:\r\n'
-                u'{s.comspeed}\r\n'
-                u'{s.parity}\r\n'
-                u'{s.node}\r\n'
-                u'{s.comspeed}\r\n'
-                u'Y\r\n'                  # screen?
-                u'Y\r\n'                  # printer?
-                u'Y\r\n'                  # pager alarm?
-                u'Y\r\n'                  # caller alartm?
-                u'{s.fullname}\r\n'
-                u'{s.location}\r\n'
-                u'123-456-7890\r\n'       # phone number1
-                u'123-456-7890\r\n'       # phone number2
-                u'{s.password}\r\n'
-                u'{s.securitylevel}\r\n'
-                u'{s.numcalls}\r\n'
-                u'{s.lastcall_date}\r\n'
-                u'{s.remaining_secs}\r\n'
-                u'{s.remaining_mins}\r\n'
-                u'GR\r\n'                 # graphics mode
-                u'{s.pageheight}\r\n'
-                u'N\r\n'                  # expert mode?
-                u'1,2,3,4,5,6,7\r\n'      # conferences
-                u'1\r\n'                  # conf. sel, exp. date
-                u'01/01/99\r\n'           # exp. date
-                u'{s.usernum}\r\n'
-                u'{s.xferprotocol}\r\n'
-                u'0\r\n'                  # total num. uploads
-                u'0\r\n'                  # total num, downloads
-                u'0\r\n'                  # daily d/l limit
-                u'9999999\r\n'            # return val/write val
-                u'01/01/2001\r\n'         # birthdate
-                u'C:\\XXX\r\n'            # filepaths to bbs files ...
-                u'C:\\XXX\r\n'            # filepaths to bbs files ...
-                u'{s.sysopname}\r\n'      # sysop's name
-                u'{s.alias}\r\n'          # user's alias
-                u'00:05\r\n'              # event time(?)
-                u'Y\r\n'                  # error-correcting connection
-                u'Y\r\n'                  # is ANSI in NG mode?
-                u'Y\r\n'                  # use record locking?
-                u'7\r\n'                  # default color ..
-                u'{s.remaining_mins}\r\n'
-                u'09/09/99\r\n'           # last new file scan,
-                u'{s.lastcall_time}\r\n'  # time of this call
-                u'{s.lastcall_time}\r\n'  # time of last call
-                u'9999\r\n'               # max daily files
-                u'0\r\n'                  # num. files today
-                u'0\r\n'                  # u/l Kb today
-                u'0\r\n'                  # d/l Kb today
-                u'None\r\n'               # user comment
-                u'0\r\n'                  # doors opened
-                u'0\n'                    # msgs left
+        return (u'{self.comport}:\r\n'
+                u'{self.comspeed}\r\n'
+                u'{self.parity}\r\n'
+                u'{self.node}\r\n'
+                u'{self.comspeed}\r\n'
+                u'Y\r\n'                     # screen?
+                u'Y\r\n'                     # printer?
+                u'Y\r\n'                     # pager alarm?
+                u'Y\r\n'                     # caller alartm?
+                u'{self.fullname}\r\n'
+                u'{self.location}\r\n'
+                u'123-456-7890\r\n'          # phone number1
+                u'123-456-7890\r\n'          # phone number2
+                u'{self.password}\r\n'
+                u'{self.securitylevel}\r\n'
+                u'{self.numcalls}\r\n'
+                u'{self.lastcall_date}\r\n'
+                u'{self.remaining_secs}\r\n'
+                u'{self.remaining_mins}\r\n'
+                u'GR\r\n'                    # graphics mode
+                u'{self.pageheight}\r\n'
+                u'N\r\n'                     # expert mode?
+                u'1,2,3,4,5,6,7\r\n'         # conferences
+                u'1\r\n'                     # conf. sel, exp. date
+                u'01/01/99\r\n'              # exp. date
+                u'{self.usernum}\r\n'
+                u'{self.xferprotocol}\r\n'
+                u'0\r\n'                     # total num. uploads
+                u'0\r\n'                     # total num, downloads
+                u'0\r\n'                     # daily d/l limit
+                u'9999999\r\n'               # return val/write val
+                u'01/01/2001\r\n'            # birthdate
+                # TODO
+                u'C:\\XXX\r\n'               # filepaths to bbs files ...
+                u'C:\\XXX\r\n'               # filepaths to bbs files ...
+                u'{self.sysopname}\r\n'      # sysop's name
+                u'{self.alias}\r\n'          # user's alias
+                u'00:05\r\n'                 # event time(?)
+                u'Y\r\n'                     # error-correcting connection
+                u'Y\r\n'                     # is ANSI in NG mode?
+                u'Y\r\n'                     # use record locking?
+                u'7\r\n'                     # default color ..
+                u'{self.remaining_mins}\r\n'
+                u'09/09/99\r\n'              # last new file scan,
+                u'{self.lastcall_time}\r\n'  # time of this call
+                u'{self.lastcall_time}\r\n'  # time of last call
+                u'9999\r\n'                  # max daily files
+                u'0\r\n'                     # num. files today
+                u'0\r\n'                     # u/l Kb today
+                u'0\r\n'                     # d/l Kb today
+                u'None\r\n'                  # user comment
+                u'0\r\n'                     # doors opened
+                u'0\n'                       # msgs left
                 .format(s=self))
 
     def _get_door32(self):
         """ Return door32.sys-formatted dropfile content. """
-        return (u'{s.comtype}\r\n'
-                u'{s.comhandle}\r\n'
-                u'{s.comspeed}\r\n'
-                u'{s.systemname}\r\n'
-                u'{s.usernum}\r\n'
-                u'{s.fullname}\r\n'
-                u'{s.alias}\r\n'
-                u'{s.securitylevel}\r\n'
-                u'{s.remaining_mins}\r\n'
+        return (u'{self.comtype}\r\n'
+                u'{self.comhandle}\r\n'
+                u'{self.comspeed}\r\n'
+                u'{self.systemname}\r\n'
+                u'{self.usernum}\r\n'
+                u'{self.fullname}\r\n'
+                u'{self.alias}\r\n'
+                u'{self.securitylevel}\r\n'
+                u'{self.remaining_mins}\r\n'
                 u'1\r\n'                  # emulation (1=ansi)
-                u'{s.node}\n'
+                u'{self.node}\n'
                 .format(s=self))
 
     def _get_callinfo(self):
         """ Return callinfo.BBS-formatted dropfile content. """
-        return (u'{s.alias}\r\n'
-                u'{s.comspeed}\r\n'
-                u'{s.location}\r\n'
-                u'{s.securitylevel}\r\n'
-                u'{s.remaining_mins}\r\n'
+        return (u'{self.alias}\r\n'
+                u'{self.comspeed}\r\n'
+                u'{self.location}\r\n'
+                u'{self.securitylevel}\r\n'
+                u'{self.remaining_mins}\r\n'
                 u'COLOR\r\n'              # COLOR=ansi
-                u'{s.password}\r\n'
-                u'{s.usernum}\r\n'
-                u'{s.time_used}\r\n'
+                u'{self.password}\r\n'
+                u'{self.usernum}\r\n'
+                u'{self.time_used}\r\n'
                 u'01:23\r\n'              # 1
                 u'01:23 01/02/90\r\n'     # ..
                 u'ABCDEFGH\r\n'           # ..
@@ -303,17 +304,17 @@ class Dropfile(object):
                 u'123-456-7890\r\n'       # phone number
                 u'01/01/90 02:34\r\n'     # unknown date/time
                 u'NOVICE\r\n'             # expert mode (off)
-                u'{s.xferprotocol}\r\n'
+                u'{self.xferprotocol}\r\n'
                 u'01/01/90\r\n'           # unknown date
-                u'{s.numcalls}\r\n'
-                u'{s.pageheight}\r\n'
+                u'{self.numcalls}\r\n'
+                u'{self.pageheight}\r\n'
                 u'0\r\n'                  # ptr to new msgs?
                 u'0\r\n'                  # total u/l
                 u'0\r\n'                  # total d/l
-                u'{s.parity}\r\n'         # ?? like 8,N,1 ??
+                u'{self.parity}\r\n'      # ?? like 8,N,1 ??
                 u'REMOTE\r\n'             # local or remote?
-                u'{s.comport}\r\n'
-                u'{s.comspeed}\r\n'
+                u'{self.comport}\r\n'
+                u'{self.comspeed}\r\n'
                 u'FALSE\r\n'              # unknown,
                 u'Normal Connection\r\n'  # unknown,
                 u'01/02/94 01:20\r\n'     # unknown date/time
@@ -323,18 +324,18 @@ class Dropfile(object):
 
     def _get_dorinfo(self):
         """ Return DORINFO.DEF-formatted dropfile content. """
-        return (u'{s.systemname}\r\n'
-                u'{s.sysopname}\r\n'     # sysop f.name
-                u'{s.sysopname}\r\n'     # sysop l.name
-                u'{s.comport}\r\n'
-                u'{s.comspeed}\r\n'
-                u'0\r\n'                 # "networked"?
-                u'{s.alias}\r\n'         # user f.name
-                u'{s.alias}\r\n'         # user l.name
-                u'{s.location}\r\n'
-                u'1\r\n'                 # term (1=ansi)
-                u'{s.securitylevel}\r\n'
-                u'{s.remaining_mins}\r\n'
+        return (u'{self.systemname}\r\n'
+                u'{self.sysopname}\r\n'   # sysop f.name
+                u'{self.sysopname}\r\n'   # sysop l.name
+                u'{self.comport}\r\n'
+                u'{self.comspeed}\r\n'
+                u'0\r\n'                  # "networked"?
+                u'{self.alias}\r\n'       # user f.name
+                u'{self.alias}\r\n'       # user l.name
+                u'{self.location}\r\n'
+                u'1\r\n'                  # term (1=ansi)
+                u'{self.securitylevel}\r\n'
+                u'{self.remaining_mins}\r\n'
                 u'-1\n'                   # fossil (-1=external)
                 .format(s=self))
 
@@ -351,7 +352,7 @@ class Door(object):
     #        Too few public methods
     #        Too many arguments
 
-    def __init__(self, cmd='/bin/uname', args=(), cp437=False, env=None):
+    def __init__(self, cmd='/bin/uname', args=(), env=None, cp437=False):
         """
         Class initializer.
 
@@ -373,7 +374,17 @@ class Door(object):
         else:
             raise ValueError('args must be tuple or list')
 
-        self.log = logging.getLogger()
+        self.log = logging.getLogger(__name__)
+        self.env = (env or {}).copy()
+        self.env.update(
+            {'LANG': env.get('LANG', 'en_US.UTF-8'),
+             'TERM': env.get('TERM', self._term.kind),
+             'PATH': env.get('PATH', get_ini('door', 'path')),
+             'HOME': env.get('HOME', os.getenv('HOME')),
+             'LINES': str(self._term.height),
+             'COLUMNS': str(self._term.width),
+             })
+
         self.cp437 = cp437
         self._utf8_decoder = codecs.getincrementaldecoder('utf8')()
 
@@ -392,15 +403,6 @@ class Door(object):
         except ImportError as err:
             raise OSError('door support not (yet) supported on {0} platform.'
                           .format(sys.platform.lower()))
-
-        env = self.env.copy()
-        env.update({'LANG': env.get('LANG', 'en_US.UTF-8'),
-                    'TERM': env.get('TERM', self._term.kind),
-                    'PATH': env.get('PATH', get_ini('door', 'path')),
-                    'HOME': env.get('HOME', os.getenv('HOME')),
-                    'LINES': str(self._term.height),
-                    'COLUMNS': str(self._term.width),
-                    })
 
         # pylint: disable=W1202
         #         Use % formatting in logging functions ...
@@ -426,7 +428,7 @@ class Door(object):
             fcntl.ioctl(sys.stdout.fileno(), termios.TIOCSWINSZ, _bytes)
 
             try:
-                os.execvpe(self.cmd, self.args, env)
+                os.execvpe(self.cmd, self.args, self.env)
 
             except OSError as err:
                 # we cannot log an exception, only print to stderr and have
@@ -446,7 +448,7 @@ class Door(object):
         #
         # execute self._loop() and catch all i/o and o/s errors
         try:
-            self.log.info('exec/%s: %s', pid, ' '.join(self.args))
+            self.log.info('exec/%s: %r', pid, self.args)
             self._loop()
 
         except IOError as err:
@@ -586,33 +588,20 @@ class DOSDoor(Door):
     # pylint: disable=R0913
     #         Too many arguments
 
-    def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
-                 env_term=None, env_path=None, env_home=None, cp437=True):
+    def __init__(self, cmd='/bin/uname', args=(), env=None, cp437=True):
         """
         Class initializer.
 
         :param str cmd: full path of command to execute.
         :param tuple args: command arguments as tuple.
-        :param str env_lang: exported as environment variable ``LANG``.
-        :param str env_term: exported as environment variable ``TERM``.  When
-                             unspecified, it is determined by the same
-                             TERM value the original ``blessed.Terminal``
-                             instance is used.
-        :param str env_path: exported as environment variable ``PATH``.
-                             When None (default), the .ini ``env_path``
-                             value of section ``[door]`` is
-        :param str env_home: exported as environment variable ``HOME``.
-                             When env_home is ``None``, the environment
-                             value of the main process is used.
         :param bool cp437: When true, forces decoding of external program as
                            codepage 437.  This is the most common encoding used
                            by DOS doors.
-        :param dict env: Additional environment variables to extend to the
-                         sub-process.
+        :param dict env: Environment variables to extend to the sub-process.
+                         You should more than likely specify values for TERM,
+                         PATH, HOME, and LANG.
         """
-        Door.__init__(self, cmd, args, env_lang, env_term,
-                      env_path, env_home, cp437)
-        self._stime = time.time()
+        Door.__init__(self, cmd=cmd, args=args, env=env, cp437=cp437)
         self._re_trim_clear = re.compile(self.RE_REPWITH_CLEAR,
                                          flags=re.DOTALL)
         self._re_trim_none = re.compile(self.RE_REPWITH_NONE,
@@ -652,6 +641,8 @@ class DOSDoor(Door):
         on input, and later as an invalid menu command.
         """
         echo(u'\r\n' * self._term.height)
+
+        self._stime = time.time()
 
         Door.run(self)
 

@@ -14,11 +14,13 @@ def prompt_resize_term(session, term, name):
     want_rows = get_ini('sesame', '{0}_rows'.format(name))
 
     if want_cols and want_rows:
-        resize_msg = (u'Please resize your window to {0} x {0} '
-                      u'(or press return).'.format(want_cols, want_rows))
-
         while not (term.width == want_cols and
                    term.height == want_rows):
+            resize_msg = (u'Please resize your window to {0} x {1} '
+                          u'current size is {term.width} x {term.height} '
+                          u'(or press return).'.format(
+                              want_cols, want_rows, term=term))
+            echo(term.normal + term.home + term.clear_eos)
             pager = Pager(yloc=0, xloc=0, width=term.width, height=term.height,
                           content=resize_msg, glyphs={'erase': u'.'},
                           colors={'border': term.bold_red})
@@ -29,11 +31,13 @@ def prompt_resize_term(session, term, name):
                 continue
             if event == 'input':
                 session.buffer_input(data, pushback=True)
-                if term.inkey(0) == term.KEY_ENTER:
+                if term.inkey(0).code == term.KEY_ENTER:
                     break
+        echo(term.normal + term.home + term.clear_eos)
 
 
 def restore_screen(term, cols, rows):
+    print((term._columns, term._rows, cols, rows))
     term._columns, term._rows = cols, rows
 
 
@@ -122,7 +126,8 @@ def main(name):
         echo(syncterm_setfont(syncterm_font))
         echo(term.move_x(0) + term.clear_eol)
 
-    store_cols, store_rows = term._cols, term._rows
+    store_columns, store_rows = term._columns, term._rows
+
     prompt_resize_term(session, term, name)
 
     with acquire_node(session, name) as node:
@@ -132,17 +137,17 @@ def main(name):
                                'of nodes and may not be played.\r\n\r\n'
                                'press any key.'))
             term.inkey()
-            restore_screen(term, store_cols, store_rows)
+            restore_screen(term, store_columns, store_rows)
             return
 
         do_dropfile(name, node)
 
         with term.fullscreen():
             session.activity = u'Playing {}'.format(name)
-            command, args = parse_command_args(session, name, node)
+            cmd, args = parse_command_args(session, name, node)
             env = get_env(session, name)
 
-            _Door = DOSDoor if command.endswith('dosemu') else Door
-            _Door(command=command, args=args, env=env).run()
+            _Door = DOSDoor if cmd.endswith('dosemu') else Door
+            _Door(cmd=cmd, args=args, env=env).run()
 
-    restore_screen(term, store_cols, store_rows)
+    restore_screen(term, store_columns, store_rows)

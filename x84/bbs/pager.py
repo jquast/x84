@@ -30,13 +30,10 @@ class Pager(AnsiWindow):
         Initialize a pager of height, width, y, and x position.
         """
         self._quit = False
-
         self.init_keystrokes(keyset=kwargs.pop('keyset', VI_KEYSET.copy()))
-
-        self.content = kwargs.pop('content', u'') or u''
-
+        _content = kwargs.pop('content', u'') or u''
         AnsiWindow.__init__(self, *args, **kwargs)
-
+        self.content = _content
         self._position = self.position = kwargs.pop('position', 0) or 0
 
     def init_keystrokes(self, keyset):
