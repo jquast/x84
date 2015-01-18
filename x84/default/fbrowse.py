@@ -418,7 +418,7 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
             echo(lightbar.refresh())
 
         elif inp in (u'd',) and len(browser.flagged_files):
-            download_files(term, session, browser)
+            download_files(term, session)
             reload_dir(session, directory, lightbar, sub)
             draw_interface(term, lightbar)
 
