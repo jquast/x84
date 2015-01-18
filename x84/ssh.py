@@ -384,7 +384,7 @@ class SshSessionServer(paramiko.ServerInterface):
                 self.sftp = True
                 # XXX not returning True ?!
 
-        return (paramiko.ServerInterface.
+        return (super(SshSessionServer, self).
                 check_channel_subsystem_request(channel, name))
 
     def check_channel_pty_request(self, channel, term, width, height, *_):
