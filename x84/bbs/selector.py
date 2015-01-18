@@ -39,12 +39,6 @@ class Selector(AnsiWindow):
         :param str left: text string of left-side selection.
         :param str right: text string of right-side selection.
         """
-
-        """
-        Set screen position of Selector UI and display width of both. The
-        highlighted selection is displayed using the self.highlight attribute,
-        in order (left, right). The default selection is left.
-        """
         self._left = self._selection = left
         self._right = right
         self._moved = False

@@ -204,8 +204,7 @@ def do_chat(session, term, other_sid, dial=None, call_from=None):
                 dirty = True
                 continue
             assert not (dialing or answering), (dialing, answering, data)
-            bot_editors, bot_idx = recv_input(
-                term, editors=bot_editors, edit_idx=bot_idx, inp=data[0])
+            bot_editors, bot_idx = recv_input(bot_editors, bot_idx, data[0])
 
 
 def display_dialing(term, pos, who):
@@ -241,7 +240,7 @@ def clear_editor(editor):
     echo(editor.refresh())
 
 
-def recv_input(term, editors, edit_idx, inp):
+def recv_input(editors, edit_idx, inp):
     nextline = False
     editor = editors[edit_idx]
 
@@ -287,8 +286,7 @@ def do_input(term, session, editors, edit_idx, other_sid):
         if inp.is_sequence and inp.code == term.KEY_ESCAPE:
             # escape was pressed, exit
             return (None, None)
-        editors, edit_idx = recv_input(
-            term, editors=editors, edit_idx=edit_idx, inp=inp)
+        editors, edit_idx = recv_input(editors, edit_idx, inp)
 
         route_data = (other_sid, 'chat') + (inp,)
         session.send_event('route', route_data)

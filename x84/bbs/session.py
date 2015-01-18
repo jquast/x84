@@ -65,7 +65,6 @@ def getch(timeout=None):
 
 def gosub(script, *args, **kwargs):
     """ Call bbs script with optional arguments, Returns value. """
-    from x84.bbs.session import Script
     script = Script(name=script, args=args, kwargs=kwargs)
     return getsession().runscript(script)
 

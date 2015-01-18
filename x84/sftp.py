@@ -36,7 +36,7 @@ class X84SFTPHandle(SFTPHandle):
         """ Constructor """
         self.log = logging.getLogger(__name__)
         self.user = kwargs.pop('user')
-        SFTPHandle.__init__(*args, **kwargs)
+        SFTPHandle.__init__(self, *args, **kwargs)
 
     def stat(self):
         """ Stat the file descriptor. """
@@ -85,7 +85,7 @@ class X84SFTPServer(SFTPServerInterface):
                      else get_user(_ssh_session.username))
         self.flagged = set()
 
-        super(X84SFTPServer, self).__init__(*args, **kwargs)
+        SFTPServerInterface.__init__(self, *args, **kwargs)
 
     def _dummy_dir_stat(self):
         """ Stat on our dummy __flagged__ directory. """

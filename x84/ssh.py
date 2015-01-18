@@ -382,10 +382,9 @@ class SshSessionServer(paramiko.ServerInterface):
                 self.client.kind = 'sftp'
                 self.sftp_requested.set()
                 self.sftp = True
-                # XXX not returning True ?!
 
-        return (super(SshSessionServer, self).
-                check_channel_subsystem_request(channel, name))
+        return paramiko.ServerInterface.check_channel_subsystem_request(
+            self, channel, name)
 
     def check_channel_pty_request(self, channel, term, width, height, *_):
         self.client.env['TERM'] = term
