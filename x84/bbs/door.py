@@ -653,4 +653,3 @@ class DOSDoor(Door):
         # and any unprocessed input from telnet session not yet processed.
         self._term.kbflush()
         self._session.flush_event('input')
-
