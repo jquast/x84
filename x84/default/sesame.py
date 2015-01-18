@@ -26,9 +26,9 @@ def prompt_resize_term(session, term, name):
 
             echo(pager.refresh() + pager.border())
 
-            width = max(70, term.width - 4)
+            width = min(70, term.width - 5)
             for yoff, line in enumerate(term.wrap(resize_msg, width)):
-                echo(u''.join((term.move(yoff + 1, 2), line.rstrip())))
+                echo(u''.join((term.move(yoff + 1, 5), line.rstrip())))
 
             event, data = session.read_events(('input', 'refresh'))
             if event == 'refresh':
