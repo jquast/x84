@@ -36,8 +36,10 @@ Description of sesame configuration options:
 
 - ``{name}_droptype``: Any of DOORSYS, DOOR32, CALLINFOBBS, or DORINFO. This value
   is only honored if the command path is targets a binary named ``dosemu``.
+  The default value is DOORSYS if unspecified.
 
-- ``{name}_droppath``: The linux-local folder where the dropfile is saved.
+- ``{name}_droppath``: The linux-local folder where the dropfile is saved.  The
+  dropfile will only be saved when this parameter is set..
 
 - ``{name}_nodes``: The number of nodes this door supports.
 
