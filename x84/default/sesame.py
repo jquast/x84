@@ -10,10 +10,10 @@ from x84.bbs import Door, DOSDoor, get_ini, syncterm_setfont
 
 
 def prompt_resize_term(session, term, name):
-    want_cols = get_ini('sesame', '{0}_cols'.format(name))
-    want_rows = get_ini('sesame', '{0}_rows'.format(name))
+    want_cols = get_ini('sesame', '{0}_cols'.format(name), getter='getint')
+    want_rows = get_ini('sesame', '{0}_rows'.format(name), getter='getint')
 
-    if want_cols and want_rows:
+    if want_cols and want_rows and not term.kind.startswith('ansi'):
         while not (term.width == want_cols and
                    term.height == want_rows):
             resize_msg = (u'Please resize your window to {0} x {1} '
@@ -21,19 +21,25 @@ def prompt_resize_term(session, term, name):
                           u'(or press return).'.format(
                               want_cols, want_rows, term=term))
             echo(term.normal + term.home + term.clear_eos + term.home)
-            pager = Pager(yloc=0, xloc=0, width=term.width, height=term.height,
-                          content=resize_msg, glyphs={'erase': u'.'},
+            pager = Pager(yloc=0, xloc=0, width=want_cols, height=want_rows,
                           colors={'border': term.bold_red})
+
             echo(pager.refresh() + pager.border())
+
+            width = max(70, term.width - 4)
+            for yoff, line in enumerate(term.wrap(resize_msg, width)):
+                echo(u''.join((term.move(yoff + 1, 2), line.rstrip())))
 
             event, data = session.read_events(('input', 'refresh'))
             if event == 'refresh':
                 continue
+
             if event == 'input':
                 session.buffer_input(data, pushback=True)
                 if term.inkey(0).code == term.KEY_ENTER:
                     break
-        echo(term.normal + term.home + term.clear_eos + term.home)
+
+        echo(term.normal + term.home + term.clear_eos)
 
 
 def restore_screen(term, cols, rows):
@@ -98,7 +104,7 @@ def get_env(session, name):
 def do_dropfile(name, node):
     dropfile_path = get_ini('sesame', '{0}_droppath'.format(name))
     dropfile_type = get_ini('sesame', '{0}_droptype'.format(name)
-                            ) or 'door.sys'
+                            ) or 'doorsys'
     if not dropfile_path:
         return
 
