@@ -128,7 +128,6 @@ def main(name):
         echo(term.move_x(0) + term.clear_eol)
 
     store_columns, store_rows = term._columns, term._rows
-
     prompt_resize_term(session, term, name)
 
     with acquire_node(session, name) as node:
@@ -147,8 +146,10 @@ def main(name):
             session.activity = u'Playing {}'.format(name)
             cmd, args = parse_command_args(session, name, node)
             env = get_env(session, name)
+            cp437 = get_ini('sesame', '{0}_cp437'.format(name),
+                            getter='getboolean')
 
             _Door = DOSDoor if cmd.endswith('dosemu') else Door
-            _Door(cmd=cmd, args=args, env=env).run()
+            _Door(cmd=cmd, args=args, env=env, cp437=cp437).run()
 
     restore_screen(term, store_columns, store_rows)
