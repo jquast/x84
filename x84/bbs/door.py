@@ -34,14 +34,15 @@ class Dropfile(object):
 
     > the 1990s on, most BBS software had the capability to "drop to" doors.
     > Several standards were developed for passing connection and user
-    > information to doors; this was usually done with "dropfiles", small binary
-    > or text files dropped into known locations in the BBS's file system.
+    > information to doors; this was usually done with "dropfiles", small
+    > binary or text files dropped into known locations in the BBS's file
+    > system.
     """
 
     #: Dropfile type constants
     (DOORSYS, DOOR32, CALLINFOBBS, DORINFO) = range(4)
 
-    def __init__(self, filetype=None):
+    def __init__(self, filetype=None, node=None):
         """
         Class initializer.
 
@@ -49,9 +50,8 @@ class Dropfile(object):
                              ``Dropfile.DOOR32``, ``Dropfile.CALLINFOBBS``,
                              or ``Dropfile.DORINFO``.
         """
-        assert filetype in (self.DOORSYS, self.DOOR32,
-                            self.CALLINFOBBS, self.DORINFO)
-        self.filetype = filetype
+        self._filetype = filetype
+        self._node = node
 
     def save(self, folder):
         """ Save dropfile to destination ``folder`` """
@@ -62,7 +62,7 @@ class Dropfile(object):
     @property
     def node(self):
         """ User's node number. """
-        return getsession().node
+        return self._node or getsession().node
 
     @property
     def location(self):
@@ -179,13 +179,13 @@ class Dropfile(object):
     @property
     def filename(self):
         """ Filename of given dropfile. """
-        if self.filetype == self.DOORSYS:
+        if self._filetype == self.DOORSYS:
             return 'DOOR.SYS'
-        elif self.filetype == self.DOOR32:
+        elif self._filetype == self.DOOR32:
             return 'DOOR32.SYS'
-        elif self.filetype == self.CALLINFOBBS:
+        elif self._filetype == self.CALLINFOBBS:
             return 'CALLINFO.BBS'
-        elif self.filetype == self.DORINFO:
+        elif self._filetype == self.DORINFO:
             # n in DORINFOn.DEF is 1-9,0,a-z
             if self.node == 10:
                 nodeid = '0'
@@ -205,9 +205,9 @@ class Dropfile(object):
             self.DOOR32: self._get_door32,
             self.CALLINFOBBS: self._get_callinfo,
             self.DORINFO: self._get_dorinfo,
-        }.get(self.filetype, None)
+        }.get(self._filetype, None)
         if method is None:
-            raise ValueError('unknown dropfile filetype: {self.filetype}'
+            raise ValueError('unknown dropfile filetype: {self._filetype}'
                              .format(self=self))
         return method()
 
@@ -351,30 +351,18 @@ class Door(object):
     #        Too few public methods
     #        Too many arguments
 
-    def __init__(self, cmd='/bin/uname', args=(), env_lang='en_US.UTF-8',
-                 env_term=None, env_path=None, env_home=None, cp437=False,
-                 env=None):
+    def __init__(self, cmd='/bin/uname', args=(), cp437=False, env=None):
         """
         Class initializer.
 
         :param str cmd: full path of command to execute.
         :param tuple args: command arguments as tuple.
-        :param str env_lang: exported as environment variable ``LANG``.
-        :param str env_term: exported as environment variable ``TERM``.  When
-                             unspecified, it is determined by the same
-                             TERM value the original ``blessed.Terminal``
-                             instance is used.
-        :param str env_path: exported as environment variable ``PATH``.
-                             When None (default), the .ini ``env_path``
-                             value of section ``[door]`` is
-        :param str env_home: exported as environment variable ``HOME``.
-                             When env_home is ``None``, the environment
-                             value of the main process is used.
         :param bool cp437: When true, forces decoding of external program as
                            codepage 437.  This is the most common encoding used
                            by DOS doors.
-        :param dict env: Additional environment variables to extend to the
-                         sub-process.
+        :param dict env: Environment variables to extend to the sub-process.
+                         You should more than likely specify values for TERM,
+                         PATH, HOME, and LANG.
         """
         self._session, self._term = getsession(), getterminal()
         self.cmd = cmd
@@ -384,11 +372,8 @@ class Door(object):
             self.args = [self.cmd, ] + args
         else:
             raise ValueError('args must be tuple or list')
-        self.env_lang = env_lang
-        self.env_term = env_term or self._term.kind
-        self.env_path = env_path or get_ini('door', 'path')
-        self.env_home = env_home or os.getenv('HOME')
-        self.env = env or {}
+
+        self.log = logging.getLogger()
         self.cp437 = cp437
         self._utf8_decoder = codecs.getincrementaldecoder('utf8')()
 
@@ -408,48 +393,51 @@ class Door(object):
             raise OSError('door support not (yet) supported on {0} platform.'
                           .format(sys.platform.lower()))
 
-        logger = logging.getLogger()
         env = self.env.copy()
-        env.update({'LANG': self.env_lang,
-                    'TERM': self.env_term,
-                    'PATH': self.env_path,
-                    'HOME': self.env_home,
+        env.update({'LANG': env.get('LANG', 'en_US.UTF-8'),
+                    'TERM': env.get('TERM', self._term.kind),
+                    'PATH': env.get('PATH', get_ini('door', 'path')),
+                    'HOME': env.get('HOME', os.getenv('HOME')),
                     'LINES': str(self._term.height),
                     'COLUMNS': str(self._term.width),
                     })
+
         # pylint: disable=W1202
         #         Use % formatting in logging functions ...
-        logger.debug('os.execvpe(cmd={self.cmd}, args={self.args}, '
-                     'env={self.env}'.format(self=self))
+        self.log.debug('os.execvpe(cmd={self.cmd}, args={self.args}, '
+                       'env={self.env})'.format(self=self))
         try:
-            # on Solaris we would need to use something like I've done
-            # in pexpect project, a custom pty fork implementation.
             pid, self.master_fd = pty.fork()
         except OSError as err:
             # too many open files, out of memory, no such file/directory
-            logger.error('OSError in pty.fork(): %s', err)
+            self.log.error('OSError in pty.fork(): %s', err)
             return
 
         # child process
         if pid == pty.CHILD:
             sys.stdout.flush()
+
             # send initial screen size
-            _bytes = struct.pack('HHHH',
-                                 self._term.height,
-                                 self._term.width,
-                                 0, 0)
+            _bytes = struct.pack(
+                'HHHH', self._term.height, self._term.width, 0, 0)
+
             # pylint: disable=E1101
             #         Instance of 'DummyStream' has no 'fileno' member
             fcntl.ioctl(sys.stdout.fileno(), termios.TIOCSWINSZ, _bytes)
-            # we cannot log an exception, only print to stderr and have
-            # it captured by the parent process; this is because our 'logger'
-            # instance is dangerously forked, and any attempt to communicate
-            # with multiprocessing pipes, loggers, etc. will cause the value
-            # and state of many various file descriptors to become corrupted
+
             try:
                 os.execvpe(self.cmd, self.args, env)
+
             except OSError as err:
+                # we cannot log an exception, only print to stderr and have
+                # it captured by the parent process; this is because our
+                # 'log' instance is dangerously forked, and any attempt to
+                # communicate with multiprocessing pipes, loggers, etc. will
+                # cause the value and state of many various file descriptors
+                # to become corrupted, as our file descriptors are shared.
+
                 sys.stderr.write('%s\n' % (err,))
+
             # pylint: disable=W0212
             #         Access to a protected member _exit of a client class
             os._exit(1)
@@ -458,21 +446,24 @@ class Door(object):
         #
         # execute self._loop() and catch all i/o and o/s errors
         try:
-            logger.info('exec/%s: %s', pid, ' '.join(self.args))
+            self.log.info('exec/%s: %s', pid, ' '.join(self.args))
             self._loop()
+
         except IOError as err:
-            logger.error('IOError: %s', err)
+            self.log.error('IOError: %s', err)
+
         except OSError as err:
-            # match occurs on read() after child closed sys.stdout. (ok)
-            if 'Errno 5' not in str(err):
-                # otherwise log as an error,
-                logger.error('OSError: %s', err)
+            # errno 5 is OK: it occurs when a read() call occurs after
+            # sys.stdout has been closed by the child.
+            if err.errno != 5:
+                self.log.error('OSError: %s', err)
+
         (pid, status) = os.waitpid(pid, 0)
         res = status >> 8
-        if res != 0:
-            logger.error('%s child %s exit %d', self.cmd, pid, res)
-        else:
-            logger.debug('%s exit', self.cmd)
+
+        log_func = self.log.error if res != 0 else self.log.debug
+        log_func('%s child %s exit %d', self.cmd, pid, res)
+
         os.close(self.master_fd)
         return res
 
@@ -510,9 +501,8 @@ class Door(object):
         """ Signal resize of terminal to pty. """
         import termios
         import fcntl
-        logger = logging.getLogger()
-        logger.debug('send TIOCSWINSZ: %dx%d',
-                     self._term.width, self._term.height)
+        self.log.debug('send TIOCSWINSZ: %dx%d',
+                       self._term.width, self._term.height)
         _bytes = struct.pack('HHHH',
                              self._term.height,
                              self._term.width,
@@ -521,14 +511,13 @@ class Door(object):
 
     def _loop(self):
         """ Main event loop, polling i/o of pty and session. """
-        # pylint: disable=R0914
-        #         Too many local variables (21/15)
-        logger = logging.getLogger()
         while True:
             # block up to self.time_opoll for screen output
             if self.master_fd == -1:
-                # pty file descriptor closed by child, early termination!
+                # pty file descriptor closed by child,
+                # early termination!
                 break
+
             rlist = (self.master_fd,)
             ret_tuple = select.select(rlist, (), (), self.time_opoll)
             if self.master_fd in ret_tuple[0]:
@@ -553,12 +542,7 @@ class Door(object):
                         # not all. re-buffer remaining bytes back into
                         # session for next poll
                         self._session.buffer_input(data[n_written:])
-
-                        # XXX I've never actually seen this, though. It might
-                        # require writing a sub-program that artificially
-                        # hangs, such as time.sleep(99999) to assert correct
-                        # behavior. Please report, should be ok ..
-                        logger.error('re-buffer_input(%r)!', data[n_written:])
+                        self.log.warn('re-buffer_input(%r)!', data[n_written:])
 
 
 class DOSDoor(Door):
@@ -628,7 +612,6 @@ class DOSDoor(Door):
         """
         Door.__init__(self, cmd, args, env_lang, env_term,
                       env_path, env_home, cp437)
-        self.check_winsize()
         self._stime = time.time()
         self._re_trim_clear = re.compile(self.RE_REPWITH_CLEAR,
                                          flags=re.DOTALL)
@@ -653,17 +636,6 @@ class DOSDoor(Door):
         """ filter keyboard input (used for "throway" bug workaround). """
         return data if time.time() - self._stime > self.START_BLOCK else u''
 
-    def check_winsize(self):
-        """ Assert window size is large enough for a DOS door. """
-        assert self._term.width >= 80, (
-            'Terminal width must be greater than '
-            '80 columns (IBM-PC dimensions). '
-            'Please resize your window.')
-        assert self._term.height >= 25, (
-            'Terminal height must be greater than '
-            '25 rows (IBM-PC dimensions). '
-            'Please resize your window.')
-
     def resize(self):
         pass
 
@@ -680,6 +652,7 @@ class DOSDoor(Door):
         on input, and later as an invalid menu command.
         """
         echo(u'\r\n' * self._term.height)
+
         Door.run(self)
 
         # flush any previously decoded but unreceived keystrokes,
@@ -689,220 +662,7 @@ class DOSDoor(Door):
 
         # perform lossless "cls" after dosemu exit; display is garbage
         echo(self._term.normal + u'\r\n' * self._term.height)
+
         # also, fight against 'set scrolling region' by resetting, LORD
         # contains, for example: \x1b[3;22r after 'E'nter the realm :-(
         echo(u"\x1b[r")
-
-
-# pylint: disable=R0913,R0914,R0915
-#         Too many arguments
-#         Too many local variables
-#         Too many statements
-def launch(dos=None, cp437=True, drop_type=None,
-           drop_folder=None, name=None, args='',
-           forcesize=None, activity=None, command=None,
-           nodes=None, forcesize_func=None, env_term=None):
-    r"""
-    Helper function for launching an external program as a "Door".
-
-    the forcesize_func may be overridden if the sysop wants to use
-    their own function for presenting the screen resize prompt.
-
-    virtual node pools are per-door, based on the 'name' argument, up
-    to a maximum determined by the 'nodes' argument.
-    name='Netrunner' nodes=4 would mean that the door, Netrunner, has
-    a virtual node pool with 4 possible nodes in it. When 4 people
-    are already playing the game, additional users will be notified
-    that there are no nodes available for play until one of them is
-    released.
-
-    for DOS doors, the [dosemu] section of default.ini is used for
-    defaults::
-
-        default.ini
-        ---
-        [dosemu]
-        bin = /usr/bin/dosemu
-        home = /home/bbs
-        path = /usr/bin:/usr/games:/usr/local/bin
-        opts = -u virtual -f /home/bbs/dosemu.conf \
-               -o /home/bbs/dosemu%%#.log %%c 2> /home/bbs/dosemu_boot%%#.log
-        dropdir = /home/bbs/dos
-        nodes = 4
-
-    in 'opts', %%# becomes the virtual node number, %%c becomes the 'command'
-    argument.
-
-    'dropdir' is where dropfiles will be created if unspecified. you can
-    give each door a dropdir for each node if you like, for ultimate
-    compartmentalization -- just set the 'dropdir' argument when calling
-    this function.
-
-    -u virtual can be used to add a section to your dosemu.conf for
-    virtualizing the com port (which allows you to use the same dosemu.conf
-    locally by omitting '-u virtual')::
-
-        dosemu.conf
-        ---
-        $_cpu = (80386)
-        $_hogthreshold = (20)
-        $_layout = "us"
-        $_external_charset = "utf8"
-            $_internal_charset = "cp437"
-        $_term_update_freq = (4)
-        $_rdtsc = (on)
-        $_cpuspeed = (166.666)
-        ifdef u_virtual
-                $_com1 = "virtual"
-        endif
-    """
-    session, term = getsession(), getterminal()
-    logger = logging.getLogger()
-    echo(term.clear)
-
-    with term.fullscreen():
-        store_rows, store_cols = None, None
-        env_term = env_term or term.kind
-        strnode = None
-        (dosbin, doshome, dospath, dosopts, dosdropdir, dosnodes) = (
-            get_ini('dosemu', 'bin'),
-            get_ini('dosemu', 'home'),
-            get_ini('dosemu', 'path'),
-            get_ini('dosemu', 'opts'),
-            get_ini('dosemu', 'dropdir'),
-            get_ini('dosemu', 'nodes', getter='getint'))
-
-        if drop_folder is not None and drop_type is None:
-            drop_type = 'DOORSYS'
-
-        if drop_type is not None and drop_folder is None:
-            drop_folder = dosdropdir
-
-        if drop_folder or drop_type:
-            assert name is not None, (
-                'name required for door using node pools')
-
-            for node in range(nodes if nodes is not None else dosnodes):
-                event = 'lock-%s/%d' % (name, node)
-                session.send_event(event, ('acquire', None))
-                data = session.read_event(event)
-
-                if data is True:
-                    strnode = str(node + 1)
-                    break
-
-            if strnode is None:
-                logger.warn('No virtual nodes left in pool: %s', name)
-                echo(term.bold_red(u'This door is currently at maximum '
-                                   u'capacity. Please try again later.'))
-                term.inkey(3)
-                return
-
-            logger.info('Requisitioned virtual node %s-%s', name, strnode)
-            dosopts = dosopts.replace('%#', strnode)
-            dosdropdir = dosdropdir.replace('%#', strnode)
-            drop_folder = drop_folder.replace('%#', strnode)
-            args = args.replace('%#', strnode)
-
-        try:
-            if dos is not None or forcesize is not None:
-                if forcesize is None:
-                    forcesize = (80, 25,)
-                else:
-                    assert len(forcesize) == 2, forcesize
-
-                # pylint: disable=W0633
-                #         Attempting to unpack a non-sequence
-                want_cols, want_rows = forcesize
-
-                if want_cols != term.width or want_rows != term.height:
-                    store_cols, store_rows = term.width, term.height
-                    echo(u'\x1b[8;%d;%dt' % (want_rows, want_cols,))
-                    term.inkey(timeout=0.25)
-
-                dirty = True
-
-                if not (term.width == want_cols and term.height == want_rows):
-                    if forcesize_func is not None:
-                        forcesize_func()
-                    else:
-                        while not (term.width == want_cols and
-                                   term.height == want_rows):
-                            if session.poll_event('refresh'):
-                                dirty = True
-
-                            if dirty:
-                                dirty = False
-                                echo(term.clear)
-                                echo(term.bold_cyan(
-                                    u'o' + (u'-' * (forcesize[0] - 2))
-                                    + u'>\r\n'
-                                    + (u'|\r\n' * (forcesize[1] - 2))))
-                                echo(u''.join(
-                                    (term.bold_cyan(u'V'),
-                                     term.bold(u' Please resize your screen '
-                                               u'to %sx%s and/or press ENTER '
-                                               u'to continue' % (want_cols,
-                                                                 want_rows)))))
-
-                            ret = term.inkey(timeout=0.25)
-
-                            if ret in (term.KEY_ENTER, u'\r', u'\n'):
-                                break
-
-                if term.width != want_cols or term.height != want_rows:
-                    echo(u'\r\nYour dimensions: %s by %s; '
-                         u'emulating %s by %s' % (term.width, term.height,
-                                                  want_cols, want_rows,))
-
-                    # hand-hack, its ok ... really
-                    store_cols, store_rows = term.width, term.height
-                    term._columns, term._rows = want_cols, want_rows
-                    term.inkey(timeout=1)
-
-            if activity is not None:
-                session.activity = activity
-            elif name is not None:
-                session.activity = 'Playing %s' % name
-            else:
-                session.activity = 'Playing a door game'
-
-            if drop_folder is not None:
-                if not os.path.isabs(drop_folder):
-                    drop_folder = os.path.join(dosdropdir, drop_folder)
-
-                Dropfile(getattr(Dropfile, drop_type)).save(drop_folder)
-
-            door = None
-
-            if dos is not None:
-                # launch a dosemu door
-                cmd = None
-
-                if command is not None:
-                    cmd = command
-                else:
-                    cmd = dosbin
-                    args = dosopts.replace('%c', '"' + args + '"')
-
-                door = DOSDoor(cmd, shlex.split(args), cp437=True,
-                               env_home=doshome, env_path=dospath,
-                               env_term=env_term)
-            else:
-                # launch a unix program
-                door = Door(command, shlex.split(args), cp437=cp437,
-                            env_term=env_term)
-
-            door.run()
-
-        finally:
-            if store_rows is not None and store_cols is not None:
-                term._rows, term._columns = store_rows, store_cols
-                echo(u'\x1b[8;%d;%dt' % (store_rows, store_cols,))
-                term.inkey(timeout=0.25)
-
-            if name is not None and drop_type:
-                session.send_event(
-                    event='lock-%s/%d' % (name, int(strnode) - 1),
-                    data=('release', None))
-                logger.info('Released virtual node %s-%s', name, strnode)
