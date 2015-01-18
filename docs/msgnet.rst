@@ -57,8 +57,8 @@ When restarting x/84, we may see the log info message::
 
     INFO   webserve.py:223 https listening on 88.80.6.213:8443/tcp
 
-Configuring a leaf hub
-======================
+Configuring a leaf node
+=======================
 
 On the hub system as a user of the 'sysop' group, enter the 'sysop' menu
 from the main menu, and choose 'a'dd new leaf node.
