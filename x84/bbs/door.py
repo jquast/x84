@@ -348,9 +348,6 @@ class Door(object):
     time_opoll = 0.05
     blocksize = 7680
     master_fd = None
-    # pylint: disable=R0903,R0913
-    #        Too few public methods
-    #        Too many arguments
 
     def __init__(self, cmd='/bin/uname', args=(), env=None, cp437=False):
         """
@@ -571,6 +568,7 @@ class DOSDoor(Door):
                         r'|H\033\[2J'
                         r'|\d+;1H.*\033\[1;1H'
                         r')')
+
     #: regular expression of sequences to strip entirely during
     #: ``START_BLOCK`` delay in ``output_filter``.
     RE_REPWITH_NONE = (r'\033\[('
@@ -578,13 +576,11 @@ class DOSDoor(Door):
                        r'|\?1049[lh]'
                        r'|\d+;\d+r'
                        r'|1;1H\033\[\dM)')
+
     #: Number of seconds to allow to elapse for ``input_filter`` and
     #: ``output_filter`` as a workaround for stripping startup sequences
     #: and working around a strange keyboard input bug.
-
     START_BLOCK = 4.0
-    # pylint: disable=R0913
-    #         Too many arguments
 
     def __init__(self, cmd='/bin/uname', args=(), env=None, cp437=True):
         """

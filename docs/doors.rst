@@ -104,4 +104,9 @@ Finally, we add lord to the sesame configuration::
 
 Which then allows us to run this game by typing "lord" in the main menu.
 
+Please note, that there is a 4 second pause before any input is accepted,
+(so you may not immediately press return at the <MORE> prompt).  This is
+to work around a dosemu bug where input becomes garbaged and bit-shifted
+if any keyboard input is received during startup.
+
 .. _dosemu: http://www.dosemu.org/
