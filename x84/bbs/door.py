@@ -645,9 +645,10 @@ class DOSDoor(Door):
         # fight against 'set scrolling region' by resetting, LORD
         # contains, for example: \x1b[3;22r after 'E'nter the realm
         echo(u''.join((self._term.normal,
+                       self._term.move(self._term.height, self._term.width),
                        u"\x1b[r",
                        self._term.move(self._term.height, 0),
-                       u'\r\n')))
+                       u'\r\n\r\n')))
 
         # flush any previously decoded but unreceived keystrokes,
         # and any unprocessed input from telnet session not yet processed.
