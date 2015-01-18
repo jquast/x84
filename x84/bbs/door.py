@@ -266,7 +266,7 @@ class Dropfile(object):
                 u'None\r\n'                  # user comment
                 u'0\r\n'                     # doors opened
                 u'0\n'                       # msgs left
-                .format(s=self))
+                .format(self=self))
 
     def _get_door32(self):
         """ Return door32.sys-formatted dropfile content. """
@@ -281,7 +281,7 @@ class Dropfile(object):
                 u'{self.remaining_mins}\r\n'
                 u'1\r\n'                  # emulation (1=ansi)
                 u'{self.node}\n'
-                .format(s=self))
+                .format(self=self))
 
     def _get_callinfo(self):
         """ Return callinfo.BBS-formatted dropfile content. """
@@ -320,7 +320,7 @@ class Dropfile(object):
                 u'01/02/94 01:20\r\n'     # unknown date/time
                 u'0\r\n'                  # task #
                 u'1\n'                    # door #
-                .format(s=self))
+                .format(self=self))
 
     def _get_dorinfo(self):
         """ Return DORINFO.DEF-formatted dropfile content. """
@@ -337,7 +337,7 @@ class Dropfile(object):
                 u'{self.securitylevel}\r\n'
                 u'{self.remaining_mins}\r\n'
                 u'-1\n'                   # fossil (-1=external)
-                .format(s=self))
+                .format(self=self))
 
 
 class Door(object):
@@ -503,8 +503,6 @@ class Door(object):
         """ Signal resize of terminal to pty. """
         import termios
         import fcntl
-        self.log.debug('send TIOCSWINSZ: %dx%d',
-                       self._term.width, self._term.height)
         _bytes = struct.pack('HHHH',
                              self._term.height,
                              self._term.width,
@@ -640,20 +638,17 @@ class DOSDoor(Door):
         various terminal reset sequences that may cause a reply to be received
         on input, and later as an invalid menu command.
         """
-        echo(u'\r\n' * self._term.height)
-
         self._stime = time.time()
 
         Door.run(self)
+
+        echo(u"\x1b[r" + self._term.normal + u'\r\n')
 
         # flush any previously decoded but unreceived keystrokes,
         # and any unprocessed input from telnet session not yet processed.
         self._term.kbflush()
         self._session.flush_event('input')
 
-        # perform lossless "cls" after dosemu exit; display is garbage
-        echo(self._term.normal + u'\r\n' * self._term.height)
-
         # also, fight against 'set scrolling region' by resetting, LORD
         # contains, for example: \x1b[3;22r after 'E'nter the realm :-(
-        echo(u"\x1b[r")
+        self._term.inkey()
