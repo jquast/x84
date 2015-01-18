@@ -39,7 +39,6 @@ class Pager(AnsiWindow):
 
         self._position = self.position = kwargs.pop('position', 0) or 0
 
-
     def init_keystrokes(self, keyset):
         """
         This initializer sets keys appropriate for navigation.
