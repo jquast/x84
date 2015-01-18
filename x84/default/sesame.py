@@ -144,9 +144,10 @@ def main(name):
         with term.fullscreen():
             session.activity = u'Playing {}'.format(name)
             cmd, args = parse_command_args(session, name, node)
+            cp437 = get_ini('sesame', '{0}_cp437', getter='getboolean')
             env = get_env(session, name)
 
             _Door = DOSDoor if cmd.endswith('dosemu') else Door
-            _Door(cmd=cmd, args=args, env=env).run()
+            _Door(cmd=cmd, args=args, env=env, cp437=cp437).run()
 
     restore_screen(term, store_columns, store_rows)
