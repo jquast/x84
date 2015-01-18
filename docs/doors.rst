@@ -48,11 +48,11 @@ configured for DORINFO-style dropfile, and add the program bnu_ to
 Finally, we add lord to the sesame configuration::
 
     [sesame]
-    lord = /usr/bin/dosemu -quiet -f /etc/dosemu/dosemu.conf -I '$_com1 = "virtual"' 'X:\\LORD\\START.BAT %%#'
+    lord = /usr/bin/dosemu -quiet -f /etc/dosemu/dosemu.conf -I '$_com1 = "virtual"' 'X:\LORD\START.BAT {node}'
     lord_env_HOME = /DOS
     lord_key = lord
     lord_text = play lord
-    lord_dropfile = DORINFO
+    lord_dropfile = dorinfo
     lord_droppath = /DOS/X/lord
     lord_nodes = 4
     lord_cols = 80
