@@ -15,6 +15,9 @@ ChatEvent = collections.namedtuple('ChatEvent', [
 WindowDimension = collections.namedtuple(
     'WindowDimension', ['yloc', 'xloc', 'height', 'width'])
 
+#: for ytalk-like version of split-screen of small windows, show user@bbs
+system_bbsname = get_ini(section='system', key='bbsname')
+
 ANSWER, HANGUP = 1, 2
 
 art_encoding = 'cp437'
@@ -54,26 +57,47 @@ def prompt_chat_request(term, pos, call_from):
             return False
 
 
-def refresh_screen(term, again=False):
+def refresh_screen(term, who):
     # create a new, empty screen
-    if again:
-        echo(term.home + term.clear_eos)
+    echo(term.normal)
+    echo(term.move(term.height - 1, 0))
+    echo(u'\r\n' * (term.height + 1))
+
+    ans_height, ans_width = 24, 80
+    if term.width < ans_width or term.height < ans_height:
+        # screen is too small for ansi file, use ytalk-like format
+        center_line = term.height // 2
+        echo(term.move(center_line, 0))
+        echo(term.center(u'= {0}@{1} ='.format(who, system_bbsname),
+                         term.width, '-'))
+        top_window = WindowDimension(
+            yloc=-1, xloc=-1,
+            height=center_line + 2,
+            width=term.width + 2)
+        bot_window = WindowDimension(
+            yloc=center_line,
+            xloc=-1,
+            height=term.height - (center_line - 1),
+            width=term.width + 2)
     else:
-        echo(term.move(term.height - 1, 0))
-        echo(u'\r\n' * (term.height + 1))
-    ans_height = 24
-    ans_width = 78
-    ypos, xpos = (max(0, int(math.floor(term.height / 2 - (ans_height / 2)))),
-                  max(0, int(math.floor(term.width / 2 - (ans_width / 2)))))
-    for y_offset, line in enumerate(showart(art_file, encoding=art_encoding)):
-        _ypos = ypos + y_offset
-        if _ypos <= term.height:
-            echo(term.move(_ypos, xpos))
-            echo(line)
-    top_window = WindowDimension(
-        yloc=ypos, xloc=xpos + 1, height=9, width=78)
-    bot_window = WindowDimension(
-        yloc=ypos + 14, xloc=xpos + 1, height=10, width=78)
+        # center ansi file
+        center_y = (math.floor(term.height / 2 - (ans_height / 2)))
+        center_x = math.floor(term.width / 2 - (ans_width / 2))
+        ypos, xpos = max(0, int(center_y)), max(0, int(center_x))
+        art_generator = showart(art_file, encoding=art_encoding)
+        for y_offset, line in enumerate(art_generator):
+            _ypos = ypos + y_offset
+            if _ypos <= term.height:
+                echo(term.move(_ypos, xpos))
+                echo(line.rstrip())
+        top_window = WindowDimension(
+            yloc=ypos,
+            xloc=xpos + 1,
+            height=9, width=78)
+        bot_window = WindowDimension(
+            yloc=ypos + 14,
+            xloc=xpos + 1,
+            height=10, width=78)
     return top_window, bot_window
 
 
@@ -87,7 +111,8 @@ def make_editor_series(winsize, editors):
         ScrollingEditor(
             yloc=_yloc, xloc=winsize.xloc, width=winsize.width,
             colors=colors, margin_pct=margin_pct, scroll_pct=scroll_pct,
-            content=u'' if not editors else editors[_idx].content,
+            content=(u'' if not editors or _idx >= len(editors)
+                     else editors[_idx].content),
             max_length=winsize.width
         ) for _idx, _yloc in enumerate(range(
             winsize.yloc, winsize.yloc + winsize.height + -2))]
@@ -129,7 +154,8 @@ def do_chat(session, term, other_sid, dial=None, call_from=None):
     top_editors, bot_editors = [], []
     while True:
         if dirty:
-            top_winsize, bot_winsize = refresh_screen(term)
+            who = dial if dialing else call_from
+            top_winsize, bot_winsize = refresh_screen(term, who)
             top_editors, bot_editors = get_editors(top_winsize, bot_winsize,
                                                    top_editors, bot_editors)
             for editor in top_editors + bot_editors:
@@ -137,9 +163,9 @@ def do_chat(session, term, other_sid, dial=None, call_from=None):
                 echo(editor.refresh())
             echo(top_editors[top_idx].fixate())
             if dialing:
-                display_dialing(term, pos=bot_winsize, who=dial)
+                display_dialing(term, pos=bot_winsize, who=who)
             if answering:
-                display_answering(term, pos=bot_winsize, who=call_from)
+                display_answering(term, pos=bot_winsize, who=who)
             dirty = False
 
         event, data = session.read_events(
@@ -199,14 +225,20 @@ def display_hangup(term, pos, who):
 
 
 def do_answer(term, session, other_sid):
-    inp = term.inkey(0)
-    if inp.lower() == u'y':
-        route_data = (other_sid, 'chat') + (ANSWER,)
-        session.send_event('route', route_data)
-        return True
-    elif inp.lower() == u'n':
-        return False
-    return None
+    while True:
+        inp = term.inkey()
+        if inp.lower() == u'y':
+            route_data = (other_sid, 'chat') + (ANSWER,)
+            session.send_event('route', route_data)
+            return True
+        elif inp.lower() == u'n':
+            return False
+
+
+def clear_editor(editor):
+    """ Clear content and refresh line editor ``editor``. """
+    editor.update(u'')
+    echo(editor.refresh())
 
 
 def recv_input(term, editors, edit_idx, inp):
@@ -217,6 +249,16 @@ def recv_input(term, editors, edit_idx, inp):
     echo(editor.fixate())
 
     if inp.is_sequence:
+        if ((inp.code in editor.keyset['backspace'] or
+             inp in editor.keyset['backspace']
+             ) and editor.content == u''):
+            # editor is empty, and we've backspaced, allow
+            # backspacing into previous line
+            edit_idx = (len(editors) - 1 if edit_idx == 0
+                        else edit_idx - 1)
+            editor = editors[edit_idx]
+            editor.update(editor.content)
+            echo(editor.refresh() + editor.fixate())
         echo(editor.process_keystroke(inp.code))
     else:
         echo(editor.process_keystroke(inp))
@@ -228,10 +270,13 @@ def recv_input(term, editors, edit_idx, inp):
     if nextline:
         edit_idx = (0 if edit_idx == len(editors) - 1
                     else edit_idx + 1)
-        editor = editors[edit_idx]
-        editor.update(u'')
-        echo(editor.refresh())
-        echo(editor.fixate())
+
+        # clear new editor-line
+        clear_editor(editors[edit_idx])
+        if edit_idx + 1 < len(editors):
+            # as well as the next
+            clear_editor(editors[edit_idx + 1])
+        echo(editors[edit_idx].fixate())
 
     return editors, edit_idx
 
