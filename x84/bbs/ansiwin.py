@@ -49,6 +49,9 @@ class AnsiWindow(object):
         :param dict colors: color theme.
         :param dict glyphs: bordering window character glyphs.
         """
+        from x84.bbs.session import getterminal
+        self._term = getterminal()
+
         self.height = height
         self.width = width
         self.yloc = yloc
@@ -59,9 +62,6 @@ class AnsiWindow(object):
         self._ypadding = 1
         self._alignment = 'left'
         self._moved = False
-
-        from x84.bbs.session import getterminal
-        self._term = getterminal()
 
     def init_theme(self, colors=None, glyphs=None):
         """
