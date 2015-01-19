@@ -10,6 +10,8 @@ ignore:
   - ^x84/encodings
   # derived from mini-boa, not very well documented.
   - ^x84/telnet.py
+  # this code is disgusting, please don't view it.
+  - ^x84/default/tetris.py
 
 test-warnings: true
 
