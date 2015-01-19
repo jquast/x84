@@ -139,8 +139,6 @@ class Msg(object):
         As a side-effect, it may queue message for delivery to
         external systems, when configured.
         """
-        # pylint: disable=W1202
-        #         Use % formatting in logging functions ...
         log = logging.getLogger(__name__)
         session = getsession()
         use_session = bool(session is not None)
@@ -210,8 +208,6 @@ class Msg(object):
 
         # check all tags of message; if they match a message network,
         # either record for hosting servers, or schedule for delivery.
-        # pylint: disable=W1202
-        #         Use % formatting in logging functions ...
         for tag in self.tags:
 
             # server networks offered by this server,

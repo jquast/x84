@@ -405,8 +405,6 @@ class Door(object):
             raise OSError('door support not (yet) supported on {0} platform.'
                           .format(sys.platform.lower()))
 
-        # pylint: disable=W1202
-        #         Use % formatting in logging functions ...
         self.log.debug('os.execvpe(cmd={self.cmd}, args={self.args}, '
                        'env={self.env})'.format(self=self))
         try:
