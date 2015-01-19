@@ -409,15 +409,11 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
         lightbar.process_keystroke(inp)
         filename, _ = lightbar.selection
 
-        # figure out file extension
         filepath = os.path.join(directory, filename)
         relativename = filepath[len(ROOT):]
         isdir = bool(filepath[-1:] == os.path.sep)
-        ext = None
-        rfind = filename.rfind('.')
+        _, ext = os.path.splitext(filename)
 
-        if rfind > -1:
-            ext = filename[rfind + 1:].lower()
         if inp in lightbar.keyset['home']:
             # lightbar 'home' keystroke bug; redraw current line
             echo(lightbar.refresh_row(idx))
