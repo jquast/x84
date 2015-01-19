@@ -56,7 +56,7 @@ class IRCChat(object):
     want to respond to; just add on_<eventname> as a method and you're done!
     """
 
-    # pylint:disable=R0904
+    # pylint: disable=R0904
 
     def __init__(self, term, session):
         """ Class initializer. """
@@ -71,7 +71,7 @@ class IRCChat(object):
 
     def _mirc_convert(self, text):
         """ Convert mIRC formatting codes into term sequence equivalents. """
-        # pylint:disable=R0201
+        # pylint: disable=R0201
 
         def color_repl(match):
             """ Regex function for replacing color codes """
@@ -141,7 +141,7 @@ class IRCChat(object):
 
     def _indicator(self, color=None, character=None):
         """ Construct an indicator to be used in output """
-        # pylint:disable=R0201
+        # pylint: disable=R0201
         color = color or self.term.white
         character = character or u'*'
         return (u'{0}{1}{0}'.format(
@@ -150,7 +150,7 @@ class IRCChat(object):
     def help(self):
         """ Show /HELP text """
 
-        # pylint:disable=W0141
+        # pylint: disable=W0141
         commands = map(
             self.term.bold, [
                 u'/HELP', u'/ME', u'/TOPIC', u'/NAMES'])
@@ -167,13 +167,13 @@ class IRCChat(object):
 
     def on_disconnect(self, connection, event):
         """ Disconnected; send quit event to end the main loop """
-        # pylint:disable=R0201,W0613
+        # pylint: disable=R0201,W0613
         why = filter(None, event.arguments + [event.target])
         self.session.buffer_event('irc-quit', ' '.join(why))
 
     def on_nicknameinuse(self, connection, event):
         """ Nick is being used; pick another one. """
-        # pylint:disable=W0613
+        # pylint: disable=W0613
         self.session.buffer_event('irc-connected')
         self.connected = True
         echo(u''.join([self.term.normal, u'\r\n',
@@ -193,8 +193,7 @@ class IRCChat(object):
 
     def on_welcome(self, connection, event):
         """ Connected to the server; join the channel """
-        # pylint:disable=W0613
-
+        # pylint: disable=W0613
         if not self.connected:
             self.session.buffer_event('irc-connected')
         self.nick = connection.get_nickname()
@@ -207,19 +206,16 @@ class IRCChat(object):
         if irc.client.is_channel(CHANNEL):
             connection.join(CHANNEL)
 
-    def on_quit(self, connection, event):
+    def on_quit(self, _, event):
         """ Someone has /QUIT IRC """
-        # pylint:disable=W0613
-
         self.queue(u'{0} {1} has quit ({2})'.format(
             self._indicator(color=self.term.red),
             self.term.bold(event.source.nick),
             self.term.bold(event.arguments[0])
         ))
 
-    def on_namreply(self, connection, event):
+    def on_namreply(self, _, event):
         """ Reply received from /NAMES command """
-        # pylint:disable=W0613
         nicks = list()
         for nick in event.arguments[2].split(' '):
             stripped_nick = (nick[1:]
@@ -232,38 +228,35 @@ class IRCChat(object):
             self.term.bold(u', '.join(nicks) if nicks else u'<nobody>')
         ))
 
-    def on_currenttopic(self, connection, event):
+    def on_currenttopic(self, _, event):
         """ Reply received from /TOPIC command """
-        # pylint:disable=W0613
         self.queue(u'{0} Topic: {1}'.format(
             self._indicator(),
             self.term.bold(event.arguments[1])
         ))
 
-    def on_topic(self, connection, event):
+    def on_topic(self, _, event):
         """ Someone has changed the channel topic """
-        # pylint:disable=W0613
-
         self.queue(u'{0} {1} has changed the topic to {2}'.format(
             self._indicator(color=self.term.bold),
             self.term.bold(event.source.nick),
             self.term.bold(event.arguments[0])
         ))
 
-    def on_privnotice(self, connection, event):
+    def on_privnotice(self, _, event):
         """ Received a private notice. """
         if ENABLE_PRIVNOTICE:
             self.queue('{0} {1}'.format(event.target, event.arguments[0]))
 
     def format_pubmsg(self, source, msg, mode=None):
         """ Helper to format public messages. """
-        # pylint:disable=R0201
+        # pylint: disable=R0201
         color = self.term.bold if mode is None else mode
-        return u'{0} {1}'.format(color(u'<{0}>'.format(source)), msg)
+        nick = color(u'<{0}>'.format(source))
+        return u'{0} {1}'.format(nick, msg)
 
-    def on_pubmsg(self, connection, event):
+    def on_pubmsg(self, _, event):
         """ Public message has been received. """
-        # pylint:disable=W0613
         color = None
         if self.nick in event.arguments[0]:
             color = self.term.bold_white_on_magenta
@@ -297,9 +290,8 @@ class IRCChat(object):
         if event.arguments[0] == self.nick:
             connection.join(CHANNEL)
 
-    def on_part(self, connection, event):
+    def on_part(self, _, event):
         """ Someone has /PART-ed the channel """
-        # pylint:disable=W0613
         self.queue(u'{0} {1} has left the channel'.format(
             self._indicator(color=self.term.red),
             self.term.bold(event.source.nick)
@@ -312,43 +304,39 @@ class IRCChat(object):
             self._indicator(character=u'+', color=self.term.bold_black),
             color(source), action)
 
-    def on_action(self, connection, event):
+    def on_action(self, _, event):
         """ Someone has performed an action in the channel """
-        # pylint:disable=W0613
         color = None
         if self.nick in event.arguments[0]:
             color = self.term.bold_white_on_magenta
         self.queue(
             self.format_action(event.source.nick, event.arguments[0], color))
 
-    def on_nick(self, connection, event):
+    def on_nick(self, _, event):
         """ Someone has changed their nickname """
-        # pylint:disable=W0613
         self.queue(u'{0} {1} has changed their nickname to {2}'.format(
             self._indicator(),
             self.term.bold(event.source.nick),
             self.term.bold(event.target)
         ))
 
-    def on_mode(self, connection, event):
+    def on_mode(self, _, event):
         """ Someone has changed modes on the channel or a user """
-        # pylint:disable=W0613
         self.queue(u'{0} {1} sets mode {2}'.format(
             self._indicator(color=self.term.bold),
             self.term.bold(event.source.nick),
             self.term.bold(u' '.join(event.arguments))
         ))
 
-    def on_pubnotice(self, connection, event):
+    def on_pubnotice(self, _, event):
         """ Public notice has been received """
-        # pylint:disable=W0613
         self.queue(u'{0} NOTICE ({1}) {2}'.format(
             self._indicator(),
             self.term.bold(event.source.nick),
             self.term.bold(u' '.join(event.arguments))
         ))
 
-    def on_error(self, connection, event):
+    def on_error(self, _, event):
         """ Some error has been received """
         err_desc = (u'error (type={event.type}, source={event.source}, '
                     'target={event.target}, arguments={event.arguments}'
@@ -384,7 +372,7 @@ def establish_connection(term, session):
     client = IRCChat(term, session)
     irc_handle = session.user.handle.replace(' ', '_')
     try:
-        # pylint:disable=W0142
+        # pylint: disable=W0142
         client.connect(SERVER, PORT, irc_handle, **kwargs)
     except irc.client.ServerConnectionError:
         echo(term.bold_red(u'Connection error!'))

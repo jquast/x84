@@ -247,9 +247,9 @@ def view_article(session, term, url, title):
     article_text = u''
     scroll_idx = 0
     last_width, last_height = -1, -1
-    quit = False
+    do_quit = False
     dirty = True
-    while not quit:
+    while not do_quit:
         if dirty:
             if last_width != term.width or last_height != term.height:
                 # screen size has changed, re-calculate rendered contents
@@ -300,7 +300,7 @@ def view_article(session, term, url, title):
                     # refresh (^L)
                     dirty = 2
                 elif inp.lower() in (u'r', u'q',):
-                    quit = True
+                    do_quit = True
                     break
                 elif inp in ('s',):
                     # share url
@@ -337,9 +337,9 @@ def view_article_summaries(session, term, rss_url, rss_title):
     bottom = -1
     scroll_idx = 0
     last_width, last_height = -1, -1
-    quit = False
+    do_quit = False
     dirty = 2
-    while not quit:
+    while not do_quit:
         if dirty == 2:
             # dirty value of '2' is full screen refresh,
             if last_width != term.width or last_height != term.height:
@@ -387,7 +387,7 @@ def view_article_summaries(session, term, rss_url, rss_title):
                     # refresh (^L)
                     dirty = 2
                 elif inp.lower() in (u'q',):
-                    quit = True
+                    do_quit = True
                     break
                 elif inp in (u'v', 'c'):
                     article = get_article(term, articles)

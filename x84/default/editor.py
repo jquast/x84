@@ -46,7 +46,7 @@ def save(key, content):
     getsession().user[key] = content
 
 
-def show_help(term, center=True):
+def show_help(term):
     """ Returns help text. """
     # clear screen
     echo(term.normal + ('\r\n' * (term.height + 1)) + term.home)
@@ -83,7 +83,7 @@ def get_lbcontent(lightbar):
     # a custom 'soft newline' versus 'hard newline' is implemented,
     # '\n' == 'soft', '\r\n' == 'hard'
     lines = list()
-    for lno, (_row, ucs) in enumerate(lightbar.content):
+    for lno, (_, ucs) in enumerate(lightbar.content):
         # first line always appends as-is, otherwise if the previous line
         # matched a hardwrap, or did not match softwrap, then append as-is.
         # (a simple .endswith() can't wll work with a scheme of '\n' vs.

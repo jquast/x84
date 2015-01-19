@@ -128,8 +128,7 @@ def prompt_pager(content, line_no=0, colors=None, width=None,
         inp = LineEditor(0, colors=colors).read()
 
 
-def prompt_input(term, key, content=u'', sep_ok=u'::',
-                 width=None, colors=None):
+def prompt_input(term, key, sep_ok=u'::', width=None, colors=None):
     """ Prompt for and return input, up to given width and colorscheme. """
     term = getterminal()
     colors = colors or {
