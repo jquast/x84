@@ -65,7 +65,7 @@ def disp_msg(msg):
 
 def disp_notfound():
     """ Display 'bad request -/- not found in red. """
-    from x84.bbs import getsession, getterminal, echo
+    from x84.bbs import getterminal, echo
     term = getterminal()
     echo(u'\r\n\r\n{bad_req} {decorator} {not_found}'.format(
         bad_req=term.bold(u'bad request'),
@@ -132,9 +132,7 @@ def fetch_weather(postal):
 
 
 def do_search(term, search):
-    """
-    Given any arbitrary string, return list of possible matching locations.
-    """
+    """ Given search string, return list of possible matching locations. """
     import StringIO
     from x84.bbs import echo
     disp_msg(u'SEARChiNG')

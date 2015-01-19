@@ -108,7 +108,7 @@ class User(object):
 
     @property
     def handle(self):
-        """ User's handle, also the database key. """
+        """ User handle, also the database key. """
         return self._handle
 
     @handle.setter
@@ -120,7 +120,7 @@ class User(object):
     @property
     def password(self):
         """
-        User's password in encrypted form as tuple (salt, hash).
+        Password in encrypted form as tuple (salt, hash).
 
         Not generally used directly, but by :meth:`auth`.
 
@@ -133,8 +133,8 @@ class User(object):
 
     @password.setter
     def password(self, value):
-        # pylint: disable=C0111,
-        #        Missing docstring
+        # pylint: disable=C0111
+        #         Missing docstring
         log = logging.getLogger(__name__)
         from x84.bbs import ini
         if ini.CFG.getboolean('system', 'pass_ucase'):

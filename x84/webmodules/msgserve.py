@@ -92,7 +92,7 @@ class MessageApi(object):
         return self._jsonify(response_data, log)
 
     def PUT(self, network, *_):
-        """ PUT method - post messages """
+        """ PUT method - post messages. """
         log = logging.getLogger(__name__)
         if 'HTTP_AUTH_X84NET' not in web.ctx.env:
             raise server_error(

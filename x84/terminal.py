@@ -15,6 +15,7 @@ class Terminal(BlessedTerminal):
     _session = None
 
     def __init__(self, kind, stream, rows, columns):
+        """ Class initializer. """
         self._rows = rows
         self._columns = columns
         BlessedTerminal.__init__(self, kind, stream)
@@ -30,6 +31,8 @@ class Terminal(BlessedTerminal):
         return self._session
 
     def inkey(self, timeout=None, esc_delay=0.35, *_):
+        # pylint: disable=C0111
+        #         Missing docstring
         try:
             return BlessedTerminal.inkey(self, timeout, esc_delay=0.35)
         except UnicodeDecodeError as err:
@@ -49,6 +52,8 @@ class Terminal(BlessedTerminal):
             log.exception(err)
 
     def kbhit(self, timeout=0, *_):
+        # pylint: disable=C0111
+        #         Missing docstring
         # pull a value off the input buffer if available,
         val = self.session.read_event('input', timeout)
 
@@ -62,11 +67,15 @@ class Terminal(BlessedTerminal):
     kbhit.__doc__ = BlessedTerminal.kbhit.__doc__
 
     def getch(self):
+        # pylint: disable=C0111
+        #         Missing docstring
         val = self.session.read_event('input')
         return self._keyboard_decoder.decode(val, final=False)
     getch.__doc__ = BlessedTerminal.getch.__doc__
 
     def _height_and_width(self):
+        # pylint: disable=C0111
+        #         Missing docstring
         from blessed.terminal import WINSZ
         return WINSZ(ws_row=self._rows, ws_col=self._columns,
                      ws_xpixel=None, ws_ypixel=None)
