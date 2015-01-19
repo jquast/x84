@@ -142,7 +142,7 @@ def get_diz_from_colly(filepath):
     return None
 
 
-def get_instructions(term):
+def get_instructions(term, is_sysop=None):
     """ Show file browser instructions """
     return [
         term.bold_blue_underline(u'Instructions'),
@@ -159,12 +159,28 @@ def get_instructions(term):
         .format(term.reverse(u'(-)')),
         u'{0}     Upload file(s)'
         .format(term.reverse(u'(u)')),
+        u'{0}     Edit description'
+        .format(term.reverse(u'(e)')) if is_sysop else u'',
         u'{0}     Quit'
         .format(term.reverse(u'(q)')),
         u' ',
         u'Files are also available via {0}'
         .format(term.bold(u'SFTP')),
     ]
+
+
+def edit_description(filepath, db_desc):
+    """ Edit file description. """
+    from x84.bbs import gosub
+    new_desc = None
+    if filepath in db_desc:
+        new_desc = u'\r\n'.join([line.decode('cp437_art')
+                                 for line in db_desc[filepath]])
+    new_desc = gosub('editor', continue_draft=new_desc)
+    if not new_desc:
+        return
+    with db_desc:
+        db_desc[filepath] = new_desc.splitlines()
 
 
 def download_files(term, session, protocol='xmodem1k'):
@@ -391,6 +407,12 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
 
         # pass input to lightbar
         lightbar.process_keystroke(inp)
+        filename, _ = lightbar.selection
+
+        filepath = os.path.join(directory, filename)
+        relativename = filepath[len(ROOT):]
+        isdir = bool(filepath[-1:] == os.path.sep)
+        _, ext = os.path.splitext(filename)
 
         if inp in lightbar.keyset['home']:
             # lightbar 'home' keystroke bug; redraw current line
@@ -434,18 +456,13 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
             reload_dir(session, directory, lightbar, sub)
             draw_interface(term, lightbar)
 
+        elif inp in (u'e',) and session.user.is_sysop and not isdir:
+            edit_description(relativename, db_desc)
+            reload_dir(session, directory, lightbar, sub)
+            draw_interface(term, lightbar)
+
         clear_diz(term)
         save_diz = True
-        filename, _ = lightbar.selection
-
-        # figure out file extension
-        filepath = os.path.join(directory, filename)
-        relativename = filepath[len(ROOT):]
-        isdir = bool(filepath[-1:] == os.path.sep)
-        ext = None
-        rfind = filename.rfind('.')
-        if rfind > -1:
-            ext = filename[rfind + 1:].lower()
 
         if lightbar.selected or inp in (term.KEY_LEFT, term.KEY_RIGHT,):
 
@@ -491,7 +508,7 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
             # save diz in raw format, but display decoded
             save_diz = False
             db_desc[relativename] = diz
-            decoder = 'cp43_art'
+            decoder = 'cp437_art'
             if session.encoding == 'utf8':
                 decoder = COLLY_DECODING
             diz = [line.decode(decoder) for line in diz]
@@ -499,7 +516,7 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
         elif is_flagged_dir(filename):
             # is pseudo-folder for flagged files
             save_diz = False
-            diz = get_instructions(term)
+            diz = get_instructions(term, session.user.is_sysop)
 
         elif isdir:
             # is directory; don't give it a description
