@@ -81,6 +81,8 @@ def get_fail2ban_function():
     def wrapper(ip):
         log = logging.getLogger(__name__)
 
+        # pylint: disable=W0602
+        #         Using global for 'BANNED_IP_LIST' but no assignment is done
         global BANNED_IP_LIST, ATTEMPTED_LOGINS
 
         now = int(time.time())

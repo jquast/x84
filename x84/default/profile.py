@@ -279,6 +279,9 @@ def do_command(term, session, inp, fields, tgt_user, point):
         # return False if no field matches this key
         return False
 
+    # pylint: disable=W0631
+    #         Using possibly undefined loop variable 'field'
+
     # TODO: we could probably stand to do a bit of a better job of detecting
     # screen resizes and providing ^L full-screen refresh during the remainder
     # of this procedure ... It would require quite the refactor, though.

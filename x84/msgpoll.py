@@ -341,7 +341,7 @@ def main(background_daemon=True):
     :rtype: None
     """
     from threading import Thread
-    from x84.bbs import get_ini
+    from x84.bbs.ini import get_ini
 
     log = logging.getLogger(__name__)
 
@@ -374,7 +374,6 @@ if __name__ == '__main__':
     # as we are running outside of the 'engine' context, it is necessary
     # for us to initialize the .ini configuration scheme so that the list
     # of web modules and ssl options may be gathered.
-    import x84.engine
     import x84.bbs.ini
     x84.bbs.ini.init(*cmdline.parse_args())
 

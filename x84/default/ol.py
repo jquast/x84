@@ -248,7 +248,7 @@ def add_oneline(session, message):
         key = max([int(key) for key in udb.keys()] or [0]) + 1
         udb[key] = {
             'oneliner': message,
-            'alias': getsession().handle,
+            'alias': getsession().user.handle,
             'bbsname': get_ini('system', 'bbsname'),
             'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
         }

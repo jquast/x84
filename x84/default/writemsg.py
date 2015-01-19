@@ -186,7 +186,7 @@ def prompt_tags(msg):
             err = False
             for tag in tags.copy():
                 if tag not in tagdb and not (
-                        session.users.groups & moderated_groups):
+                        session.user.groups & moderated_groups):
                     tags.remove(tag)
                     echo(msg_invalidtag % (term.bold_red(tag),))
                     err = True

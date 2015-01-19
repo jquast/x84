@@ -117,19 +117,19 @@ def prompt_pager(content, line_no=0, colors=None, width=None, breaker=u'- ', nop
                 echo(term.move_up() + term.clear_eol)
 
     show_breaker()
-    if noprompt: return
+    if noprompt:
+        return
     echo(u'\r\n')
     if term.width > 80:
-        echo(term.move_x(max(0,(term.width / 2) - 40)))
+        echo(term.move_x(max(0, (term.width // 2) - 40)))
     echo(u'Press {enter}.'.format(
-        enter=colors['highlight'](u'return')))
+        enter=colors['highlight'](u'enter')))
     inp = LineEditor(0, colors=colors).read()
 
 
 def prompt_input(term, key, content=u'', sep_ok=u'::',
                  width=None, colors=None):
-    """ Prompt for and return input, up to given width and colorscheme.
-    """
+    """ Prompt for and return input, up to given width and colorscheme. """
     term = getterminal()
     colors = colors or {
         'highlight': term.yellow,
@@ -141,8 +141,7 @@ def prompt_input(term, key, content=u'', sep_ok=u'::',
 
 
 def coerce_terminal_encoding(term, encoding):
-    # attempt to coerce encoding of terminal to match session.
-    # NOTE: duplicated in top.py
+    """ Coerce encoding of terminal to match session by CSI. """
     echo(u'\r\n')
     echo({
         # ESC %G activates UTF-8 with an unspecified implementation

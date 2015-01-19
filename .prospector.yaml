@@ -4,6 +4,7 @@ inherits:
 ignore:
   - (^|/)\..+
   - ^docs/
+  - ^x84/default/extras
 
 test-warnings: true
 
@@ -45,6 +46,8 @@ pylint:
         # no 'mark' member
         ignored-classes: pytest
     disable:
+        # Use % formatting in logging functions but pass the % parameters as arguments
+        - W1202
         # Used builtin function 'map' (col 29)
         - W0141
         # Used * or ** magic
