@@ -42,7 +42,7 @@ FLAGGED_CHAR = get_ini(
 #: extensions for ASCII collies
 COLLY_EXTENSIONS = get_ini(
     section='fbrowse', key='colly_extensions', split=True
-) or ['txt', 'asc', 'ans']
+) or ['.txt', '.asc', '.ans']
 
 #: name of virtual directory for collecting user's flagged files
 FLAGGED_DIRNAME = get_ini(
@@ -58,6 +58,7 @@ COLLY_DECODING = get_ini(
 class FileBrowser(object):
 
     """ File browsing interface variables that need to be passed around """
+
     # pylint:disable=R0903
     diz_location = 0
     last_diz_len = 0
@@ -87,7 +88,7 @@ def diz_from_dms(binary, filename):
 
 def diz_from_lha(binary, filename):
     """
-    Amiga LHA format. Depends on the external binary 'lha'
+    Amiga LHA format. Depends on the external binary 'lha'.
     """
     import subprocess
     import tempfile
@@ -111,7 +112,7 @@ def diz_from_lha(binary, filename):
 
 def diz_from_zip(filename, method=zipfile.ZIP_STORED):
     """
-    Pull FILE_ID.DIZ from `filename` using particular zipfile `method`
+    Pull FILE_ID.DIZ from `filename` using particular zipfile `method`.
     """
     try:
         myzip = zipfile.ZipFile(filename, compression=method, allowZip64=True)
@@ -129,7 +130,7 @@ def diz_from_zip(filename, method=zipfile.ZIP_STORED):
 
 
 def get_diz_from_colly(filepath):
-    """ Get FILE_ID.DIZ from within an ASCII collection """
+    """ Get FILE_ID.DIZ from within an ASCII collection. """
     colly = open(filepath, 'r').read()
     colly_diz_begin = '@BEGIN_FILE_ID.DIZ '
     colly_diz_end = '@END_FILE_ID.DIZ'
@@ -143,7 +144,7 @@ def get_diz_from_colly(filepath):
 
 
 def get_instructions(term, is_sysop=None):
-    """ Show file browser instructions """
+    """ Show file browser instructions. """
     return [
         term.bold_blue_underline(u'Instructions'),
         u' ',
@@ -184,7 +185,7 @@ def edit_description(filepath, db_desc):
 
 
 def download_files(term, session, protocol='xmodem1k'):
-    """ Download flagged files """
+    """ Download flagged files. """
     if not len(browser.flagged_files):
         return False
     echo(term.clear)
@@ -208,7 +209,7 @@ def download_files(term, session, protocol='xmodem1k'):
 
 
 def upload_files(term, protocol='xmodem1k'):
-    """ Upload files """
+    """ Upload files. """
     echo(term.clear)
     while True:
         echo(u'Filename (empty to quit):\r\n')
@@ -244,7 +245,7 @@ def upload_files(term, protocol='xmodem1k'):
 
 
 def draw_interface(term, lightbar):
-    """ Redraw and resize the interface """
+    """ Redraw and resize the interface. """
     lightbar.height = term.height
     lightbar.width = max(10, int(term.width * 0.25))
     # +1 for spacing between lightbar and diz
@@ -259,7 +260,7 @@ def draw_interface(term, lightbar):
 
 
 def clear_diz(term):
-    """ Clear file_id.diz area """
+    """ Clear file_id.diz area. """
     echo(term.move(1, browser.diz_location))
     # +2 for info line (filename, size) and empty line below it
     for i in range(browser.last_diz_len + 2):
@@ -268,7 +269,7 @@ def clear_diz(term):
 
 
 def describe_file(term, diz, directory, filename, isdir=None):
-    """ Describe a file in the diz area """
+    """ Describe a file in the diz area. """
     if isdir or filename == u'..{0}'.format(os.path.sep):
         # describe directory
         description = u'{txt_Directory}: {filename}'.format(
@@ -309,7 +310,7 @@ def describe_file(term, diz, directory, filename, isdir=None):
 
 
 def mark_flagged(directory, files):
-    """ Add marker to flagged files """
+    """ Add marker to flagged files. """
     files_list = list()
     for fname in files:
         prefix = u' '
@@ -323,7 +324,7 @@ def mark_flagged(directory, files):
 
 
 def flagged_listdir():
-    """ Build listing for flagged files pseudo-folder """
+    """ Build listing for flagged files pseudo-folder. """
     files = [u'{flagged_char}{txt_fname}'.format(
         flagged_char=FLAGGED_CHAR,
         txt_fname=fname[fname.rfind(os.path.sep) + 1:].decode('utf8'))
@@ -337,7 +338,7 @@ def flagged_listdir():
 
 
 def regular_listdir(session, directory, sub):
-    """ Build listing for regular folder """
+    """ Build listing for regular folder. """
     files = sorted(os.listdir(directory), key=lambda x: x.lower())
     sorted_dirs = []
     sorted_files = []
@@ -363,7 +364,7 @@ def regular_listdir(session, directory, sub):
 
 
 def reload_dir(session, directory, lightbar, sub):
-    """ Reload contents of directory """
+    """ Reload contents of directory. """
     if directory == os.path.join(ROOT, FLAGGED_DIRNAME):
         # pseudo-folder for flagged files list
         lightbar.update(flagged_listdir())
@@ -373,13 +374,13 @@ def reload_dir(session, directory, lightbar, sub):
 
 
 def is_flagged_dir(directory):
-    """ Is this our __flagged__ directory? """
+    """ Check to see if this is the __flagged__ directory. """
     return (directory == FLAGGED_DIRNAME or
             directory.endswith(FLAGGED_DIRNAME))
 
 
 def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
-    """ Browse a directory """
+    """ Browse a directory. """
     # build and sort directory listing
     reload_dir(session, directory, lightbar, sub)
     echo(lightbar.refresh())
@@ -541,7 +542,7 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
 
 
 def main():
-    """ File browser """
+    """ File browser launch point. """
     import subprocess
     import functools
     session, term = getsession(), getterminal()
@@ -553,18 +554,18 @@ def main():
         echo(syncterm_setfont(SYNCTERM_FONT))
 
     # assign extractors to file types
-    browser.diz_extractors['zip'] = diz_from_zip
+    browser.diz_extractors['.zip'] = diz_from_zip
 
     # detect LHA and DMS support
     output, _ = subprocess.Popen(('which', 'lha'), stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE).communicate()
     if output:
-        browser.diz_extractors['lha'] = functools.partial(diz_from_lha,
+        browser.diz_extractors['.lha'] = functools.partial(diz_from_lha,
                                                           output.rstrip())
     output, _ = subprocess.Popen(('which', 'xdms'), stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE).communicate()
     if output:
-        browser.diz_extractors['dms'] = functools.partial(diz_from_dms,
+        browser.diz_extractors['.dms'] = functools.partial(diz_from_dms,
                                                           output.rstrip())
 
     # load flagged files
