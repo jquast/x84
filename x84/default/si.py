@@ -19,7 +19,7 @@ def main():
     # pylint: disable=W0633
     #         Attempting to unpack a non-sequence defined at line 1160 of
     #         platform
-    system, _node, release, _version, machine, _processor = platform.uname()
+    system, _, release, _, machine, _ = platform.uname()
 
     body = [u'authors:',
             u'Johannes Lundberg',
@@ -156,7 +156,7 @@ def main():
     def erase(star_idx):
         """ erase old star before moving .. """
         if show_star:
-            _char, xloc, yloc = stars[star_idx]
+            _, xloc, yloc = stars[star_idx]
             echo(u''.join((term.move(int(yloc), int(xloc)), term.normal,
                            char_at_pos(int(yloc), int(xloc), txt_y, txt_x),)))
 

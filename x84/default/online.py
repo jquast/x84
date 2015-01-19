@@ -48,7 +48,7 @@ def describe(sessions):
         term.yellow((attrs.get('activity', u''))
                     if attrs.get('sid') != session.sid else
                     term.yellow(session.activity)),
-    )) for node, (_sid, attrs) in get_nodes(sessions)]))
+    )) for node, (_, attrs) in get_nodes(sessions)]))
 
     return text + '\r\n'
 
@@ -58,11 +58,9 @@ def get_nodes(sessions):
     return enumerate(sorted(sessions.items()))
 
 
-def heading(sessions):
-    """
-    Given an array of sessions, return string suitable for display heading.
-    """
-    from x84.bbs import getterminal, ini, showart
+def heading():
+    """ Return string suitable for display heading. """
+    from x84.bbs import getterminal, showart
     import os
     term = getterminal()
     bar = ''
@@ -119,7 +117,7 @@ def get_node(sessions):
         echo(invalid)
         return (None, None)
 
-    for tgt_node, (_sid, attrs) in get_nodes(sessions):
+    for tgt_node, (_, attrs) in get_nodes(sessions):
         if tgt_node == node:
             return (tgt_node, attrs)
 
@@ -145,7 +143,7 @@ def chat(sessions):
     """
     from x84.bbs import gosub, getsession
     session = getsession()
-    (node, tgt_session) = get_node(sessions)
+    (_, tgt_session) = get_node(sessions)
     if tgt_session and tgt_session != session:
         gosub('chat', dial=tgt_session['handle'],
               other_sid=tgt_session['sid'])
@@ -298,7 +296,7 @@ def main():
             olen = len(otxt.splitlines())
             if 0 == cur_row or (cur_row + olen) >= term.height:
                 otxt_b = banner()
-                otxt_h = heading(sessions)
+                otxt_h = heading()
                 cur_row = len(otxt_b.splitlines()) + len(otxt_h.splitlines())
                 echo(u''.join((otxt_b, '\r\n', otxt_h, u'\r\n', otxt)))
             else:

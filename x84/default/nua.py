@@ -122,8 +122,8 @@ vfield = collections.namedtuple('input_validation', [
 ])
 
 
-def validate_handle(user, handle):
-    """ Validate setting ``handle`` for ``user``. """
+def validate_handle(_, handle):
+    """ Validate user ``handle``. """
     errmsg = None
     if find_user(handle):
         errmsg = u'User by this name already exists.'

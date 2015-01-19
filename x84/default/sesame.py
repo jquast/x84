@@ -133,6 +133,8 @@ def main(name):
         echo(syncterm_setfont(syncterm_font))
         echo(term.move_x(0) + term.clear_eol)
 
+    # pylint: disable=W0212
+    #         Access to a protected member {_columns, _rows} of a client class
     store_columns, store_rows = term._columns, term._rows
     prompt_resize_term(session, term, name)
 

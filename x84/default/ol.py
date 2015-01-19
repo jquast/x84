@@ -234,7 +234,7 @@ def maybe_expunge_records():
             _sorted = sorted(
                 ((value, key) for (key, value) in contents.items()),
                 key=lambda _valkey: keysort_by_datetime(_valkey[0]))
-            for expunged, (value, key) in enumerate(
+            for expunged, (_, key) in enumerate(
                     _sorted[len(udb) - MAX_HISTORY:]):
                 del udb[key]
     if expunged:
@@ -432,8 +432,8 @@ def do_prompt(term, session):
     dirty = -1
     top_margin = bot_margin = 0
     offset = 0
-    quit = False
-    while not quit:
+    do_quit = False
+    while not do_quit:
         if dirty == -1:
             # re-display entire screen on-load, only. there
             # should never be any need to re-draw the art here-forward.
@@ -497,7 +497,7 @@ def do_prompt(term, session):
                     dirty = 2
                 elif inp.lower() in (u'n', u'q'):
                     echo(inp + u'\r\n')
-                    quit = True
+                    do_quit = True
                     break
 
                 elif len(inp):
