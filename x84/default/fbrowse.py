@@ -132,7 +132,7 @@ def diz_from_zip(filename, method=zipfile.ZIP_STORED):
 def get_diz_from_colly(filepath):
     """ Get FILE_ID.DIZ from within an ASCII collection. """
     colly = open(filepath, 'r').read()
-    colly_diz_begin = '@BEGIN_FILE_ID.DIZ '
+    colly_diz_begin = '@BEGIN_FILE_ID.DIZ'
     colly_diz_end = '@END_FILE_ID.DIZ'
     pos = colly.find(colly_diz_begin)
     if pos > 0:
