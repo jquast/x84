@@ -146,7 +146,7 @@ def validate_handle(_, handle):
     return errmsg, 0
 
 
-def validate_password(user, password):
+def validate_password(_, password):
     """ Validate setting ``password`` for ``user``. """
     errmsg = None
     if password == u'':

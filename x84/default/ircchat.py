@@ -473,7 +473,7 @@ def irc_event(term, data, scrollback, editor):
     ]))
 
 
-def input_event(term, session, client, editor):
+def input_event(term, client, editor):
     """
     React to input event, processing /commands.
 
@@ -579,7 +579,7 @@ def main():
             irc_event(term, data, scrollback, editor)
         elif event == 'input':
             session.buffer_input(data, pushback=True)
-            if not input_event(term, session, client, editor):
+            if not input_event(term, client, editor):
                 break
         elif event == 'irc-quit':
             time.sleep(0.5)

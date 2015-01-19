@@ -302,6 +302,8 @@ class SshSessionServer(paramiko.ServerInterface):
         self.sftp = False
 
     def check_channel_request(self, kind, chanid):
+        # pylint: disable=W0613
+        #         Unused argument 'chanid'
         if kind == 'session':
             self.log.debug('channel request granted, kind={0}'.format(kind))
             return paramiko.OPEN_SUCCEEDED
@@ -372,9 +374,13 @@ class SshSessionServer(paramiko.ServerInterface):
         return False
 
     def get_allowed_auths(self, username):
+        # pylint: disable=W0613
+        #         Unused argument 'username'
         return 'password,publickey'
 
     def check_channel_shell_request(self, channel):
+        # pylint: disable=W0613
+        #         Unused argument 'channel'
         self.log.debug('ssh channel granted.')
         self.shell_requested.set()
         return True
@@ -391,12 +397,16 @@ class SshSessionServer(paramiko.ServerInterface):
             self, channel, name)
 
     def check_channel_pty_request(self, channel, term, width, height, *_):
+        # pylint: disable=W0613
+        #         Unused argument 'channel'
         self.client.env['TERM'] = term
         self.client.env['LINES'] = str(height)
         self.client.env['COLUMNS'] = str(width)
         return True
 
     def check_channel_window_change_request(self, channel, width, height, *_):
+        # pylint: disable=W0613
+        #         Unused argument 'channel'
         self.client.env['LINES'] = str(height)
         self.client.env['COLUMNS'] = str(width)
         if self.client.on_naws is not None:
@@ -404,6 +414,8 @@ class SshSessionServer(paramiko.ServerInterface):
         return True
 
     def check_channel_env_request(self, channel, name, value):
+        # pylint: disable=W0613
+        #         Unused argument 'channel'
         self.log.debug('env request: [{0}] = {1}'.format(name, value))
         self.client.env[name] = value
         return True

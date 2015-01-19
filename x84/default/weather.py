@@ -152,7 +152,7 @@ def do_search(term, search):
         # print resp.content
         xml_stream = StringIO.StringIO(resp.content)
         locations = list([dict(elem.attrib.items())
-                          for _event, elem in ET.iterparse(xml_stream)
+                          for _, elem in ET.iterparse(xml_stream)
                           if elem.tag == 'location'])
         if 0 == len(locations):
             disp_notfound()
@@ -199,7 +199,7 @@ def parse_forecast(root):
             forecast[key] = dict()
             for subelem in elem:
                 forecast[key][subelem.tag] = subelem.text.strip()
-    return [value for _key, value in sorted(forecast.items())]
+    return [value for _, value in sorted(forecast.items())]
 
 
 def get_centigrade():
@@ -350,7 +350,7 @@ def chose_location(locations):
     assert len(locations) > 0, locations
     echo(u'\r\n\r\n {chose_a} {city}: '
          .format(chose_a=term.yellow(u'chose a'),
-                 city=term.bold_yellow('city'))),
+                 city=term.bold_yellow('city')))
     return chose_location_lightbar(locations)
 
 

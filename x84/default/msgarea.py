@@ -117,7 +117,7 @@ def main(last_called=None):
     session.activity = 'checking for new messages'
 
     # set syncterm font, if any
-    if term._kind == 'ansi':
+    if term.kind.startswith('ansi'):
         echo(syncterm_setfont(syncterm_font))
 
     search_tags = session.user.get(key='msg_subscription', default=None)
