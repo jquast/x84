@@ -1,5 +1,5 @@
 """
-fail2ban module for x/84, https://github.com/jquast/x84
+fail2ban module for x/84.
 
 To enable, add to default.ini::
 

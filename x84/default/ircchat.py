@@ -1,5 +1,4 @@
 """ IRC chat script for x/84. """
-
 # std imports
 import collections
 import warnings

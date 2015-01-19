@@ -1,4 +1,4 @@
-""" logoff script with 'automsg' for x/84, https://github.com/jquast/x84 """
+""" logoff script with 'automsg' for x/84. """
 
 
 def main():

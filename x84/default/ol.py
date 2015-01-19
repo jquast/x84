@@ -1,5 +1,6 @@
 # coding=utf-8
-""" oneliners for x/84, http://github.com/jquast/x84
+"""
+one-liners script for x/84.
 
 To use the (optional) http://shroo.ms API,
 which provides something of an intra-bbs oneliners,

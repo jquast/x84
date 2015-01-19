@@ -1,4 +1,4 @@
-""" common interface module for x/84, https://github.com/jquast/x84 """
+""" Common interface utility functions for x/84. """
 # std imports
 from __future__ import division
 import os

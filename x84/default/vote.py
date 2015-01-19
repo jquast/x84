@@ -1,4 +1,4 @@
-""" Voting booth script for x/84 bbs, https://github.com/jquast/x84 """
+""" Voting booth script for x/84. """
 
 from common import waitprompt, prompt_pager
 from x84.bbs import getsession, getterminal, echo, LineEditor, DBProxy, showart, syncterm_setfont
@@ -59,7 +59,7 @@ def query_question():
                  colors={'highlight': term.cyan,
                          'lowlight': term.green,
                          },
-                 width=term.width, breaker=None, noprompt=True)
+                 width=term.width, breaker=None, end_prompt=False)
     echo(term.move_x(0) + term.bold_black(u'* = already voted\r\n\r\n'))
 
     while True:
@@ -77,19 +77,17 @@ def query_question():
 
 # -----------------------------------------------------------------------------------
 
+
 def list_results(questionnumber):
     term = getterminal()
     db = DBProxy(databasename)
     alternatives = {}
     questions = []
     results = []
-    amount_of_alternatives = []
     amount_of_alternatives = db['amount_of_alternatives']
-    alternatives = db['alternatives']
     alternatives = db['alternatives']
     questions = db['questions']
     results = db['results']
-    index = db['index']
 
     echo(term.clear())
 
@@ -126,7 +124,7 @@ def list_results(questionnumber):
                  colors={'highlight': term.cyan,
                          'lowlight': term.green,
                          },
-                 width=term.width, breaker=None, noprompt = True)
+                 width=term.width, breaker=None, end_prompt=False)
     echo(term.move_x(0) + term.bold_black(u'* = already voted\r\n'))
     waitprompt()
 
@@ -160,7 +158,7 @@ def vote(questionnumber):
                  colors={'highlight': term.cyan,
                          'lowlight': term.green,
                          },
-                 width=term.width, breaker=None, noprompt = True)
+                 width=term.width, breaker=None, end_prompt=False)
     echo(term.move_x(0) + term.magenta(u'(') + term.cyan(str(amount_of_alternatives[questionnumber])) +
          term.magenta(u') ') + term.bold_black(u'Add your own answer..\r\n\r\n'))
 
@@ -393,7 +391,7 @@ def main():
     echo(syncterm_setfont('topaz'))
 
     db = DBProxy(databasename)
-    if not 'questions' in db:
+    if 'questions' not in db:
         generate_database()
 
     while True:

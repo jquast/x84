@@ -1,9 +1,9 @@
-'''
-Amiga "Topaz" codec for X/84, https://github.com/jquast/x84
+"""
+Amiga "Topaz" codec for x/84.
 
 There is no provided unicode translation map, but we try to approximate the
 Topaz font families as close as possible.
-'''
+"""
 
 from __future__ import absolute_import
 

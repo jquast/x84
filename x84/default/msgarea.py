@@ -1,5 +1,5 @@
 """
-Message area for x/84, https://github.com/jquast/x84
+Message area for x/84.
 
 This script provides an interface to check for new
 messages, subscribe to and browse tags and networks,

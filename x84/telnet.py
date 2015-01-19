@@ -1,5 +1,5 @@
 """
-Telnet server for x84, https://github.com/jquast/x84
+Telnet server for x84.
 
 Limitations:
 

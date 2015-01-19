@@ -1,4 +1,4 @@
-""" File browsing/flagging for x/84 bbs https://github.com/jquast/x84 """
+""" File browser/manager for x/84. """
 # std imports
 from __future__ import division
 import zipfile

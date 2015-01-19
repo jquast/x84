@@ -1,4 +1,4 @@
-""" SSH server for x84, https://github.com/jquast/x84 """
+""" SSH server for x84. """
 
 from __future__ import absolute_import
 

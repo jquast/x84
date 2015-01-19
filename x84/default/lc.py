@@ -1,4 +1,4 @@
-""" Last Callers script for x/84, http://github.com/jquast/x84 """
+""" Last Callers script for x/84. """
 # std
 import os
 import time

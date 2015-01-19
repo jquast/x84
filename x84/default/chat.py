@@ -1,4 +1,4 @@
-""" Chat script for x/84, https://github.com/jquast/x84 """
+""" Chat script for x/84. """
 # std imports
 from __future__ import division
 import collections

@@ -1,6 +1,4 @@
-"""
-Weather retriever for x/84 https://github.com/jquast/x84
-"""
+""" Weather forecast script for x/84. """
 from xml.etree import cElementTree as ET
 import itertools
 import textwrap

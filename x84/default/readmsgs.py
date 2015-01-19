@@ -1,4 +1,4 @@
-""" message reader for x/84, https://github.com/jquast/x84 """
+""" message reader script for x/84. """
 FILTER_PRIVATE = True
 ALREADY_READ = set()
 DELETED = set()

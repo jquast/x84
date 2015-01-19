@@ -1,4 +1,4 @@
-""" Bulletins / Gallery script for x/84 bbs, https://github.com/jquast/x84 """
+""" Bulletins / Gallery script for x/84."""
 
 # Variables for start position of lightbar etc can be found in def main()
 # If you are running this on a -Windows- machine you will have to search

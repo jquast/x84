@@ -1,5 +1,5 @@
 """
-Post-login screen for x/84, http://github.com/jquast/x84
+Post-login screen for x/84.
 
 When handle is None or u'', an in-memory account 'anonymous' is created
 and assigned to the session.

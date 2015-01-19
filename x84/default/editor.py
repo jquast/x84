@@ -1,4 +1,4 @@
-""" Editor script for X/84, https://github.com/jquast/x84 """
+""" Editor script for x/84 """
 # std
 import os
 

@@ -1,8 +1,9 @@
-""" Tetris game for x/84, https://github.com/jquast/x84 """
+""" Tetris game for x/84. """
 __author__ = 'Johannes Lundberg'
 __copyright__ = 'Copyright 2007-2013'
 __license__ = 'Public Domain'
-# Single player tetris, originally written for The Progressive (prsv)
+# Single player tetris, originally written for The Progressive (prsv), the
+# predecessor python bbs system of x/84.
 # Copyright (C) 2007-2013 Johannes Lundberg
 
 

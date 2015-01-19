@@ -1,5 +1,5 @@
 """
-Matrix/login script for x/84, https://github.com/jquast/x84
+Default matrix (login) script for x/84.
 
 This script is the default session entry point for all connections.
 

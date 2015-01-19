@@ -1,4 +1,4 @@
-""" Bulletins script for x/84 bbs, https://github.com/jquast/x84 """
+""" Bulletins script for x/84. """
 
 # More to be added as soon as we get a filebase going.
 

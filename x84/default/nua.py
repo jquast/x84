@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-New user account script for x/84, https://github.com/jquast/x84
+New user account script for x/84.
 
 This script is closely coupled with, and dependend on by profile.py.
 """

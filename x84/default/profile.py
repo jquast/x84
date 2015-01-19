@@ -1,5 +1,5 @@
 """
-User profile editor script for x/84, http://github.com/jquast/x84
+User profile editor script for x/84.
 
 This script is closely coupled with, and dependent upon nua.py.
 """

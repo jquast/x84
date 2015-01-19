@@ -1,5 +1,5 @@
 """
-rlogin server for x84, https://github.com/jquast/x84
+rlogin server for x84.
 
 This only exists to demonstrate alternative client protocols rather than
 only ssh or telnet.  rlogin is a very insecure and not recommended!

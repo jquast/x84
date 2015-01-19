@@ -1,7 +1,4 @@
-""" Userlister for x/84 bbs, https://github.com/jquast/x84 """
-__version__ = 1.2
-__author__ = 'Hellbeard'
-
+""" Userlister for x/84. """
 # std
 import collections
 import time

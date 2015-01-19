@@ -1,6 +1,4 @@
-"""
-oneliners web module for x/84, https://github.com/jquast/x84
-"""
+""" oneliners web module for x/84. """
 
 import web
 import json

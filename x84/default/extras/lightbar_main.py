@@ -1,14 +1,11 @@
 """
- Example code of a simple, lightbar based main menu for x/84,
- http://github.com/jquast/x84
+Example code of lightbar-based main menu for x/84.
 
- Please note: this is a 3rdparty module, so use at your own risk!
+Install
+-------
 
- Install instructions:
- ---------------------
-
- simply copy over/rename lb_main.py to main.py (remember to make a backup
- of the original main.py first !!)
+simply copy over/rename lb_main.py to main.py (remember to make a backup
+of the original main.py first !!)
 """
 
 __author__ = 'megagumbo'

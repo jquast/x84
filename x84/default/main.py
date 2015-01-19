@@ -1,6 +1,4 @@
-"""
-Main menu script for x/84, http://github.com/jquast/x84
-"""
+""" Main menu script for x/84. """
 # std imports
 from __future__ import division
 import collections

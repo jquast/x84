@@ -70,7 +70,7 @@ def remaining(date):
 
 
 def main():
-    """ Only called by x/84 bbs, https://github.com/jquast/x84 """
+    """ x/84 version. """
     from x84.bbs import echo
     now = datetime.now()
     echo(u'\r\n\r\n')

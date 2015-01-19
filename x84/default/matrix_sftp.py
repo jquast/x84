@@ -1,5 +1,5 @@
 """
-SFTP Matrix for X/84 (Formerly, 'The Progressive') BBS,
+SFTP Matrix for x/84.
 
 This script is the default session entry point for all sftp connections.
 

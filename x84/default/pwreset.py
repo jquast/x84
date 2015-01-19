@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""" Password reset script for x/84, http://github.com/jquast/x84 """
+""" Password reset script for x/84. """
 from __future__ import division
 
 import string

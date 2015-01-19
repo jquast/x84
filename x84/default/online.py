@@ -1,4 +1,4 @@
-""" Who's online script for X/84, https://github.com/jquast/x84 """
+""" Who's online script for x/84. """
 import time
 POLL_KEY = 0.25  # blocking ;; how often to poll keyboard
 POLL_INF = 2.00  # seconds elapsed until re-ask clients for more details

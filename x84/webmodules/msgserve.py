@@ -1,5 +1,5 @@
 """
-x84net message network web host for x/84, https://github.com/jquast/x84
+x84net message network web host for x/84.
 
 This is a RESTful API server. Data is represented as JSON.
 
