@@ -175,7 +175,7 @@ def parse_todays_weather(root):
     # parse all current conditions from XML, value is cdata.
     current_conditions = root.find('CurrentConditions')
     if current_conditions is None:
-        log.error('Current conditions is None: root={!r}'
+        log.debug('Current conditions is None: root={!r}'
                   .format(ET.tostring(root)))
         return weather
     for elem in current_conditions:
@@ -194,7 +194,7 @@ def parse_forecast(root):
     forecast = dict()
     xml_forecast = root.find('Forecast')
     if xml_forecast is None:
-        log.error('Forecast is None: root={!r}'
+        log.debug('Forecast is None: root={!r}'
                   .format(ET.tostring(root)))
         return forecast
 
@@ -276,10 +276,10 @@ def chk_save_location(location):
     stored_location = session.user.get('location', dict()).items()
     if (sorted(location.items()) == sorted(stored_location)):
         # location already saved
-        return
+        return False
     if session.user.handle == 'anonymous':
         # anonymous cannot save preferences
-        return
+        return False
 
     # prompt to store (unsaved/changed) location
     echo(u'\r\n\r\n')
@@ -401,7 +401,7 @@ def get_icon(weather):
 
 
 def display_panel(weather, column, centigrade):
-    from x84.bbs import getterminal, echo, from_cp437
+    from x84.bbs import getterminal, echo
     term = getterminal()
 
     # display day of week,
@@ -441,32 +441,36 @@ def display_panel(weather, column, centigrade):
     return row_loc
 
 
-def display_weather(todays, weather, centigrade):
+def display_weather(todays, forecast, centigrade):
     """
     Display weather as vertical panels.
 
     Thanks to xzip, we now have a sortof tv-weather channel art :-)
     """
-    from x84.bbs import getterminal, echo, from_cp437, syncterm_setfont
+    print(centigrade)
+    from x84.bbs import getterminal, echo, syncterm_setfont
     term = getterminal()
     # set syncterm font to cp437
     if term.kind.startswith('ansi'):
         echo(syncterm_setfont('cp437'))
+
     echo(term.height * u'\r\n')
     echo(term.move(0, 0))
-    at = term.yellow_bold('At')
     city = term.bold(todays.get('City', u''))
     state = todays.get('State', u'')
     if state:
-        state = u', {}'.format(term.bold_yellow_reverse(state))
+        state = u', {}'.format(term.bold(state))
     dotdot = term.bold_black('...')
-    echo(u'{at} {city}{state} {dotdot}'.format(
-        at=at, city=city, state=state, dotdot=dotdot))
-    bottom = 2
-    if weather:
-        for column in range(0, (term.width - panel_width), panel_width):
+    echo(u'At {city}{state} {dotdot}'.format(
+        city=city, state=state, dotdot=dotdot))
+
+    bottom = 3
+    if forecast:
+        end = (term.width - panel_width)
+        step = panel_width
+        for idx, column in enumerate(range(0, end, step)):
             try:
-                day = weather.pop(0)
+                day = forecast[idx]
             except IndexError:
                 break
             bottom = max(display_panel(day, column, centigrade), bottom)
@@ -477,7 +481,7 @@ def display_weather(todays, weather, centigrade):
     temp, deg_conv = temp_conv(todays.get('Temperature', ''), centigrade)
     real_temp, deg_conv = temp_conv(todays.get('RealFeel', ''), centigrade)
     speed, spd_conv = speed_conv(todays.get('WindSpeed', ''), centigrade)
-    degree = from_cp437(''.join([chr(248)]))
+    degree = '\xf8'.decode('cp437_art')
 
     current_0 = u'Current conditions at {timenow}'.format(timenow=timenow)
     current_1 = u'{0}'.format(todays.get('WeatherText', ''))
@@ -526,14 +530,17 @@ def main():
         if search is None or 0 == len(search):
             # exit (no selection)
             return
+
         locations = do_search(search)
         if 0 != len(locations):
             location = (locations.pop() if 1 == len(locations)
                         else chose_location(locations) or dict())
+
         root = fetch_weather(location.get('postal'))
         if root is None:
             # exit (weather not found)
             return
+
         todays = parse_todays_weather(root)
         forecast = parse_forecast(root)
         if session.user.get('centigrade', None) is None:
@@ -542,16 +549,24 @@ def main():
         else:
             # offer C/F preference change
             chk_centigrade()
+
         while True:
             centigrade = session.user.get('centigrade', False)
+
             display_weather(todays, forecast, centigrade)
-            echo(term.move(term.height - 1, panel_width + 5))
-            echo(term.yellow_reverse(u'--ENd Of tRANSMiSSiON--'))
-            # allow re-displaying weather between C/F, even at EOT prompt
-            if getch() == cf_key:
-                get_centigrade()
-                continue
-            break
-        break
+            txt_chg_deg = (', [!] change degrees'
+                           if session.user.handle != 'anonymous' else u'')
+            echo(u''.join((term.normal, u'\r\n\r\n',
+                           term.move_x(5),
+                           u'-- press return' + txt_chg_deg + ' --')))
+
+            while True:
+                # allow re-displaying weather between C/F, even at EOT prompt
+                inp = term.inkey()
+                if inp.lower() == cf_key:
+                    get_centigrade()
+                    break
+                elif inp.code == term.KEY_ENTER:
+                    return
 
     chk_save_location(location)

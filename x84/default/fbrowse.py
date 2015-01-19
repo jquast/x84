@@ -206,15 +206,22 @@ def upload_files(term, protocol='xmodem1k'):
                     echo(term.bold_red(u'\r\nIllegal filename.\r\n'))
                     term.inkey()
                     return
-            echo(term.bold(u'\r\nBegin your {protocol} sending program now.\r\n'
-                           .format(protocol=protocol)))
+
+            echo(term.bold(
+                u'\r\nBegin your {0} sending program now.\r\n'
+                .format(protocol)))
+
             upload_filename = os.path.join(UPLOADS_DIR, inp)
-            upload = open(upload_filename, 'wb')
-            if not recv_modem(upload, protocol):
-                echo(term.bold_red(u'Upload failed!\r\n'))
-                os.unlink(upload_filename)
+            try:
+                upload = open(upload_filename, 'wb')
+            except IOError as err:
+                echo(term.bold_red('u\r\nIOError: {err}\r\n'.format(err=err)))
             else:
-                echo(term.bold_green(u'Transfer succeeded.\r\n'))
+                if not recv_modem(upload, protocol):
+                    echo(term.bold_red(u'Upload failed!\r\n'))
+                    os.unlink(upload_filename)
+                else:
+                    echo(term.bold_green(u'Transfer succeeded.\r\n'))
             term.inkey()
         else:
             return
