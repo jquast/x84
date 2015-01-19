@@ -13,6 +13,7 @@ class Favicon(object):
     """ Dummy class for preventing 404 of ``/favicon.ico`` """
 
     def GET(self):
+        """ GET request callback (does nothing). """
         pass
 
 
@@ -36,6 +37,7 @@ def _get_fp(section_key, optional=False):
 
 
 def get_urls_funcs(web_modules):
+    """ Get url function mapping for the given web modules. """
     log = logging.getLogger(__name__)
 
     # list of url's to route to each module api; defaults to route /favicon.ico

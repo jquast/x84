@@ -79,6 +79,7 @@ def get_fail2ban_function():
     ) or 360
 
     def wrapper(ip):
+        """ Inner wrapper function. """
         log = logging.getLogger(__name__)
 
         # pylint: disable=W0602

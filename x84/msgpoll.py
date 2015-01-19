@@ -107,7 +107,7 @@ def push_rest(net, msg, parent):
 
 
 def get_networks():
-    " Get configured message networks. "
+    """ Get list configured message networks. """
     from x84.bbs import get_ini
 
     log = logging.getLogger(__name__)
@@ -161,6 +161,9 @@ def get_networks():
 
 
 def get_last_msg_id(last_file):
+    """ Get the "last message id" by data file ``last_file``. """
+    # TODO(jquast): This should have been done internally (and far
+    #               more easily!) by a DBProxy database.
     last_msg_id = -1
 
     log = logging.getLogger(__name__)
@@ -182,7 +185,7 @@ def get_last_msg_id(last_file):
 
 
 def poll_network_for_messages(net):
-    " pull for new messages of network, storing locally. "
+    """ Poll for new messages of network, ``net``. """
     from x84.bbs import Msg, DBProxy
     from x84.bbs.msgbase import to_localtime
 
@@ -257,7 +260,7 @@ def poll_network_for_messages(net):
 
 
 def publish_network_messages(net):
-    " Push messages to network. "
+    """ Push messages to network, ``net``. """
     from x84.bbs import DBProxy
     from x84.bbs.msgbase import format_origin_line, MSGDB
 
@@ -317,14 +320,16 @@ def publish_network_messages(net):
 
 
 def poller(poll_interval):
+    """ Blocking function periodically polls configured message networks. """
     log = logging.getLogger(__name__)
 
     # get all networks
     networks = get_networks()
 
-    while networks:
-        poll(networks)
-        time.sleep(poll_interval)
+    if networks:
+        while True:
+            do_poll(networks)
+            time.sleep(poll_interval)
     else:
         log.error(u'No networks configured for poll/publish.')
 
@@ -359,9 +364,12 @@ def main(background_daemon=True):
         poller(poll_interval)
 
 
-def poll(networks):
-    """ message polling process """
+def do_poll(networks):
+    """
+    Message polling process.
 
+    Function is called periodically by :func:`poller`.
+    """
     # pull-from all networks
     map(poll_network_for_messages, networks)
 

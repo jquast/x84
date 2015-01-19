@@ -4,7 +4,12 @@ inherits:
 ignore:
   - (^|/)\..+
   - ^docs/
+  # user-contributed, very chaotic and unmaintainable
   - ^x84/default/extras
+  # user-contributed, not necessary to pylint
+  - ^x84/encodings
+  # derived from mini-boa, not very well documented.
+  - ^x84/telnet.py
 
 test-warnings: true
 
@@ -18,6 +23,9 @@ dodgy:
 frosted:
     # static analysis
     run: true
+    disable:
+        # (...) imported but unused, does not understand __all__
+        - E101
 
 mccabe:
     # complexity checking.
@@ -55,6 +63,12 @@ pylint:
         # Cyclic import (x84.bbs -> x84.bbs.dbproxy -> x84.db -> x84.bbs.ini -> x84.ssh -> x84.sftp)
         # we really can't prevent this without a complete overhaul.
         - R0401
+        # Argument 'self' passed by position and keyword in method call
+        # we use this commonly for .format(self=self)
+        - E1124
+        # Interface not implemented
+        # happens in ssh.py and sftp.py due to paramiko's old-style classes.
+        - R0923
 
 pyroma:
     # checks setup.py

@@ -12,6 +12,7 @@ from x84.db import (
     log_db_cmd,
 )
 
+
 class DBProxy(object):
 
     """

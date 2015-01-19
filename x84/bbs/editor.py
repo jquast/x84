@@ -216,10 +216,10 @@ class ScrollingEditor(AnsiWindow):
         :param int width: width of window.
         :param int yloc: y-location of window.
         :param int xloc: x-location of window.
-        :param int max_length: maximum length of input (may be larger than width).
-        :param dict colors: color theme, only key value of ``highlight`` is used.
+        :param int max_length: maximum length of input (even when scrolled).
+        :param dict colors: color theme.
         :param dict glyphs: bordering window character glyphs.
-        :param dict keyset: command keys, global ``PC_KEYSET`` is used by default.
+        :param dict keyset: command keys, global ``PC_KEYSET`` is default.
         """
         self._term = getterminal()
         self._horiz_shift = 0

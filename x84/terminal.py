@@ -1,6 +1,4 @@
-"""
-Terminal handler for x/84 bbs.  http://github.com/jquast/x84
-"""
+""" Terminal handler for x/84 """
 import contextlib
 import logging
 import codecs
@@ -11,6 +9,9 @@ TERMINALS = dict()
 
 
 class Terminal(BlessedTerminal):
+
+    """ A thin wrapper over :class:`blessed.Terminal`. """
+
     _session = None
 
     def __init__(self, kind, stream, rows, columns):
@@ -22,12 +23,13 @@ class Terminal(BlessedTerminal):
 
     @property
     def session(self):
+        """ Session associated with this terminal. """
         if self._session is None:
             from x84.bbs.session import getsession
             self._session = getsession()
         return self._session
 
-    def inkey(self, timeout=None, esc_delay=0.35):
+    def inkey(self, timeout=None, esc_delay=0.35, *_):
         try:
             return BlessedTerminal.inkey(self, timeout, esc_delay=0.35)
         except UnicodeDecodeError as err:
@@ -37,6 +39,7 @@ class Terminal(BlessedTerminal):
     inkey.__doc__ = BlessedTerminal.inkey.__doc__
 
     def set_keyboard_decoder(self, encoding):
+        """ Set or change incremental decoder for keyboard input. """
         log = logging.getLogger(__name__)
         try:
             self._keyboard_decoder = codecs.getincrementaldecoder(encoding)()
@@ -69,24 +72,38 @@ class Terminal(BlessedTerminal):
                      ws_xpixel=None, ws_ypixel=None)
     _height_and_width.__doc__ = BlessedTerminal._height_and_width.__doc__
 
-    def padd(self, text):
-        from blessed.sequences import Sequence
-        return Sequence(text, self).padd()
-
     @contextlib.contextmanager
     def raw(self):
+        """ Dummy method yields nothing for blessed compatibility. """
         yield
 
     @contextlib.contextmanager
     def cbreak(self):
+        """ Dummy method yields nothing for blessed compatibility. """
         yield
 
     @property
     def is_a_tty(self):
+        """ Dummy property always returns True. """
         return True
 
 
 def translate_ttype(ttype):
+    """
+    Return preferred terminal type given the session-negotiation ttype.
+
+    This provides a kind of coercion; we know some terminals, such as
+    SyncTerm report a terminal type of 'ansi' -- however, the author
+    publishes a termcap database for 'ansi-bbs' which he instructs
+    should be used!  So an ``[system]`` configuration item
+    of ``termcap-ansi`` may be set to ``'ansi-bbs'`` to coerce
+    such terminals for Syncterm-centric telnet servers -- though I
+    would not recommend it.
+
+    Furthermore, if the ttype is (literally) 'unknown', then a
+    system-wide default terminal type may be returned, also by
+    ``[system]`` configuration option ``termcap-unknown``.
+    """
     from x84.bbs import get_ini
     log = logging.getLogger(__name__)
 
@@ -108,9 +125,7 @@ def translate_ttype(ttype):
 
 
 def determine_encoding(env):
-    """
-    Determine and return preferred encoding given session env.
-    """
+    """ Determine and return preferred encoding given session env. """
     from x84.bbs import get_ini
     default_encoding = get_ini(
         section='session', key='default_encoding'
@@ -163,12 +178,23 @@ def init_term(writer, env):
 class TerminalProcess(object):
 
     """
-    Class record for tracking global processes and their
-    various attributes. These are stored using register_tty()
-    and unregister_tty(), and retrieved using terminals().
+    Class record for tracking "terminals".
+
+    Probably of most interest, is that a ``TerminalProcess``
+    is an abstract association with a multiprocessing.Process
+    sub-process, and its i/o queues (``master_pipes``).
+
+    This is not a really tty, or even a pseudo-tty (pty)!  No
+    termios, fnctl, or any terminal driver i/o is performed, it
+    is all virtual.
+
+    An instance of this class is stored using :func:`register_tty`
+    and removed by :func:`unregister_tty`, and discovered using
+    :func:`get_terminals`.
     """
 
     def __init__(self, client, sid, master_pipes):
+        """ Class constructor. """
         from x84.bbs import get_ini
         self.client = client
         self.sid = sid
@@ -178,6 +204,8 @@ class TerminalProcess(object):
 
 def flush_queue(queue):
     """
+    Flush all data awaiting on the ipc queue.
+
     Seeks any remaining events in queue, used before closing
     to prevent zombie processes with IPC waiting to be picked up.
     """
@@ -192,19 +220,14 @@ def flush_queue(queue):
 
 
 def register_tty(tty):
-    """
-    Register a global instance of TerminalProcess
-    """
+    """ Register a :class:`TerminalProcess` instance. """
     log = logging.getLogger(__name__)
     log.debug('[{tty.sid}] registered tty'.format(tty=tty))
     TERMINALS[tty.sid] = tty
 
 
 def unregister_tty(tty):
-    """
-    Unregister a Terminal, described by its Client,
-    input and output Queues, and Lock.
-    """
+    """ Unregister a :class:`TerminalProcess` instance. """
     try:
         flush_queue(tty.master_read)
         tty.master_read.close()
@@ -219,16 +242,12 @@ def unregister_tty(tty):
 
 
 def get_terminals():
-    """
-    Returns a list of tuples (session-id, ttys).
-    """
+    """ Returns a list of all terminals as tuples (session-id, ttys). """
     return TERMINALS.items()
 
 
 def find_tty(client):
-    """
-    Given a client, return a matching tty, or None if not registered.
-    """
+    """ Given a client, return a matching tty, or None if not registered. """
     try:
         return next(tty for _, tty in get_terminals() if client == tty.client)
     except StopIteration:
@@ -236,9 +255,7 @@ def find_tty(client):
 
 
 def kill_session(client, reason='killed'):
-    """
-    Given a client, shutdown its socket and signal subprocess exit.
-    """
+    """ Given a client, shutdown its socket and signal subprocess exit. """
     from x84.bbs.exception import Disconnected
     client.shutdown()
 
@@ -272,6 +289,9 @@ def start_process(sid, env, CFG, child_pipes, kind, addrport,
     :param dict matrix_kwargs: optional keyward arguments to pass to matrix
                                script.
     """
+    # pylint: disable=R0913,R0914
+    #         Too many arguments (8/5)
+    #         Too many local variables (16/15)
     import x84.bbs.ini
     from x84.bbs.ipc import make_root_logger
     from x84.bbs.session import Session
@@ -281,7 +301,7 @@ def start_process(sid, env, CFG, child_pipes, kind, addrport,
     # sending to child process
     x84.bbs.ini.CFG = CFG
 
-    (writer, reader) = child_pipes
+    (writer, _) = child_pipes
 
     # remove any existing log handlers in child process and replace
     # with a new root log handler that sends to x84.bbs.engine over IPC.
@@ -348,14 +368,14 @@ def spawn_client_session(client, matrix_kwargs=None):
 
 def on_naws(client):
     """
-    On a NAWS event, check if client is yet registered in registry and send
-    the input event queue a 'refresh' event.
+    Callback for telnet NAWS negotiation.
 
-    This is the same thing as ^L to the 'userland', but should indicate also
-    that a new window size is read in interfaces where they may be changed
-    accordingly.
+    On a Telnet NAWS sub-negotiation, check if client is yet registered
+    in registry, and if so, send a 'refresh' event down the event queue.
+
+    This is ultimately handled by :meth:`x84.bbs.session.Session.buffer_event`.
     """
-    for _sid, tty in get_terminals():
+    for _, tty in get_terminals():
         if client == tty.client:
             columns = int(client.env['COLUMNS'])
             rows = int(client.env['LINES'])

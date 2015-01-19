@@ -3,9 +3,7 @@
 
 class BaseServer(object):
 
-    """
-    Base class for server implementations.
-    """
+    """ Base class for server implementations. """
 
     #: Maximum number of clients
     MAX_CONNECTIONS = 100
@@ -41,6 +39,8 @@ class BaseServer(object):
 
         :rtype dict
         """
+        # pylint: disable=W0613
+        #         Unused argument 'instance'
         return dict()
 
     @classmethod
@@ -53,6 +53,8 @@ class BaseServer(object):
 
         :rtype dict
         """
+        # pylint: disable=W0613
+        #         Unused argument 'instance'
         return dict()
 
     def client_count(self):
@@ -60,9 +62,7 @@ class BaseServer(object):
         return len(self.clients)
 
     def client_list(self):
-        """
-        Returns a list of connected clients.
-        """
+        """ Return list of connected clients. """
         return self.clients.values()
 
     def client_fds(self):

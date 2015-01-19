@@ -198,7 +198,7 @@ def get_menu_items(session):
     return menu_items
 
 
-def decorate_menu_item(menu_item, term, highlight, lowlight):
+def decorate_menu_item(menu_item, highlight, lowlight):
     """ Return menu item decorated. """
     key_text = (u'{lb}{inp_key}{rb}'.format(
         lb=lowlight(u'['),
@@ -230,8 +230,8 @@ def render_menu_entries(term, top_margin, menu_items):
 
     # render all menu items, highlighting their action 'key'
     rendered_menuitems = [
-        decorate_menu_item(menu_item=menu_item, term=term,
-                           highlight=highlight, lowlight=lowlight)
+        decorate_menu_item(
+            menu_item=menu_item, highlight=highlight, lowlight=lowlight)
         for menu_item in menu_items
     ]
     # create a parallel array of their measurable width

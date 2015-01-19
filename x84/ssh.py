@@ -33,12 +33,7 @@ import paramiko.py3compat
 
 class SshClient(BaseClient):
 
-    """
-    Represents a remote Ssh Client, instantiated from SshServer.
-    """
-    # pylint: disable=R0902,R0904
-    #         Too many instance attributes
-    #         Too many public methods
+    """A remote Ssh Client, instantiated from SshServer. """
 
     def __init__(self, sock, address_pair, on_naws=None):
         super(SshClient, self).__init__(sock, address_pair, on_naws)
@@ -57,7 +52,7 @@ class SshClient(BaseClient):
         """
         Shutdown and close socket.
 
-        Called by event loop after client is marked by deactivate().
+        Called by event loop after client is marked by :meth:`deactivate`.
         """
         self.active = False
         if self.channel is not None:
@@ -87,9 +82,7 @@ class SshClient(BaseClient):
                            '{self.__class__.__name__}'.format(self=self))
 
     def is_active(self):
-        """
-        Returns True if channel and transport is active.
-        """
+        """ Whether this connection is active (bool). """
         if self.transport is None or self.channel is None:
             # still connecting/negotiating, return our static
             # value (which is True, unless shutdown was called)
@@ -97,9 +90,7 @@ class SshClient(BaseClient):
         return self.transport.is_active()
 
     def send_ready(self):
-        """
-        Return True if any data is buffered for sending (screen output).
-        """
+        """ Whether any data is buffered for delivery. """
         if self.channel is None:
             # channel has not yet been negotiated
             return False
@@ -107,10 +98,10 @@ class SshClient(BaseClient):
 
     def _send(self, send_bytes):
         """
-        Sends bytes ``send_bytes`` to ssh channel, returns number of bytes
-        sent. Caller must re-buffer bytes not sent.
+        Sends ``send_bytes`` to ssh channel, returning number of bytes sent.
 
-        throws Disconnected on error
+        Caller must re-buffer bytes not sent.
+        :raises Disconnected: on socket send error (client disconnect).
         """
         try:
             return self.channel.send(send_bytes)
@@ -125,9 +116,9 @@ class SshClient(BaseClient):
 
     def send(self):
         """
-        Send any data buffered, returns number of bytes sent.
+        Send any data buffered and return number of bytes send.
 
-        Throws Disconnected on EOF.
+        :raises Disconnected: client has disconnected (cannot write to socket).
         """
         if not self.send_ready():
             self.log.warn('send() called on empty buffer')
@@ -143,24 +134,22 @@ class SshClient(BaseClient):
         return sent
 
     def recv_ready(self):
-        """
-        Returns True if data is awaiting on the ssh channel.
-        """
+        """ Whether data is awaiting on the ssh channel.  """
         if self.channel is None or self.kind == 'sftp':
-            # channel has not yet been negotiated, in the case
-            # of sftp, we explicitly don't want to hear about it!
-            #
-            # for sftp, we always return False ... XXX
+            # very strange for SFTP, all i/o is handled by paramiko's event
+            # loop and the various callback handlers of x84/sftp.py.  We always
+            # return False.  If we enable this, we'll find "input" received
+            # into matrix_sftp, which is raw protocol bytes that we should not
+            # concern ourselves with.
             return False
         return self.channel.recv_ready()
 
     def socket_recv(self):
         """
-        Receive any data ready on socket.
+        Receive data from socket, returns number of bytes received.
 
-        All bytes buffered to :py:attr`SshClient.recv_buffer`.
-
-        Throws Disconnected on EOF.
+        :raises Disconnect: client has disconnected.
+        :rtype: int
         """
         recv = 0
         try:
@@ -179,28 +168,32 @@ class SshClient(BaseClient):
 class ConnectSsh(BaseConnect):
 
     """
-    ssh protocol connection handler.
+    SSH protocol on-connect handler (in thread).
 
-    Takes care of the (initial) handshake, authentication, terminal,
-    and session setup.
+    Takes care of the (initial) handshake, authentication,
+    terminal, and session setup, ultimately spawning a
+    process by :func:`spawn_client_session` on success.
     """
 
+    #: time to periodically poll for negotiation completion.
     TIME_POLL = 0.05
-    TIME_WAIT_STAGE = 60
+
+    #: time to give up awaiting session negotiation.
+    TIME_WAIT_STAGE = 30
 
     def __init__(self, client, server_host_key, on_naws=None):
         """
-        client is a ssh.SshClient instance.
-        server_host_key is paramiko.RSAKey instance.
+        Class constructor.
+
+        :param ssh.SshClient client: an SshClient instance.
+        :param paramiko.RSAKey server_host_key: an RSAKey instance.
         """
         self.server_host_key = server_host_key
         self.on_naws = on_naws
         super(ConnectSsh, self).__init__(client)
 
     def run(self):
-        """
-        Accept new Ssh connect in thread.
-        """
+        """ Accept new Ssh connect in thread. """
         try:
             self.client.transport = paramiko.Transport(self.client.sock)
             self.client.transport.load_server_moduli()
@@ -213,6 +206,7 @@ class ConnectSsh(BaseConnect):
                     ssh_session=ssh_session)
 
             def detected():
+                """ Whether shell or SFTP session has been detected. """
                 return (ssh_session.shell_requested.isSet() or
                         ssh_session.sftp_requested.isSet())
 
@@ -275,6 +269,8 @@ class ConnectSsh(BaseConnect):
 
     def _timeleft(self, st_time):
         """
+        Whether time elapsed since ``st_time`` is below ``TIME_WAIT_STAGE``.
+
         Returns True when difference of current time and st_time is below
         TIME_WAIT_STAGE, and the ``stopped`` class attribute has not yet
         been set (such as during server shutdown).
@@ -284,6 +280,14 @@ class ConnectSsh(BaseConnect):
 
 
 class SshSessionServer(paramiko.ServerInterface):
+
+    """
+    SSH on-connect Session Server interface.
+
+    Methods of this class are callbacks from Paramiko's primary thread,
+    generally returning whether to accept or deny authentication and
+    sub-system requests.
+    """
 
     def __init__(self, client):
         self.shell_requested = threading.Event()
@@ -407,9 +411,7 @@ class SshSessionServer(paramiko.ServerInterface):
 
 class SshServer(BaseServer):
 
-    """
-    Poll sockets for new connections and sending/receiving data from clients.
-    """
+    """ SSH Server, tracking connecting clients for send/recv management. """
 
     client_factory = SshClient
     client_factory_kwargs = dict(on_naws=on_naws)
@@ -423,9 +425,7 @@ class SshServer(BaseServer):
     clients = {}
 
     def __init__(self, config):
-        """
-        Create a new Ssh Server.
-        """
+        """ Class initializer. """
         self.log = logging.getLogger(__name__)
         self.config = config
         self.address = config.get('ssh', 'addr')
@@ -459,6 +459,7 @@ class SshServer(BaseServer):
                       .format(self=self))
 
     def generate_host_key(self, filename):
+        """ Generate server host key to local filepath ``filename``. """
         from paramiko import RSAKey
 
         bits = 4096
@@ -480,9 +481,7 @@ class SshServer(BaseServer):
         return priv_key
 
     def client_fds(self):
-        """
-        Returns a list of client file descriptors to poll for read/write.
-        """
+        """ Return list of client file descriptors to poll for read/write. """
         return [_client.channel.fileno() for _client in self.clients.values()
                 if _client.channel is not None]
 

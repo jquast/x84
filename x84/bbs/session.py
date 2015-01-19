@@ -69,14 +69,8 @@ def gosub(script, *args, **kwargs):
 
 class Session(object):
 
-    """
-    A BBS Session engine. Begins by the ``run()`` method.
-    """
+    """ A per-process Session. Begins by the :meth:`run`. """
 
-    # pylint: disable=R0902,R0904,R0913
-    #        Too many instance attributes
-    #        Too many public methods
-    #        Too many arguments
     _encoding = None
     _decoder = None
     _activity = None
@@ -85,6 +79,8 @@ class Session(object):
 
     def __init__(self, terminal, sid, env, child_pipes, kind, addrport,
                  matrix_args, matrix_kwargs):
+        # pylint: disable=R0913
+        #        Too many arguments
         """ Instantiate a Session.
 
         Only one session may be instantiated per process.
@@ -106,6 +102,7 @@ class Session(object):
 
         # pylint: disable=W0603
         #        Using the global statement
+        # Manage `SESSION' per-process singleton.
         global SESSION
         assert SESSION is None, 'Only one Session per process allowed'
         SESSION = self
@@ -118,32 +115,21 @@ class Session(object):
         self.kind = kind
         self.addrport = addrport
 
-        # private attributes
-        self.init_script_stack(matrix_args, matrix_kwargs)
-        self.init_attributes()
-
         # initialize keyboard encoding
         terminal.set_keyboard_decoder(env['encoding'])
 
-    def init_script_stack(self, matrix_args, matrix_kwargs):
-        """
-        Initialize the "script stack" with the matrix script.
-
-        Using the default configuration argument 'script' for all connections,
-        but preferring 'script_{kind}', where ``kind`` may be ``telnet``,
-        ``ssh``, or any kind of supporting transport, for an alternative matrix
-        script (if it exists).
-        """
-        matrix_script = get_ini(
-            'matrix', 'script_{self.kind}'.format(self=self)
-        ) or get_ini('matrix', 'script')
-
-        script = Script(name=matrix_script,
-                        args=matrix_args,
-                        kwargs=matrix_kwargs)
-        self._script_stack = [script]
-
-    def init_attributes(self):
+        # private attributes
+        self._script_stack = [
+            # Initialize the "script stack" with the matrix script
+            # using the default configuration value of `script' for all
+            # connections, but preferring `script_{kind}', where `kind'
+            # may be `telnet', `ssh', or any kind of supporting transport.
+            Script(
+                name=get_ini('matrix', 'script_{self.kind}'.format(self=self)
+                             ) or get_ini('matrix', 'script'),
+                args=matrix_args,
+                kwargs=matrix_kwargs)
+        ]
         self._connect_time = time.time()
         self._last_input_time = time.time()
         self._node = None
@@ -232,7 +218,7 @@ class Session(object):
 
     @property
     def encoding(self):
-        """ Session encoding (both input and output). """
+        """ Session encoding, both input and output. """
         return self.env.get('encoding', 'utf8')
 
     @encoding.setter

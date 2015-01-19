@@ -74,23 +74,26 @@ def list_tags():
 class Msg(object):
 
     """
-    the Msg object is record spec for messages held in the msgbase.
+    A record spec for messages held in the msgbase.
+
     It contains many default properties to describe a conversation:
 
-    'creationtime', the time the message was initialized
+    - ``creationtime``, the time the message was initialized
 
-    'author', 'recipient', 'subject', and 'body' are envelope parameters.
+    - ``author``, ``recipient``, ``subject``, and ``body`` are envelope
+      parameters.
 
-    'read' becomes a list of handles that have viewed a public message, or a
-    single time the message was read by the addressed for private messages.
+    - ``read`` becomes a list of handles that have viewed a public message,
+      or a single time the message was read by the addressed for private
+      messages.
 
-    'tags' is for use with message groupings, containing a list of strings that
-    other messages may share in relation.
+    - ``tags`` is for use with message groupings, containing a list of strings
+      that other messages may share in relation.
 
-    'parent' points to the message this message directly refers to, and
-    'threads' points to messages that refer to this message. 'parent' must be
-    explicitly set, but children are automatically populated into 'threads' of
-    messages replied to through the send() method.
+    - ``parent`` points to the message this message directly refers to
+    - ``threads`` points to messages that refer to this message.  ``parent``
+      must be explicitly set, but children are automatically populated into
+      ``threads`` of messages replied to through the send() method.
     """
 
     # pylint: disable=R0902

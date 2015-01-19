@@ -47,13 +47,14 @@ def parse_auth(request_data):
     """
     Parse and return tuple of 'auth' token if valid.
 
-    :raises ValueError:  token is too far from future or past.
+    :raises ValueError: ``when`` value of token is out of bounds,
+                        or could not be coerced to an integer.
     """
     values = request_data.get('auth', '').split('|')
     if len(values) != 3:
         raise ValueError('Token must be 3-part pipe-delimited')
 
-    board_id, token, when = values
+    _, _, when = values
     when = int(when)
     if time.time() > when + AUTH_EXPIREY:
         raise ValueError('Token is from the future')
@@ -70,7 +71,7 @@ class MessageApi(object):
     # todo: validate messages much earlier (here, not below the scissor-line)
 
     def GET(self, network, last):
-        " GET method - pull messages "
+        """ GET method - pull messages """
         log = logging.getLogger(__name__)
         if 'HTTP_AUTH_X84NET' not in web.ctx.env:
             raise server_error(
@@ -90,8 +91,8 @@ class MessageApi(object):
         # return response data as json (200 OK)
         return self._jsonify(response_data, log)
 
-    def PUT(self, network, *args):
-        " PUT method - post messages "
+    def PUT(self, network, *_):
+        """ PUT method - post messages """
         log = logging.getLogger(__name__)
         if 'HTTP_AUTH_X84NET' not in web.ctx.env:
             raise server_error(
@@ -113,6 +114,11 @@ class MessageApi(object):
 
     @staticmethod
     def _jsonify(response_data, log):
+        """
+        Return ``response_data`` as json.
+
+        :raises web.HTTPError: response_data failed to encode to json.
+        """
         try:
             return json.dumps(response_data)
         except ValueError as err:
@@ -157,7 +163,9 @@ def server_error(log_func, log_msg, status_exc):
 
 
 def serve_messages_for(board_id, request_data, db_source):
-    " Reply-to api client request to receive new messages. "
+    """ Reply-to api client request to receive new messages. """
+    # pylint: disable=R0914
+    #         Too many local variables (16/15)
     from x84.bbs import DBProxy, msgbase
     from x84.bbs.msgbase import to_utctime
     log = logging.getLogger(__name__)
@@ -166,10 +174,16 @@ def serve_messages_for(board_id, request_data, db_source):
     db_messages = DBProxy(msgbase.MSGDB, use_session=False)
 
     def message_owned_by(msg_id, board_id):
+        """ Whether given message is owned by specified board. """
         return (msg_id in db_source and
                 db_source[msg_id] == board_id)
 
     def msgs_after(idx=None):
+        """
+        Generator of network messages following index ``idx```.
+
+        If ``idx`` is None, all messages are returned.
+        """
         for msg_id in db_tags.get(request_data['network'], []):
             if idx is None:
                 yield db_messages[idx]
@@ -209,7 +223,7 @@ def serve_messages_for(board_id, request_data, db_source):
 
 def receive_message_from(board_id, request_data,
                          db_source, db_transactions):
-    " Reply-to api client request to post a new message. "
+    """ Reply-to api client request to post a new message. """
     from x84.bbs.msgbase import to_localtime, Msg
     log = logging.getLogger(__name__)
 
@@ -251,9 +265,8 @@ def receive_message_from(board_id, request_data,
 
 def get_response(request_data):
     """ Serve one API server request and return. """
-    # todo: The caller runs a while loop .. this should be a script
-    # that does a while loop and imports x84.webserve.
-
+    # pylint: disable=R0914
+    #         Too many local variables (16/15)
     from x84.bbs import DBProxy, get_ini
     log = logging.getLogger(__name__)
 

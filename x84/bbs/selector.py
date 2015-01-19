@@ -1,6 +1,4 @@
-"""
-Left/Right lightbar choice selector for x/84, https://github.com/jquast/x84
-"""
+""" Left/Right lightbar choice selector for x/84. """
 from x84.bbs.ansiwin import AnsiWindow
 
 VI_KEYSET = {
@@ -60,9 +58,7 @@ class Selector(AnsiWindow):
         AnsiWindow.init_theme(self, colors=colors, glyphs=glyphs)
 
     def init_keystrokes(self, keyset):
-        """
-        This initializer sets keyboard keys for various editing keystrokes.
-        """
+        """ Sets keyboard keys for various editing keystrokes. """
         from x84.bbs.session import getterminal
         self.keyset = keyset
         term = getterminal()

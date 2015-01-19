@@ -18,16 +18,20 @@ VI_KEYSET = {
 
 class Pager(AnsiWindow):
 
-    """
-    Scrolling viewer
-    """
-    # pylint: disable=R0904,R0902
-    #        Too many public methods (24/20)
-    #        Too many instance attributes (11/7)
+    """ Scrolling viewer. """
 
     def __init__(self, *args, **kwargs):
         """
-        Initialize a pager of height, width, y, and x position.
+        Class initializer.
+
+        :param int width: width of window.
+        :param int height: height of window.
+        :param int yloc: y-location of window.
+        :param int xloc: x-location of window.
+        :param str content: initial pager contents.
+        :param dict colors: color theme.
+        :param dict glyphs: bordering window character glyphs.
+        :param dict keyset: command keys, global ``VI_KEYSET`` is default.
         """
         self._quit = False
         self.init_keystrokes(keyset=kwargs.pop('keyset', VI_KEYSET.copy()))
@@ -37,9 +41,7 @@ class Pager(AnsiWindow):
         self._position = self.position = kwargs.pop('position', 0) or 0
 
     def init_keystrokes(self, keyset):
-        """
-        This initializer sets keys appropriate for navigation.
-        """
+        """ Sets keyboard keys for various editing keystrokes. """
         term = getterminal()
         self.keyset = keyset
         self.keyset['home'].append(term.KEY_HOME)

@@ -19,7 +19,6 @@ panel_width = 15
 panel_height = 8
 top_margin = 1
 next_margin = 2
-timeout_fch = 3  # timeout of fahrenheit vs. centigrade prompt
 cf_key = u'!'
 
 
@@ -68,7 +67,7 @@ def disp_msg(msg):
 
 def disp_notfound():
     """ Display 'bad request -/- not found in red. """
-    from x84.bbs import getsession, getterminal, echo, getch
+    from x84.bbs import getsession, getterminal, echo
     term = getterminal()
     echo(u'\r\n\r\n{bad_req} {decorator} {not_found}'.format(
         bad_req=term.bold(u'bad request'),
@@ -134,12 +133,12 @@ def fetch_weather(postal):
     return tree.getroot()
 
 
-def do_search(search):
+def do_search(term, search):
     """
     Given any arbitrary string, return list of possible matching locations.
     """
     import StringIO
-    from x84.bbs import echo, getch
+    from x84.bbs import echo
     disp_msg(u'SEARChiNG')
     resp = requests.get(u'http://apple.accuweather.com'
                         + u'/adcbin/apple/Apple_find_city.asp',
@@ -152,7 +151,7 @@ def do_search(search):
         echo(u'\r\n' + u'Status Code: %s\r\n\r\n' % (resp.status_code,))
         echo(repr(resp.content))
         echo(u'\r\n\r\n' + 'Press any key')
-        getch()
+        term.inkey()
     else:
         # print resp.content
         xml_stream = StringIO.StringIO(resp.content)
@@ -208,10 +207,8 @@ def parse_forecast(root):
 
 
 def get_centigrade():
-    """
-    Blocking prompt for setting C/F preference
-    """
-    from x84.bbs import getterminal, getsession, echo, getch
+    """ Blocking prompt for setting C/F preference. """
+    from x84.bbs import getterminal, getsession, echo
     term = getterminal()
     session = getsession()
     if bool(session.user.handle == 'anonymous'):
@@ -232,7 +229,7 @@ def get_centigrade():
         u'? ')))
 
     while True:
-        inp = getch()
+        inp = term.inkey()
         if inp in (u'c', u'C'):
             session.user['centigrade'] = True
             session.user.save()
@@ -249,7 +246,7 @@ def chk_centigrade():
     """
     Provide hint for setting C/F preference (! key)
     """
-    from x84.bbs import getterminal, getsession, echo, getch
+    from x84.bbs import getterminal, getsession, echo
     session, term = getsession(), getterminal()
     echo(u'\r\n\r\n')
     echo(u'USiNG ')
@@ -259,19 +256,12 @@ def chk_centigrade():
         echo(term.yellow(u'Fahrenheit'))
     echo(term.bold_black('...'))
 
-    if bool(session.user.handle != 'anonymous'):
-        echo(u' press ')
-        echo(term.bold_yellow_reverse(cf_key))
-        echo(u' to change.')
-        if getch(timeout=timeout_fch) == cf_key:
-            get_centigrade()
-
 
 def chk_save_location(location):
     """
     Prompt user to save location for quick re-use
     """
-    from x84.bbs import getterminal, getsession, echo, getch
+    from x84.bbs import getterminal, getsession, echo
     session, term = getsession(), getterminal()
     stored_location = session.user.get('location', dict()).items()
     if (sorted(location.items()) == sorted(stored_location)):
@@ -293,10 +283,10 @@ def chk_save_location(location):
     echo(term.bold_yellow(u']'))
     echo(u': ')
     while True:
-        inp = getch()
-        if inp is None or inp in (u'n', u'N', u'q', u'Q', term.KEY_EXIT):
+        inp = term.inkey()
+        if inp.code == term.KEY_EXIT or inp.lower() in (u'n', 'q'):
             break
-        if inp in (u'y', u'Y', u' ', term.KEY_ENTER):
+        elif inp.code == term.KEY_ENTER or inp.lower() in (u'y', u' '):
             session.user['location'] = location
             break
 
@@ -447,7 +437,6 @@ def display_weather(todays, forecast, centigrade):
 
     Thanks to xzip, we now have a sortof tv-weather channel art :-)
     """
-    print(centigrade)
     from x84.bbs import getterminal, echo, syncterm_setfont
     term = getterminal()
     # set syncterm font to cp437
@@ -517,7 +506,7 @@ def display_weather(todays, forecast, centigrade):
 
 def main():
     """ Main routine. """
-    from x84.bbs import getsession, getterminal, echo, getch
+    from x84.bbs import getsession, getterminal, echo
     session, term = getsession(), getterminal()
     session.activity = 'Weather'
 
@@ -531,7 +520,7 @@ def main():
             # exit (no selection)
             return
 
-        locations = do_search(search)
+        locations = do_search(term, search)
         if 0 != len(locations):
             location = (locations.pop() if 1 == len(locations)
                         else chose_location(locations) or dict())
@@ -554,7 +543,7 @@ def main():
             centigrade = session.user.get('centigrade', False)
 
             display_weather(todays, forecast, centigrade)
-            txt_chg_deg = (', [!] change degrees'
+            txt_chg_deg = (', [{0}]: change degrees'.format(cf_key)
                            if session.user.handle != 'anonymous' else u'')
             echo(u''.join((term.normal, u'\r\n\r\n',
                            term.move_x(5),

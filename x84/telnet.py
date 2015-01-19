@@ -303,6 +303,11 @@ class TelnetClient(BaseClient):
             self._iac_sniffer(byte)
         return recv
 
+    def send_unicode(self, ucs, encoding='utf8'):
+        """ Buffer unicode string, encoded for client as 'encoding'. """
+        # Must be escaped 255 (IAC + IAC) to avoid IAC interpretation.
+        self.send_str(ucs.encode(encoding, 'replace').replace(IAC, 2 * IAC))
+
     def _recv_byte(self, byte):
         """
         Buffer non-telnet commands bytestrings into recv_buffer.

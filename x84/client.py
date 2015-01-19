@@ -1,6 +1,4 @@
-"""
-Base classes for clients and connections.
-"""
+""" Base classes for clients and connections of x/84. """
 
 import array
 import errno
@@ -12,15 +10,16 @@ import warnings
 
 # local
 from x84.bbs.exception import Disconnected
-from .terminal import spawn_client_session
+from x84.terminal import spawn_client_session
 
 
 class BaseClient(object):
 
-    '''
-    Base class for remote client implementations, instantiated from the
-    corresponding server class.
-    '''
+    """
+    Base class for remote client implementations.
+
+    Instantiated by the corresponding :class:`BaseServer` class.
+    """
 
     #: Override in subclass: a general string identifier for the
     #: connecting protocol (for example, 'telnet', 'ssh', 'rlogin')
@@ -33,6 +32,7 @@ class BaseClient(object):
     TTYPE_UNDETECTED = 'unknown'
 
     def __init__(self, sock, address_pair, on_naws=None):
+        """ Class initializer. """
         self.log = logging.getLogger(self.__class__.__name__)
         self.sock = sock
         self.address_pair = address_pair
@@ -49,40 +49,34 @@ class BaseClient(object):
         self.connect_time = time.time()
         self.last_input_time = time.time()
 
-    # low level I/O
-
     def close(self):
-        '''
-        Close the connection with the client.
-        '''
+        """ Close connection with the client. """
         self.shutdown()
 
     def fileno(self):
-        '''
-        Return the active file descriptor number.
-        '''
+        """ File descriptor number of socket. """
         try:
             return self.sock.fileno()
         except socket.error:
             return None
 
     def input_ready(self):
-        """
-        Return True if any data is buffered for reading (keyboard input).
-        """
+        """ Whether any data is buffered for reading. """
         return bool(self.recv_buffer.__len__())
 
     def recv_ready(self):
         """
-        Subclass and implement: returns True if socket_recv() should be called.
+        Subclass and implement: whether socket_recv() should be called.
+
+        :raises NotImplementedError
         """
         raise NotImplementedError()
 
     def send(self):
         """
-        Called by Server.poll() when send data is ready.  Send any data
-        buffered, trim self.send_buffer to bytes sent, and return number of
-        bytes sent.  Throws Disconnected
+        Send any data buffered and return number of bytes send.
+
+        :raises Disconnected: client has disconnected (cannot write to socket).
         """
         if not self.send_ready():
             warnings.warn('send() called on empty buffer', RuntimeWarning, 2)
@@ -93,7 +87,9 @@ class BaseClient(object):
 
         def _send(send_bytes):
             """
-            throws x84.bbs.exception.Disconnected on sock.send err
+            Inner low-level function for socket send.
+
+            :raises Disconnected: on sock.send error.
             """
             try:
                 return self.sock.send(send_bytes)
@@ -111,16 +107,14 @@ class BaseClient(object):
         return sent
 
     def send_ready(self):
-        """
-        Return True if any data is buffered for sending (screen output).
-        """
+        """ Whether any data is buffered for delivery. """
         return bool(self.send_buffer.__len__())
 
     def shutdown(self):
         """
         Shutdown and close socket.
 
-        Called by event loop after client is marked by deactivate().
+        Called by event loop after client is marked by :meth:`deactivate`.
         """
         try:
             self.sock.shutdown(socket.SHUT_RDWR)
@@ -133,7 +127,10 @@ class BaseClient(object):
 
     def socket_recv(self):
         """
-        Receive data from the client socket and returns num bytes received.
+        Receive data from socket, returns number of bytes received.
+
+        :raises Disconnect: client has disconnected.
+        :rtype: int
         """
         try:
             data = self.sock.recv(self.BLOCKSIZE_RECV)
@@ -151,99 +148,72 @@ class BaseClient(object):
         self.recv_buffer.fromstring(data)
         return recv
 
-    # high level I/O
-
     def get_input(self):
         """
-        Get any input bytes received from the DE. The input_ready method
-        returns True when bytes are available.
+        Receive input from client into ``self.recv_buffer``.
+
+        Should be called conditionally when :meth:`input_ready` returns True.
         """
         data = self.recv_buffer.tostring()
         self.recv_buffer = array.array('c')
         return data
 
     def send_str(self, bstr):
-        """
-        Buffer bytestring for client.
-        """
+        """ Buffer bytestring for client. """
         self.send_buffer.fromstring(bstr)
 
     def send_unicode(self, ucs, encoding='utf8'):
-        """
-        Buffer unicode string, encoded for client as 'encoding'.
-        """
-        # Must be escaped 255 (IAC + IAC) to avoid IAC intepretation
-        self.send_str(ucs.encode(encoding, 'replace')
-                      .replace(chr(255), 2 * chr(255)))
-
-    # activity
+        """ Buffer unicode string, encoded for client as 'encoding'. """
+        self.send_str(ucs.encode(encoding, 'replace'))
 
     def is_active(self):
-        """
-        Returns True if this connection is still active.
-        """
+        """ Whether this connection is active (bool). """
         return self.active
 
     def deactivate(self):
-        """
-        Flag client for disconnection.
-        """
+        """ Flag client for disconnection by engine loop. """
         if self.active:
             self.active = False
             self.log.debug('{self.addrport}: deactivated'.format(self=self))
 
     def idle(self):
-        """
-        Returns time elapsed since DE last sent input.
-        """
+        """ Time elapsed since data was last received. """
         return time.time() - self.last_input_time
 
     def duration(self):
-        """
-        Returns time elapsed since DE connected.
-        """
+        """ Time elapsed since connection was made. """
         return time.time() - self.connect_time
-
-    # client information
 
     @property
     def addrport(self):
-        """
-        Returns IP address and port of DE as string.
-        """
+        """ IP address and port of connection as string (ip:port). """
         return '%s:%d' % (self.address_pair[0], self.address_pair[1])
 
 
 class BaseConnect(threading.Thread):
 
-    '''
-    Base class for client connect factories.
-    '''
+    """ Base class for client connect factories. """
 
-    #: for x/y/z-modem transfers? -- unused.
-    is_binary = True
-
-    # whether this thread is completed. Set to ``True`` to cause an on-connect
-    # thread to forcefully exit early, such as when the server is shutdown.
+    #: whether this thread is completed. Set to ``True`` to cause an on-connect
+    #: thread to forcefully exit.
     stopped = False
 
     def __init__(self, client):
-        """
-        client is a telnet.TelnetClient instance.
-        """
+        """ Class initializer. """
         self.client = client
         threading.Thread.__init__(self)
         self.log = logging.getLogger(self.__class__.__name__)
 
     def banner(self):
-        """
-        Negotiate protocol options or advertise protocol banner.
-        """
+        """ Write data on-connect, callback from :meth:`run`. """
         pass
 
     def run(self):
         """
-        Negotiate and inquire about terminal type, telnet options, window size,
+        Negotiate a connecting session.
+
+        In the case of telnet and ssh, for example, negotiates and
+        inquires about terminal type, telnet options, window size,
         and tcp socket options before spawning a new session.
         """
         try:
@@ -260,6 +230,8 @@ class BaseConnect(threading.Thread):
     def _set_socket_opts(self):
         """
         Set socket non-blocking and enable TCP KeepAlive.
+
+        Callback from :meth:`run`.
         """
         self.client.sock.setblocking(0)
         self.client.sock.setsockopt(
