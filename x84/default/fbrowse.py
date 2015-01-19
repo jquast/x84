@@ -413,7 +413,7 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
         filepath = os.path.join(directory, filename)
         relativename = filepath[len(ROOT):]
         isdir = bool(filepath[-1:] == os.path.sep)
-        _, ext = os.path.splitext(filename)
+        _, ext = os.path.splitext(filename.lower())
 
         if inp in lightbar.keyset['home']:
             # lightbar 'home' keystroke bug; redraw current line
