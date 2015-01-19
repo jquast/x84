@@ -56,6 +56,7 @@ class Lightbar(AnsiWindow):
         """
         self._selected = False
         self._quit = False
+        self._vitem_idx = self._vitem_shift = -1
         self.content = kwargs.pop('content', list())
 
         pos = kwargs.pop('position', (0, 0)) or (0, 0)
@@ -307,19 +308,15 @@ class Lightbar(AnsiWindow):
         Index of selected item relative by index to only the length of the list
         that is visible, without accounting for scrolled content.
         """
-        return self._vitem_idx if hasattr(self, '_vitem_idx') else -1
+        return self._vitem_idx
 
     @vitem_idx.setter
     def vitem_idx(self, value):
-        # pylint: disable=C0111,E0203
+        # pylint: disable=C0111
         #         Missing docstring
-        #         Access to member '_vitem_idx' before its definition line
-        if hasattr(self, '_vitem_idx') and self._vitem_idx != value:
+        if self._vitem_idx != value:
             self._vitem_lastidx = self._vitem_idx
             self._moved = True
-        else:
-            self._vitem_lastidx = value
-            self._moved = False
         self._vitem_idx = value
 
     @property
@@ -330,19 +327,15 @@ class Lightbar(AnsiWindow):
         This value effectively represents the number of items not in view
         due to paging.
         """
-        return self._vitem_shift if hasattr(self, '_vitem_shift') else -1
+        return self._vitem_shift
 
     @vitem_shift.setter
     def vitem_shift(self, value):
-        # pylint: disable=C0111,E0203
+        # pylint: disable=C0111
         #         Missing docstring
-        #         Access to member '_vitem_idx' before its definition line
-        if hasattr(self, '_vitem_shift') and self._vitem_shift != value:
+        if self._vitem_shift != value:
             self._vitem_lastshift = self._vitem_shift
             self._moved = True
-        else:
-            self._vitem_lastshift = value
-            self._moved = False
         self._vitem_shift = value
 
     def _chk_bounds(self):
