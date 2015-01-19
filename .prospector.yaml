@@ -52,6 +52,9 @@ pylint:
         - W0141
         # Used * or ** magic
         - W0142
+        # Cyclic import (x84.bbs -> x84.bbs.dbproxy -> x84.db -> x84.bbs.ini -> x84.ssh -> x84.sftp)
+        # we really can't prevent this without a complete overhaul.
+        - R0401
 
 pyroma:
     # checks setup.py
