@@ -263,7 +263,7 @@ def prompt_subscription(session, term, yloc, subscription, colors):
 
     if session.user.get('msg_subscription', None) is None:
         # force-display introductory description for first-time users.
-        yloc += describe_message_area(term, colors)
+        yloc += describe_message_system(term, colors)
         echo(u'\r\n\r\n')
         yloc += 2
 
@@ -367,7 +367,7 @@ def main(quick=False):
             else:
                 echo(term.move_x(0) + term.clear_eos)
 
-            txt = describe_message_area(
+            txt = describe_message_tags(
                 term, subscription, messages_bytags, colors)
             yloc += show_description(
                 term, txt, color=None,
