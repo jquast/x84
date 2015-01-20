@@ -14,7 +14,7 @@ import re
 # local
 from x84.bbs import getsession, getterminal, echo, LineEditor
 from x84.bbs import goto, get_ini, find_user, User, syncterm_setfont
-from common import display_banner
+from common import display_banner, show_description
 
 log = logging.getLogger(__name__)
 here = os.path.dirname(__file__)
@@ -266,15 +266,6 @@ def show_validation_error(errmsg):
         echo(u'\r\n')
 
 
-def show_description(description):
-    """ Display field description message. """
-    term = getterminal()
-    for txt in term.wrap(description, width=min(80, term.width)):
-        echo(fixate_next(term, newlines=0))
-        echo(getattr(term, color_secondary)(txt.rstrip()))
-        echo(u'\r\n')
-
-
 def do_nua(user):
     """ Perform new user account field setting and validation. """
     session, term = getsession(), getterminal()
@@ -286,7 +277,9 @@ def do_nua(user):
         field = validation_fields.values()[idx]
         echo(fixate_next(term, newlines=1))
         if field.description:
-            show_description(field.description)
+            show_description(term, field.description,
+                             color=getattr(term, color_secondary))
+            echo(u'\r\n')
             echo(fixate_next(term, newlines=0))
         value = prompt_input(term=term,
                              key=field.prompt_key,
