@@ -257,11 +257,10 @@ def init_bbs_ini():
     # become too expensive.
     cfg_bbs.set('msg', 'max_depth', '8')
 
-    # not implemented
     # by default, anybody can make up a new tag. otherwise, only
-    # those of groups specified may.
-    #    cfg_bbs.set('msg', 'moderated_tags', 'no')
-    #    cfg_bbs.set('msg', 'tag_moderators', 'sysop, moderator')
+    # those of the groups specified may.
+    cfg_bbs.set('msg', 'moderated_tags', 'no')
+    cfg_bbs.set('msg', 'tag_moderators', 'sysop, moderator')
 
     # cfg_bbs.add_section('sesame')
     # cfg_bbs.set('sesame', 'CavesOfPhear', '/usr/bin/phear')
