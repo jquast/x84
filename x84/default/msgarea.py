@@ -394,7 +394,7 @@ def main(quick=False):
             session.flush_event('newmsg')
             nxt_msgs, nxt_bytags = get_messages_by_subscription(
                 session, subscription)
-            if nxt_messages['new'] - messages['new']:
+            if nxt_msgs['new'] - messages['new']:
                 # beep and re-display when a new message has arrived.
                 echo(u'\b')
                 messages, messages_bytags = nxt_msgs, nxt_bytags

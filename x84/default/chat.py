@@ -158,9 +158,16 @@ def do_chat(session, term, other_sid, dial=None, call_from=None):
             top_winsize, bot_winsize = refresh_screen(term, who)
             top_editors, bot_editors = get_editors(top_winsize, bot_winsize,
                                                    top_editors, bot_editors)
+
+            # when a screen is resized, we must adjust our editor indicies to
+            # ensure they are within range
+            top_idx = min(top_idx, len(top_editors) - 1)
+            bot_idx = min(bot_idx, len(bot_editors) - 1)
+
             for editor in top_editors + bot_editors:
                 echo(editor.clear())
                 echo(editor.refresh())
+
             echo(top_editors[top_idx].fixate())
             if dialing:
                 display_dialing(term, pos=bot_winsize, who=who)

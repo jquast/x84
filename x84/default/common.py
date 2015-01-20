@@ -26,7 +26,7 @@ def decorate_menu_item(menu_item, colors):
 
 
 def render_menu_entries(term, top_margin, menu_items,
-                        colors={}, max_cols=3, max_rowsp=2):
+                        colors=None, max_cols=3, max_rowsp=2):
     """
     Return all menu items rendered in decorated tabular format.
 
@@ -43,10 +43,11 @@ def render_menu_entries(term, top_margin, menu_items,
     # we take measured effects to do this operation much quicker when
     # colored_menu_items is set False to accommodate slower systems
     # such as the raspberry pi.
-    if colors:
+    if colors is not None:
         measure_width = term.length
     else:
         measure_width = str.__len__
+        colors = {}
     colors['highlight'] = colors.get('highlight', lambda txt: txt)
     colors['lowlight'] = colors.get('lowlight', lambda txt: txt)
 
