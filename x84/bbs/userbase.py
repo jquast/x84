@@ -256,13 +256,15 @@ class User(object):
                 log.warn('{!r}: First new user becomes sysop.'
                          .format(self.handle))
                 self.group_add(u'sysop')
+            is_new = self.handle not in udb
             udb[self.handle] = self
+            if is_new:
+                log.info("saved new user '%s'.", self.handle)
         adb = DBProxy(USERDB, 'attrs')
         with adb:
             if self.handle not in adb:
                 adb[self.handle] = dict()
         self._apply_groups()
-        log.info("saved user '%s'.", self.handle)
 
     def delete(self):
         """ Remove user from user and group databases. """
