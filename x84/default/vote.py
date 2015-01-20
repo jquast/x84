@@ -1,7 +1,8 @@
 """ Voting booth script for x/84. """
 
 from common import waitprompt, prompt_pager
-from x84.bbs import getsession, getterminal, echo, LineEditor, DBProxy, showart, syncterm_setfont
+from x84.bbs import getsession, getterminal, echo, LineEditor
+from x84.bbs import DBProxy, showart, syncterm_setfont
 import os
 
 databasename = 'votingbooth'  # change this to use an alternative database file
@@ -126,7 +127,7 @@ def list_results(questionnumber):
                          },
                  width=term.width, breaker=None, end_prompt=False)
     echo(term.move_x(0) + term.bold_black(u'* = already voted\r\n'))
-    waitprompt()
+    waitprompt(term)
 
 # -----------------------------------------------------------------------------------
 
@@ -270,7 +271,7 @@ def add_question():
             db['amount_of_questions'] = amount_of_questions
             db['alternatives'] = alternatives
 
-            waitprompt()
+            waitprompt(term)
 
 # -----------------------------------------------------------------------------------
 
@@ -449,4 +450,4 @@ def main():
         else:
             # if no valid key is pressed then do some ami/x esthetics.
             echo(term.red(u'\r\nNo such command. Try again.\r\n'))
-            waitprompt()
+            waitprompt(term)
