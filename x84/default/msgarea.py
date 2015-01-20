@@ -367,7 +367,7 @@ def main(quick=False):
             else:
                 echo(term.move_x(0) + term.clear_eos)
 
-            txt = describe_message_tags(
+            txt = describe_message_area(
                 term, subscription, messages_bytags, colors)
             yloc += show_description(
                 term, txt, color=None,
