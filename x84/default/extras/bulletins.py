@@ -1,23 +1,13 @@
 """ Bulletins script for x/84. """
-
 # More to be added as soon as we get a filebase going.
 
 from x84.bbs import getsession, getterminal, echo, list_users, get_user
 from x84.bbs import gosub, showart, getch
+from common import waitprompt
 import os
 
 __author__ = 'Hellbeard'
-__version__ = 1.0
-
-# --------------------------------------------------------------------------
-
-
-def waitprompt():
-    term = getterminal()
-    echo(term.normal + u'\n\r' + term.magenta + u'(' + term.green + u'..' + term.white +
-         u' press any key to continue' + term.green + u'..' + term.magenta + u')')
-    getch()
-    echo(term.normal_cursor)
+__version__ = 1.1
 
 # ---------------------------------------------------
 
@@ -44,7 +34,6 @@ def toplist(parameter):
     echo(term.red + u' crunching data..')
 
     for handle in user_handles:
-
         user_record = get_user(handle)
 
         if u'sysop' in user_record.groups:
@@ -58,10 +47,8 @@ def toplist(parameter):
 
     for name in sorted(database, key=database.get, reverse=True):
         username[counter] = name
-
         user_record = get_user(name)
         location[counter] = user_record.location
-
         feature[counter] = str(database[name])
         counter = counter + 1
 
@@ -85,7 +72,7 @@ def toplist(parameter):
         echo(term.white + term.move_x(3) +
              username[i] + term.move_x(27) + location[i] + term.move_x(67) + feature[i] + u'\r\n')
 
-    waitprompt()
+    waitprompt(term)
 
 # --------------------------------------------------------------------------
 
