@@ -131,7 +131,7 @@ class FetchUpdatesShrooMs(threading.Thread):
             if str(key) not in self.existing_content:
                 new_content[key] = oneliner
         if new_content:
-            self.log.error('[shroo.ms] %d new entries', len(new_content))
+            self.log.info('[shroo.ms] %d new entries', len(new_content))
             self.new_content = new_content
             getsession().buffer_event('oneliner', True)
         else:
