@@ -9,32 +9,249 @@ last login.
 It determines a set of message-ids that are then
 forwarded to the message browser interface.
 """
+# std imports
+import collections
+import fnmatch
 
-import os
-
+# local
 from x84.bbs import (
     syncterm_setfont,
-    getsession,
-    getterminal,
-    echo,
     ScrollingEditor,
-    list_tags
+    getterminal,
+    getsession,
+    list_msgs,
+    list_tags,
+    get_ini,
+    get_msg,
+    echo,
 )
-from common import show_description, display_banner
 
-here = os.path.dirname(__file__)
+from common import (
+    render_menu_entries,
+    show_description,
+    display_banner,
+    display_prompt,
+    waitprompt,
+)
 
 #: banner art displayed in main()
-art_file = 'art/msgarea.ans'
+art_file = 'art/hx-msg.ans'
 
 #: character encoding of banner art
 art_encoding = 'cp437'
 
 #: preferred fontset for SyncTerm emulator
-syncterm_font = 'cp437'
+syncterm_font = 'topaz'
+
+#: When set False, menu items are not colorized and render much
+#: faster on slower systems (such as raspberry pi).
+colored_menu_items = get_ini(
+    section='msgarea', key='colored_menu_items', getter='getboolean'
+) or True
+
+#: color used for description text
+color_text = get_ini(
+    section='msgarea', key='color_text'
+) or 'white'
+
+#: color used for menu key entries
+color_highlight = get_ini(
+    section='msgarea', key='color_highlight'
+) or 'bold_magenta'
+
+#: color used for prompt
+color_backlight = get_ini(
+    section='msgarea', key='color_prompt',
+) or 'magenta_reverse'
+
+#: color used for brackets ``[`` and ``]``
+color_lowlight = get_ini(
+    section='msgarea', key='color_lowlight'
+) or 'bold_black'
 
 
-def set_subscription_tags(session, term):
+def get_menu(messages):
+    MenuItem = collections.namedtuple('MenuItem', ['inp_key', 'text'])
+    return [
+        MenuItem(u'n', u'new ({0})'.format(len(messages['new']))),
+        MenuItem(u'a', u'all ({0})'.format(len(messages['all']))),
+        MenuItem(u'm', u'mark all read'),
+        MenuItem(u'p', u'post public'),
+        MenuItem(u'w', u'write private'),
+        MenuItem(u'c', u'change area'),
+        MenuItem(u'?', u'help'),
+        MenuItem(u'q', u'quit'),
+    ]
+
+
+def allow_tag(session, idx):
+    """
+    Whether user is allowed to tag a message.
+
+    Rules:
+        * sysop or moderator
+        * author or recipient
+        * a member of any existing tag matching user group
+    """
+    moderated = get_ini('msg', 'moderated_tags', getter='getboolean')
+    moderator_groups = get_ini('msg', 'tag_moderators', split=True)
+    if not moderated and 'sysop' in session.user.groups:
+        return True
+
+    elif moderated and any(grp in session.user.groups
+                           for grp in moderator_groups):
+        return True
+
+    msg = get_msg(idx)
+    if session.user.handle in (msg.recipient, msg.author):
+        return True
+
+    for tag in msg.tags:
+        if tag in session.user.groups:
+            return True
+    return False
+
+
+def get_messages_by_subscription(session, subscription):
+    all_tags = list_tags()
+    messages = {'all': set(), 'new': set()}
+    messages_bytag = {}
+    messages_read = session.user.get('readmsgs', set())
+
+    # this looks like perl code
+    for tag_pattern in subscription:
+        messages_bytag[tag_pattern] = collections.defaultdict(set)
+        for tag_match in fnmatch.filter(all_tags, tag_pattern):
+            msg_indicies = list_msgs(tags=(tag_match,))
+            messages['all'].update(msg_indicies)
+            messages_bytag[tag_pattern]['all'].update(msg_indicies)
+        messages_bytag[tag_pattern]['new'] = (
+            messages_bytag[tag_pattern]['all'] - messages_read)
+    messages['new'] = (messages['all'] - messages_read)
+
+    return messages, messages_bytag
+
+
+def describe_message_area(term, subscription, messages_bytags, colors):
+    return u''.join((
+        colors['text'](u'message area: '),
+        colors['text'](u', ').join((
+            u''.join((
+                quote(term, tag_pattern, colors),
+                colors['lowlight'](u'('),
+                colors['highlight'](
+                    str(len(messages_bytags[tag_pattern]['new']))),
+                colors['lowlight'](u'/{0})'.format(
+                    str(len(messages_bytags[tag_pattern]['all']))))
+            )) for tag_pattern in subscription)),
+    ))
+
+
+def validate_tag_patterns(tag_patterns):
+    all_tags = list_tags()
+    removed = []
+    for tag_pattern in set(tag_patterns):
+        if not fnmatch.filter(all_tags, tag_pattern):
+            removed.append(tag_pattern)
+            tag_patterns.remove(tag_pattern)
+    return removed, tag_patterns
+
+
+def quote(term, txt, colors):
+    return u''.join(((u'"'), colors['highlight'](txt), (u'"')))
+
+
+def describe_available_tags(term, colors):
+    sorted_tags = sorted([(len(list_msgs(tags=(tag,))), tag)
+                          for tag in list_tags()], reverse=True)
+    decorated_tags = [
+        colors['text'](tag) +
+        colors['lowlight']('({0})'.format(num_msgs))
+        for num_msgs, tag in sorted_tags]
+
+    description = u''.join((
+        colors['highlight'](u'available tags'), ': ',
+        colors['text'](u', ').join(decorated_tags),
+        colors['text'](u'.'),
+        u'\r\n\r\n',
+    ))
+    return show_description(term, description, color=None)
+
+
+def describe_message_system(term, colors):
+    """ Display help text about message tagging. """
+
+    def describe_network_tags():
+        """ Return description text of message networks, if any. """
+        server_tags = get_ini('msg', 'server_tags', split=True)
+        network_tags = get_ini('msg', 'network_tags', split=True)
+
+        if not (network_tags or server_tags):
+            return u''
+        return u''.join((
+            u'\r\n\r\n',
+            colors['text'](u'This board participates in intra-bbs '
+                           'messaging, '),
+            u''.join((
+                colors['text'](u'hosting network messages by tag '),
+                u', '.join(quote(term, tag, colors) for tag in server_tags),
+            )) if server_tags else u'',
+            (colors['text'](
+                u' and ') if (server_tags and network_tags) else u''),
+            u''.join((
+                colors['text'](u'participating in network messages by tag '),
+                u', '.join(quote(term, tag, colors) for tag in network_tags),
+            )) if network_tags else u'',
+            u'.',
+        ))
+
+    def describe_group_tags():
+        groups = getsession().user.groups
+        if not groups:
+            return u''
+
+        return u''.join((
+            u'\r\n\r\n',
+            colors['text'](
+                u'Finally, private messages may be shared among groups.  You '
+                u'may post messages to any group you are a member of: '),
+            colors['text'](
+                u', '.join(quote(term, grp, colors) for grp in groups)),
+            colors['text'](u'.')
+        ))
+
+    description = u''.join((
+        u'\r\n',
+        colors['text'](
+            u'You can think of tags as a system of providing context to any '
+            u'message stored on this system.  A tag might provide the '
+            u'general label of the topic of conversation, which may be '
+            u'subscribed to.  For example, '),
+        quote(term, u'python', colors),
+        colors['text'](
+            u' may be used for topics related to the python programming '
+            u'language.  This is similar to flicker or gmail tags, or '
+            u'hashtags.'),
+        describe_network_tags(),
+        u'\r\n\r\n',
+        colors['text'](
+            u'Furthermore, glob expressions may be used such as '),
+        quote(term, u'*', colors),
+        u' ',
+        colors['text']('for all messages, or expression '),
+        quote(term, u'lang-*', colors),
+        u' ',
+        colors['text']('might subscribe to both '),
+        quote(term, u'lang-python', colors),
+        colors['text'](u' and '),
+        quote(term, u'lang-go', colors),
+        colors['text'](u'.'),
+        describe_group_tags(),
+    ))
+    return show_description(term, description, color=None)
+
+
+def prompt_subscription(session, term, yloc, subscription, colors):
     """
     This function is called to assign a new set of subscription
     tags for a user.  If escape is pressed, the existing value
@@ -44,73 +261,60 @@ def set_subscription_tags(session, term):
     at any later time to change a subscription.
     """
 
-    line_no = display_banner(art_file, encoding=art_encoding)
+    if session.user.get('msg_subscription', None) is None:
+        # force-display introductory description for first-time users.
+        yloc += describe_message_tags(term, colors)
+        echo(u'\r\n\r\n')
+        yloc += 2
 
-    # introduce the user to the concept ...
-    description = (
-        u'{term.yellow}You can think of tags as a system of providing '
-        u'context to any message stored on this system.  A tag might signify '
-        u'that it was received on a particular message network, or it might '
-        u'provide the topic of conversation, such as '
-        u'{term.bold_yellow}python{term.normal}{term.yellow} or '
-        u'{term.bold_yellow}rock music{term.normal}{term.yellow}.  '
-        u'This is similar to flicker\'s tags, or twitter hashtags. '
-        u'Use glob expressions as a comma-delimited list, for example, '
-        u'the expression {term.bold_yellow}x84net{term.normal}{term.yellow}, '
-        u'{term.bold_yellow}sysop{term.normal}{term.yellow}, '
-        u'{term.bold_yellow}python*{term.normal}{term.yellow} '
-        u'will subscribe to all tags of the x84net message network, '
-        u'sysop messages, and any topics that begin with the phrase '
-        u'{term.bold_yellow}python{term.normal}{term.yellow}.  You can '
-        u'subscribe to all topics using the expression, '
-        u'{term.bold_yellow}*{term.normal}{term.yellow}.'
-        .format(term=term))
+    yloc += describe_available_tags(term, colors) + 1
 
-    echo(u'\r\n')
-    line_no += 1
+    # for small screens, scroll and leave room for prompt & errors
+    if yloc > term.height + 3:
+        echo(u'\r\n' * 3)
+        yloc = term.height - 3
 
-    line_no += show_description(description, color=None)
+    # and prompt for setting of message tags
+    xloc = max(0, (term.width // 2) - 40)
+    input_prefix = u':: subscription tags:'
+    echo(u''.join((term.move(yloc, xloc), input_prefix)))
 
-    description = u' '.join(
-        [u'tags available:', ] +
-        ['{tag}{term.yellow},{term.normal}'
-         .format(tag=tag, term=term)
-         for tag in list_tags()])
+    xloc += len(input_prefix)
+    wide = min(40, (term.width - xloc - 2))
 
-    echo(u'\r\n\r\n')
-    line_no += 2
+    while True:
+        editor = ScrollingEditor(xloc=xloc, yloc=yloc-1, width=wide,
+                                 colors={'highlight': colors['backlight']},
+                                 content=u', '.join(subscription),
+                                 max_length=100)
 
-    # display our prompt prefix, input_prefix:
-    input_prefix = u'  {sep} {key:>18}: '.format(
-        sep=term.bright_yellow(u'::'),
-        key='subscription tags')
-    echo(input_prefix)
+        # Prompt for and evaluate the given input, splitting by comma,
+        # removing any empty items, and defaulting to ['*'] on escape.
+        inp = editor.read() or u''
+        subscription = filter(None, set(map(unicode.strip, inp.split(',')))
+                              ) or set([u'*'])
 
-    xloc = term.length(input_prefix)
+        # Then, reduce to only validate tag patterns, tracking those
+        # that do not match any known tags, and display a warning and
+        # re-prompt if any are removed.
+        removed, subscription = validate_tag_patterns(subscription)
 
-    # and prompt an editor on that row
-    editor = ScrollingEditor(xloc=xloc,
-                             yloc=line_no,
-                             width=(term.width - xloc - 2),
-                             colors = {'highlight': term.black_on_yellow})
+        # clear existing warning, if any
+        echo(u''.join((term.normal, u'\r\n\r\n', term.clear_eos)))
+        if removed:
+            # and display any unmatched tags as a warning, re-prompt
+            txt = ''.join((
+                term.bold_red(u"The following patterns are not matched: "),
+                u', '.join(removed)))
+            show_description(term, txt, color=None)
+            continue
 
-    value = editor.read() or u''
-    echo(term.normal + u'\r\n\r\n')
-
-    return map(unicode.strip, value.split(','))
+        # otherwise everything is fine,
+        # return new subscription set
+        return subscription
 
 
-def display_subscription(session, term):
-    echo(u'\r\n')
-    echo(u'Subscription: ')
-    echo(u' '.join([term.bold_yellow] +
-                   ['{tag}{term.yellow},{term.normal}'
-                    .format(tag=tag, term=term)
-                    for tag in session.user['msg_subscription']
-                    ]))
-
-
-def main(last_called=None):
+def main(quick=False):
     """ Main procedure. """
 
     session, term = getsession(), getterminal()
@@ -120,32 +324,118 @@ def main(last_called=None):
     if term.kind.startswith('ansi'):
         echo(syncterm_setfont(syncterm_font))
 
-    search_tags = session.user.get(key='msg_subscription', default=None)
+    colors = {}
+    if colored_menu_items:
+        colors['highlight'] = getattr(term, color_highlight)
+        colors['lowlight'] = getattr(term, color_lowlight)
+        colors['backlight'] = getattr(term, color_backlight)
+        colors['text'] = getattr(term, color_text)
 
-    if search_tags is None:
-        # prompt user for tag subscription
-        search_tags = set_subscription_tags(session, term)
-        if search_tags:
-            session.user['msg_subscription'] = search_tags
-        else:
-            session.user['msg_subscription'] = ['public']
+    yloc = top_margin = 0
+    subscription = session.user.get(key='msg_subscription', default=[])
+    dirty = True
+    while True:
+        if dirty:
+            # display header art,
+            yloc = display_banner(art_file, encoding=art_encoding, center=True)
 
-    display_banner(art_file, encoding=art_encoding)
+            echo(u'\r\n')
+            top_margin = yloc + 1
 
-    display_subscription(session, term)
-    term.inkey()
+            if not subscription:
+                # prompt the user for a tag subscription, and loop
+                # back again when completed to re-draw and show new messages.
+                subscription = session.user['msg_subscription'] = (
+                    prompt_subscription(
+                        session, term, yloc, subscription, colors))
+                continue
 
+            # When quick login ('y') selected in top.py, return immediately
+            # when no new messages were matched by new or existing
+            # subscription.
+            echo(colors['backlight']('Scanning for new messages ...'
+                                     .center(term.width)))
+            messages, messages_bytags = get_messages_by_subscription(
+                session, subscription)
 
-#FILTER_PRIVATE = True
-#ALREADY_READ = set()
-#DELETED = set()
-#SEARCH_TAGS = set()
-#READING = False
-#TIME_FMT = '%A %b-%d, %Y at %r'
-#
-#
-#
-#
+            if quick and not messages['new']:
+                echo(u''.join((u'\r\n',
+                               'No new messages.'.center(term.width).rstrip(),
+                               u'\r\n')))
+                term.inkey(1)
+                return
+            else:
+                echo(term.move_x(0) + term.clear_eos)
+
+            txt = describe_message_area(
+                term, subscription, messages_bytags, colors)
+            yloc += show_description(
+                term, txt, color=None,
+                subsequent_indent=' '*len('message area: '))
+
+            yloc += 1
+
+            echo(render_menu_entries(
+                term=term, top_margin=yloc,
+                menu_items=get_menu(messages),
+                colors=colors, max_cols=2))
+            echo(term.move_x(max(0, (term.width // 2) - 40)) + u':: ')
+            echo(display_prompt(term, colors))
+
+            dirty = False
+
+        event, data = session.read_events(('input', 'refresh', 'newmsg'))
+
+        if event == 'newmsg':
+            # when a new message is sent system-wide, a 'newmsg' event
+            # is broadcasted.  re-evaluate our messages.  Its content
+            # doesn't matter, as we still explicitly match only messages
+            # defined by our subscription.
+            session.flush_event('newmsg')
+            nxt_msgs, nxt_bytags = get_messages_by_subscription(
+                session, subscription)
+            if nxt_messages['new'] - messages['new']:
+                # beep and re-display when a new message has arrived.
+                echo(u'\b')
+                messages, messages_bytags = nxt_msgs, nxt_bytags
+                dirty = True
+                continue
+
+        if event == 'input':
+            session.buffer_input(data, pushback=True)
+            inp = term.inkey(0)
+            if not inp.is_sequence:
+                echo(inp)
+            if inp.lower() == u'n' and messages['new']:
+                # read new messages
+                pass
+            elif inp.lower() == u'a' and messages['all']:
+                # read all messages
+                dirty = True
+                pass
+            elif inp.lower() == u'm' and messages['new']:
+                # mark all messages as read
+                pass
+            elif inp.lower() == u'p':
+                # write new public message
+                pass
+            elif inp.lower() == u'w':
+                # write new private message
+                pass
+            elif inp.lower() == u'c':
+                # prompt for new subscription in next loop
+                subscription = []
+                dirty = True
+            elif inp.lower() == u'?':
+                echo(term.move(top_margin, 0) + term.clear_eos)
+                describe_message_system(term, colors)
+                waitprompt(term)
+                dirty = True
+            elif inp.lower() == u'q':
+                return
+            elif not dirty:
+                echo(u'\b \b')
+
 # def quote_body(msg, width=79, quote_txt=u'> ', hardwrap=u'\r\n'):
 #    """
 #    Given a message, return new string suitable for quoting it.
@@ -164,27 +454,6 @@ def main(last_called=None):
 #        msg.stime.replace(tzinfo=dateutil.tz.tzlocal()).astimezone(dateutil.tz.tzutc()).strftime(TIME_FMT), u' UTC ',
 #        msg.author, u' wrote:',
 #        hardwrap, ucs, hardwrap))
-#
-#
-# def allow_tag(idx):
-#    """
-#    Returns true if user is allowed to 't'ag message at idx:
-#        * sysop and moderator
-#        * author or recipient
-#        * a member of any message tag matching user group
-#    """
-#    from x84.bbs import getsession, get_msg
-#    session = getsession()
-#    if ('sysop' in session.user.groups
-#            or 'moderator' in session.user.groups):
-#        return True
-#    msg = get_msg(idx)
-#    if session.user.handle in (msg.recipient, msg.author):
-#        return True
-#    for tag in msg.tags:
-#        if tag in session.user.groups:
-#            return True
-#    return False
 #
 #
 # def mark_undelete(idx):
@@ -404,9 +673,9 @@ def main(last_called=None):
 #    if autoscan_tags is not None:
 #        SEARCH_TAGS = autoscan_tags
 #        echo(u''.join((
-#            term.bold_black('[ '),
+#            term.color_lowlight('[ '),
 #            term.yellow('AUtOSCAN'),
-#            term.bold_black(' ]'), u'\r\n')))
+#            term.color_lowlight(' ]'), u'\r\n')))
 #    else:
 #        SEARCH_TAGS = set(['public'])
 #
@@ -419,7 +688,7 @@ def main(last_called=None):
 #
 #    echo(u'\r\n\r\n%s%s ' % (
 #        term.bold_yellow('SCANNiNG'),
-#        term.bold_black(':'),))
+#        term.color_lowlight(':'),))
 #    echo(u','.join([term.red(tag) for tag in SEARCH_TAGS]
 #                   if 0 != len(SEARCH_TAGS) else ['<All>', ]))
 #
@@ -536,7 +805,7 @@ def main(last_called=None):
 #                attr(author.ljust(len_author)),
 #                (timeago(tm_ago)).rjust(len_ago),
 #                attr(u'ago'),
-#                term.bold_black(':'),)
+#                term.color_lowlight(':'),)
 #            msg_list.append((head(msg), idx, row_txt, subj))
 #        msg_list.sort(reverse=True)
 #        return [(idx, row_txt + thread_indent(depth) + subj)
@@ -675,13 +944,13 @@ def main(last_called=None):
 #
 #        if READING:
 #            reader.colors['border'] = term.bold_yellow
-#            selector.colors['border'] = term.bold_black
+#            selector.colors['border'] = term.color_lowlight
 #        else:
-#            reader.colors['border'] = term.bold_black
+#            reader.colors['border'] = term.color_lowlight
 #            selector.colors['border'] = term.bold_yellow
 #        title = get_selector_title(mbox, new)
 #        padd_attr = (term.bold_yellow if not READING
-#                     else term.bold_black)
+#                     else term.color_lowlight)
 #        sel_padd_right = padd_attr(
 #            u'-'
 #            + selector.glyphs['bot-horiz'] * (
