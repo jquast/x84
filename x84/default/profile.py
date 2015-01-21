@@ -240,19 +240,21 @@ def display_prompt(term, session, point):
 
     out_text = u''.join(
         (out_text,
+         u'{lb}{key_d}{rb}elete, '
          u'{lb}{key_q}{rb}uit'
-         .format(lb=lb, key_q=_color2(u'q'), rb=rb)))
+         .format(lb=lb, rb=rb,
+                 key_q=_color2(u'q'),
+                 key_d=_color2(u'd'),
+                 )))
 
     if session.user.is_sysop:
         # administrative functions (sysops only)
         out_text = u''.join(
             (out_text,
              u', {lb}{key_f}{rb}ind user, '
-             u'{lb}{key_d}{rb}elete, '
              u'{lb}{key_gt}{rb}next'
              .format(lb=lb, rb=rb,
                      key_f=_color2(u'f'),
-                     key_d=_color2(u'd'),
                      key_gt=_color2(u'>'))))
 
     out_text = u''.join(
