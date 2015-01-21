@@ -161,10 +161,19 @@ They grew apart over time with their forks, Johannes providing a new redesign ca
 
 x/84 retains only some of the design and basic variables, such as the concept of a session, userbase, and the echo function, but is otherwise completely rewritten by the work of Jeff alone and since 2013 many contributions over github.
 
-x/84 is a re-imagination of the possibilities of authoring a nostalgic text-mode system analogous to those early dial-up systems.  Targeted for, but not limited to, running a bulletin board over the TCP/IP protocol.  The name x/84 is derived from the theme of an "amiexpress-style system for an Orwellian future".
-
 .. _Jeff Quast: https://jeffquast.com/
 .. _Johannes Lundberg: http://github.com/johannesl/
+
+What does x/84 mean?
+====================
+
+x/84 is a re-imagination of the early dial-up systems.  Targeted for, but not limited to, running a bulletin board over the TCP/IP protocol.  The name x/84 is derived from the theme of an "amiexpress-style system for an Orwellian future".
+
+It was thought of as a small part of a science fiction universe:  an alternative future where governments have banned internet anonymity and free speech, and those who wish to have it must gateway to underground systems such as these to communicate.
+
+It was a lot farther on the "science fiction" end of the spectrum 10 years ago...
+
+
 
 Future Directions
 =================
