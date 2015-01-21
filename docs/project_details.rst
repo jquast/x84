@@ -151,18 +151,17 @@ It might best to compare x/84 with the most popularly used surviving BBS systems
 History
 =======
 
-`Jeff Quast`_, the author of x/84, first ran his own systems as a young teenager on an IBM-PC compatible, then later began writing his own for the internet telnet protocol in Perl and C on Linux systems since the mid-90's.
+In 2002, `Jeff Quast`_, author of x84 ran mystic_ on Linux which gained popularity due to its association with a pirate channel he managed on efnet, regularly receiving 30-50 daily callers, which exposed numerous bugs and design issues.  Frustrated by its closed-source nature and the (intermittent) abandonment of the author, Jeff set out to write his own from-scratch.
 
-Around 2002, he ran his third "bbs" using Mystic on Linux which gained popularity due to its association with a pirate channel he managed on efnet, regularly receiving 30-50 daily callers, which exposed numerous bugs and design issues in mystic.  Frustrated by its closed-source nature and the (intermittent) abandonment of the author, Jeff set out to write his own from-scratch.
-
-He met `Johannes Lundberg`_ of Sweden who had already began writing his own system, initially named just "bbs", this was authored in the Python language, which Jeff was unfamiliar with at the time but quickly adapted to.  Many of the things made difficult in the C language were easily solvable, and the dynamic nature of the language made for very rapid development.  Overnight, a 5,000-line patch was returned to Johannes and they agreed to collaborate on a new system, with focus on the new Unix developer traditions and open source.
+He and `Johannes Lundberg`_ of Sweden met who had already began writing his own system, initially named just "pybbs", this was authored in the Python language. Overnight, a 5,000-line patch was returned to Johannes and they agreed to collaborate on a new system, with focus on the new Unix developer traditions and open source.
 
 They grew apart over time with their forks, Johannes providing a new redesign called "The Progressive (PRSV)", which Jeff re-based and began to contribute to when they re-combined efforts years later.  Johannes continually asserted that he would maintain and later release PRSV, but as his involvement wanned, Jeff renamed his fork as x/84, with the intent to merge upstream some day.
 
-x/84 retains only some of the design and basic variables, such as the concept of a session, userbase, and the echo function, but is otherwise completely rewritten by the work of Jeff alone and since 2013 many contributions over github.
+x/84 retains only some of the design and basic variables, such as the concept of a session but is otherwise completely rewritten by the work of Jeff alone through 2013, when many contributions over github were received after being released to pypi.
 
 .. _Jeff Quast: https://jeffquast.com/
 .. _Johannes Lundberg: http://github.com/johannesl/
+.. _mystic: http://mysticbbs.com/
 
 What does x/84 mean?
 ====================
@@ -172,8 +171,6 @@ x/84 is a re-imagination of the early dial-up systems.  Targeted for, but not li
 It was thought of as a small part of a science fiction universe:  an alternative future where governments have banned internet anonymity and free speech, and those who wish to have it must gateway to underground systems such as these to communicate.
 
 It was a lot farther on the "science fiction" end of the spectrum 10 years ago...
-
-
 
 Future Directions
 =================
