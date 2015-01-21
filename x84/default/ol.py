@@ -35,7 +35,7 @@ art_file = get_ini(
 
 #: encoding used to display artfile
 art_encoding = get_ini(
-    section='oneliners', key='art_file'
+    section='oneliners', key='art_encoding'
 ) or 'cp437'
 
 #: fontset for SyncTerm emulator
