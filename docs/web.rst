@@ -50,7 +50,7 @@ Serving static files
 ====================
 
 One of x/84's internal web modules is called ``static``. If you enable this
-module, x/84 will serve static file content from the ``www``` subdirectory of
+module, x/84 will serve static file content from the ``www`` subdirectory of
 your system's script path. If you wish to set the document root to some other
 location, use the ``document_root`` option in the ``[web]`` section of your
 configuration file. ::
@@ -59,6 +59,10 @@ configuration file. ::
     ; other configuration here
     modules = static
     document_root = /var/www
+
+The static files are served from ``/www/``, so if your server is
+``https://123.123.123.123:8443``, and the file is ``style.css``, it would
+be served as ``https://123.123.123.123:8443/www/style.css``.
 
 Writing a web module
 ====================
