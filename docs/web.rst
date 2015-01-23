@@ -1,20 +1,23 @@
-==============================
-The web server and web modules
-==============================
+==========
+Web server
+==========
 
-x/84 now provides an optional web server through the `web.py`_ python library
-and its internal ``cherrypy`` server. The core can be extended with new
-functionality through the use of web modules both internally by the engine and
-externally by userland scripts.
+An optional web server is provided in x/84 using the basic `web.py`_ python
+library.  It is possible to build web "endpoints" that may make use of x/84's
+database and configuration items, these are called "web modules".  Of the default
+board, intra-bbs messaging is provided by a web module, for example.
 
-Configuring the web server
-==========================
+Starting a web server
+=====================
 
-If you wish to enable this functionality,
-you will need to add a ``[web]`` section to your configuration file with
-binding settings; SSL certificate, key, and (optionally) chain certificate
-file paths; and the list of modules to enable. For the server to successfully
-launch, at least one module must be enabled. ::
+Of your ``~/.x84/default.ini`` file, set the configuration of the ``[web]`` section
+value ``enabled = yes``  (by default, it is ``no``).  You will also require a
+certificate, key, and sometimes a chain certificate file -- **only** HTTPS is
+supported at this time.  This is documented in more detail in the "Configuring a
+hub" section of the `message network`_ page.
+
+For the server to successfully launch, at least one module must be enabled, the
+simple example modules ``oneliners, lastcallers`` may be enabled, for example::
 
     [web]
     enabled = yes
@@ -26,31 +29,22 @@ launch, at least one module must be enabled. ::
     modules = oneliners, lastcallers
 
 If everything is configured properly, you should see something like this at
-startup: ::
+startup::
 
     Mon-01-01 12:00AM INFO       webserve.py:207 https listening on 123.123.123.123:8443/tcp
 
-Using web modules
-=================
+Lookup path
+===========
 
-Whether you want to load web modules that are in x/84's list of interal modules
-or you want to load web modules that are in the ``webmodules`` subdirectory
-of your x/84 system's script path, you just need to use the module filename
-without its ``.py`` extension. For example, if you have a ``mymodule.py``
-script in your ``webmodules`` subdirectory, you would refer to it as
-``mymodule`` when enabling it.
+There are only two lookup paths for the values defined by ``modules``,
+preferably, the sub-folder, ``webmodules/`` of your ``scriptpath`` configuration
+of section ``[system]`` in your ``~/.x84/default.ini`` file.  These are imported
+by their python module name, so file ``scriptpath/webmodules/oneliners.py`` is
+simply ``oneliners``.  If the file is not found there, it will then look for it
+in the package path of x84, which can be found using command::
 
-To add a module to the list of enabled modules, put it in a comma-separated
-list of module names in the ``modules`` option in the ``[web]`` section of
-your configuration file: ::
+        $ python -c 'import os, x84.webmodules; print(os.path.dirname(x84.webmodules.__file__))'
 
-    [web]
-    ; other configuration here
-    modules = mymodule, othermodule
-
-The engine will first look for the module in userland, and *then* it will look
-at its internal list. This allows you to override internal modules with your
-own scripts in a clean and unobtrusive way.
 
 Serving static files
 ====================
@@ -69,7 +63,7 @@ configuration file. ::
 Writing a web module
 ====================
 
-While some web modules, such as the `message network server`_ module,
+While some web modules, such as the `message network`_ module,
 operate outside of userland and are leveraged by the engine for low-level
 functionality. However, you can write your own modules--and even override the
 internal modules--by placing your scripts in the ``webmodules`` subdirectory
@@ -170,5 +164,5 @@ further still, consider looking at the :module:`x84.webmodules.msgserve`
 module in the x/84 server code.
 
 .. _web.py: http://webpy.org/
-.. _message network server: ./msgnet.rst
+.. _message network: ./msgnet.rst
 .. _HTTP verb: https://wikipedia.org/wiki/Hypertext_Transfer_Protocol#Request_methods
