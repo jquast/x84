@@ -14,12 +14,13 @@ Contents:
    project_details
    msgnet
    doors
+   web
    developers
    default_api
    api/*
    future_direction
 
-  
+
 =======
 Indexes
 =======
