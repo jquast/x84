@@ -137,8 +137,8 @@ def display_banner(filepattern, vertical_padding=0, **kwargs):
 
 
 def prompt_pager(content, line_no=0, colors=None, width=None,
-                 breaker=u'- ', end_prompt=True):
-    """ Display text, using a command-prompt pager.
+                 breaker=u'- ', end_prompt=True, **kwargs):
+    """ Display text, using a stop/continuous/next-page prompt.
 
     :param iterable content: iterable of text contents.
     :param int line_no: line number to offset beginning of pager.
@@ -146,6 +146,10 @@ def prompt_pager(content, line_no=0, colors=None, width=None,
                         attributes, for keys ``'highlight'`` and
                         ``'lowlight'``.  When unset, yellow and green
                         are used.
+    :param int width: When set, text is left-justified-centered by width.
+    :param str breaker: repeated decoration for page breaks
+    :param bool end_prompt: Whether prompt should be displayed at end.
+    :param kwargs: additional arguments to :func:`textwrap.wrap`
     :param bool end_prompt: use 'press enter prompt' at end.
     """
     # This is unfortunate, we should use 'term' as first argument
@@ -172,41 +176,54 @@ def prompt_pager(content, line_no=0, colors=None, width=None,
         echo(attr(term.center(breaker_bar).rstrip()))
 
     continuous = False
+
+    # we must parse the entire tree, so that we can avoid the needless
+    # call to show_breaker() on the final line.
+    result = []
     for txt in content:
-        lines = term.wrap(txt, width) or [txt]
-        for txt in lines:
-            if width:
-                txt = term.center(term.ljust(txt, max(0, width)))
-            echo(txt.rstrip() + term.normal + term.clear_eol + u'\r\n')
-            line_no += 1
-            if not continuous and should_break(line_no, term.height):
-                show_breaker()
-                echo(u'\r\n')
-                if term.width > 80:
-                    echo(term.move_x((term.width // 2) - 40))
-                echo(pager_prompt)
-                while True:
-                    inp = LineEditor(1, colors=colors).read()
-                    if inp is None or inp and inp.lower() in u'sqx':
-                        # s/q/x/escape: quit
-                        echo(u'\r\n')
-                        return
-                    if len(inp) == 1:
-                        echo(u'\b')
-                    if inp.lower() == 'c':
-                        # c: enable continuous
-                        continuous = True
-                        break
-                    elif inp == u'':
-                        # return: next page
-                        break
-                # remove pager
-                echo(term.move_x(0) + term.clear_eol)
+        if txt.rstrip():
+            result.extend(term.wrap(txt, width, **kwargs))
+        else:
+            result.append(u'\r\n')
+
+    xpos = 0
+    if term.width:
+        xpos = max(0, int((term.width / 2) - width / 2))
+    for line_no, txt in enumerate(result):
+        if xpos:
+            echo(term.move_x(xpos))
+        echo(txt.rstrip() + term.normal + term.clear_eol + u'\r\n')
+        if (line_no and line_no != len(result) - 1
+                and not continuous
+                and should_break(line_no, term.height)):
+            show_breaker()
+            echo(u'\r\n')
+            if xpos:
+                echo(term.move_x(xpos))
+            echo(pager_prompt)
+            while True:
+                inp = LineEditor(1, colors=colors).read()
+                if inp is None or inp and inp.lower() in u'sqx':
+                    # s/q/x/escape: quit
+                    echo(u'\r\n')
+                    return
+                if len(inp) == 1:
+                    echo(u'\b')
+                if inp.lower() == 'c':
+                    # c: enable continuous
+                    continuous = True
+                    break
+                elif inp == u'':
+                    # return: next page
+                    break
+            # remove pager
+            echo(term.move_x(0) + term.clear_eol)
+            if breaker:
+                # and breaker,
                 echo(term.move_up() + term.clear_eol)
 
-    show_breaker()
-
     if end_prompt:
+        show_breaker()
         echo(u'\r\n')
         if term.width > 80:
             echo(term.move_x(max(0, (term.width // 2) - 40)))
@@ -261,8 +278,7 @@ def show_description(term, description, color='white', width=80, **kwargs):
     lines = []
     for line in unicode(description).splitlines():
         if line.strip():
-                for wrapped in term.wrap(line, wide, **kwargs):
-                    lines.append(wrapped)
+            lines.extend(term.wrap(line, wide, **kwargs))
         else:
             lines.append(u'')
 
