@@ -134,6 +134,7 @@ def do_chat(session, term, other_sid, dial=None, call_from=None):
         doing=('answering call from' if answering else
                'requesting chat with'),
         call_from=call_from))
+    log = logging.getLogger(__name__)
 
     # expunge all 'chat' events before initiating new ones.
     while True:
@@ -210,8 +211,12 @@ def do_chat(session, term, other_sid, dial=None, call_from=None):
                 dialing = False
                 dirty = True
                 continue
-            assert not (dialing or answering), (dialing, answering, data)
-            bot_editors, bot_idx = recv_input(bot_editors, bot_idx, data[0])
+            elif isinstance(data[0], basestring):
+                bot_editors, bot_idx = recv_input(editors=bot_editors,
+                                                  edit_idx=bot_idx,
+                                                  inp=data[0])
+            else:
+                log.error("Unexpected data for event 'chat': {0!r}", data)
 
 
 def display_dialing(term, pos, who):
