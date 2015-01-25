@@ -152,7 +152,7 @@ def get_messages_by_subscription(session, subscription):
     messages['private'] = list_privmsgs(session.user.handle)
 
     # and calculate 'new' messages
-    messages['new'] = (messages['all'] | messagbes['private']) - messages_read
+    messages['new'] = (messages['all'] | messages['private']) - messages_read
 
     return messages, messages_bytag
 
