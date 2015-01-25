@@ -252,27 +252,10 @@ def init_bbs_ini():
 
     cfg_bbs.add_section('msg')
     cfg_bbs.set('msg', 'max_subject', '40')
-    # maximum recursion for searching 'head' in a reply-to chain;
-    # as each get_msg() is a lookup, thread-related sorting could
-    # become too expensive.
-    cfg_bbs.set('msg', 'max_depth', '8')
-
     # by default, anybody can make up a new tag. otherwise, only
     # those of the groups specified may.
     cfg_bbs.set('msg', 'moderated_tags', 'no')
     cfg_bbs.set('msg', 'tag_moderators', 'sysop, moderator')
-
-    # cfg_bbs.add_section('sesame')
-    # cfg_bbs.set('sesame', 'CavesOfPhear', '/usr/bin/phear')
-    # cfg_bbs.set('sesame', 'CavesOfPhear_key', '!')
-    # cfg_bbs.set('sesame', 'FrozenDepths', '/usr/bin/frozendepths')
-    # cfg_bbs.set('sesame', 'FrozenDepths_key', '@')
-    # cfg_bbs.set('sesame', 'DopeWars',
-    #            ('/usr/bin/dopewars -a -P {session[handle]} '
-    #             '--single-player -u none'))
-    # cfg_bbs.set('sesame', 'DopeWars_key', '$')
-    # cfg_bbs.set('sesame', 'MyMan', '/usr/bin/myman')
-    # cfg_bbs.set('sesame', 'MyMan_key', '&')
 
     return cfg_bbs
 
