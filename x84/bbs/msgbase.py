@@ -13,6 +13,7 @@ import dateutil.tz
 
 MSGDB = 'msgbase'
 TAGDB = 'tags'
+PRIVDB = 'privmsg'
 
 # TODO(jquast, maze): Use modeling to construct rfc-compliant mail messaging
 # formats.  It would be possible to use standard mbox-formatted mail boxes,
@@ -56,7 +57,7 @@ def get_msg(idx=0):
 
 
 def list_msgs(tags=None):
-    """ Return set of indicies matching ``tags``, or all by default. """
+    """ Return set of indices matching ``tags``, or all by default. """
     if tags is not None and 0 != len(tags):
         msgs = set()
         db_tag = DBProxy(TAGDB)
@@ -64,6 +65,12 @@ def list_msgs(tags=None):
             msgs.update(db_tag[tag])
         return msgs
     return set(int(key) for key in DBProxy(MSGDB).keys())
+
+
+def list_privmsgs(handle):
+    """ Return all private messages for given user handle. """
+    db_priv = DBProxy(PRIVDB)
+    return db_priv.get(handle, set())
 
 
 def list_tags():
@@ -179,6 +186,12 @@ class Msg(object):
                 self.parent = None
                 with db_msg:
                     db_msg['%d' % (self.idx)] = self
+
+        # persist message record to PRIVDB
+        if 'public' not in self.tags:
+            with DBProxy(PRIVDB, use_session=use_session) as db_priv:
+                db_priv[self.recipient] = (
+                    db_priv.get(self.recipient, set()) | set([self.idx]))
 
         # if either any of 'server_tags' or 'network_tags' are enabled,
         # then queue for potential delivery.
