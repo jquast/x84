@@ -164,6 +164,17 @@ def get_display_fields(user, point):
                      "on OSX or `xclip -i < ~/.ssh/id_rsa.pub` in X11.  Then, "
                      "simply paste it here. "),
     )
+    fields['groups'] = field(
+        value=','.join(user.groups),
+        field_fmt=u'{lb}{key}{rb}roups{colon}   {value}',
+        display_location=Point(y=point.y + 13, x=point.x),
+        edit_location=Point(y=point.y + 13, x=point.x + 12),
+        key=u'g', width=30,
+        validate_fn=None,
+        description=(u"Groups this user is a member of, separated by comma.  "
+                     u"Notably, group 'sysop' has system-wide access, and "
+                     u"group 'moderator' is able to moderate messages. "),
+    )
     return fields
 
 
@@ -277,8 +288,13 @@ def do_command(term, session, inp, fields, tgt_user, point):
         if field.key == inp.lower():
             field_name = _fname
             break
+
     if field_name is None:
         # return False if no field matches this key
+        return False
+
+    # only 'sysop' may edit user groups
+    if field_name == 'groups' and not session.user.is_sysop:
         return False
 
     # pylint: disable=W0631
@@ -288,8 +304,8 @@ def do_command(term, session, inp, fields, tgt_user, point):
     # screen resizes and providing ^L full-screen refresh during the remainder
     # of this procedure ... It would require quite the refactor, though.
 
-    # special case; ssh public keys require scrolling editor
-    if field_name == 'pubkey':
+    # special case; ssh public keys and groups use scrolling editor
+    if field_name in ('pubkey', 'groups'):
         editor = ScrollingEditor(
             # issue #161; because of a 'border' (that we don't draw),
             # y must be offset by 1 and height by 2.
@@ -297,7 +313,7 @@ def do_command(term, session, inp, fields, tgt_user, point):
             xloc=field.edit_location.x - 1,
             width=field.width + 2,
             colors={'highlight': _color3})
-        # limit input to 1K, scroll at final field character
+        # limit input to 1K
         editor.max_length = 1024
     else:
         editor = LineEditor(field.width, colors={'highlight': _color3})
@@ -354,8 +370,16 @@ def do_command(term, session, inp, fields, tgt_user, point):
             elif field_name == 'pubkey':
                 if tgt_user.handle != 'anonymous':
                     tgt_user[field_name] = inp
+        elif field_name in ('groups'):
+            new_groups = set(filter(None, set(map(unicode.strip, inp.split(',')))))
+            for old_grp in tgt_user.groups.copy():
+                if old_grp not in new_groups:
+                    tgt_user.group_del(old_grp)
+            for new_grp in new_groups:
+                if new_grp not in tgt_user.groups:
+                    tgt_user.group_add(new_grp)
         else:
-            raise ValueError('unknown field.name: {0}'.format(field.name))
+            raise ValueError('unknown field name: {0}'.format(field_name))
     if tgt_user.handle != 'anonymous':
         tgt_user.save()
     return True
@@ -487,7 +511,7 @@ def main():
             point_margin = show_banner(term)
 
             # forward-calculate the prompt (y,x) point
-            point_prompt = Point(y=point_margin.y + 14, x=point_margin.x)
+            point_prompt = Point(y=point_margin.y + 15, x=point_margin.x)
 
         # get all field values and locations,
         fields = get_display_fields(tgt_user, point=point_margin)
@@ -527,10 +551,13 @@ def main():
                 tgt_user = locate_user(term, point_prompt) or tgt_user
                 break
             elif inp == u'd':
+                # yes, you can delete yourself !!
                 if delete_user(term, tgt_user, point_prompt):
                     if tgt_user == session.user:
-                        # if you delete yourself, you must logoff.
+                        # but if you delete yourself,
+                        # you must logoff.
                         goto('logoff')
+
                     # otherwise, move to next user
                     tgt_user = get_next_user(tgt_user)
                 break
