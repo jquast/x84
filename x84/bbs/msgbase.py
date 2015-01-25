@@ -78,22 +78,17 @@ class Msg(object):
 
     It contains many default properties to describe a conversation:
 
-    - ``creationtime``, the time the message was initialized
+    - ``stime``, the time the message was sent.
 
     - ``author``, ``recipient``, ``subject``, and ``body`` are envelope
       parameters.
 
-    - ``read`` becomes a list of handles that have viewed a public message,
-      or a single time the message was read by the addressed for private
-      messages.
-
     - ``tags`` is for use with message groupings, containing a list of strings
       that other messages may share in relation.
 
-    - ``parent`` points to the message this message directly refers to
-    - ``threads`` points to messages that refer to this message.  ``parent``
-      must be explicitly set, but children are automatically populated into
-      ``threads`` of messages replied to through the send() method.
+    - ``parent`` points to the message this message directly refers to.
+
+    - ``children`` is a set of indices replied by this message.
     """
 
     # pylint: disable=R0902
@@ -173,8 +168,6 @@ class Msg(object):
                 db_tag[tag] = set([self.idx])
 
         # persist message as child to parent;
-        if not hasattr(self, 'parent'):
-            self.parent = None
         assert self.parent not in self.children
         if self.parent is not None:
             parent_msg = get_msg(self.parent)
@@ -196,10 +189,13 @@ class Msg(object):
             self.queue_for_network()
 
         log.info(
-            u"saved {new}{public}msg {post}, addressed to '{self.recipient}'."
+            u"saved {new} {public_or_private} {message_or_reply}"
+            u", addressed to '{self.recipient}'."
             .format(new='new ' if new else '',
-                    public='public ' if 'public' in self.tags else '',
-                    post='post' if self.parent is None else 'reply',
+                    public_or_private=('public' if 'public' in self.tags
+                                       else 'private'),
+                    message_or_reply=('message' if self.parent is None
+                                      else 'reply'),
                     self=self))
 
     def queue_for_network(self):
