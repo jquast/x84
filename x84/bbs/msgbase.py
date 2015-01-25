@@ -67,10 +67,13 @@ def list_msgs(tags=None):
     return set(int(key) for key in DBProxy(MSGDB).keys())
 
 
-def list_privmsgs(handle):
+def list_privmsgs(handle=None):
     """ Return all private messages for given user handle. """
     db_priv = DBProxy(PRIVDB)
-    return db_priv.get(handle, set())
+    if handle:
+        return db_priv.get(handle, set())
+    # flatten list of [set(1, 2), set(3, 4)] to set(1, 2, 3, 4)
+    return set([_idx for indices in db_priv.values() for _idx in indices])
 
 
 def list_tags():
