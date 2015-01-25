@@ -9,6 +9,7 @@ import collections
 import urlparse
 import textwrap
 import math
+import sys
 
 # local
 from x84.bbs import getsession, getterminal, echo, LineEditor, get_ini
@@ -225,11 +226,15 @@ def view_article(session, term, url, title):
     headers = {'User-Agent': USER_AGENT}
     try:
         req = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
-    except requests.adapters.ReadTimeout as err:
+    except Exception as err:
+        # a wide variety of exceptions may occur; ssl errors, connect timeouts,
+        # read errors, BadStatusLine, it goes on and on.
+        e_type, e_value, e_tb = sys.exc_info()
         echo(term.move(term.height, 0))
-        echo(term.center('failed: {0}'.format(err)))
+        echo(term.center('{0}: {1}'.format(e_type, err)))
         term.inkey()
         return
+
     if 200 != req.status_code:
         # display 404, 500, or whatever non-200 code returned.
         echo(term.move(term.height, 0))
