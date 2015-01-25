@@ -495,7 +495,7 @@ def do_prompt(term, session):
 
                     # only redraw prompt (user canceled)
                     dirty = 2
-                elif inp.lower() in (u'n', u'q'):
+                elif inp.lower() in (u'n', u'q', u'\r', u'\n'):
                     echo(inp + u'\r\n')
                     do_quit = True
                     break
