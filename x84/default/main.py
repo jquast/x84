@@ -164,22 +164,10 @@ def get_menu_items(session):
                  script='charset',
                  args=(), kwargs={}),
 
-        # writemsg.py will be done from the reader (TODO
         MenuItem(inp_key=u'msg',
                  text=u'message area',
                  script='msgarea',
                  args=(), kwargs={}),
-
-        MenuItem(inp_key=u'post',
-                 text=u'write message',
-                 script='writemsg',
-                 args=(), kwargs={}),
-
-        MenuItem(inp_key=u'read',
-                 text=u'read messages',
-                 script='readmsgs',
-                 args=(), kwargs={}),
-
 
         MenuItem(inp_key=u'g',
                  text=u'logoff system',
