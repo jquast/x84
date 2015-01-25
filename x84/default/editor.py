@@ -26,7 +26,9 @@ here = os.path.dirname(__file__)
 
 def save_draft(key, ucs):
     """ Persist draft to database and stack changes to UNDO buffer. """
-    save(key, ucs)
+    if key is not None:
+        save(key, ucs)
+
     # pylint: disable=W0602
     #         Using global for 'UNDO' but no assignment is done
     global UNDO
@@ -296,7 +298,9 @@ def main(save_key=None, continue_draft=False):
                 term.yellow('-( '),
                 term.bold(u'Enter'),
                 u':', term.bold_yellow(u'edit mode'),
-                term.yellow(' )-'),))),))
+                term.yellow(' )-'),))),
+            lightbar.fixate(),
+        ))
 
     def redraw_lneditor(lightbar, lneditor):
         """
