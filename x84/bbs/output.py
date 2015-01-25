@@ -175,7 +175,7 @@ def decode_pipe(ucs):
             outp += ucs[ptr:match.start() + 1]
             ptr = match.end()
             continue
-        # 07 -> 7
+        # 0..7 -> 7
         while val.startswith('0'):
             val = val[1:]
         int_value = 0 if 0 == len(val) else int(val, 10)
