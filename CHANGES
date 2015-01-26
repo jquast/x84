@@ -1,3 +1,6 @@
+2.0.1
+  - bugfix: did not include default 'top' art
+  - bugfix: could not press 'return' to continue in sesame
 2.0.0
   - you will need to ensure to set 'enabled = yes' for the shroo-ms api,
     previously this was enabled if the section alone existed
