@@ -124,7 +124,7 @@ def get_editors(top_winsize, bot_winsize, top_editors, bot_editors):
             make_editor_series(bot_winsize, bot_editors))
 
 
-def do_chat(session, term, other_sid, dial=None, call_from=None):
+def do_chat(session, term, log, other_sid, dial=None, call_from=None):
     """ Main procedure. """
     editor = None
     dirty = True
@@ -337,6 +337,6 @@ def main(*args, **kwargs):
 
     with term.fullscreen():
         try:
-            return do_chat(session, term, *args, **kwargs)
+            return do_chat(session, term, log=log, *args, **kwargs)
         finally:
             do_hangup(session, other_sid=kwargs['other_sid'])
