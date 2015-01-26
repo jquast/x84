@@ -860,6 +860,10 @@ def prompt_body(term, msg, colors):
     with term.fullscreen():
         content = gosub('editor', save_key=None,
                         continue_draft=msg.body)
+    # set syncterm font, if any
+    if term.kind.startswith('ansi'):
+        echo(syncterm_setfont(syncterm_font))
+    echo(term.move(term.height, 0) + term.normal + u'\r\n')
     if content and content.strip():
         msg.body = content
         return True

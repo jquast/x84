@@ -5,6 +5,7 @@ import os
 # local
 from x84.bbs import getsession, getterminal, encode_pipe, echo, getch
 from x84.bbs import Lightbar, Selector, ScrollingEditor, showart
+from x84.bbs import syncterm_setfont
 
 # This is probably the fourth or more ansi multi-line editor
 # I've written for python. I did the least-effort this time.
@@ -22,6 +23,9 @@ UNDO = list()
 UNDOLEVELS = 9
 
 here = os.path.dirname(__file__)
+
+#: preferred fontset for SyncTerm emulator
+syncterm_font = 'cp437'
 
 
 def save_draft(key, ucs):
@@ -210,6 +214,10 @@ def main(save_key=None, continue_draft=False):
     #         Too many branches
     #         Too many statements
     session, term = getsession(), getterminal()
+
+    # set syncterm font, if any
+    if term.kind.startswith('ansi'):
+        echo(syncterm_setfont(syncterm_font))
 
     movement = (term.KEY_UP, term.KEY_DOWN, term.KEY_NPAGE,
                 term.KEY_PPAGE, term.KEY_HOME, term.KEY_END,
