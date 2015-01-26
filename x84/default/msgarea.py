@@ -30,6 +30,7 @@ from x84.bbs import (
     get_ini,
     get_msg,
     timeago,
+    DBProxy,
     gosub,
     echo,
     Msg,
@@ -111,7 +112,7 @@ def get_menu(messages):
             MenuItem(u'v', u'private ({0})'.format(len(messages['private'])))
         )
     items.extend([
-        MenuItem(u'n', u'post public'),
+        MenuItem(u'p', u'post public'),
         MenuItem(u'w', u'write private'),
         MenuItem(u'c', u'change area'),
         MenuItem(u'?', u'help'),
@@ -173,7 +174,7 @@ def describe_message_area(term, subscription, messages_bytags, colors):
 
 
 def validate_tag_patterns(tag_patterns):
-    all_tags = list_tags()
+    all_tags = list_tags() or set([u'public'])
     removed = []
     for tag_pattern in set(tag_patterns):
         if not fnmatch.filter(all_tags, tag_pattern):
@@ -188,7 +189,8 @@ def quote(term, txt, colors):
 
 def do_describe_available_tags(term, colors):
     sorted_tags = sorted([(len(list_msgs(tags=(tag,))), tag)
-                          for tag in list_tags()], reverse=True)
+                          for tag in list_tags() or [u'public']
+                          ], reverse=True)
     decorated_tags = [
         colors['text'](tag) +
         colors['lowlight']('({0})'.format(num_msgs))
@@ -464,6 +466,40 @@ def display_message(session, term, msg_index, colors):
                  break_long_words=True)
 
 
+def can_delete(session):
+    moderated = get_ini('msg', 'moderated_tags', getter='getboolean')
+    tag_moderators = set(get_ini('msg', 'tag_moderators', split=True))
+    return ('sysop' in session.user.groups or
+            moderated and tag_moderators & session.user.groups)
+
+
+def delete_message(msg):
+    """ Experimental message delete! """
+    # ! belongs as msg.delete() function !
+    msg.recipient = u''
+    msg.subject = u''
+    msg.body = u''
+    msg.children = set()
+    msg.parent = None
+    msg.tags = set()
+    msg.save()
+    with DBProxy('tags') as tag_db:
+        for key, values in tag_db.items()[:]:
+            if msg.idx in values:
+                newvalue = values - set([msg.idx])
+                if newvalue:
+                    tag_db[key] = newvalue
+                else:
+                    # no more messages by this tag, delete it
+                    del tag_db[key]
+    with DBProxy('privmsg') as priv_db:
+        for key, values in priv_db.items()[:]:
+            if msg.idx in values:
+                priv_db[key] = values - set([msg.idx])
+    with DBProxy('msgbase') as msg_db:
+        del msg_db['%d' % int(msg.idx)]
+
+
 def do_reader_prompt(session, term, index, message_indices, colors):
     xpos = max(0, (term.width // 2) - (80 // 2))
     opts = []
@@ -473,6 +509,8 @@ def do_reader_prompt(session, term, index, message_indices, colors):
         opts += (('n', 'ext'),)
     if allow_tag(session, message_indices[index]):
         opts += (('e', 'dit tags'),)
+    if can_delete(session):
+        opts += (('D', 'elete'),)
     opts += (('r', 'eply'),)
     opts += (('q', 'uit'),)
     opts += (('idx', ''),)
@@ -516,6 +554,9 @@ def do_reader_prompt(session, term, index, message_indices, colors):
                 echo(u'\r\n')
                 msg.save()
             return index
+        elif inp == u'D' and can_delete(session):
+            delete_message(msg=get_msg(message_indices[index]))
+            return None
         elif inp == u'r':
             # write message reply
             msg = create_reply_message(session=session,
