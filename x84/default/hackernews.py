@@ -229,7 +229,7 @@ def view_article(session, term, url, title):
     except Exception as err:
         # a wide variety of exceptions may occur; ssl errors, connect timeouts,
         # read errors, BadStatusLine, it goes on and on.
-        e_type, e_value, e_tb = sys.exc_info()
+        e_type, _, _ = sys.exc_info()
         echo(term.move(term.height, 0))
         echo(term.center('{0}: {1}'.format(e_type, err)))
         term.inkey()
