@@ -143,6 +143,7 @@ def main(name):
     #         Access to a protected member {_columns, _rows} of a client class
     store_columns, store_rows = term._columns, term._rows
     if not prompt_resize_term(session, term, name):
+        return
 
     with acquire_node(session, name) as node:
 

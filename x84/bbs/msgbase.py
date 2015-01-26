@@ -184,8 +184,8 @@ class Msg(object):
             try:
                 parent_msg = get_msg(self.parent)
             except KeyError:
-                self.log.warn('Child message {0}.parent = {1}: '
-                              'parent does not exist!'.format(self.idx, self.parent))
+                log.warn('Child message {0}.parent = {1}: '
+                         'parent does not exist!'.format(self.idx, self.parent))
             else:
                 if self.idx != parent_msg.idx:
                     parent_msg.children.add(self.idx)
