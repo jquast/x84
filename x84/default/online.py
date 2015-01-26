@@ -65,7 +65,8 @@ def heading():
     term = getterminal()
     bar = ''
     for line in showart(
-            os.path.join(os.path.dirname(__file__), 'art', 'onlinebar.ans'), 'topaz'):
+            os.path.join(os.path.dirname(__file__), 'art', 'onlinebar.ans'),
+            'amiga'):
         bar = bar + term.move_x(max(0, (term.width / 2) - 40)) + line
     return u'\r\n'.join((
         u'\r\n'.join([term.center(pline, (term.width))
