@@ -40,12 +40,12 @@ def prompt_resize_term(session, term, name):
                 inp = term.inkey(0)
                 while inp:
                     if inp.code == term.KEY_ENTER:
-                        break
+                        echo(term.normal + term.home + term.clear_eos)
+                        return True
                     if inp.code == term.KEY_ESCAPE:
                         return False
                     inp = term.inkey(0)
 
-        echo(term.normal + term.home + term.clear_eos)
 
 
 def restore_screen(term, cols, rows):
