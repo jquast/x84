@@ -28,7 +28,7 @@ There are now several boards running x/84:
 
     telnet://|02bloodisland.ph4.se|07
     telnet://|02bbs.beardy.se|07
-    telnet://|02maze.io|07
+    telnet://|02bbs.maze.io|07
     telnet://|02ufud.eu:6023|07
     telnet://|02oddnetwork.org|07
 

@@ -30,7 +30,7 @@ def main():
               ('blackflag.acid.org:2627', 'Piranha: Black Flag', 'Caphood',),
               ('oddnetwork.org', '79 columns', 'Haliphax'),
               ('bbs.beardy.se', 'The Swamp', 'Beardy'),
-              ('maze.io', 'rANDOM nOIZE', 'Maze'),)
+              ('bbs.maze.io', 'rANDOM nOIZE', 'maze'),)
     board_fmt = u'%25s %-30s %-15s\r\n'
     goodbye_msg = u''.join((
         term.move(term.height, 0),
