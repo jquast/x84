@@ -50,13 +50,19 @@ import dateutil
 TIME_FMT = '%A %b-%d, %Y at %r UTC'
 
 #: banner art displayed in main()
-art_file = 'art/hx-msg.ans'
+art_file = get_ini(
+    section='msgarea', key='art_file'
+) or 'art/hx-msg.ans'
 
 #: character encoding of banner art
-art_encoding = 'cp437'
+art_encoding = get_ini(
+    section='msgarea', key='art_encoding'
+) or 'cp437'
 
 #: preferred fontset for SyncTerm emulator
-syncterm_font = 'topaz'
+syncterm_font = get_ini(
+    section='msgarea', key='syncterm_font'
+) or 'topaz'
 
 #: When set False, menu items are not colorized and render much
 #: faster on slower systems (such as raspberry pi).
