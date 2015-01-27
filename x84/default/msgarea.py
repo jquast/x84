@@ -53,7 +53,7 @@ TIME_FMT = '%A %b-%d, %Y at %r UTC'
 art_file = 'art/hx-msg.ans'
 
 #: character encoding of banner art
-art_encoding = 'amiga'
+art_encoding = 'cp437'
 
 #: preferred fontset for SyncTerm emulator
 syncterm_font = 'topaz'
