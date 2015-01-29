@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-"""
-Command-line launcher and event loop for x/84, https://github.com/jquast/x84
-"""
+""" Command-line launcher and event loop for x/84. """
 # Place ALL metadata in setup.py, except where not suitable, place here.
 # For any contributions, feel free to tag __author__ etc. at top of such file.
 __author__ = "Johannes Lundberg (jojo), Jeff Quast (dingo)"
@@ -23,11 +21,18 @@ __credits__ = [
 __license__ = 'ISC'
 
 # std
-import sys
 import logging
+import select
+import socket
+import time
+import sys
 
 # local
 __import__('encodings')  # provides alternate encodings
+from x84 import cmdline
+from x84.db import DBHandler
+from x84.terminal import get_terminals, kill_session, find_tty
+from x84.fail2ban import get_fail2ban_function
 
 
 def main():
@@ -39,10 +44,10 @@ def main():
     - ``--config=`` location of alternate configuration file
     - ``--logger=`` location of alternate logging.ini file
     """
-    import x84.bbs.ini
-
     # load existing .ini files or create default ones.
-    x84.bbs.ini.init(*parse_args())
+    import x84.bbs.ini
+    x84.bbs.ini.init(*cmdline.parse_args())
+
     from x84.bbs import get_ini
     from x84.bbs.ini import CFG
 
@@ -50,7 +55,7 @@ def main():
         # apple is the only known bastardized variant that does this;
         # presumably for memory/speed savings (UCS-2 strings are faster
         # than UCS-4).  Python 3 dynamically allocates string types by
-        # their widest content, so such things aren't necessary ...
+        # their widest content, so such things aren't necessary, there.
         import warnings
         warnings.warn('This python is built without wide unicode support. '
                       'some internationalized languages will not be possible.')
@@ -77,9 +82,8 @@ def main():
         _loop(servers)
     except KeyboardInterrupt:
         # exit on ^C, killing any client sessions.
-        from x84.terminal import kill_session
         for server in servers:
-            for idx, thread in enumerate(server.threads[:]):
+            for thread in server.threads[:]:
                 if not thread.stopped:
                     thread.stopped = True
                 server.threads.remove(thread)
@@ -89,51 +93,8 @@ def main():
     return 0
 
 
-def parse_args():
-    import getopt
-    import sys
-    import os
-
-    if sys.platform.lower().startswith('win32'):
-        system_path = os.path.join('C:', 'x84')
-    else:
-        system_path = os.path.join(os.path.sep, 'etc', 'x84')
-
-    lookup_bbs = (os.path.join(system_path, 'default.ini'),
-                  os.path.expanduser(os.path.join('~', '.x84', 'default.ini')))
-
-    lookup_log = (os.path.join(system_path, 'logging.ini'),
-                  os.path.expanduser(os.path.join('~', '.x84', 'logging.ini')))
-
-    try:
-        opts, tail = getopt.getopt(sys.argv[1:], u'', (
-            'config=', 'logger=', 'help'))
-    except getopt.GetoptError as err:
-        sys.stderr.write('{0}\n'.format(err))
-        return 1
-    for opt, arg in opts:
-        if opt in ('--config',):
-            lookup_bbs = (arg,)
-        elif opt in ('--logger',):
-            lookup_log = (arg,)
-        elif opt in ('--help',):
-            sys.stderr.write(
-                'Usage: \n'
-                '{0} [--config <filepath>] [--logger <filepath>]\n'
-                .format(os.path.basename(sys.argv[0])))
-            sys.exit(1)
-    if len(tail):
-        sys.stderr.write('Unrecognized program arguments: {0}\n'
-                         .format(tail))
-        sys.exit(1)
-    return (lookup_bbs, lookup_log)
-
-
 def get_servers(CFG):
-    """
-    Given a configuration file, instantiate and return a list of enabled
-    servers.
-    """
+    """ Instantiate and return enabled servers by configuration ``CFG``. """
     servers = []
 
     if (CFG.has_section('telnet') and
@@ -167,6 +128,7 @@ def get_servers(CFG):
 
 
 def find_server(servers, fd):
+    """ Find matching ``server.server_socket`` for given file descriptor. """
     for server in servers:
         if fd == server.server_socket.fileno():
             return server
@@ -183,8 +145,6 @@ def accept(log, server, check_ban):
     using connect_factory, with optional keyword arguments
     server.connect_factory_kwargs.
     """
-    import socket
-
     if None in (server.client_factory, server.connect_factory):
         raise NotImplementedError(
             "No accept for server class {server.__class__.__name__}"
@@ -240,7 +200,7 @@ def accept(log, server, check_ban):
 
 
 def get_session_output_fds(servers):
-    from x84.terminal import find_tty
+    """ Return file descriptors of all ``tty.master_read`` pipes. """
     session_fds = []
     for server in servers:
         for client in server.clients.values():
@@ -252,12 +212,13 @@ def get_session_output_fds(servers):
 
 def client_recv(servers, ready_fds, log):
     """
-    Test all clients for recv_ready(). If any data is available, then
-    socket_recv() is called, buffering the data for the session which
-    is exhausted in session_send().
+    Test all clients for recv_ready().
+
+    If any data is available, then ``client.socket_recv()`` is called,
+    buffering the data for the session which is exhausted by
+    :func:`session_send`.
     """
     from x84.bbs.exception import Disconnected
-    from x84.terminal import kill_session
     for server in servers:
         for client in server.clients_ready(ready_fds):
             try:
@@ -270,14 +231,14 @@ def client_recv(servers, ready_fds, log):
 
 def client_send(terminals, log):
     """
-    Test all clients for send_ready(). If any data is available, then
-    tty.client.send() is called. This is data sent from the session to
-    the tcp client.
+    Test all clients for send_ready().
+
+    If any data is available, then ``tty.client.send()`` is called.
+    This is data sent from the session to the tcp client.
     """
     from x84.bbs.exception import Disconnected
-    from x84.terminal import kill_session
     # nothing to send until tty is registered.
-    for sid, tty in terminals:
+    for _, tty in terminals:
         if tty.client.send_ready():
             try:
                 tty.client.send()
@@ -289,15 +250,13 @@ def client_send(terminals, log):
 
 def session_send(terminals):
     """
-    Test all tty clients for input_ready(), meaning tcp data has been
-    buffered to be received by the tty session, and sent it to the tty
-    input queue (tty.master_write).
+    Test all tty clients for input_ready().
 
-    Also, test all sessions for idle timeout, signaling exit to
-    subprocess when reached
+    Meaning, tcp data has been buffered to be received by the tty session,
+    and send it to the tty input queue (tty.master_write).  Also, test all
+    sessions for idle timeout, signaling exit to subprocess when reached.
     """
-    from x84.terminal import kill_session
-    for sid, tty in terminals:
+    for _, tty in terminals:
         if tty.client.input_ready():
             try:
                 tty.master_write.send(('input', tty.client.get_input()))
@@ -314,18 +273,16 @@ def session_send(terminals):
 
 
 def handle_lock(locks, tty, event, data, tap_events, log):
-    """
-    handle locking event of (lock-key, (method, stale))
-    """
-    import time
-    from x84.terminal import get_terminals
+    """ handle locking event of ``(lock-key, (method, stale))``. """
+    # pylint: disable=R0913
+    #         Too many arguments (6/5)
     method, stale = data
     if method == 'acquire':
         # this lock is already held,
         if event in locks:
             # check if lock held by an active session,
             holder = locks[event][1]
-            for _sid, _tty in get_terminals():
+            for _sid, _ in get_terminals():
                 if _sid == holder and _sid != tty.sid:
                     # acquire the lock from a now-deceased session.
                     log.debug('[{tty.sid}] {event} not acquired, '
@@ -366,21 +323,21 @@ def handle_lock(locks, tty, event, data, tap_events, log):
                 # though this is not currently used in the demonstration
                 # system.
                 locks[event] = (time.time(), tty.sid)
-                tty.master_write.send((event, True,))
                 log.warn('[{tty.sid}] {event} re-acquiring stale lock, '
                          'previously held active session {holder} after '
                          '{elapsed}s elapsed (stale={stale})'
                          .format(tty=tty, event=event, holder=holder,
                                  elapsed=elapsed, stale=stale))
+                tty.master_write.send((event, True,))
 
             # signal busy with matching event, data=False
             else:
+                log.debug('[{tty.sid}] {event} lock rejected; already held '
+                          'by active session {holder} for {elapsed} seconds '
+                          '(stale={stale})'
+                          .format(tty=tty, event=event, holder=holder,
+                                  elapsed=elapsed, stale=stale))
                 tty.master_write.send((event, False,))
-                log.warn('[{tty.sid}] {event} lock rejected; already held '
-                         'by active session {holder} for {elapsed} seconds '
-                         '(stale={stale})'
-                         .format(tty=tty, event=event, holder=holder,
-                                 elapsed=elapsed, stale=stale))
 
     elif method == 'release':
         if event not in locks:
@@ -395,31 +352,21 @@ def handle_lock(locks, tty, event, data, tap_events, log):
 
 def session_recv(locks, terminals, log, tap_events):
     """
-    receive data waiting for session; all data received from
-    subprocess is in form (event, data), and is handled by ipc_recv.
+    Receive data waiting for terminal sessions.
 
-    if stale is not None, the number of seconds elapsed since lock was
-    first held is consider stale after that period of time, and is acquire
-    anyway.
+    All data received from subprocess is handled here.
     """
-    # No actual Lock instances are held or released, just a simple dictionary
-    # state/time tracking system.
-    from x84.terminal import kill_session
-    from x84.db import DBHandler
-
     for sid, tty in terminals:
         while tty.master_read.poll():
             try:
                 event, data = tty.master_read.recv()
             except (EOFError, IOError) as err:
                 # sub-process unexpectedly closed
-                msg_err = 'master_read pipe: {err}'.format(err=err)
-                log.exception(msg_err)
-                kill_session(tty.client, msg_err)
+                log.exception('master_read pipe: {0}'.format(err))
+                kill_session(tty.client, 'master_read pipe: {0}'.format(err))
                 break
-            except TypeError:
-                msg_err = 'unpickling error'
-                log.exception(msg_err)
+            except TypeError as err:
+                log.exception('unpickling error: {0}'.format(err))
                 break
 
             # 'exit' event, unregisters client
@@ -439,11 +386,11 @@ def session_recv(locks, terminals, log, tap_events):
 
             # 'remote-disconnect' event, hunt and destroy
             elif event == 'remote-disconnect':
-                send_to = data[0]
-                reason = 'remote-disconnect by {sid}'.format(sid=sid)
                 for _sid, _tty in terminals:
-                    if send_to == _sid:
-                        kill_session(tty.client, reason)
+                    # data[0] is 'send-to' address.
+                    if data[0] == _sid:
+                        kill_session(
+                            tty.client, 'remote-disconnect by {0}'.format(sid))
                         break
 
             # 'route': message passing directly from one session to another
@@ -473,8 +420,7 @@ def session_recv(locks, terminals, log, tap_events):
 
             # 'db*': access DBProxy API for shared sqlitedict
             elif event.startswith('db'):
-                thread = DBHandler(tty.master_write, event, data)
-                thread.start()
+                DBHandler(tty.master_write, event, data).start()
 
             # 'lock': access fine-grained bbs-global locking
             elif event.startswith('lock'):
@@ -487,16 +433,10 @@ def session_recv(locks, terminals, log, tap_events):
 
 
 def _loop(servers):
-    """
-    Main event loop. Never returns.
-    """
+    """ Main event loop. Never returns. """
     # pylint: disable=R0912,R0914,R0915
     #         Too many local variables (24/15)
-    import select
-    import sys
-    from x84.terminal import get_terminals, kill_session
     from x84.bbs.ini import CFG
-    from x84.fail2ban import get_fail2ban_function
 
     SELECT_POLL = 0.02  # polling time is 20ms
 
@@ -544,7 +484,13 @@ def _loop(servers):
         # a new client in terminal.start_process surprises us with new
         # file descriptors for the session i/o.  Unless we loop for
         # additional `session_fds', a connecting client would block.
-        ready_r, _, _ = select.select(check_r, [], [], SELECT_POLL)
+        try:
+            ready_r, _, _ = select.select(check_r, [], [], SELECT_POLL)
+        except select.error as err:
+            # more than likely EBADF (9, 'Bad file descriptor'), it would seem
+            # the socket we've just decided to poll has just gone bad.
+            log.debug('continue after select.error: {0}'.format(err))
+            continue
 
         for fd in ready_r:
             # see if any new tcp connections were made

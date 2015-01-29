@@ -1,4 +1,4 @@
-""" news script for x/84, https://github.com/jquast/x84 """
+""" news script for x/84. """
 # std
 import os
 import time

@@ -1,4 +1,4 @@
-""" Debug example script for x/84, https://github.com/jquast/x84 """
+""" Debug example script for x/84 """
 
 
 def main():

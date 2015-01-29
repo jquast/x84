@@ -1,16 +1,25 @@
-"""
-Main menu script for x/84, http://github.com/jquast/x84
-"""
+""" Main menu script for x/84. """
 # std imports
 from __future__ import division
 import collections
-import math
 import os
 
 # local
-from x84.bbs import getsession, getterminal, get_ini
-from x84.bbs import echo, LineEditor, gosub, syncterm_setfont
-from x84.bbs import ini
+from x84.bbs import (
+    syncterm_setfont,
+    getterminal,
+    getsession,
+    LineEditor,
+    get_ini,
+    gosub,
+    echo,
+    ini,
+)
+from x84.default.common import (
+    render_menu_entries,
+    display_banner,
+    display_prompt,
+)
 
 #: MenuItem is a definition class for display, input, and target script.
 MenuItem = collections.namedtuple(
@@ -28,8 +37,8 @@ color_highlight = get_ini(
 ) or 'bold_magenta'
 
 #: color used for prompt
-color_prompt = get_ini(
-    section='main', key='color_prompt',
+color_backlight = get_ini(
+    section='main', key='color_backlight',
 ) or 'magenta_reverse'
 
 #: color used for brackets ``[`` and ``]``
@@ -40,7 +49,7 @@ color_lowlight = get_ini(
 #: filepath to artfile displayed for this script
 art_file = get_ini(
     section='main', key='art_file'
-) or 'art/main*.asc'
+) or 'art/main1.asc'
 
 #: encoding used to display artfile
 art_encoding = get_ini(
@@ -52,10 +61,41 @@ syncterm_font = get_ini(
     section='main', key='syncterm_font'
 ) or 'topaz'
 
-#: system name of bbs
-bbsname = get_ini(
-    section='system', key='bbsname'
-) or 'Unnamed'
+
+def get_sesame_menu_items(session):
+    # there doesn't exist any documentation on how this works,
+    # only the given examples in the generated default.ini file
+    menu_items = []
+    if ini.CFG.has_section('sesame'):
+        for name in filter(lambda _name: '_' not in _name,
+                           ini.CFG.options('sesame')):
+
+            sesame_kwargs = {'name': name}
+
+            door_cmd = ini.CFG.get('sesame', name).split(None, 1)[0]
+            if door_cmd.lower() == 'no' or not os.path.exists(door_cmd):
+                # skip entry if path does not resolve, or set to 'no'
+                continue
+
+            inp_key = get_ini(section='sesame', key='{0}_key'.format(name))
+            if not inp_key:
+                raise ValueError('sesame configuration for "{0}" requires '
+                                 'complimenting value "{0}_key" for menu '
+                                 'input key.'.format(name))
+
+            if get_ini(section='sesame', key='{0}_sysop_only'.format(name),
+                       getter='getboolean') and not session.user.is_sysop:
+                continue
+
+            text = get_ini(
+                section='sesame', key='{0}_text'.format(name)
+            ) or name
+
+            menu_items.append(
+                MenuItem(inp_key=inp_key, text=text, script='sesame',
+                         args=(), kwargs=sesame_kwargs))
+
+    return menu_items
 
 
 def get_menu_items(session):
@@ -124,14 +164,9 @@ def get_menu_items(session):
                  script='charset',
                  args=(), kwargs={}),
 
-        # writemsg.py will be done from the reader (TODO
-        MenuItem(inp_key=u'read',
-                 text=u'read messages',
-                 script='readmsgs',
-                 args=(), kwargs={}),
-        MenuItem(inp_key=u'post',
-                 text=u'write message',
-                 script='writemsg',
+        MenuItem(inp_key=u'msg',
+                 text=u'message area',
+                 script='msgarea',
                  args=(), kwargs={}),
 
         MenuItem(inp_key=u'g',
@@ -141,32 +176,6 @@ def get_menu_items(session):
 
     ]
 
-    # there doesn't exist any documentation on how this works,
-    # only the given examples in the generated default.ini file
-    if ini.CFG.has_section('sesame'):
-        from ConfigParser import NoOptionError
-        for door in ini.CFG.options('sesame'):
-            if door.endswith('_key'):
-                # skip entries ending by _key.
-                continue
-
-            if not os.path.exists(ini.CFG.get('sesame', door)):
-                # skip entry if path does not resolve
-                continue
-
-            try:
-                inp_key = get_ini(section='sesame', key='{0}_key'.format(door))
-            except NoOptionError:
-                # skip entry if there is no {door}_key option
-                continue
-
-            menu_items.append(
-                MenuItem(inp_key=inp_key,
-                         text=u'play {0}'.format(door),
-                         script='sesame',
-                         args=(door,),
-                         kwargs={}))
-
     # add sysop menu for sysop users, only.
     if session.user.is_sysop:
         menu_items.append(
@@ -175,78 +184,9 @@ def get_menu_items(session):
                      script='sysop',
                      args=(), kwargs={}))
 
+    # add sesame doors, if any.
+    menu_items.extend(get_sesame_menu_items(session))
     return menu_items
-
-
-def decorate_menu_item(menu_item, term, highlight, lowlight):
-    """ Return menu item decorated. """
-    key_text = (u'{lb}{inp_key}{rb}'.format(
-        lb=lowlight(u'['),
-        rb=lowlight(u']'),
-        inp_key=highlight(menu_item.inp_key)))
-
-    # set the inp_key within the key_text if matching
-    if menu_item.inp_key in menu_item.text:
-        return menu_item.text.replace(menu_item.inp_key, key_text)
-
-    # otherwise prefixed with space
-    return (u'{key_text} {menu_text}'.format(
-        key_text=key_text, menu_text=menu_item.text))
-
-
-def render_menu_entries(term, top_margin, menu_items):
-    """ Return all menu items rendered in decorated tabular format. """
-    # we take measured effects to do this operation much quicker when
-    # colored_menu_items is set False to accommodate slower systems
-    # such as the raspberry pi.
-    if colored_menu_items:
-        highlight = getattr(term, color_highlight)
-        lowlight = getattr(term, color_lowlight)
-        measure_width = term.length
-    else:
-        highlight = lambda txt: txt
-        lowlight = lambda txt: txt
-        measure_width = str.__len__
-
-    # render all menu items, highlighting their action 'key'
-    rendered_menuitems = [
-        decorate_menu_item(menu_item=menu_item, term=term,
-                           highlight=highlight, lowlight=lowlight)
-        for menu_item in menu_items
-    ]
-    # create a parallel array of their measurable width
-    column_widths = map(measure_width, rendered_menuitems)
-
-    # here, we calculate how many vertical sections of menu entries
-    # may be displayed in 80 columns or less -- and forat accordingly
-    # so that they are left-adjusted in 1 or more tabular columns, with
-    # sufficient row spacing to padd out the full vertical height of the
-    # window.
-    #
-    # It's really just a bunch of math to make centered, tabular columns..
-    display_width = min(term.width, 80)
-    padding = max(column_widths) + 3
-    n_columns = max(1, int(math.floor(display_width / padding)))
-    xpos = max(1, int(math.floor((term.width / 2) - (display_width / 2))))
-    xpos += int(math.floor((display_width - ((n_columns * padding))) / 2))
-    rows = int(math.ceil(len(rendered_menuitems) / n_columns))
-    height = int(math.ceil((term.height - 3) - top_margin))
-    row_spacing = max(1, min(3, int(math.floor(height / rows))))
-
-    column = 1
-    output = u''
-    for idx, item in enumerate(rendered_menuitems):
-        padding_left = term.move_x(xpos) if column == 1 and xpos else u''
-        padding_right = ' ' * (padding - column_widths[idx])
-        if idx == len(rendered_menuitems) - 1:
-            # last item, two newlines
-            padding_right = u'\r\n' * 2
-        elif column == n_columns:
-            # newline(s) on last column only
-            padding_right = u'\r\n' * row_spacing
-        column = 1 if column == n_columns else column + 1
-        output = u''.join((output, padding_left, item, padding_right))
-    return output
 
 
 def get_line_editor(term, menu):
@@ -256,30 +196,22 @@ def get_line_editor(term, menu):
     # enable by default.  Just a note for you east-asian folks.
     max_inp_length = max([len(item.inp_key) for item in menu])
     return LineEditor(width=max_inp_length,
-                      colors={'highlight': getattr(term, color_prompt)})
-
-
-def display_prompt(term):
-    """ Return string for displaying command prompt. """
-    xpos = 0
-    if term.width > 30:
-        xpos = max(5, int((term.width / 2) - (80 / 2)))
-    return (u'{xpos}{user}{at}{bbsname}{colon} '.format(
-        xpos=term.move_x(xpos),
-        user=term.session.user.handle,
-        at=getattr(term, color_lowlight)(u'@'),
-        bbsname=bbsname,
-        colon=getattr(term, color_lowlight)(u'::')))
+                      colors={'highlight': getattr(term, color_backlight)})
 
 
 def main():
     """ Main menu entry point. """
-    from x84.default.common import display_banner
     session, term = getsession(), getterminal()
 
     text, width, height, dirty = u'', -1, -1, 2
     menu_items = get_menu_items(session)
     editor = get_line_editor(term, menu_items)
+    colors = {}
+    if colored_menu_items:
+        colors['backlight'] = getattr(term, color_backlight)
+        colors['highlight'] = getattr(term, color_highlight)
+        colors['lowlight'] = getattr(term, color_lowlight)
+
     while True:
         if dirty == 2:
             # set syncterm font, if any
@@ -291,8 +223,11 @@ def main():
             echo(u'\r\n')
             if width != term.width or height != term.height:
                 width, height = term.width, term.height
-                text = render_menu_entries(term, top_margin, menu_items)
-            echo(u''.join((text, display_prompt(term), editor.refresh())))
+                text = render_menu_entries(
+                    term, top_margin, menu_items, colors)
+            echo(u''.join((text,
+                           display_prompt(term, colors),
+                           editor.refresh())))
             dirty = 0
 
         event, data = session.read_events(('input', 'refresh'))

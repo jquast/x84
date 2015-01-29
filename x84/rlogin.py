@@ -1,5 +1,5 @@
 """
-rlogin server for x84, https://github.com/jquast/x84
+rlogin server for x84.
 
 This only exists to demonstrate alternative client protocols rather than
 only ssh or telnet.  rlogin is a very insecure and not recommended!
@@ -10,6 +10,7 @@ import logging
 import select
 import socket
 import array
+import errno
 import time
 
 # local
@@ -18,6 +19,7 @@ from x84.bbs.userbase import (
     check_bye_user,
     check_anonymous_user
 )
+from x84.bbs.exception import Disconnected
 from x84.client import BaseClient, BaseConnect
 from x84.server import BaseServer
 from x84.terminal import spawn_client_session
@@ -25,9 +27,7 @@ from x84.terminal import spawn_client_session
 
 class RLoginClient(BaseClient):
 
-    '''
-    rlogin protocol client handler.
-    '''
+    """ rlogin protocol client handler. """
 
     kind = 'rlogin'
 
@@ -38,22 +38,31 @@ class RLoginClient(BaseClient):
         self.usend_buffer = array.array('c')
 
     def recv_ready(self):
-        """
-        Returns True if data is awaiting on the telnet socket.
-        """
+        """ Whether data is awaiting on the telnet socket. """
         return (self.is_active() and bool(
             select.select([self.sock.fileno()], [], [], 0)[0]))
 
     def send(self):
+        """
+        Send any data buffered and return number of bytes send.
+
+        :raises Disconnected: client has disconnected (cannot write to socket).
+        """
         if len(self.usend_buffer) > 0:
             ready_bytes = bytes(''.join(self.usend_buffer))
             self.usend_buffer = array.array('c')
 
             def _send_urgent(send_bytes):
-                '''
-                Sent urgent (out of band) TCP packet.
-                '''
-                return self.sock.send(send_bytes, socket.MSG_OOB)
+                """ Sent urgent (out of band) TCP packet. """
+                try:
+                    return self.sock.send(send_bytes, socket.MSG_OOB)
+                except socket.error as err:
+                    if err.errno in (errno.EDEADLK, errno.EAGAIN):
+                        self.log.debug('{self.addrport}: {err} '
+                                       '(bandwidth exceed)'
+                                       .format(self=self, err=err))
+                        return 0
+                    raise Disconnected('send: {0}'.format(err))
 
             sent = _send_urgent(ready_bytes)
             if sent < len(ready_bytes):
@@ -63,22 +72,22 @@ class RLoginClient(BaseClient):
             super(RLoginClient, self).send()
 
     def send_ready(self):
+        """ Whether any data is buffered for delivery. """
         return bool(len(self.send_buffer) + len(self.usend_buffer))
 
     def send_urgent_str(self, bstr):
-        '''
-        Buffer urgent (OOB) message to client from bytestring.
-        '''
+        """ Buffer urgent (OOB) message to client from bytestring. """
         self.usend_buffer.fromstring(bstr)
 
 
 class ConnectRLogin(BaseConnect):
 
-    '''
+    """
     rlogin protocol connection handler.
 
     Takes care of the (initial) handshake, terminal and session setup.
-    '''
+    """
+
     #: maximum time elapsed allowed for on-connect negotiation
     TIME_NEGOTIATE = 5.0
 
@@ -89,8 +98,8 @@ class ConnectRLogin(BaseConnect):
         """
         Perform rfc1282 (rlogin) connection establishment.
 
-        Determine terminal type, telnet options, window size,
-        and tcp socket options before spawning a new session.
+        Determine rlogin on-connect data, rlogin may only
+        negotiate session user name and terminal type.
         """
         try:
             self._set_socket_opts()
@@ -267,23 +276,20 @@ class ConnectRLogin(BaseConnect):
         return parsed
 
     def _set_sock_opts(self):
-        '''
-        Set the socket in non-blocking mode.
-        '''
+        """ Set the socket in non-blocking mode. """
         self.client.sock.setblocking(0)
         self.client.sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
 
 
 class RLoginServer(BaseServer):
 
-    '''
-    RLogin/RSH protocol server.
-    '''
+    """ RLogin/RSH protocol server. """
 
     client_factory = RLoginClient
     connect_factory = ConnectRLogin
 
     def __init__(self, config):
+        """ Class initializer. """
         self.log = logging.getLogger(__name__)
         self.config = config
         self.addr = config.get('rlogin', 'addr')
@@ -309,9 +315,7 @@ class RLoginServer(BaseServer):
                       .format(self=self))
 
     def client_fds(self):
-        '''
-        Returns a list of rlogin client file descriptors.
-        '''
+        """ Return list of rlogin client file descriptors. """
         fds = [client.fileno() for client in self.clients.values()]
         # pylint: disable=bad-builtin
         #         You're drunk, pylint

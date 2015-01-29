@@ -12,14 +12,15 @@ Contents:
 
    intro
    project_details
-   developers
    msgnet
+   doors
+   web
+   developers
    default_api
    api/*
    future_direction
-   history
 
-  
+
 =======
 Indexes
 =======

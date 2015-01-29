@@ -4,6 +4,14 @@ inherits:
 ignore:
   - (^|/)\..+
   - ^docs/
+  # user-contributed, very chaotic and unmaintainable
+  - ^x84/default/extras
+  # user-contributed, not necessary to pylint
+  - ^x84/encodings
+  # derived from mini-boa, not very well documented.
+  - ^x84/telnet.py
+  # this code is disgusting, please don't view it.
+  - ^x84/default/tetris.py
 
 test-warnings: true
 
@@ -17,6 +25,9 @@ dodgy:
 frosted:
     # static analysis
     run: true
+    disable:
+        # (...) imported but unused, does not understand __all__
+        - E101
 
 mccabe:
     # complexity checking.
@@ -45,10 +56,21 @@ pylint:
         # no 'mark' member
         ignored-classes: pytest
     disable:
+        # Use % formatting in logging functions but pass the % parameters as arguments
+        - W1202
         # Used builtin function 'map' (col 29)
         - W0141
         # Used * or ** magic
         - W0142
+        # Cyclic import (x84.bbs -> x84.bbs.dbproxy -> x84.db -> x84.bbs.ini -> x84.ssh -> x84.sftp)
+        # we really can't prevent this without a complete overhaul.
+        - R0401
+        # Argument 'self' passed by position and keyword in method call
+        # we use this commonly for .format(self=self)
+        - E1124
+        # Interface not implemented
+        # happens in ssh.py and sftp.py due to paramiko's old-style classes.
+        - R0923
 
 pyroma:
     # checks setup.py

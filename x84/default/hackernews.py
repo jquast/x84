@@ -9,6 +9,7 @@ import collections
 import urlparse
 import textwrap
 import math
+import sys
 
 # local
 from x84.bbs import getsession, getterminal, echo, LineEditor, get_ini
@@ -117,9 +118,17 @@ def do_movement(inp, scroll_idx, height, bottom, keyset):
 
 def get_article(term, articles):
     """ Prompt for an article number, return matching article. """
-    echo(term.move(term.height, 0) + getattr(term, COLOR_MAIN))
-    echo(term.center(''))
-    echo(term.move(term.height, 0))
+    moveto_lastline = term.move(term.height, 0)
+    width = term.width
+    if term.kind.startswith('ansi'):
+        # bah syncterm
+        moveto_lastline = term.move(term.height - 1, 0)
+        width -= 1
+    echo(u''.join((
+        moveto_lastline + getattr(term, COLOR_MAIN),
+        term.center('', width),
+        moveto_lastline,
+    )))
     echo(u':: enter article #: ')
     article_idx = LineEditor(
         width=len(str(ARTICLE_LIMIT)),
@@ -217,23 +226,35 @@ def view_article(session, term, url, title):
     keyset_help = (u'[r]eturn - (pg)up/down - [{0}%] - [s]hare')
 
     # display 'fetching ...'
-    echo(term.move(term.height, 0))
+    moveto_lastline = term.move(term.height, 0)
+    width = term.width
+    if term.kind.startswith('ansi'):
+        # bah syncterm
+        moveto_lastline = term.move(term.height - 1, 0)
+        width -=1
     fetch_txt = 'fetching {0}'.format(url)
-    echo(term.center(fetch_txt[:term.width]))
+    echo(u''.join((moveto_lastline, term.center(fetch_txt[:term.width], width))))
 
     # perform get request,
     headers = {'User-Agent': USER_AGENT}
     try:
         req = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
-    except requests.adapters.ReadTimeout as err:
-        echo(term.move(term.height, 0))
-        echo(term.center('failed: {0}'.format(err)))
+    except Exception as err:
+        # a wide variety of exceptions may occur; ssl errors, connect timeouts,
+        # read errors, BadStatusLine, it goes on and on.
+        e_type, _, _ = sys.exc_info()
+        echo(u''.join((
+            moveto_lastline,
+            term.center('{0}: {1}'.format(e_type, err), width))))
         term.inkey()
         return
+
     if 200 != req.status_code:
         # display 404, 500, or whatever non-200 code returned.
-        echo(term.move(term.height, 0))
-        echo(term.center('failed: status_code={0}'.format(req.status_code)))
+        echo(u''.join((
+            moveto_lastline,
+            term.center('failed: status_code={0}'.format(req.status_code), width)
+        )))
         term.inkey()
         return
 
@@ -247,13 +268,19 @@ def view_article(session, term, url, title):
     article_text = u''
     scroll_idx = 0
     last_width, last_height = -1, -1
-    quit = False
+    do_quit = False
     dirty = True
-    while not quit:
+    width = term.width
+    while not do_quit:
         if dirty:
             if last_width != term.width or last_height != term.height:
                 # screen size has changed, re-calculate rendered contents
                 page_height = term.height - 2
+                width = term.width
+                if term.kind.startswith('ansi'):
+                    # bah syncterm
+                    page_height -= 1
+                    width -= 1
                 article_text = render_article(term, html_text)
                 last_width, last_height = term.width, term.height
                 bottom = len(article_text) - page_height
@@ -261,7 +288,7 @@ def view_article(session, term, url, title):
             # display titlebar
             echo(term.home)
             echo(getattr(term, COLOR_VIEW)(
-                title[:term.width].center(term.width)))
+                title[:term.width].center(width)))
 
             # display page at offset
             echo(term.move(1, 0))
@@ -271,17 +298,22 @@ def view_article(session, term, url, title):
                 echo(line_txt + _endline)
 
             # clear (any) remaining lines
-            echo(_endline * (page_height - line_no))
+            syncterm_sucks = int(not bool(term.kind.startswith('ansi')))
+            echo(_endline * (page_height - (line_no + syncterm_sucks)))
 
             # calculate pct
             _pct = (scroll_idx + page_height) / len(article_text)
             pct = min(int(math.ceil(_pct * 100)), 100)
 
             # display context help
-            echo(term.move(term.height, 0))
+            moveto_lastline = term.move(term.height, 0)
+            if term.kind.startswith('ansi'):
+                # bah syncterm
+                moveto_lastline = term.move(term.height - 1, 0)
+            echo(moveto_lastline)
             echo(getattr(term, COLOR_VIEW)(
                 keyset_help.format(pct)[:term.width]
-                .center(term.width)))
+                .center(width)))
 
             dirty = False
 
@@ -300,12 +332,12 @@ def view_article(session, term, url, title):
                     # refresh (^L)
                     dirty = 2
                 elif inp.lower() in (u'r', u'q',):
-                    quit = True
+                    do_quit = True
                     break
                 elif inp in ('s',):
                     # share url
                     echo(term.move(term.height, 0))
-                    echo(term.center(url))
+                    echo(term.center(url, width))
                     dirty = True
                     term.inkey()
                 else:
@@ -337,14 +369,20 @@ def view_article_summaries(session, term, rss_url, rss_title):
     bottom = -1
     scroll_idx = 0
     last_width, last_height = -1, -1
-    quit = False
+    width = term.width
+    do_quit = False
     dirty = 2
-    while not quit:
+    while not do_quit:
         if dirty == 2:
             # dirty value of '2' is full screen refresh,
             if last_width != term.width or last_height != term.height:
                 # screen size has changed, re-calculate rendered contents
                 page_height = term.height - 2
+                width = term.width
+                if term.kind.startswith('ansi'):
+                    # bah syncterm
+                    page_height -= 1
+                    width -= 1
                 last_width, last_height = term.width, term.height
 
                 # we can't actually determine how many articles may be
@@ -356,7 +394,8 @@ def view_article_summaries(session, term, rss_url, rss_title):
             # display titlebar
             echo(term.home)
             echo(getattr(term, COLOR_MAIN)(
-                rss_title[:term.width].center(term.width)))
+                rss_title[:term.width].center(width)))
+            echo(term.move(1, 0))
 
             # display page summary of articles by scroll index
             echo(render_articles_summary(
@@ -365,10 +404,13 @@ def view_article_summaries(session, term, rss_url, rss_title):
 
         if dirty > 0:
             # dirty value of '1' or more is context-bar refresh
+            moveto_lastline = term.move(term.height, 0)
+            if term.kind.startswith('ansi'):
+                moveto_lastline = term.move(term.height - 1, 0)
             echo(u''.join((
-                term.move(term.height, 0),
+                moveto_lastline,
                 getattr(term, COLOR_MAIN)(
-                    keyset_help[:term.width].center(term.width)))
+                    keyset_help[:term.width].center(width)))
             ))
             dirty = 0
 
@@ -387,7 +429,7 @@ def view_article_summaries(session, term, rss_url, rss_title):
                     # refresh (^L)
                     dirty = 2
                 elif inp.lower() in (u'q',):
-                    quit = True
+                    do_quit = True
                     break
                 elif inp in (u'v', 'c'):
                     article = get_article(term, articles)

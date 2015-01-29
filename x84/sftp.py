@@ -1,5 +1,5 @@
 """
-SFTP server for x/84 bbs https://github.com/jquast/x84
+SFTP server for x/84.
 
 In order to configure x/84 as an SFTP server, you will need to add an [sftp]
 section to your default.ini file and add a `root` option. This points to the
@@ -28,14 +28,18 @@ flagged_dirname = '__flagged__'
 uploads_dirname = '__uploads__'
 
 
-class X84SFTPHandle (SFTPHandle):
+class X84SFTPHandle(SFTPHandle):
+
+    """ SFTP File handler for x/84. """
 
     def __init__(self, *args, **kwargs):
+        """ Class initializer. """
         self.log = logging.getLogger(__name__)
         self.user = kwargs.pop('user')
-        super(X84SFTPHandle, self).__init__(*args, **kwargs)
+        SFTPHandle.__init__(self, *args, **kwargs)
 
     def stat(self):
+        """ Stat the file descriptor. """
         self.log.debug('stat')
         try:
             return SFTPAttributes.from_stat(os.fstat(self.readfile.fileno()))
@@ -43,6 +47,7 @@ class X84SFTPHandle (SFTPHandle):
             return SFTPServer.convert_errno(err.errno)
 
     def chattr(self, attr):
+        """ Change attributes of the file descriptor. """
         if not self.user.is_sysop:
             return SFTP_PERMISSION_DENIED
         self.log.debug('chattr ({0!r})'.format(attr))
@@ -55,9 +60,12 @@ class X84SFTPHandle (SFTPHandle):
             return SFTPServer.convert_errno(err.errno)
 
 
-class X84SFTPServer (SFTPServerInterface):
+class X84SFTPServer(SFTPServerInterface):
+
+    """ SFTP server for x/84. """
 
     def __init__(self, *args, **kwargs):
+        """ Class initializer. """
         from x84.bbs import get_ini
         self.log = logging.getLogger(__name__)
 
@@ -75,14 +83,12 @@ class X84SFTPServer (SFTPServerInterface):
         _ssh_session = kwargs.pop('ssh_session')
         self.user = (User(u'anonymous') if _ssh_session.anonymous
                      else get_user(_ssh_session.username))
+        self.flagged = set()
 
-        # XXX this means if a user interactively flags files, they have to
-        # re-sftp login to see them, we should fix this
-        self.flagged = self.user.get('flaggedfiles', set())
-
-        super(X84SFTPServer, self).__init__(*args, **kwargs)
+        SFTPServerInterface.__init__(self, *args, **kwargs)
 
     def _dummy_dir_stat(self):
+        """ Stat on our dummy __flagged__ directory. """
         self.log.debug('_dummy_dir_stat')
         attr = SFTPAttributes.from_stat(
             os.stat(self.root))
@@ -90,24 +96,30 @@ class X84SFTPServer (SFTPServerInterface):
         return attr
 
     def _realpath(self, path):
+        """ Get the real path of a given path. """
         self.log.debug('_realpath({0!r})'.format(path))
         if path.endswith(flagged_dirname):
             self.log.debug('fake dir path: {0!r}'.format(path))
             return self.root + path
         elif path.find(flagged_dirname) > -1:
             self.log.debug('fake file path: {0!r}'.format(path))
-            for f in self.flagged:
-                fstripped = f[f.rindex(os.path.sep) + 1:]
+            for fname in self.flagged:
+                fstripped = fname[fname.rindex(os.path.sep) + 1:]
                 pstripped = path[path.rindex('/') + 1:]
                 if fstripped == pstripped:
-                    self.log.debug('file is actually {0}'.format(f))
-                    return f
+                    self.log.debug('file is actually {0}'.format(fname))
+                    return fname
+
+        # pylint: disable=E1101
+        #         Instance of 'X84SFTPServer' has no 'canonicalize' member
         return self.root + self.canonicalize(path)
 
     def _is_uploaddir(self, path):
+        """ Check if this is the upload directory. """
         return ('/{0}'.format(path) == uploads_dirname)
 
     def list_folder(self, path):
+        """ List contents of a folder. """
         self.log.debug('list_folder({0!r})'.format(path))
         rpath = self._realpath(path)
         if not self.user.is_sysop and self._is_uploaddir(path):
@@ -117,6 +129,7 @@ class X84SFTPServer (SFTPServerInterface):
             if path == u'/':
                 out.append(self._dummy_dir_stat())
             elif flagged_dirname in path:
+                self.flagged = self.user.get('flaggedfiles', set())
                 for fname in self.flagged:
                     rname = fname
                     attr = SFTPAttributes.from_stat(os.stat(rname))
@@ -134,16 +147,17 @@ class X84SFTPServer (SFTPServerInterface):
             return SFTPServer.convert_errno(err.errno)
 
     def stat(self, path):
+        """ Stat a given path. """
         self.log.debug('stat({0!r})'.format(path))
         if path.endswith(flagged_dirname):
             return self._dummy_dir_stat()
         elif path.find(flagged_dirname) > -1:
-            for f in self.flagged:
-                fstripped = f[f.rindex(os.path.sep) + 1:]
+            for fname in self.flagged:
+                fstripped = fname[fname.rindex(os.path.sep) + 1:]
                 pstripped = path[path.rindex('/') + 1:]
                 if fstripped == pstripped:
-                    self.log.debug('file is actually {0}'.format(f))
-                    return SFTPAttributes.from_stat(f)
+                    self.log.debug('file is actually {0}'.format(fname))
+                    return SFTPAttributes.from_stat(fname)
         path = self._realpath(path)
         try:
             return SFTPAttributes.from_stat(os.stat(path))
@@ -151,16 +165,17 @@ class X84SFTPServer (SFTPServerInterface):
             return SFTPServer.convert_errno(err.errno)
 
     def lstat(self, path):
+        """ Lstat a given path. """
         self.log.debug('lstat({0!r})'.format(path))
         if path.endswith(flagged_dirname):
             return self._dummy_dir_stat()
         elif path.find(flagged_dirname) > -1:
-            for f in self.flagged:
-                fstripped = f[f.rindex(os.path.sep) + 1:]
+            for fname in self.flagged:
+                fstripped = fname[fname.rindex(os.path.sep) + 1:]
                 pstripped = path[path.rindex('/') + 1:]
                 if fstripped == pstripped:
-                    self.log.debug('file is actually {0}'.format(f))
-                    return SFTPAttributes.from_stat(f)
+                    self.log.debug('file is actually {0}'.format(fname))
+                    return SFTPAttributes.from_stat(fname)
         path = self._realpath(path)
         try:
             return SFTPAttributes.from_stat(os.lstat(path))
@@ -168,6 +183,7 @@ class X84SFTPServer (SFTPServerInterface):
             return SFTPServer.convert_errno(err.errno)
 
     def open(self, path, flags, attr):
+        """ Up/download the given path. """
         self.log.debug('lstat({0!r}, {1!r}, {2!r})'
                        .format(path, flags, attr))
         path = self._realpath(path)
@@ -178,7 +194,7 @@ class X84SFTPServer (SFTPServerInterface):
         try:
             binary_flag = getattr(os, 'O_BINARY', 0)
             flags |= binary_flag
-            fd = os.open(path, flags, self.mode)
+            filedesc = os.open(path, flags, self.mode)
         except OSError as err:
             return SFTPServer.convert_errno(err.errno)
         if (flags & os.O_CREAT) and (attr is not None):
@@ -198,13 +214,13 @@ class X84SFTPServer (SFTPServerInterface):
             # O_RDONLY (== 0)
             fstr = 'rb'
         try:
-            f = os.fdopen(fd, fstr)
+            openfile = os.fdopen(filedesc, fstr)
         except OSError as err:
             return SFTPServer.convert_errno(err.errno)
         fobj = X84SFTPHandle(flags, user=self.user)
         fobj.filename = path
-        fobj.readfile = f
-        fobj.writefile = f
+        fobj.readfile = openfile
+        fobj.writefile = openfile
 
         if path in self.flagged:
             self.flagged.remove(path)
@@ -212,6 +228,7 @@ class X84SFTPServer (SFTPServerInterface):
         return fobj
 
     def remove(self, path):
+        """ Delete the given path. """
         if not self.user.is_sysop or flagged_dirname in path:
             return SFTP_PERMISSION_DENIED
         self.log.debug('remove({0!r})'.format(path))
@@ -223,7 +240,9 @@ class X84SFTPServer (SFTPServerInterface):
         return SFTP_OK
 
     def rename(self, oldpath, newpath):
-        if not self.user.is_sysop or flagged_dirname in path:
+        """ Rename the ``oldpath`` to ``newpath``. """
+        if not self.user.is_sysop or flagged_dirname in oldpath or \
+                flagged_dirname in newpath:
             return SFTP_PERMISSION_DENIED
         self.log.debug('rename({0!r}, {1!r})'.format(oldpath, newpath))
         oldpath = self._realpath(oldpath)
@@ -235,6 +254,7 @@ class X84SFTPServer (SFTPServerInterface):
         return SFTP_OK
 
     def mkdir(self, path, attr):
+        """ Makea  new directory. """
         if not self.user.is_sysop or flagged_dirname in path:
             return SFTP_PERMISSION_DENIED
         self.log.debug('mkdir({0!r}, {1!r})'.format(path, attr))
@@ -248,6 +268,7 @@ class X84SFTPServer (SFTPServerInterface):
         return SFTP_OK
 
     def rmdir(self, path):
+        """ Remove a directory. """
         if not self.user.is_sysop or flagged_dirname in path:
             return SFTP_PERMISSION_DENIED
         self.log.debug('rmdir({0!r})'.format(path))
@@ -259,6 +280,7 @@ class X84SFTPServer (SFTPServerInterface):
         return SFTP_OK
 
     def chattr(self, path, attr):
+        """ Change path's attributes. """
         if self._is_uploaddir(path):
             return SFTP_PERMISSION_DENIED
         elif not self.user.is_sysop or \
@@ -274,6 +296,7 @@ class X84SFTPServer (SFTPServerInterface):
         return SFTP_OK
 
     def symlink(self, target_path, path):
+        """ Create symbolic link. """
         if not self.user.is_sysop or flagged_dirname in path:
             return SFTP_PERMISSION_DENIED
         self.log.debug('symlink({0!r}, {1!r})'.format(target_path, path))
@@ -298,6 +321,7 @@ class X84SFTPServer (SFTPServerInterface):
         return SFTP_OK
 
     def readlink(self, path):
+        """ Read symbolic link. """
         self.log.debug('readlink({0!r})'.format(path))
         path = self._realpath(path)
         try:

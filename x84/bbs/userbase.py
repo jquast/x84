@@ -1,6 +1,4 @@
-"""
-Userbase record access for x/84, https://github.com/jquast/x84/
-"""
+""" Userbase record database and utility functions for x/84. """
 import logging
 from x84.bbs.dbproxy import DBProxy
 
@@ -12,6 +10,9 @@ USERDB = 'userbase'
 def list_users():
     """
     Returns all user handles.
+
+    :rtype: list
+    :returns list of user handles.
     """
     return [handle.decode('utf8')
             for handle in DBProxy(USERDB).keys()]
@@ -19,15 +20,20 @@ def list_users():
 
 def get_user(handle):
     """
-    Returns User record, keyed by handle.
+    Returns User record by handle.
+
+    :rtype: User
+    :returns: instance of :class:`User`
     """
     return DBProxy(USERDB)[handle]
 
 
 def find_user(handle):
     """
-    Given handle, discover and return matching database key case insensitively.
-    The returned value may not be equal to the argument, or None if not found.
+    Discover and return matching user by ``handle``, case-insensitive.
+
+    :returns: matching handle as str, or None if not found.
+    :rtype: None or str.
     """
     for key in DBProxy(USERDB).keys():
         if handle.lower() == key.decode('utf8').lower():
@@ -36,24 +42,16 @@ def find_user(handle):
 
 class Group(object):
 
-    """
-    A simple group record object with properties name', and 'members'.
-    Use methods 'add' and 'remove' to add and remove users by handle,
-    and 'save' to persist to disk (and other bbs sessions).
-    """
+    """ A simple group record object. """
 
     def __init__(self, name, members=()):
-        """
-        Initialize a group of name and members
-        """
+        """ Class initializer. """
         self._name = name
         self._members = set(members)
 
     @property
     def name(self):
-        """
-        Name of this group.
-        """
+        """ Name of this group. """
         return self._name
 
     @name.setter
@@ -64,37 +62,27 @@ class Group(object):
 
     @property
     def members(self):
-        """
-        Members of this group as user handles.
-        """
+        """ Members of this group as user handles. """
         return self._members
 
     def add(self, handle):
-        """
-        Add user to group.
-        """
+        """ Add user to group. """
         log = logging.getLogger(__name__)
         log.info("Group({!r}).add({!r})".format(self.name, handle))
         self._members.add(handle)
 
     def remove(self, handle):
-        """
-        Remove user from group.
-        """
+        """ Remove user from group. """
         log = logging.getLogger(__name__)
         log.info("Group({!r}).remove({!r})".format(self.name, handle))
         self._members.remove(handle)
 
     def save(self):
-        """
-        Save group record to database.
-        """
+        """ Save group record to database. """
         DBProxy(GROUPDB)[self.name] = self
 
     def delete(self):
-        """
-        Delete group record from database, and from .groups of any users.
-        """
+        """ Delete group record, enforces referential integrity with Users. """
         udb = DBProxy(USERDB)
         for chk_user in self.members:
             user = udb[chk_user]
@@ -106,20 +94,10 @@ class Group(object):
 
 class User(object):
 
-    """
-    A simple user record object with setter and getter properties, 'handle',
-    'location', 'email', 'password', 'groups', 'calls', 'lastcall', and 'plan'.
-    """
-    # pylint: disable=R0902,R0924
-    #        Too many instance attributes (8/7)
-    #        Badly implemented Container, implements
-    #          __delitem__, __getitem__, __setitem__
-    #          but not __len__
+    """ A simple user record. """
 
     def __init__(self, handle=u'anonymous'):
-        """
-        Initialize a user record, using handle
-        """
+        """ Class initializer. """
         self._handle = handle
         self._password = (None, None)
         self._location = u''
@@ -127,15 +105,10 @@ class User(object):
         self._groups = set()
         self._calls = 0
         self._lastcall = 0
-        self._plan = u''
 
     @property
     def handle(self):
-        """
-        U.handle() --> unicode
-
-        User handle, also the database key.
-        """
+        """ User handle, also the database key. """
         return self._handle
 
     @handle.setter
@@ -147,18 +120,21 @@ class User(object):
     @property
     def password(self):
         """
-        U.password() --> tuple
+        Password in encrypted form as tuple (salt, hash).
 
-        Returns encrypted form of password as tuple (salt, hash).
+        Not generally used directly, but by :meth:`auth`.
+
+        The ``setter`` of this property is provided a password
+        in plain-text and encrypts it as given.
+
         If a password has not yet been set, it is (None, None).
         """
         return self._password
 
     @password.setter
     def password(self, value):
-        """
-        U.password = value
-        """
+        # pylint: disable=C0111
+        #         Missing docstring
         log = logging.getLogger(__name__)
         from x84.bbs import ini
         if ini.CFG.getboolean('system', 'pass_ucase'):
@@ -171,9 +147,10 @@ class User(object):
 
     def auth(self, try_pass):
         """
-        U.auth(unicode) --> boolean
+        Authenticate user with given password, ``try_pass``.
 
-        To authenticate, assert auth(try_pass) == True.
+        :rtype: bool
+        :returns: whether the password is correct.
         """
         from x84.bbs import ini
         pass_ucase = ini.CFG.getboolean('system', 'pass_ucase')
@@ -255,30 +232,19 @@ class User(object):
 
     @property
     def groups(self):
-        """
-        U.groups() --> set
-
-        Set of Group records user is a member of.
-        """
+        """ Set of groups user is a member of (set of strings). """
         return self._groups
 
     def group_add(self, group):
-        """
-        Add user to group.
-        """
+        """ Add user to group. """
         return self._groups.add(group)
 
     def group_del(self, group):
-        """
-        Remove user from group.
-        """
+        """ Remove user from group. """
         return self._groups.remove(group)
 
     def save(self):
-        """
-        (re-)Save user record to database. Changes to user record to not
-        automatically persist.  A call to the .save() method must be done.
-        """
+        """ Save user record to database. """
         log = logging.getLogger(__name__)
         assert isinstance(self._handle, unicode), ('handle must be unicode')
         assert len(self._handle) > 0, ('handle must be non-zero length')
@@ -290,18 +256,18 @@ class User(object):
                 log.warn('{!r}: First new user becomes sysop.'
                          .format(self.handle))
                 self.group_add(u'sysop')
+            is_new = self.handle not in udb
             udb[self.handle] = self
+            if is_new:
+                log.info("saved new user '%s'.", self.handle)
         adb = DBProxy(USERDB, 'attrs')
         with adb:
             if self.handle not in adb:
                 adb[self.handle] = dict()
         self._apply_groups()
-        log.info("saved user '%s'.", self.handle)
 
     def delete(self):
-        """
-        Remove user record from database, and as a member of any groups.
-        """
+        """ Remove user from user and group databases. """
         log = logging.getLogger(__name__)
         gdb = DBProxy(GROUPDB)
         with gdb:
@@ -317,20 +283,12 @@ class User(object):
 
     @property
     def is_sysop(self):
-        """
-        U.is_sysop --> boolean
-
-        Returns True if user is in u'sysop' group.
-        """
+        """ Whether the user is in the 'sysop' group. """
         return u'sysop' in self._groups
 
     @property
     def lastcall(self):
-        """
-        U.lastcall() --> float
-
-        Time last called, time.time() epoch-formatted.
-        """
+        """ Time last called, ``time.time()`` epoch-formatted (float). """
         return self._lastcall
 
     @lastcall.setter
@@ -352,9 +310,7 @@ class User(object):
 
     @property
     def location(self):
-        """
-        Legacy, used as a geographical location, group names, etc.
-        """
+        """ Legacy, used as a geographical location, group names, etc. """
         return self._location
 
     @location.setter
@@ -365,9 +321,7 @@ class User(object):
 
     @property
     def email(self):
-        """
-        E-mail address. May be used for password resets.
-        """
+        """ E-mail address. May be used for password resets. """
         return self._email
 
     @email.setter
@@ -376,23 +330,8 @@ class User(object):
         #         Missing docstring
         self._email = value
 
-    @property
-    def plan(self):
-        """
-        Unix .plan contents, the original blogosphere.
-        """
-        return self._plan
-
-    @plan.setter
-    def plan(self, value):
-        # pylint: disable=C0111
-        #         Missing docstring
-        self._plan = value
-
     def _apply_groups(self):
-        """
-        Inspect all groupbase members and enforce referential integrity.
-        """
+        """ Enforce referential integrity of user's groups. """
         log = logging.getLogger(__name__)
         gdb = DBProxy(GROUPDB)
         with gdb:
@@ -413,9 +352,7 @@ class User(object):
 
 
 def _digestpw_bcrypt(password, salt=None):
-    """
-    Password digest using bcrypt (optional)
-    """
+    """ Password digest using bcrypt (optional-preferred). """
     import bcrypt
     if not salt:
         salt = bcrypt.gensalt()
@@ -425,16 +362,14 @@ def _digestpw_bcrypt(password, salt=None):
 
 
 def _digestpw_internal(password, salt=None):
-    """
-    Password digest using regular python libs (slow)
-    """
+    """ Password digest using regular python libs (slow). """
     import hashlib
     import base64
     import os
     if not salt:
         salt = base64.b64encode(os.urandom(32))
     digest = salt + password
-    for _count in range(0, 100000):
+    for _ in range(0, 100000):
         # pylint: disable=E1101
         #         Module 'hashlib' has no 'sha256'
         digest = hashlib.sha256(digest).hexdigest()
@@ -442,28 +377,24 @@ def _digestpw_internal(password, salt=None):
 
 
 def _digestpw_plaintext(password, salt=None):
-    """
-    No password digest, just store the passwords in plain text
-    """
+    """ No password digest, just store the passwords in plain text. """
     if not salt:
         salt = 'none'
     return salt, password
 
 
 def get_digestpw():
-    """
-    Returns singleton to password digest routine.
-    """
+    """ Returns singleton to password digest routine. """
     global FN_PASSWORD_DIGEST
     if FN_PASSWORD_DIGEST is not None:
         return FN_PASSWORD_DIGEST
 
-    from x84.bbs.ini import CFG
+    from x84.bbs.ini import get_ini
     FN_PASSWORD_DIGEST = {
         'bcrypt': _digestpw_bcrypt,
         'internal': _digestpw_internal,
         'plaintext': _digestpw_plaintext,
-    }.get(CFG.get('system', 'password_digest'))
+    }.get(get_ini('system', 'password_digest'))
     return FN_PASSWORD_DIGEST
 
 
@@ -558,7 +489,7 @@ def check_user_pubkey(username, public_key):
         stored_pubkey = parse_public_key(user_pubkey)
     except (ValueError, Exception):
         import sys
-        (exc_type, exc_value, exc_traceback) = sys.exc_info()
+        (exc_type, exc_value, _) = sys.exc_info()
         log.debug('{0} for stored public key of user {1!r}: '
                   '{2}'.format(exc_type, username, exc_value))
     else:

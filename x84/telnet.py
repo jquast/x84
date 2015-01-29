@@ -1,5 +1,5 @@
 """
-Telnet server for x84, https://github.com/jquast/x84
+Telnet server for x84.
 
 Limitations:
 
@@ -302,6 +302,11 @@ class TelnetClient(BaseClient):
         for byte in data:
             self._iac_sniffer(byte)
         return recv
+
+    def send_unicode(self, ucs, encoding='utf8'):
+        """ Buffer unicode string, encoded for client as 'encoding'. """
+        # Must be escaped 255 (IAC + IAC) to avoid IAC interpretation.
+        self.send_str(ucs.encode(encoding, 'replace').replace(IAC, 2 * IAC))
 
     def _recv_byte(self, byte):
         """
@@ -868,7 +873,6 @@ class ConnectTelnet(BaseConnect):
         Negotiate and inquire about terminal type, telnet options, window size,
         and tcp socket options before spawning a new session.
         """
-        from x84.bbs.exception import Disconnected
         try:
             self._set_socket_opts()
             mrk_bytes = self.client.bytes_received

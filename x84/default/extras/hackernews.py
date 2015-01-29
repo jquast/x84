@@ -1,17 +1,4 @@
-""" Hacker news script for x/84 bbs, https://github.com/jquast/x84
-
- A script that lets you browse and read popular articles on ycombinator.com
-
- Installation instructions:
- ---------------------
-
- * This script depends on the FEEDPARSER and HTML2TEXT python modules.
-   You can install them with PIP for example:
-   pip install feedparser html2text.
- * Copy hackernews.py to your script folder (.x84/default by default) and
-   then run it from the main.py. Simple as that.
-
-"""
+""" Hacker news browser for x/84.  """
 
 from x84.bbs import getsession, getterminal, echo, LineEditor, showart, getch
 import feedparser

@@ -82,7 +82,7 @@ class BuildDocs(Command):
 
 
 setup(name='x84',
-      version='1.9.84',
+      version='2.0.1',
       description=("Framework for Telnet and SSH BBS or MUD server "
                    "development with example default bbs board"),
       long_description=open(os.path.join(HERE, README)).read(),
@@ -97,6 +97,7 @@ setup(name='x84',
           '': [README],
           'x84.default': ['*.ans', '*.txt', ],
           'x84.default.art': ['*.asc', '*.ans', '*.txt',
+                              'top/*',
                               'weather/*',
                               'bulletins/*/*',
                               ],

@@ -1,7 +1,13 @@
-2.0
+2.0.1
+  - bugfix: did not include default 'top' art
+  - bugfix: could not press 'return' to continue in sesame
+2.0.0
   - you will need to ensure to set 'enabled = yes' for the shroo-ms api,
     previously this was enabled if the section alone existed
-1.2.0
+  - you will need to change the values of `newcmds', `anoncmds',
+    and 'byecmds' of section [matrix] to be comma-delimited,
+    not space-delimited as before. Similarly, you must also change
+    value of 'invalid_handles' in section [nua].
   - the meaning of [system] option 'termcap-ansi', when not valued 'no', now
     coerces any reported terminal types *beginning* with 'ansi' to
     the target type.

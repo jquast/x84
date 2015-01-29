@@ -1,5 +1,5 @@
 """
-fail2ban module for x/84, https://github.com/jquast/x84
+fail2ban module for x/84.
 
 To enable, add to default.ini::
 
@@ -79,8 +79,11 @@ def get_fail2ban_function():
     ) or 360
 
     def wrapper(ip):
+        """ Inner wrapper function. """
         log = logging.getLogger(__name__)
 
+        # pylint: disable=W0602
+        #         Using global for 'BANNED_IP_LIST' but no assignment is done
         global BANNED_IP_LIST, ATTEMPTED_LOGINS
 
         now = int(time.time())

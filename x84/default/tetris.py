@@ -1,8 +1,9 @@
-""" Tetris game for x/84, https://github.com/jquast/x84 """
+""" Tetris game for x/84. """
 __author__ = 'Johannes Lundberg'
 __copyright__ = 'Copyright 2007-2013'
 __license__ = 'Public Domain'
-# Single player tetris, originally written for The Progressive (prsv)
+# Single player tetris, originally written for The Progressive (prsv), the
+# predecessor python bbs system of x/84.
 # Copyright (C) 2007-2013 Johannes Lundberg
 
 
@@ -22,7 +23,7 @@ def main():
         score = play()
         if score[0] > 0:
             register_score(session.user.handle, score)
-        show_scores(score)
+        show_scores()
 
 
 def register_score(handle, score):
@@ -34,7 +35,7 @@ def register_score(handle, score):
         db[handle] = score
 
 
-def show_scores(my_score):
+def show_scores():
     from x84.bbs import DBProxy, Pager, getterminal
     from x84.bbs import getch, echo, getsession, ini
     session, term = getsession(), getterminal()
@@ -59,17 +60,17 @@ def show_scores(my_score):
     pager.colors['border'] = term.blue_reverse
     pager.alignment = 'center'
     # pre-fesh pager border before fetch
-    echo(pager.border() + pager.title(pager_title))
+    echo(pager.border() + pager.title(pager_title) + pager.clear())
     highscores = sorted(
         [(_score, _level, _handle.decode('utf8'))
-         for (_handle, (_score, _level, _lines))
-         in allscores],
+         for (_handle, (_score, _level, _)) in allscores],
         reverse=True)
     pager.append(score_fmt % (
         term.bold_blue_underline('No'.ljust(len_pos)),
         term.bold_blue_underline('SCORE'.ljust(len_score)),
         term.bold_blue_underline('lVl'.ljust(len_level)),
         term.bold_blue_underline('hANdlE'.rjust(len_handle),)))
+    pos = 0
     for pos, (_score, _level, _handle) in enumerate(highscores):
         if _handle == session.user.handle:
             pager.append(score_fmt % (
@@ -295,7 +296,7 @@ def play():
             r.x2 = None
             r.y2 = None
     rr = RectRedraw()
-    for i in range(field_height):
+    for _ in range(field_height):
         field.append([0] * field_width)
 
     def echo(s):
@@ -340,32 +341,10 @@ def play():
                 bg = ';%d' % (40 + color / 8)
             else:
                 bg = ''
-            echo('\33[0;' + fg + bg + 'm')
+            echo('\x1b[0;' + fg + bg + 'm')
             echo(c)
             lastcolor = color
         return lastcolor
-
-    def redrawfieldbig(rr):
-        # rr.merge(0,0,field_width,field_height)
-        lastcolor = ''
-        if rr.x1 is None or rr.y1 is None:
-            return
-        # Only draw the parts which have been marked by the
-        # redraw rectangle
-        for y in range(rr.y1, rr.y2):
-            gotoxy(field_width + rr.x1 * 2, 2 + y)
-            for x in range(rr.x1, rr.x2):
-                lastcolor = plotblock(field[y][x], lastcolor)
-        echo(term.normal)
-        rr.clean()
-
-    def drawfieldbig():
-        lastcolor = ''
-        for y in range(0, field_height):
-            gotoxy(field_width, 2 + y)
-            for x in range(field_width):
-                lastcolor = plotblock(field[y][x], lastcolor)
-        echo(term.normal)
 
     def drawfield():
         lastcolor = ''
@@ -401,7 +380,7 @@ def play():
                         bg = ';%d' % (40 + color / 8)
                     else:
                         bg = ''
-                    echo('\33[0;' + fg + bg + 'm')
+                    echo('\x1b[0;' + fg + bg + 'm')
                     echo(c)
                     lastcolor = color
         echo(term.normal)
@@ -474,20 +453,20 @@ def play():
 
     def shownext(p):
         r = 0
-        lastcolor = ''
-        for y in range(6):
-            gotoxy(38, 1 + y)
-            for x in range(6):
-                if y == 0 or y == 5 or x == 0 or x == 5:
-                    echo('\xB0\xB0')
-                else:
-                    echo('\33[0m  ')
-                    lastcolor = ''
+        for y in range(4):
+            gotoxy(26, 18 + y)
+            echo(u' ' * 4)
+
+        echo(term.color(layoutcolor[p]))
+
+        yoffset = int(len(layout[p][r][0]) < 4)
+        xoffset = int(len(layout[p][r]) < 3)
         for y in range(len(layout[p][r])):
-            gotoxy(40, 2 + y)
-            for x in range(len(layout[p][r][0])):
-                # plotblock(layoutcolor[layout[p][r][y][x]],lastcolor)
-                plotblock(layout[p][r][y][x], lastcolor)
+            for x in range(len(layout[p][r][y])):
+                val = layout[p][r][y][x]
+                if val:
+                    gotoxy(26 + x + xoffset, 18 + y + yoffset)
+                    echo(u'\u2588\u2588')
 
     def drawstats():
         echo(term.move(scorey1, scorex1) + '%d' % level)
@@ -498,7 +477,9 @@ def play():
     ticksize = 0.4
     nexttick = time.time() + ticksize
     showpiece(xpos, ypos, p, r)
-    # shownext(nextpiece)
+    gotoxy(26, 17)
+    echo(term.blue_reverse('next'))
+    shownext(nextpiece)
 
     # Full redraw first frame
     rr.merge(0, 0, field_width, field_height)
@@ -507,7 +488,7 @@ def play():
     while True:
         drawfield()
         # gotoxy(0,0)
-        # echo('\33[37mx: %d, y: %d, p: %d         '%(xpos,ypos,p))
+        # echo('\x1b[37mx: %d, y: %d, p: %d         '%(xpos,ypos,p))
         slice = nexttick - time.time()
         if slice < 0:
             slice = 0
@@ -598,3 +579,4 @@ def play():
                 xpos = 4
                 ypos = -len(layout[p][0])
                 showpiece(xpos, ypos, p, r)
+                shownext(nextpiece)

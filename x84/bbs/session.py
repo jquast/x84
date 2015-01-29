@@ -13,29 +13,27 @@ import os
 # local
 from x84.bbs.exception import Disconnected, Goto
 from x84.bbs.script_def import Script
+from x84.bbs.userbase import User
+from x84.bbs.ini import get_ini
+
 
 #: singleton representing the session connected by current process
 SESSION = None
 
 
 def getsession():
-    """ Returns session of current process.  """
+    """ Return :class:`Session` instance of current process. """
     return SESSION
 
 
 def getterminal():
-    """ Return blessed.Terminal class instance of this session. """
+    """ Return :class:`blessed.Terminal` instance of current session. """
     return getsession().terminal
 
 
-def getnode():
-    """ Return unique session identifier for this session as integer.  """
-    return getsession().node
-
-
-def goto(script, *args, **kwargs):
+def goto(script_name, *args, **kwargs):
     """ Change bbs script. Does not return. """
-    raise Goto(script, *args, **kwargs)
+    raise Goto(script_name, *args, **kwargs)
 
 
 def disconnect(reason=u''):
@@ -65,33 +63,24 @@ def getch(timeout=None):
 
 def gosub(script, *args, **kwargs):
     """ Call bbs script with optional arguments, Returns value. """
-    from x84.bbs.session import Script
     script = Script(name=script, args=args, kwargs=kwargs)
     return getsession().runscript(script)
 
 
 class Session(object):
 
-    """
-    A BBS Session engine. Workflow begins in the ``run()`` method.
-    """
+    """ A per-process Session. Begins by the :meth:`run`. """
 
-    # pylint: disable=R0902,R0904,R0913
-    #        Too many instance attributes
-    #        Too many public methods
-    #        Too many arguments
     _encoding = None
     _decoder = None
     _activity = None
     _user = None
-
     _script_module = None
-
-    #: node number
-    _node = None
 
     def __init__(self, terminal, sid, env, child_pipes, kind, addrport,
                  matrix_args, matrix_kwargs):
+        # pylint: disable=R0913
+        #        Too many arguments
         """ Instantiate a Session.
 
         Only one session may be instantiated per process.
@@ -113,6 +102,7 @@ class Session(object):
 
         # pylint: disable=W0603
         #        Using the global statement
+        # Manage `SESSION' per-process singleton.
         global SESSION
         assert SESSION is None, 'Only one Session per process allowed'
         SESSION = self
@@ -125,96 +115,80 @@ class Session(object):
         self.kind = kind
         self.addrport = addrport
 
-        # private attributes
-        self.init_script_stack(matrix_args, matrix_kwargs)
-        self.init_attributes()
-
         # initialize keyboard encoding
         terminal.set_keyboard_decoder(env['encoding'])
 
-    def init_script_stack(self, matrix_args, matrix_kwargs):
-        """
-        Initialize the "script stack" with the matrix script.
-
-        Using the default configuration argument 'script' for
-        all connections, but preferring 'script_{kind}', where
-        ``kind`` may be ``telnet``, ``ssh``, or any kind of
-        supporting transport, for an alternative matrix script
-        (if it exists).
-        """
-        from x84.bbs import ini
-        script_kind = 'script_{self.kind}'.format(self=self)
-        if ini.CFG.has_option('matrix', script_kind):
-            # TODO: also check that 'script_kind' exists (!)
-            matrix_script = ini.CFG.get('matrix', script_kind)
-        else:
-            matrix_script = ini.CFG.get('matrix', 'script')
-
-        script = Script(name=matrix_script,
-                        args=matrix_args,
-                        kwargs=matrix_kwargs)
-        self._script_stack = [script]
-
-    def init_attributes(self):
+        # private attributes
+        self._script_stack = [
+            # Initialize the "script stack" with the matrix script
+            # using the default configuration value of `script' for all
+            # connections, but preferring `script_{kind}', where `kind'
+            # may be `telnet', `ssh', or any kind of supporting transport.
+            Script(
+                name=get_ini('matrix', 'script_{self.kind}'.format(self=self)
+                             ) or get_ini('matrix', 'script'),
+                args=matrix_args,
+                kwargs=matrix_kwargs)
+        ]
         self._connect_time = time.time()
         self._last_input_time = time.time()
+        self._node = None
 
         # create event buffer
         self._buffer = dict()
 
     def to_dict(self):
-        """
-        Returns a dictionary containing information about this session object.
-        """
-        return {
+        """ Dictionary describing this session. """
+        retval = {
             attr: getattr(self, attr)
             for attr in (
-                'connect_time',
                 'last_input_time',
-                'idle',
-                'activity',
-                'handle',
-                'user',
+                'connect_time',
                 'encoding',
-                'pid',
+                'activity',
+                'idle',
                 'node',
+                'pid',
+                'sid',
             )
         }
+        retval.update(dict(
+            handle=self.user.handle,
+            term_kind=self.terminal.kind,
+            term_width=self.terminal.width,
+            term_height=self.terminal.height,
+            current_script=self.current_script.name,
+        ))
+        return retval.copy()
 
     @property
     def duration(self):
-        """
-        Seconds elapsed since connection began as float.
-        """
+        """ Seconds elapsed since connection began (as float). """
         return time.time() - self.connect_time
 
     @property
     def connect_time(self):
-        """
-        Time of session start as float.
-        """
+        """ Time of session start (as float). """
         return self._connect_time
 
     @property
     def last_input_time(self):
-        """
-        Time of last keypress as epoch.
-        """
+        """ Time of last keypress (as epoch, float). """
         return self._last_input_time
 
     @property
     def idle(self):
-        """
-        Seconds elapsed since last keypress as float.
-        """
+        """ Seconds elapsed since last keypress as float.  """
         return time.time() - self.last_input_time
 
     @property
     def activity(self):
-        """
-        Current activity (arbitrarily set). This also updates xterm titles,
-        and is globally broadcasted as a "current activity" in the Who's
-        online script.
+        """ Current session activity.
+
+        This is arbitrarily set by session scripts.
+
+        This also updates xterm titles, and is globally broadcasted
+        as a "current activity" in the Who's online script, for example.
         """
         return self._activity or u'<uninitialized>'
 
@@ -224,28 +198,15 @@ class Session(object):
         #         Missing docstring
         if self._activity != value:
             self.log.debug('activity=%s', value)
-            kind = self.env.get('TERM', 'unknown')
-            set_title = self.user.get('set-title', (
-                'xterm' in kind or 'rxvt' in kind
-                or '_xtitle' in self.env))
             self._activity = value
-            if set_title:
-                self.write(u''.join((
-                    unichr(27), u']2;%s' % (value,), unichr(7))))
 
-    @property
-    def handle(self):
-        """
-        Returns User handle.
-        """
-        return self.user.handle
+            if (self.terminal.kind.startswith('xterm') or
+                    self.terminal.kind.startswith('rxvt')):
+                self.write(u'\x1b]2;{0}\x07'.format(value))
 
     @property
     def user(self):
-        """
-        User record of session.
-        """
-        from x84.bbs.userbase import User
+        """ :class:`User` instance of this session. """
         return self._user or User()
 
     @user.setter
@@ -257,16 +218,13 @@ class Session(object):
 
     @property
     def encoding(self):
-        """
-        Session encoding.
-        """
+        """ Session encoding, both input and output. """
         return self.env.get('encoding', 'utf8')
 
     @encoding.setter
     def encoding(self, value):
-        """
-        Setter for Session encoding.
-        """
+        # pylint: disable=C0111
+        #         Missing docstring
         if value != self.encoding:
             self.log.debug('session encoding {0} -> {1}'
                            .format(self.encoding, value))
@@ -275,55 +233,28 @@ class Session(object):
 
     @property
     def pid(self):
-        """
-        Returns Process ID.
-        """
+        """ Process ID of this session (int). """
         return os.getpid()
 
     @property
-    def node(self):
-        """
-        Returns numeric constant for session, often required by 'doors'
-        """
-        if self._node is None:
-            for node in range(1, 64):
-                event = 'lock-%s/%d' % ('node', node)
-                self.send_event(event, ('acquire', None))
-                data = self.read_event(event)
-                if data is True:
-                    self._node = node
-                    break
-        return self._node
-
-    @property
     def tap_input(self):
-        """ Keyboard input should be logged for debugging. """
-        from x84.bbs import ini
-        return ini.CFG.getboolean('session', 'tap_input')
+        """ Whether keyboard input should be logged (bool). """
+        return get_ini('session', 'tap_input', getter='getboolean')
 
     @property
     def tap_output(self):
-        """ Screen output should be logged for debugging. """
-        from x84.bbs import ini
-        return ini.CFG.getboolean('session', 'tap_output')
-
-    @property
-    def tap_events(self):
-        """ IPC Events should be logged for debugging. """
-        from x84.bbs import ini
-        return ini.CFG.getboolean('session', 'tap_events')
+        """ Whether screen output should be logged (bool). """
+        return get_ini('session', 'tap_output', getter='getboolean')
 
     @property
     def show_traceback(self):
-        """ Whether traceback errors should be displayed to user. """
-        from x84.bbs import ini
-        return ini.CFG.getboolean('system', 'show_traceback')
+        """ Whether traceback errors should be displayed to user (bool). """
+        return get_ini('system', 'show_traceback', getter='getboolean')
 
     @property
     def script_path(self):
         """ Base filepath folder for all scripts. """
-        from x84.bbs import ini
-        val = ini.CFG.get('system', 'scriptpath')
+        val = get_ini('system', 'scriptpath')
         # ensure folder exists
         assert os.path.isdir(val), (
             'configuration section [system], value scriptpath: '
@@ -332,6 +263,7 @@ class Session(object):
 
     @property
     def current_script(self):
+        """ The current script being executed. """
         self.value = 1
         if len(self._script_stack):
             return self._script_stack[-1]
@@ -339,7 +271,7 @@ class Session(object):
 
     @property
     def script_module(self):
-        """ base module location of self.script_path """
+        """ Base python module instance for userland scripts. """
         if self._script_module is None:
             # load default/__init__.py as 'default',
             folder_name = os.path.basename(self.script_path)
@@ -353,6 +285,26 @@ class Session(object):
             self._script_module = imp.load_module(folder_name, *lookup)
             self._script_module.__path__ = self.script_path
         return self._script_module
+
+    @property
+    def node(self):
+        """
+        Unique numeric constant for this session.
+
+        This makes it simpler to refer to users who are online, instead
+        of by their full session-id (such as telnet-92.32.10.132:57331)
+        one can simply refer to node #1, etc..
+        """
+        if self._node is not None:
+            return self._node
+
+        for node in range(1, 65534):
+            event = 'lock-%s/%d' % ('node', node)
+            self.send_event(event, ('acquire', None))
+            data = self.read_event(event)
+            if data is True:
+                self._node = node
+                return self._node
 
     def __error_recovery(self):
         """ Recover from general exception in script. """
@@ -381,60 +333,55 @@ class Session(object):
 
     def run(self):
         """
-        Begin main execution flow.
+        Begin main execution of session.
 
-        Scripts manipulate control flow of scripts using goto and gosub.
+        Scripts manipulate control flow of scripts by raising the
+        ``Goto`` exception, or the gosub function.
         """
-        from x84.bbs.exception import Goto, Disconnected
-        while len(self._script_stack):
-            self.log.debug('script_stack is {self._script_stack!r}'
-                           .format(self=self))
-            try:
-                self.runscript(self._script_stack.pop())
-                continue
+        self.log.info('Begin session on node %s', self.node)
+        try:
+            while len(self._script_stack):
+                self.log.debug('script_stack is {self._script_stack!r}'
+                               .format(self=self))
+                try:
+                    self.runscript(self._script_stack.pop())
+                    continue
 
-            except Goto as goto_script:
-                self.log.debug('goto {0}'.format(goto_script.value))
-                self._script_stack = [goto_script.value]
-                continue
+                except Goto as goto_script:
+                    self.log.debug('goto {0}'.format(goto_script.value))
+                    self._script_stack = [goto_script.value]
+                    continue
 
-            except Disconnected as err:
-                self.log.info('Disconnected: %s', err)
-                self.close()
-                return None
+                except Disconnected as err:
+                    self.log.info('Disconnected: %s', err)
+                    return None
 
-            except Exception as err:
-                # Pokemon exception, log and Cc: telnet client, then resume.
-                e_type, e_value, e_tb = sys.exc_info()
-                if self.show_traceback:
-                    self.write(self.terminal.normal + u'\r\n')
-
-                terrs = list()
-                for line in traceback.format_tb(e_tb):
-                    for subln in line.split('\n'):
-                        terrs.append(subln)
-
-                terrs.extend(traceback.format_exception_only(e_type, e_value))
-                for etxt in map(str.rstrip, terrs):
-                    self.log.error(etxt)
+                except Exception as err:
+                    # Pokemon exception, log and Cc: client, then resume.
+                    e_type, e_value, e_tb = sys.exc_info()
                     if self.show_traceback:
-                        self.write(etxt + u'\r\n')
+                        self.write(self.terminal.normal + u'\r\n')
 
-            # recover from general exception
-            self.__error_recovery()
+                    terrs = list()
+                    for line in traceback.format_tb(e_tb):
+                        for subln in line.split('\n'):
+                            terrs.append(subln)
+                    terrs.extend(
+                        traceback.format_exception_only(e_type, e_value))
 
-        self.log.debug('End of script stack.')
-        self.close()
-        return None
+                    for e_txt in map(str.rstrip, terrs):
+                        self.log.error(e_txt)
+                        if self.show_traceback:
+                            self.write(e_txt + u'\r\n')
+
+                # recover from general exception
+                self.__error_recovery()
+            self.log.debug('End of script stack.')
+        finally:
+            self.close()
 
     def write(self, ucs, encoding=None):
-        """
-        Write unicode data ``ucs`` to telnet client.
-
-        Take special care to encode as 'cp437_art', but report as 'iso8859-1'
-        for those 8-bit binary (presumably, cp437-encoded) terminals, so that
-        all bytes of the 0x00-0xff spectrum are writable.
-        """
+        """ Write unicode data ``ucs`` to terminal. """
         # do not write empty strings
         if not ucs:
             return
@@ -445,7 +392,10 @@ class Session(object):
 
     def flush_event(self, event):
         """
-        Flush all return all data buffered for 'event'.
+        Flush and return all data buffered for ``event``.
+
+        :param str event: event name.
+        :rtype: list
         """
         flushed = list()
         while True:
@@ -457,29 +407,29 @@ class Session(object):
             flushed.append(data)
         return flushed
 
-    def info(self):
-        """
-        Returns dictionary of key, value pairs of session paramters.
-        """
-        return dict((
-            ('TERM', self.env.get('TERM', u'unknown')),
-            ('LINES', self.terminal.height),
-            ('COLUMNS', self.terminal.width),
-            ('sid', self.sid),
-            ('handle', self.user.handle),
-            ('script', self.current_script.name),
-            ('connect_time', self.connect_time),
-            ('idle', self.idle),
-            ('activity', self.activity),
-            ('encoding', self.encoding),
-            ('node', self._node),
-        ))
-
     def buffer_event(self, event, data=None):
         """
-        Push data into buffer keyed by event. Handle special events:
-        'exception', 'global' AYT (are you there), 'page', 'info-req',
-        'refresh', and 'input'.
+        Buffer and handle IPC data keyed by ``event``.
+
+        :param str event: event name.
+        :param data: event data.
+        :rtype: bool
+        :returns: True if the event was internally handled, and the caller
+                  should take no further action.
+
+        Methods internally handled by this method:
+
+        - ``global``: events where the first index of ``data`` is ``AYT``.
+          This is sent by other sessions using the ``broadcast`` event, to
+          discover "who is online".
+
+        - ``info-req``: Where the first data value is the remote session-id
+          that requested it, expecting a return value event of ``info-ack``
+          whose data values is a dictionary describing a session.  This is
+          an extension of the "who is online" event described above.
+
+        - ``gosub``: Allows one session to send another to a different script,
+          this is used by the default board ``chat.py`` for a chat request.
         """
         # exceptions aren't buffered; they are thrown!
         if event == 'exception':
@@ -515,7 +465,7 @@ class Session(object):
                     # an opportunity to adjust to the new terminal dimensions
                     # if the script that was event-driven as gosub had already
                     # acquired and reacted to any refresh-resize events.
-                    data = ('resize', n_height, n_width)
+                    data = ('resize', (n_height, n_width))
                     self.buffer_event('refresh', data)
                 # otherwise its fine to not require the calling function to
                 # refresh -- so long as the target script makes sure(!) to
@@ -524,8 +474,9 @@ class Session(object):
 
         # respond to 'info-req' events by returning pickled session info
         if event == 'info-req':
-            sid = data[0]
-            self.send_event('route', (sid, 'info-ack', self.sid, self.info(),))
+            self.send_event('route', (
+                # data[0] is the session-id to return the reply to.
+                data[0], 'info-ack', self.sid, self.to_dict()))
             return True
 
         if event not in self._buffer:
@@ -542,25 +493,31 @@ class Session(object):
         # buffer input
         if event == 'input':
             self.buffer_input(data)
-            return
+            return False
 
         # buffer only 1 most recent 'refresh' event
         if event == 'refresh':
             if data[0] == 'resize':
                 # inherit terminal dimensions values
-                (self.terminal.columns, self.terminal.rows) = data[1]
+                (self.terminal._columns, self.terminal._rows) = data[1]
 
         # buffer all else
         self._buffer[event].appendleft(data)
 
+        return False
+
     def buffer_input(self, data, pushback=False):
         """
-        Update idle time, buffering raw bytes received from
-        telnet client via event queue.  Sometimes a script may
-        poll for, and receive keyboard data, but wants to push
-        it back in to the top of the stack to be decoded by
-        a later call to term.inkey(); in such case, ``pushback``
+        Receive keyboard input ,``data``, into ``input`` buffer.
+
+        Updates idle time, buffering raw bytes received from telnet client via
+        event queue.  Sometimes a script may poll for, and receive keyboard
+        data, but wants to push it back in to the top of the stack to be
+        decoded by a later call to term.inkey(); in such case, ``pushback``
         should be set.
+
+        :param bytes data: keyboard input data.
+        :param bool pushback: whether it should be pushed to front of stack.
         """
         self._last_input_time = time.time()
 
@@ -578,58 +535,72 @@ class Session(object):
             self._buffer['input'].appendleft(data)
         else:
             self._buffer['input'].append(data)
-        return
 
     def send_event(self, event, data):
         """
-           Send data to IPC output queue in form of (event, data).
+        Send data to IPC output queue in form of (event, data).
 
-           Supported events:
-               'disconnect': Session wishes to disconnect.
-               'logger': Data is logging record, used by IPCLogHandler.
-               'output': Unicode data to write to client.
-               'global': Broadcast event to other sessions.
-               'db-<schema>': Request sqlite dict method result.
-               'db=<schema>': Request sqlite dict method result as iterable.
-               'lock-<name>': Fine-grained global bbs locking.
+        Supported ``event`` strings:
+
+        - ``disconnect``: Session wishes to disconnect.
+
+        - ``logger``: Data is logging record, used by IPCLogHandler.
+
+        - ``output``: Unicode data to write to client.
+
+        - ``global``: Broadcast event to other sessions.
+
+        - ``route``: Send an event to another session.
+
+        - ``db-<schema>``: Request sqlite dict method result.
+
+        - ``db=<schema>``: Request sqlite dict method result as iterable.
+
+        - ``lock-<name>``: Fine-grained global bbs locking.
+
+        :param str event: event name.
+        :param data: event data.
         """
         self.writer.send((event, data))
 
     def poll_event(self, event):
         """
-        Non-blocking poll for session event, returns value, if any. None
-        otherwise.
+        Non-blocking poll for session event.
+
+        :param str event: an IPC event queue by name, such as ``input``.
+        :returns: first matching IPC event data, or ``None``.
         """
         return self.read_event(event, timeout=-1)
 
     def read_event(self, event, timeout=None):
         """
-        S.read_event (event, timeout=None) --> data
+        Return data for given ``event`` by timeout.
 
-        Read any data for a single event.
-
-        Blocking by default, or non-blocking when timeout is -1. When timeout
-        is non-zero, specifies length of time to wait for event before
-        returning. If timeout is not None (non-blocking), None is returned if
-        no event has is waiting, or waiting after timeout has elapsed.
+        :param str event: an IPC event queue by name, such as ``input``.
+        :param int timeout: Value of ``None`` is blocking (default), ``-1`` is
+                            non-blocking poll. All other values are blocking up
+                            to value of timeout.
+        :returns: first matching IPC event data.  If timeout is specified and
+                  no matching IPC event is discovered, ``None`` is returned.
         """
         return self.read_events(events=(event,), timeout=timeout)[1]
 
     def read_events(self, events, timeout=None):
-        """S.read_events (events, timeout=None) --> (event, data)
-
-        Return the first matched IPC data for any event specified in tuple
-        events, in the form of (event, data).
-
-        ``timeout`` value of ``None`` is blocking, ``-1`` is non-blocking
-        poll. All other values are blocking up to value of timeout.
         """
-        # return immediately any events that are already buffered
-        (event, data) = next(
-            ((_event, self._buffer[_event].pop())
-             for _event in events
-             if len(self._buffer.get(_event, []))),
-            (None, None))
+        Return the first matched IPC data for any event specified by timeout.
+
+        :param tuple events: events to search for, for example
+                             ``('input', 'refresh')``.
+        :param int timeout: Value of ``None`` is blocking (default), ``-1`` is
+                            non-blocking poll. All other values are blocking up
+                            to value of timeout.
+        :rtype: tuple
+        :returns: first matching IPC ``event, data`` tuple, where ``event``
+                  matches one of the given ``events``.  If timeout is specified
+                  and no matching IPC event is discovered, ``(None, None)`` is
+                  returned.
+        """
+        event, data = self._pop_event_buffer(events)
         if event:
             return (event, data)
 
@@ -640,11 +611,11 @@ class Session(object):
 
         # begin scanning for matching `events' up to timeout.
         stime = time.time()
-        # XXX poll is needed because of timeout=-1, shit.
         waitfor = timeleft(stime)
         while waitfor is None or waitfor > 0:
             # ask engine process for new event data,
-            if self.reader.poll(waitfor):
+            poll = min(0.5, waitfor) or 0.01
+            if self.reader.poll(poll):
                 event, data = self.reader.recv()
                 # it is necessary to always buffer an event, as some
                 # side-effects may occur by doing so.  When buffer_event
@@ -653,18 +624,34 @@ class Session(object):
                 if not self.buffer_event(event, data):
                     if event in events:
                         return event, self._buffer[event].pop()
-            elif timeout == -1:
-                return (None, None)
+            else:
+                event, data = self._pop_event_buffer(events)
+                if event is not None:
+                    return (event, data)
+                elif timeout == -1:
+                    return (None, None)
             waitfor = timeleft(stime)
         return (None, None)
 
+    def _pop_event_buffer(self, events):
+        """
+        Return immediately any event-data already buffered.
+
+        :rtype: tuple
+        """
+        return next(
+            ((_event, self._buffer[_event].pop())
+             for _event in events
+             if len(self._buffer.get(_event, []))),
+            (None, None))
+
     def runscript(self, script):
         """
-        Execute the main() callable of script identified by
-        *script*, an instance of the ``Script`` namedtuple.
-        """
-        from x84.bbs.exception import ScriptError
+        Execute the main() callable of script identified by ``script``.
 
+        :param Script script: target script to execute.
+        :returns: the return value of the given script's ``main()`` function.
+        """
         self.log.info("runscript {0!r}".format(script.name))
         self._script_stack.append(script)
 
@@ -686,11 +673,11 @@ class Session(object):
 
         # ensure main() function exists!
         if not hasattr(module, 'main'):
-            raise ScriptError("script {0}, module {1}: main() not found."
-                              .format(script, module))
+            raise RuntimeError("script {0}, module {1}: main() not found."
+                               .format(script_name, module))
         if not callable(module.main):
-            raise ScriptError("script {0}, module {1}: main not callable."
-                              .format(script, module))
+            raise RuntimeError("script {0}, module {1}: {2} not callable."
+                               .format(script_name, module, module.main))
 
         # capture the return value of the script and return
         # to the caller -- so value = gosub('my_game') can retrieve
@@ -704,9 +691,7 @@ class Session(object):
         return value
 
     def close(self):
-        """
-        Close session.
-        """
+        """ Close session, currently releases ``node`` lock.. """
         if self._node is not None:
             self.send_event(
                 event='lock-node/%d' % (self._node),

@@ -1,9 +1,9 @@
-'''
-IBM PC Code Page 437 codec for X/84, https://github.com/jquast/x84
+"""
+IBM PC Code Page 437 codec for x/84.
 
 Generated from:
 ftp://ftp.unicode.org/Public/MAPPINGS/VENDORS/MICSFT/PC/CP437.TXT
-'''
+"""
 
 import codecs
 

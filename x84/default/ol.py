@@ -1,5 +1,6 @@
 # coding=utf-8
-""" oneliners for x/84, http://github.com/jquast/x84
+"""
+one-liners script for x/84.
 
 To use the (optional) http://shroo.ms API,
 which provides something of an intra-bbs oneliners,
@@ -34,7 +35,7 @@ art_file = get_ini(
 
 #: encoding used to display artfile
 art_encoding = get_ini(
-    section='oneliners', key='art_file'
+    section='oneliners', key='art_encoding'
 ) or 'cp437'
 
 #: fontset for SyncTerm emulator
@@ -130,7 +131,7 @@ class FetchUpdatesShrooMs(threading.Thread):
             if str(key) not in self.existing_content:
                 new_content[key] = oneliner
         if new_content:
-            self.log.error('[shroo.ms] %d new entries', len(new_content))
+            self.log.info('[shroo.ms] %d new entries', len(new_content))
             self.new_content = new_content
             getsession().buffer_event('oneliner', True)
         else:
@@ -233,7 +234,7 @@ def maybe_expunge_records():
             _sorted = sorted(
                 ((value, key) for (key, value) in contents.items()),
                 key=lambda _valkey: keysort_by_datetime(_valkey[0]))
-            for expunged, (value, key) in enumerate(
+            for expunged, (_, key) in enumerate(
                     _sorted[len(udb) - MAX_HISTORY:]):
                 del udb[key]
     if expunged:
@@ -248,7 +249,7 @@ def add_oneline(session, message):
         key = max([int(key) for key in udb.keys()] or [0]) + 1
         udb[key] = {
             'oneliner': message,
-            'alias': getsession().handle,
+            'alias': getsession().user.handle,
             'bbsname': get_ini('system', 'bbsname'),
             'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
         }
@@ -431,8 +432,8 @@ def do_prompt(term, session):
     dirty = -1
     top_margin = bot_margin = 0
     offset = 0
-    quit = False
-    while not quit:
+    do_quit = False
+    while not do_quit:
         if dirty == -1:
             # re-display entire screen on-load, only. there
             # should never be any need to re-draw the art here-forward.
@@ -494,9 +495,9 @@ def do_prompt(term, session):
 
                     # only redraw prompt (user canceled)
                     dirty = 2
-                elif inp.lower() in (u'n', u'q'):
+                elif inp.lower() in (u'n', u'q', u'\r', u'\n'):
                     echo(inp + u'\r\n')
-                    quit = True
+                    do_quit = True
                     break
 
                 elif len(inp):

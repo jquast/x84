@@ -13,6 +13,7 @@ import dateutil.tz
 
 MSGDB = 'msgbase'
 TAGDB = 'tags'
+PRIVDB = 'privmsg'
 
 # TODO(jquast, maze): Use modeling to construct rfc-compliant mail messaging
 # formats.  It would be possible to use standard mbox-formatted mail boxes,
@@ -56,7 +57,7 @@ def get_msg(idx=0):
 
 
 def list_msgs(tags=None):
-    """ Return set of indicies matching ``tags``, or all by default. """
+    """ Return set of indices matching ``tags``, or all by default. """
     if tags is not None and 0 != len(tags):
         msgs = set()
         db_tag = DBProxy(TAGDB)
@@ -64,6 +65,15 @@ def list_msgs(tags=None):
             msgs.update(db_tag[tag])
         return msgs
     return set(int(key) for key in DBProxy(MSGDB).keys())
+
+
+def list_privmsgs(handle=None):
+    """ Return all private messages for given user handle. """
+    db_priv = DBProxy(PRIVDB)
+    if handle:
+        return db_priv.get(handle, set())
+    # flatten list of [set(1, 2), set(3, 4)] to set(1, 2, 3, 4)
+    return set([_idx for indices in db_priv.values() for _idx in indices])
 
 
 def list_tags():
@@ -74,23 +84,21 @@ def list_tags():
 class Msg(object):
 
     """
-    the Msg object is record spec for messages held in the msgbase.
+    A record spec for messages held in the msgbase.
+
     It contains many default properties to describe a conversation:
 
-    'creationtime', the time the message was initialized
+    - ``stime``, the time the message was sent.
 
-    'author', 'recipient', 'subject', and 'body' are envelope parameters.
+    - ``author``, ``recipient``, ``subject``, and ``body`` are envelope
+      parameters.
 
-    'read' becomes a list of handles that have viewed a public message, or a
-    single time the message was read by the addressed for private messages.
+    - ``tags`` is for use with message groupings, containing a list of strings
+      that other messages may share in relation.
 
-    'tags' is for use with message groupings, containing a list of strings that
-    other messages may share in relation.
+    - ``parent`` points to the message this message directly refers to.
 
-    'parent' points to the message this message directly refers to, and
-    'threads' points to messages that refer to this message. 'parent' must be
-    explicitly set, but children are automatically populated into 'threads' of
-    messages replied to through the send() method.
+    - ``children`` is a set of indices replied by this message.
     """
 
     # pylint: disable=R0902
@@ -117,7 +125,7 @@ class Msg(object):
         self.author = None
         session = getsession()
         if session:
-            self.author = session.handle
+            self.author = session.user.handle
 
         self._ctime = datetime.datetime.now()
         self._stime = None
@@ -136,8 +144,6 @@ class Msg(object):
         As a side-effect, it may queue message for delivery to
         external systems, when configured.
         """
-        # pylint: disable=W1202
-        #         Use % formatting in logging functions ...
         log = logging.getLogger(__name__)
         session = getsession()
         use_session = bool(session is not None)
@@ -172,19 +178,29 @@ class Msg(object):
                 db_tag[tag] = set([self.idx])
 
         # persist message as child to parent;
-        if not hasattr(self, 'parent'):
-            self.parent = None
-        assert self.parent not in self.children
+        assert self.parent not in self.children, ('circular reference',
+                                                  self.parent, self.children)
         if self.parent is not None:
-            parent_msg = get_msg(self.parent)
-            if self.idx != parent_msg.idx:
-                parent_msg.children.add(self.idx)
-                parent_msg.save()
+            try:
+                parent_msg = get_msg(self.parent)
+            except KeyError:
+                log.warn('Child message {0}.parent = {1}: '
+                         'parent does not exist!'.format(self.idx, self.parent))
             else:
-                log.error('Parent idx same as message idx; stripping')
-                self.parent = None
-                with db_msg:
-                    db_msg['%d' % (self.idx)] = self
+                if self.idx != parent_msg.idx:
+                    parent_msg.children.add(self.idx)
+                    parent_msg.save()
+                else:
+                    log.error('Parent idx same as message idx; stripping')
+                    self.parent = None
+                    with db_msg:
+                        db_msg['%d' % (self.idx)] = self
+
+        # persist message record to PRIVDB
+        if 'public' not in self.tags:
+            with DBProxy(PRIVDB, use_session=use_session) as db_priv:
+                db_priv[self.recipient] = (
+                    db_priv.get(self.recipient, set()) | set([self.idx]))
 
         # if either any of 'server_tags' or 'network_tags' are enabled,
         # then queue for potential delivery.
@@ -195,10 +211,13 @@ class Msg(object):
             self.queue_for_network()
 
         log.info(
-            u"saved {new}{public}msg {post}, addressed to '{self.recipient}'."
+            u"saved {new} {public_or_private} {message_or_reply}"
+            u", addressed to '{self.recipient}'."
             .format(new='new ' if new else '',
-                    public='public ' if 'public' in self.tags else '',
-                    post='post' if self.parent is None else 'reply',
+                    public_or_private=('public' if 'public' in self.tags
+                                       else 'private'),
+                    message_or_reply=('message' if self.parent is None
+                                      else 'reply'),
                     self=self))
 
     def queue_for_network(self):
@@ -207,8 +226,6 @@ class Msg(object):
 
         # check all tags of message; if they match a message network,
         # either record for hosting servers, or schedule for delivery.
-        # pylint: disable=W1202
-        #         Use % formatting in logging functions ...
         for tag in self.tags:
 
             # server networks offered by this server,

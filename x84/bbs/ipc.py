@@ -46,7 +46,7 @@ class IPCLogHandler(logging.Handler):
             record.handle = None
             session = getsession()
             if session:
-                record.handle = session.handle
+                record.handle = session.user.handle
             self.oqueue.send(('logger', record))
         except (KeyboardInterrupt, SystemExit):
             raise

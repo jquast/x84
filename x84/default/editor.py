@@ -1,10 +1,11 @@
-""" Editor script for X/84, https://github.com/jquast/x84 """
+""" Editor script for x/84 """
 # std
 import os
 
 # local
 from x84.bbs import getsession, getterminal, encode_pipe, echo, getch
 from x84.bbs import Lightbar, Selector, ScrollingEditor, showart
+from x84.bbs import syncterm_setfont
 
 # This is probably the fourth or more ansi multi-line editor
 # I've written for python. I did the least-effort this time.
@@ -23,10 +24,15 @@ UNDOLEVELS = 9
 
 here = os.path.dirname(__file__)
 
+#: preferred fontset for SyncTerm emulator
+syncterm_font = 'cp437'
+
 
 def save_draft(key, ucs):
     """ Persist draft to database and stack changes to UNDO buffer. """
-    save(key, ucs)
+    if key is not None:
+        save(key, ucs)
+
     # pylint: disable=W0602
     #         Using global for 'UNDO' but no assignment is done
     global UNDO
@@ -46,7 +52,7 @@ def save(key, content):
     getsession().user[key] = content
 
 
-def show_help(term, center=True):
+def show_help(term):
     """ Returns help text. """
     # clear screen
     echo(term.normal + ('\r\n' * (term.height + 1)) + term.home)
@@ -83,7 +89,7 @@ def get_lbcontent(lightbar):
     # a custom 'soft newline' versus 'hard newline' is implemented,
     # '\n' == 'soft', '\r\n' == 'hard'
     lines = list()
-    for lno, (_row, ucs) in enumerate(lightbar.content):
+    for lno, (_, ucs) in enumerate(lightbar.content):
         # first line always appends as-is, otherwise if the previous line
         # matched a hardwrap, or did not match softwrap, then append as-is.
         # (a simple .endswith() can't wll work with a scheme of '\n' vs.
@@ -209,6 +215,10 @@ def main(save_key=None, continue_draft=False):
     #         Too many statements
     session, term = getsession(), getterminal()
 
+    # set syncterm font, if any
+    if term.kind.startswith('ansi'):
+        echo(syncterm_setfont(syncterm_font))
+
     movement = (term.KEY_UP, term.KEY_DOWN, term.KEY_NPAGE,
                 term.KEY_PPAGE, term.KEY_HOME, term.KEY_END,
                 u'\r', term.KEY_ENTER)
@@ -296,7 +306,9 @@ def main(save_key=None, continue_draft=False):
                 term.yellow('-( '),
                 term.bold(u'Enter'),
                 u':', term.bold_yellow(u'edit mode'),
-                term.yellow(' )-'),))),))
+                term.yellow(' )-'),))),
+            lightbar.fixate(),
+        ))
 
     def redraw_lneditor(lightbar, lneditor):
         """

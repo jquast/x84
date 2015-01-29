@@ -1,6 +1,4 @@
-"""
-Weather retriever for x/84 https://github.com/jquast/x84
-"""
+""" Weather forecast script for x/84. """
 from xml.etree import cElementTree as ET
 import itertools
 import textwrap
@@ -19,7 +17,6 @@ panel_width = 15
 panel_height = 8
 top_margin = 1
 next_margin = 2
-timeout_fch = 3  # timeout of fahrenheit vs. centigrade prompt
 cf_key = u'!'
 
 
@@ -68,7 +65,7 @@ def disp_msg(msg):
 
 def disp_notfound():
     """ Display 'bad request -/- not found in red. """
-    from x84.bbs import getsession, getterminal, echo, getch
+    from x84.bbs import getterminal, echo
     term = getterminal()
     echo(u'\r\n\r\n{bad_req} {decorator} {not_found}'.format(
         bad_req=term.bold(u'bad request'),
@@ -134,12 +131,10 @@ def fetch_weather(postal):
     return tree.getroot()
 
 
-def do_search(search):
-    """
-    Given any arbitrary string, return list of possible matching locations.
-    """
+def do_search(term, search):
+    """ Given search string, return list of possible matching locations. """
     import StringIO
-    from x84.bbs import echo, getch
+    from x84.bbs import echo
     disp_msg(u'SEARChiNG')
     resp = requests.get(u'http://apple.accuweather.com'
                         + u'/adcbin/apple/Apple_find_city.asp',
@@ -152,12 +147,12 @@ def do_search(search):
         echo(u'\r\n' + u'Status Code: %s\r\n\r\n' % (resp.status_code,))
         echo(repr(resp.content))
         echo(u'\r\n\r\n' + 'Press any key')
-        getch()
+        term.inkey()
     else:
         # print resp.content
         xml_stream = StringIO.StringIO(resp.content)
         locations = list([dict(elem.attrib.items())
-                          for _event, elem in ET.iterparse(xml_stream)
+                          for _, elem in ET.iterparse(xml_stream)
                           if elem.tag == 'location'])
         if 0 == len(locations):
             disp_notfound()
@@ -175,7 +170,7 @@ def parse_todays_weather(root):
     # parse all current conditions from XML, value is cdata.
     current_conditions = root.find('CurrentConditions')
     if current_conditions is None:
-        log.error('Current conditions is None: root={!r}'
+        log.debug('Current conditions is None: root={!r}'
                   .format(ET.tostring(root)))
         return weather
     for elem in current_conditions:
@@ -194,7 +189,7 @@ def parse_forecast(root):
     forecast = dict()
     xml_forecast = root.find('Forecast')
     if xml_forecast is None:
-        log.error('Forecast is None: root={!r}'
+        log.debug('Forecast is None: root={!r}'
                   .format(ET.tostring(root)))
         return forecast
 
@@ -204,14 +199,12 @@ def parse_forecast(root):
             forecast[key] = dict()
             for subelem in elem:
                 forecast[key][subelem.tag] = subelem.text.strip()
-    return [value for _key, value in sorted(forecast.items())]
+    return [value for _, value in sorted(forecast.items())]
 
 
 def get_centigrade():
-    """
-    Blocking prompt for setting C/F preference
-    """
-    from x84.bbs import getterminal, getsession, echo, getch
+    """ Blocking prompt for setting C/F preference. """
+    from x84.bbs import getterminal, getsession, echo
     term = getterminal()
     session = getsession()
     if bool(session.user.handle == 'anonymous'):
@@ -232,7 +225,7 @@ def get_centigrade():
         u'? ')))
 
     while True:
-        inp = getch()
+        inp = term.inkey()
         if inp in (u'c', u'C'):
             session.user['centigrade'] = True
             session.user.save()
@@ -249,7 +242,7 @@ def chk_centigrade():
     """
     Provide hint for setting C/F preference (! key)
     """
-    from x84.bbs import getterminal, getsession, echo, getch
+    from x84.bbs import getterminal, getsession, echo
     session, term = getsession(), getterminal()
     echo(u'\r\n\r\n')
     echo(u'USiNG ')
@@ -259,27 +252,20 @@ def chk_centigrade():
         echo(term.yellow(u'Fahrenheit'))
     echo(term.bold_black('...'))
 
-    if bool(session.user.handle != 'anonymous'):
-        echo(u' press ')
-        echo(term.bold_yellow_reverse(cf_key))
-        echo(u' to change.')
-        if getch(timeout=timeout_fch) == cf_key:
-            get_centigrade()
-
 
 def chk_save_location(location):
     """
     Prompt user to save location for quick re-use
     """
-    from x84.bbs import getterminal, getsession, echo, getch
+    from x84.bbs import getterminal, getsession, echo
     session, term = getsession(), getterminal()
     stored_location = session.user.get('location', dict()).items()
     if (sorted(location.items()) == sorted(stored_location)):
         # location already saved
-        return
+        return False
     if session.user.handle == 'anonymous':
         # anonymous cannot save preferences
-        return
+        return False
 
     # prompt to store (unsaved/changed) location
     echo(u'\r\n\r\n')
@@ -293,10 +279,10 @@ def chk_save_location(location):
     echo(term.bold_yellow(u']'))
     echo(u': ')
     while True:
-        inp = getch()
-        if inp is None or inp in (u'n', u'N', u'q', u'Q', term.KEY_EXIT):
+        inp = term.inkey()
+        if inp.code == term.KEY_EXIT or inp.lower() in (u'n', 'q'):
             break
-        if inp in (u'y', u'Y', u' ', term.KEY_ENTER):
+        elif inp.code == term.KEY_ENTER or inp.lower() in (u'y', u' '):
             session.user['location'] = location
             break
 
@@ -364,7 +350,7 @@ def chose_location(locations):
     assert len(locations) > 0, locations
     echo(u'\r\n\r\n {chose_a} {city}: '
          .format(chose_a=term.yellow(u'chose a'),
-                 city=term.bold_yellow('city'))),
+                 city=term.bold_yellow('city')))
     return chose_location_lightbar(locations)
 
 
@@ -401,7 +387,7 @@ def get_icon(weather):
 
 
 def display_panel(weather, column, centigrade):
-    from x84.bbs import getterminal, echo, from_cp437
+    from x84.bbs import getterminal, echo
     term = getterminal()
 
     # display day of week,
@@ -441,32 +427,35 @@ def display_panel(weather, column, centigrade):
     return row_loc
 
 
-def display_weather(todays, weather, centigrade):
+def display_weather(todays, forecast, centigrade):
     """
     Display weather as vertical panels.
 
     Thanks to xzip, we now have a sortof tv-weather channel art :-)
     """
-    from x84.bbs import getterminal, echo, from_cp437, syncterm_setfont
+    from x84.bbs import getterminal, echo, syncterm_setfont
     term = getterminal()
     # set syncterm font to cp437
     if term.kind.startswith('ansi'):
         echo(syncterm_setfont('cp437'))
+
     echo(term.height * u'\r\n')
     echo(term.move(0, 0))
-    at = term.yellow_bold('At')
     city = term.bold(todays.get('City', u''))
     state = todays.get('State', u'')
     if state:
-        state = u', {}'.format(term.bold_yellow_reverse(state))
+        state = u', {}'.format(term.bold(state))
     dotdot = term.bold_black('...')
-    echo(u'{at} {city}{state} {dotdot}'.format(
-        at=at, city=city, state=state, dotdot=dotdot))
-    bottom = 2
-    if weather:
-        for column in range(0, (term.width - panel_width), panel_width):
+    echo(u'At {city}{state} {dotdot}'.format(
+        city=city, state=state, dotdot=dotdot))
+
+    bottom = 3
+    if forecast:
+        end = (term.width - panel_width)
+        step = panel_width
+        for idx, column in enumerate(range(0, end, step)):
             try:
-                day = weather.pop(0)
+                day = forecast[idx]
             except IndexError:
                 break
             bottom = max(display_panel(day, column, centigrade), bottom)
@@ -477,7 +466,7 @@ def display_weather(todays, weather, centigrade):
     temp, deg_conv = temp_conv(todays.get('Temperature', ''), centigrade)
     real_temp, deg_conv = temp_conv(todays.get('RealFeel', ''), centigrade)
     speed, spd_conv = speed_conv(todays.get('WindSpeed', ''), centigrade)
-    degree = from_cp437(''.join([chr(248)]))
+    degree = '\xf8'.decode('cp437_art')
 
     current_0 = u'Current conditions at {timenow}'.format(timenow=timenow)
     current_1 = u'{0}'.format(todays.get('WeatherText', ''))
@@ -513,7 +502,7 @@ def display_weather(todays, weather, centigrade):
 
 def main():
     """ Main routine. """
-    from x84.bbs import getsession, getterminal, echo, getch
+    from x84.bbs import getsession, getterminal, echo
     session, term = getsession(), getterminal()
     session.activity = 'Weather'
 
@@ -526,14 +515,17 @@ def main():
         if search is None or 0 == len(search):
             # exit (no selection)
             return
-        locations = do_search(search)
+
+        locations = do_search(term, search)
         if 0 != len(locations):
             location = (locations.pop() if 1 == len(locations)
                         else chose_location(locations) or dict())
+
         root = fetch_weather(location.get('postal'))
         if root is None:
             # exit (weather not found)
             return
+
         todays = parse_todays_weather(root)
         forecast = parse_forecast(root)
         if session.user.get('centigrade', None) is None:
@@ -542,16 +534,24 @@ def main():
         else:
             # offer C/F preference change
             chk_centigrade()
+
         while True:
             centigrade = session.user.get('centigrade', False)
+
             display_weather(todays, forecast, centigrade)
-            echo(term.move(term.height - 1, panel_width + 5))
-            echo(term.yellow_reverse(u'--ENd Of tRANSMiSSiON--'))
-            # allow re-displaying weather between C/F, even at EOT prompt
-            if getch() == cf_key:
-                get_centigrade()
-                continue
-            break
-        break
+            txt_chg_deg = (', [{0}]: change degrees'.format(cf_key)
+                           if session.user.handle != 'anonymous' else u'')
+            echo(u''.join((term.normal, u'\r\n\r\n',
+                           term.move_x(5),
+                           u'-- press return' + txt_chg_deg + ' --')))
+
+            while True:
+                # allow re-displaying weather between C/F, even at EOT prompt
+                inp = term.inkey()
+                if inp.lower() == cf_key:
+                    get_centigrade()
+                    break
+                elif inp.code == term.KEY_ENTER:
+                    return
 
     chk_save_location(location)

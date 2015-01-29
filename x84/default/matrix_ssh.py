@@ -1,20 +1,20 @@
 """
- SSH Matrix for X/84 (Formerly, 'The Progressive') BBS,
+SSH Matrix for x/84.
 
- This script is the default session entry point for all ssh connections.
+This script is the default session entry point for all ssh connections.
 
- As our transport is ssh -- we've *already* authenticated the user,
- though, when 'anonymous' login is enabled, or the handle is one of
- the 'new user handles', we pass the mutually exclusive boolean keyword
- arguments 'anonymous' or 'new'.
+As our transport is ssh -- we've *already* authenticated the user,
+though, when 'anonymous' login is enabled, or the handle is one of
+the 'new user handles', we pass the mutually exclusive boolean keyword
+arguments 'anonymous' or 'new'.
 
- The argument 'username' is always set as the 'user@' argument of the
- connecting ssh client -- it could be 'anonymous' or 'new', or any
- case insensitive match of a user handle -- it does not necessarily
- guarantee that the user exists!
+The argument 'username' is always set as the 'user@' argument of the
+connecting ssh client -- it could be 'anonymous' or 'new', or any
+case insensitive match of a user handle -- it does not necessarily
+guarantee that the user exists!
 
- When set, this is a user that should be found under find_user(username)
- who may have already authenticated by some various means.
+When set, this is a user that should be found under find_user(username)
+who may have already authenticated by some various means.
 """
 
 

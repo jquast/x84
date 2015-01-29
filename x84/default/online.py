@@ -1,6 +1,5 @@
-""" Who's online script for X/84, https://github.com/jquast/x84 """
+""" Who's online script for x/84. """
 import time
-SELF_ID = -1
 POLL_KEY = 0.25  # blocking ;; how often to poll keyboard
 POLL_INF = 2.00  # seconds elapsed until re-ask clients for more details
 POLL_AYT = 4.00  # seconds elapsed until global 'are you there?' is checked,
@@ -49,7 +48,7 @@ def describe(sessions):
         term.yellow((attrs.get('activity', u''))
                     if attrs.get('sid') != session.sid else
                     term.yellow(session.activity)),
-    )) for node, (_sid, attrs) in get_nodes(sessions)]))
+    )) for node, (_, attrs) in get_nodes(sessions)]))
 
     return text + '\r\n'
 
@@ -59,11 +58,9 @@ def get_nodes(sessions):
     return enumerate(sorted(sessions.items()))
 
 
-def heading(sessions):
-    """
-    Given an array of sessions, return string suitable for display heading.
-    """
-    from x84.bbs import getterminal, ini, showart
+def heading():
+    """ Return string suitable for display heading. """
+    from x84.bbs import getterminal, showart
     import os
     term = getterminal()
     bar = ''
@@ -108,16 +105,23 @@ def get_node(sessions):
     invalid = u'\r\ninvalid.'
     echo(u'\r\n\r\nNOdE: ')
     node = LineEditor(max_user).read()
+
     if node is None or 0 == len(node):
+        # cancel
         return (None, None)
+
     try:
         node = int(node)
     except ValueError:
+        # not an int
         echo(invalid)
         return (None, None)
-    for tgt_node, (_sid, attrs) in get_nodes(sessions):
+
+    for tgt_node, (_, attrs) in get_nodes(sessions):
         if tgt_node == node:
             return (tgt_node, attrs)
+
+    # not found
     echo(invalid)
     return (None, None)
 
@@ -138,9 +142,8 @@ def chat(sessions):
     Sysop will send session id of -1, indicating the chat is forced.
     """
     from x84.bbs import gosub, getsession
-    session = getsession()
-    (node, tgt_session) = get_node(sessions)
-    if tgt_session and tgt_session != session:
+    (_, tgt_session) = get_node(sessions)
+    if tgt_session and tgt_session['sid'] != getsession().sid:
         gosub('chat', dial=tgt_session['handle'],
               other_sid=tgt_session['sid'])
 
@@ -199,6 +202,7 @@ def main():
     #         Too many statements
     from x84.bbs import getsession, getterminal, getch, echo
     session, term = getsession(), getterminal()
+    SELF_ID = session.sid
     ayt_lastfresh = 0
 
     def broadcast_ayt(last_update):
@@ -264,7 +268,7 @@ def main():
             sessions[sid]['lastfresh'] = time.time()
 
         # update our own session
-        sessions[SELF_ID] = session.info()
+        sessions[SELF_ID] = session.to_dict()
         sessions[SELF_ID]['lastfresh'] = time.time()
 
         # request that all sessions update if more stale than POLL_INF,
@@ -291,7 +295,7 @@ def main():
             olen = len(otxt.splitlines())
             if 0 == cur_row or (cur_row + olen) >= term.height:
                 otxt_b = banner()
-                otxt_h = heading(sessions)
+                otxt_h = heading()
                 cur_row = len(otxt_b.splitlines()) + len(otxt_h.splitlines())
                 echo(u''.join((otxt_b, '\r\n', otxt_h, u'\r\n', otxt)))
             else:

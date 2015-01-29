@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-New user account script for x/84, https://github.com/jquast/x84
+New user account script for x/84.
 
 This script is closely coupled with, and dependend on by profile.py.
 """
@@ -14,7 +14,7 @@ import re
 # local
 from x84.bbs import getsession, getterminal, echo, LineEditor
 from x84.bbs import goto, get_ini, find_user, User, syncterm_setfont
-from common import display_banner
+from common import display_banner, show_description
 
 log = logging.getLogger(__name__)
 here = os.path.dirname(__file__)
@@ -23,6 +23,11 @@ here = os.path.dirname(__file__)
 art_file = get_ini(
     section='nua', key='art_file'
 ) or os.path.join(here, 'art', 'nua*.ans')
+
+#: encoding of artfile
+art_encoding = get_ini(
+    section='nua', key='art_encoding'
+) or 'ascii'
 
 #: preferred fontset for SyncTerm emulator
 syncterm_font = get_ini(
@@ -117,8 +122,8 @@ vfield = collections.namedtuple('input_validation', [
 ])
 
 
-def validate_handle(user, handle):
-    """ Validate setting ``handle`` for ``user``. """
+def validate_handle(_, handle):
+    """ Validate user ``handle``. """
     errmsg = None
     if find_user(handle):
         errmsg = u'User by this name already exists.'
@@ -141,7 +146,7 @@ def validate_handle(user, handle):
     return errmsg, 0
 
 
-def validate_password(user, password):
+def validate_password(_, password):
     """ Validate setting ``password`` for ``user``. """
     errmsg = None
     if password == u'':
@@ -261,15 +266,6 @@ def show_validation_error(errmsg):
         echo(u'\r\n')
 
 
-def show_description(description):
-    """ Display field description message. """
-    term = getterminal()
-    for txt in term.wrap(description, width=min(80, term.width)):
-        echo(fixate_next(term, newlines=0))
-        echo(getattr(term, color_secondary)(txt.rstrip()))
-        echo(u'\r\n')
-
-
 def do_nua(user):
     """ Perform new user account field setting and validation. """
     session, term = getsession(), getterminal()
@@ -281,7 +277,9 @@ def do_nua(user):
         field = validation_fields.values()[idx]
         echo(fixate_next(term, newlines=1))
         if field.description:
-            show_description(field.description)
+            show_description(term, field.description,
+                             color=getattr(term, color_secondary))
+            echo(u'\r\n')
             echo(fixate_next(term, newlines=0))
         value = prompt_input(term=term,
                              key=field.prompt_key,
@@ -333,7 +331,7 @@ def main(handle=u''):
 
     # create new user record for manipulation
     while True:
-        display_banner(art_file, encoding='ascii')
+        display_banner(art_file, encoding=art_encoding)
         user = do_nua(user)
 
         # user canceled.

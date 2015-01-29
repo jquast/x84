@@ -1,4 +1,4 @@
-""" System info for x/84 BBS, https://github.com/jquast/x84 """
+""" System info script for x/84. """
 
 
 def main():
@@ -16,18 +16,21 @@ def main():
     session, term = getsession(), getterminal()
     session.activity = 'System Info'
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'plant.ans',)
-    system, _node, release, _version, machine, _processor = platform.uname()
-    body = [u'AUthORS:',
+    # pylint: disable=W0633
+    #         Attempting to unpack a non-sequence defined at line 1160 of
+    #         platform
+    system, _, release, _, machine, _ = platform.uname()
+
+    body = [u'authors:',
             u'Johannes Lundberg',
             u'Jeffrey Quast',
             u'Wijnand Modderman-Lenstra',
             u'',
-            u'ARtWORk:',
-            u'spidy!food,',
+            u'artwork:',
             u'hellbeard!impure',
             u'\r\n',
-            u'SYStEM: %s %s %s' % (system, release, machine),
-            u'SOftWARE: X/84',
+            u'system: %s %s %s' % (system, release, machine),
+            u'software: x/84',
             url,
             u'\r\n',
             (platform.python_implementation() + u' '
@@ -153,14 +156,14 @@ def main():
     def erase(star_idx):
         """ erase old star before moving .. """
         if show_star:
-            _char, xloc, yloc = stars[star_idx]
+            _, xloc, yloc = stars[star_idx]
             echo(u''.join((term.move(int(yloc), int(xloc)), term.normal,
                            char_at_pos(int(yloc), int(xloc), txt_y, txt_x),)))
 
     def melt():
         """ Iterate through all stars and phase through melt sequence. """
         def melted(yloc, xloc):
-            """ shift melt, delete if dissapeared. """
+            """ shift melt, delete if disappeared. """
             melting[(yloc, xloc)] -= 1
             if 0 == melting[(yloc, xloc)]:
                 del melting[(yloc, xloc)]
@@ -205,15 +208,15 @@ def main():
                     num_stars = int(num_stars * .5)
                     stars = dict([(n, (random.choice('\\|/-'),
                                        float(random.choice(range(term.width))),
-                                       float(random.choice(range(term.height)))))
-                                  for n in range(num_stars)])
+                                       float(random.choice(range(term.height)))
+                                       )) for n in range(num_stars)])
             elif inp in (term.KEY_RIGHT, 'l'):
                 if num_stars < (term.width * term.height) / 4:
                     num_stars = int(num_stars * 1.5)
                     stars = dict([(n, (random.choice('\\|/-'),
                                        float(random.choice(range(term.width))),
-                                       float(random.choice(range(term.height)))))
-                                  for n in range(num_stars)])
+                                       float(random.choice(range(term.height)))
+                                       )) for n in range(num_stars)])
             elif inp in (u'*',) and not show_star:
                 show_star = True
             elif inp in (u'*',) and show_star:

@@ -1,5 +1,5 @@
 """
-Encoding selection script for x/84, https://github.com/jquast/x84
+Encoding selection script for x/84.
 
 Displays a CP437 artwork (block ansi), and prompts the user
 to chose 'utf8' or 'cp437' encoding.

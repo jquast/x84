@@ -1,4 +1,4 @@
-""" logoff script with 'automsg' for x/84, https://github.com/jquast/x84 """
+""" logoff script with 'automsg' for x/84. """
 
 
 def main():
@@ -13,9 +13,7 @@ def main():
     import os
     session, term = getsession(), getterminal()
     session.activity = 'logging off'
-    handle = session.handle if (
-        session.handle is not None
-    ) else 'anonymous'
+    handle = session.user.handle or 'anonymous'
     max_user = ini.CFG.getint('nua', 'max_user')
     prompt_msg = u'[spnG]: ' if session.user.get('expert', False) else (
         u'%s:AY SOMEthiNG %s:REViOUS %s:EXt %s:Et thE fUCk Off !\b' % (
@@ -32,7 +30,7 @@ def main():
               ('blackflag.acid.org:2627', 'Piranha: Black Flag', 'Caphood',),
               ('oddnetwork.org', '79 columns', 'Haliphax'),
               ('bbs.beardy.se', 'The Swamp', 'Beardy'),
-              ('maze.io', 'rANDOM nOIZE', 'Maze'),)
+              ('bbs.maze.io', 'rANDOM nOIZE', 'maze'),)
     board_fmt = u'%25s %-30s %-15s\r\n'
     goodbye_msg = u''.join((
         term.move(term.height, 0),

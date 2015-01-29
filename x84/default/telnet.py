@@ -1,6 +1,4 @@
-"""
-telnet client for X/84 BBS, https://github.com/jquast/x84/
-"""
+""" telnet client for x/84 """
 KEY_POLL = 0.015
 IS = chr(0)
 SEND = chr(1)

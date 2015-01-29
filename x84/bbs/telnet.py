@@ -1,12 +1,12 @@
-"""
-telnet extras for x/x84 bbs, https://github.com/jquast/x84
-"""
-# local
-from x84.telnet import SEND
+""" Utility functions for clients based on telnetlib for x/84. """
+
+SEND = chr(1)  # Sub-process negotiation SEND command
 
 
 def callback_cmdopt(socket, cmd, opt, env_term=None, width=None, height=None):
     """ Callback for telnetlib.Telnet.set_option_negotiation_callback. """
+    # pylint: disable=R0913
+    #         Too many arguments
     import telnetlib
     import struct
     IS = chr(0)  # Sub-process negotiation IS command

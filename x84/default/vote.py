@@ -1,35 +1,34 @@
-""" Voting booth script for x/84 bbs, https://github.com/jquast/x84 """
+""" Voting booth script for x/84. """
 
-from common import waitprompt
-from x84.bbs import getsession, getterminal, echo, getch, LineEditor, DBProxy, showart, syncterm_setfont
+from common import waitprompt, prompt_pager
+from x84.bbs import getsession, getterminal, echo, LineEditor
+from x84.bbs import DBProxy, showart, syncterm_setfont
 import os
 
-databasename = 'votingbooth'  # change this for alternate database file
+databasename = 'votingbooth'  # change this to use an alternative database file
 
 __author__ = 'Hellbeard'
-__version__ = 1.01
+__version__ = 1.1
 
 # -----------------------------------------------------------------------------------
 
-
 def ynprompt():
     term = getterminal()
-    echo(term.magenta + ' (' + term.cyan + 'yes' + term.magenta +
-         '/' + term.cyan + 'no' + term.magenta + ')' + term.white)
+    echo(term.magenta + u' (' + term.cyan + u'yes' + term.magenta +
+         u'/' + term.cyan + u'no' + term.magenta + u')' + term.white)
     while True:
-        svar = getch()
-        if (svar == 'y') or (svar == 'Y'):
+        inp = term.inkey()
+        if inp.lower() == u'y':
             yn = True
             echo(u' yes!')
             break
-        if (svar == 'n') or (svar == 'N') or (svar == 'q') or (svar == 'Q'):
+        if inp.lower() == u'n' or inp.lower() == u'q':
             yn = False
             echo(u' no')
             break
     return(yn)
 
 # -----------------------------------------------------------------------------------
-
 
 def query_question():
     term = getterminal()
@@ -40,103 +39,101 @@ def query_question():
     uservotingdata = []
     questions = db['questions']
     index = db['index']
-    counter = 0
 
-    # create database for user if the user hasn't made any votes
+    # create a new database file if none exists
     if not session.user.handle in db:
         db[session.user.handle] = {}
     uservotingdata = db[session.user.handle]
 
-    echo(term.clear() + term.blue + '>>' + term.white + 'questions availible\r\n' +
-         term.blue + '---------------------\r\n\r\n' + term.white)
+    echo(term.clear() + term.blue(u'>>') + term.white(u'questions availible\r\n') +
+         term.blue(u'-' * 21 + '\r\n\r\n'))
+
+    text = ''
     for i in range(0, len(questions)):
         if (index[i], 0) in uservotingdata:
-            # prints out a star to show that the user already voted on this
-            # question
-            echo(term.green + '*')
-        echo(term.magenta + '(' + term.cyan + str(i) + term.magenta + ') ' +
-             term.white + questions[i] + '\r\n')
-
-        # if the list of questions is longer than the screen height, display a
-        # press enter prompt
-        counter = counter + 1
-        if counter > term.height - 7:
-            counter = 0
-            waitprompt()
-            echo(term.move_x(0) + term.clear_eol + term.move_up)
-
-    echo(term.bold_black + '* = already voted\r\n\r\n' + term.normal)
+            text = text + term.green(u'*')
+        text = text + u''.join(term.magenta + u'(' + term.cyan + str(i) + term.magenta + u') ' +
+                              term.white + questions[i] + u'\r\n')
+    text = text.splitlines()
+    prompt_pager(content=text,
+                 line_no=0,
+                 colors={'highlight': term.cyan,
+                         'lowlight': term.green,
+                         },
+                 width=term.width, breaker=None, end_prompt=False)
+    echo(term.move_x(0) + term.bold_black(u'* = already voted\r\n\r\n'))
 
     while True:
-        echo(
-            term.magenta + '\rselect one of the questions above or press enter to return: ')
-        le = LineEditor(30)
+        echo(term.move_x(
+            0) + term.magenta(u'select one of the questions above or press enter to return: '))
+        le = LineEditor(10)
         le.colors['highlight'] = term.cyan
         inp = le.read()
         if inp is not None and inp.isnumeric() and int(inp) < len(questions):
             return int(inp)
         else:
-            # 999 in this case means that no valid option was chosen.. break
+            # -1 in this case means that no valid option was chosen.. break
             # loop.
-            return 999
+            return -1
 
 # -----------------------------------------------------------------------------------
 
 
 def list_results(questionnumber):
     term = getterminal()
-
     db = DBProxy(databasename)
     alternatives = {}
     questions = []
     results = []
-    amount_of_alternatives = []
     amount_of_alternatives = db['amount_of_alternatives']
-    alternatives = db['alternatives']
     alternatives = db['alternatives']
     questions = db['questions']
     results = db['results']
-    index = db['index']
-    counter = 0
 
     echo(term.clear())
-    echo(term.white + questions[questionnumber] + term.move_x(max(0, term.width - 10)) + ' index: ' + str(index[questionnumber]) +
-         '\r\n' + term.blue + '-' * len(questions[questionnumber]) + '\r\n\r\n')
-    echo(term.magenta + '(alternatives)' + term.move_x(49) +
-         '(votes)' + term.move_x(57) + '(percentage)\r\n')
 
-    totalvotes = 0.00
-    for i in range(0, amount_of_alternatives[questionnumber]):
-        totalvotes = totalvotes + results[(questionnumber, i)]
+    text = (term.white + questions[questionnumber] + u'\r\n' + term.blue +
+            u'-' * len(questions[questionnumber]) + u'\r\n\r\n')
 
-    for i in range(0, amount_of_alternatives[questionnumber]):
-        if results[(questionnumber, i)] > 0:
-            percentage = (results[(questionnumber, i)] / totalvotes) * 100
-        else:
-            percentage = 0
-        staple = int(round(percentage / 5))
+    # only display full statistics if the screen width is above 79 columns.
+    if term.width > 79:
+        text = text + (term.magenta + u'(alternatives)' + term.move_x(49) +
+                       u'(votes)' + term.move_x(57) + u'(percentage)\r\n')
+        totalvotes = 0.00
+        for i in range(0, amount_of_alternatives[questionnumber]):
+            totalvotes = totalvotes + results[(questionnumber, i)]
+        for i in range(0, amount_of_alternatives[questionnumber]):
+            if results[(questionnumber, i)] > 0:
+                percentage = (results[(questionnumber, i)] / totalvotes) * 100
+            else:
+                percentage = 0
+            staple = int(round(percentage / 5))
+            text = text + u''.join(term.move_x(0) + term.white(alternatives[(questionnumber, i)]) + term.move_x(49) +
+                                   term.cyan(str(results[(questionnumber, i)])) + u'  ' + term.cyan + str(int(percentage)) +
+                                   term.cyan(u'%') + term.move_x(57) + term.cyan(u'[') +
+                                   term.green('#' * staple) + term.move_x(78) + term.cyan(']'))
+            if i != amount_of_alternatives[questionnumber]:
+                text = text + u'\r\n'
+    else:
+        for i in range(0, amount_of_alternatives[questionnumber]):
+            text = text + (term.white(str(alternatives[(questionnumber, i)])) + term.cyan(u' votes: ') +
+                           term.magenta(str(results[(questionnumber, i)])) + u'\r\n')
 
-        echo(term.cyan + term.move_x(49) + str(results[(questionnumber, i)]) + '  ' + str(int(percentage)) +
-             '%' + term.move_x(57) + '[                    ]' + term.move_x(58) + term.green + '#' * staple + '\r')
-        echo(term.white + alternatives[(questionnumber, i)] + '\r\n')
-
-        # if the list of questions is longer than the screen height, display a
-        # press enter prompt
-        counter = counter + 1
-        if counter > term.height - 7:
-            counter = 0
-            waitprompt()
-            echo(term.move_x(0) + term.clear_eol + term.move_up)
-
-    waitprompt()
+    text = text.splitlines()
+    prompt_pager(content=text,
+                 line_no=0,
+                 colors={'highlight': term.cyan,
+                         'lowlight': term.green,
+                         },
+                 width=term.width, breaker=None, end_prompt=False)
+    echo(term.move_x(0) + term.bold_black(u'* = already voted\r\n'))
+    waitprompt(term)
 
 # -----------------------------------------------------------------------------------
-
 
 def vote(questionnumber):
     term = getterminal()
     session = getsession()
-
     db = DBProxy(databasename)
     questions = []
     amount_of_alternatives = []
@@ -149,16 +146,26 @@ def vote(questionnumber):
     amount_of_alternatives = db['amount_of_alternatives']
     index = db['index']
 
-    echo(term.clear() + term.white + questions[questionnumber] + '\r\n\r\n')
+    echo(term.clear() + term.white + questions[questionnumber] + u'\r\n' +
+         term.blue(u'-' * len(questions[questionnumber])) + u'\r\n\r\n')
+    text = ''
     for i in range(0, amount_of_alternatives[questionnumber]):
-        echo(term.magenta + '(' + term.cyan + str(i) + term.magenta + ') ' +
-             term.white + alternatives[(questionnumber, i)] + '\r\n')
-    echo(term.magenta + '(' + term.cyan + str(amount_of_alternatives[
-         questionnumber]) + term.magenta + ')' + term.bold_black + ' Add your own answer..\r\n\r\n')
+        text = text + (term.magenta + u'(' + term.cyan + str(i) + term.magenta + u') ' +
+                       term.white + alternatives[(questionnumber, i)] + u'\r\n')
+
+    text = text.splitlines()
+    prompt_pager(content=text,
+                 line_no=0,
+                 colors={'highlight': term.cyan,
+                         'lowlight': term.green,
+                         },
+                 width=term.width, breaker=None, end_prompt=False)
+    echo(term.move_x(0) + term.magenta(u'(') + term.cyan(str(amount_of_alternatives[questionnumber])) +
+         term.magenta(u') ') + term.bold_black(u'Add your own answer..\r\n\r\n'))
 
     while True:
-        echo(term.normal + term.magenta + '\rYour choice:: ')
-        le = LineEditor(30)
+        echo(term.move_x(0) + term.magenta(u'Your choice: '))
+        le = LineEditor(10)
         le.colors['highlight'] = term.cyan
         inp = le.read()
         if inp is not None and inp.isnumeric() and int(
@@ -173,8 +180,8 @@ def vote(questionnumber):
 
             # if user wants to create an own alternative..
             if int(inp) == amount_of_alternatives[questionnumber]:
-                echo(term.clear + term.red + '\r\nPress enter to abort.' +
-                     term.move(0, 0) + term.white + ' Your answer: ')
+                echo(term.clear + term.red + u'\r\nPress enter to abort. ' +
+                     term.move(0, 0) + term.white(u'Your answer: '))
                 le = LineEditor(48)
                 new_alternative = le.read()
                 if new_alternative == '':
@@ -202,8 +209,8 @@ def vote(questionnumber):
 
             uservotingdata[(index[questionnumber], 0)] = int(inp)
 
-            echo(term.green + '\r\nyour vote has been noted, thanks..')
-            getch(1)
+            echo(term.green(u'\r\nyour vote has been noted, thanks..'))
+            term.inkey(2)
             db['results'] = results
             db[session.user.handle] = uservotingdata
             list_results(questionnumber)
@@ -211,10 +218,8 @@ def vote(questionnumber):
 
 # -----------------------------------------------------------------------------------
 
-
 def add_question():
     term = getterminal()
-
     db = DBProxy(databasename)
     questions = []
     amount_of_alternatives = []
@@ -228,18 +233,17 @@ def add_question():
     amount_of_alternatives = db['amount_of_alternatives']
     amount_of_questions = len(questions)
 
-    echo(term.clear + term.white + '\r\nQuestion: ')
+    echo(term.clear + term.white + u'\r\nQuestion: ')
     le = LineEditor(65)
     new_question = le.read()
     if new_question == '':
         return
 
-    echo(
-        term.bold_black + '\r\n\r\nLeave a blank line when you are finished..')
+    echo(term.bold_black(u'\r\n\r\nLeave a blank line when you are finished..'))
     new_amount = 0
     while True:
-        echo(term.normal + term.white + '\r\nchoice ' +
-             term.red + str(new_amount) + term.white + ': ')
+        echo(term.normal + term.white + u'\r\nchoice ' +
+             term.red + str(new_amount) + term.white + u': ')
         le = LineEditor(48)
         alternatives[(amount_of_questions, new_amount)] = le.read()
         if alternatives[(amount_of_questions, new_amount)] == '':
@@ -249,7 +253,7 @@ def add_question():
             new_amount = new_amount + 1
 
     if new_amount > 0:
-        echo(term.normal + term.white + '\r\n\r\nSave this voting question?')
+        echo(term.white(u'\r\n\r\nSave this voting question?'))
         answer = ynprompt()
         if answer == 1:
             questions.append(new_question)
@@ -267,15 +271,13 @@ def add_question():
             db['amount_of_questions'] = amount_of_questions
             db['alternatives'] = alternatives
 
-            waitprompt()
+            waitprompt(term)
 
 # -----------------------------------------------------------------------------------
-
 
 def delete_question(questionnumber):
     term = getterminal()
     db = DBProxy(databasename)
-
     alternatives = {}
     questions = []
     results = {}
@@ -286,28 +288,28 @@ def delete_question(questionnumber):
     alternatives = db['alternatives']
     index = db['index']
 
-    echo(term.clear + term.white + 'Delete the ' + term.magenta + '(' + term.cyan + 'e' + term.magenta + ')' + term.white +
-         'ntire question or delete single ' + term.magenta + '(' + term.cyan + 'a' + term.magenta + ')' + term.white + 'lternatives?' +
-         '\r\n\r\n' + term.magenta + 'command:: ')
+    echo(term.clear + term.white(u'Delete the ') + term.magenta(u'(') + term.cyan(u'e') + term.magenta(u')') +
+         term.white(u'ntire question or delete single ') + term.magenta(u'(') + term.cyan(u'a') + term.magenta(u')') +
+         term.white(u'lternatives?') + u'\r\n\r\n' + term.magenta(u'command: '))
 
-    le = LineEditor(30)
+    le = LineEditor(10)
     le.colors['highlight'] = term.cyan
     inp = le.read()
     # makes the input indifferent to wheter you used lower case when typing in
     # a command or not..
     inp = (inp or u'').lower()
 
-    if inp == 'a':  # delete answer alternative..
+    if inp == u'a':  # delete answer alternative..
         echo(term.clear)
-        echo(term.white + questions[questionnumber] + term.move_x(max(0,
-                                                                      term.width - 12)) + ' index: ' + str(index[questionnumber]) + '\r\n\r\n')
+        echo(term.white + questions[questionnumber] + term.move_x(max(0, term.width - 12)) +
+             u' index: ' + str(index[questionnumber]) + u'\r\n\r\n')
         for i in range(0, amount_of_alternatives[questionnumber]):
-            echo(term.cyan + str(i) + '. ' + term.white +
-                 alternatives[(questionnumber, i)] + '\r\n')
+            echo(term.cyan(str(i) + u'. ') +
+                 term.white(alternatives[(questionnumber, i)]) + u'\r\n')
 
-        echo(term.magenta + '\r\nSelect a number. Enter to abort: ')
+        echo(term.magenta(u'\r\nSelect a number. Enter to abort: '))
 
-        le = LineEditor(30)
+        le = LineEditor(10)
         le.colors['highlight'] = term.cyan
         inp2 = le.read()
 
@@ -324,7 +326,7 @@ def delete_question(questionnumber):
             return
         amount_of_alternatives[questionnumber] -= 1
 
-    elif inp == 'e':  # delete entire question..
+    elif inp == u'e':  # delete entire question..
         if questionnumber + 1 < len(questions):
             for i in range(questionnumber, len(questions) - 1):
                 questions[i] = questions[i + 1]
@@ -347,7 +349,6 @@ def delete_question(questionnumber):
     return
 
 # -----------------------------------------------------------------------------------
-
 
 def generate_database():  # generates a database file with a generic question.
     db = DBProxy(databasename)
@@ -384,15 +385,14 @@ def generate_database():  # generates a database file with a generic question.
 
 # -----------------------------------------------------------------------------------
 
-
 def main():
     session = getsession()
     session.activity = u'hanging out in voting script'
     term = getterminal()
-    echo(term.clear + syncterm_setfont('topaz'))
+    echo(syncterm_setfont('topaz'))
 
     db = DBProxy(databasename)
-    if not 'questions' in db:
+    if 'questions' not in db:
         generate_database()
 
     while True:
@@ -407,48 +407,47 @@ def main():
         else:
             spacing = 7
             echo(' ')
-        echo(term.magenta + '\n (' + term.cyan + 'r' + term.magenta + ')' +
-             term.white + 'esults' + ' ' * spacing)
-        echo(term.magenta + '(' + term.cyan + 'v' + term.magenta + ')' +
-             term.white + 'ote on a question' + ' ' * spacing)
-        echo(term.magenta + '(' + term.cyan + 'a' + term.magenta + ')' +
-             term.white + 'dd a new question' + ' ' * spacing)
+        echo(term.magenta(u'\n (') + term.cyan(u'r') + term.magenta(u')') +
+             term.white(u'esults') + ' ' * spacing +
+             term.magenta(u'(') + term.cyan(u'v') + term.magenta(u')') +
+             term.white(u'ote on a question') + u' ' * spacing +
+             term.magenta(u'(') + term.cyan(u'a') + term.magenta(u')') +
+             term.white(u'dd a new question') + u' ' * spacing)
         if 'sysop' in session.user.groups:
-            echo(term.magenta + '(' + term.cyan + 'd' + term.magenta + ')' +
-                 term.white + 'elete a question' + ' ' * spacing)
-        echo(
-            term.magenta + '(' + term.cyan + 'q' + term.magenta + ')' + term.white + 'uit')
-        echo(term.magenta + '\r\n\r\n\r\nx/84 voting booth command: ')
-        le = LineEditor(30)
+            echo(term.magenta(u'(') + term.cyan(u'd') + term.magenta(u')') +
+                 term.white(u'elete a question') + u' ' * spacing)
+        echo(term.magenta(u'(') + term.cyan(u'q') + term.magenta(u')') + term.white(u'uit') +
+             term.magenta(u'\r\n\r\nx/84 voting booth command: '))
+        le = LineEditor(10)
         le.colors['highlight'] = term.cyan
         inp = le.read()
         # makes the input indifferent to wheter you used lower case when typing
         # in a command or not..
         inp = (inp or u'').lower()
 
-        if 'sysop' in session.user.groups and inp == 'd':
+        if 'sysop' in session.user.groups and inp == u'd':
             while True:
                 questionnumber = query_question()
-                if questionnumber == 999:
+                if questionnumber == -1:
                     break
                 delete_question(questionnumber)
-        elif inp == 'r':
+        elif inp == u'r':
             while True:
                 questionnumber = query_question()
-                if questionnumber == 999:
+                if questionnumber == -1:
                     break
                 list_results(questionnumber)
-        elif inp == 'v':
+        elif inp == u'v':
             while True:
                 questionnumber = query_question()
-                if questionnumber == 999:
+                if questionnumber == -1:
                     break
                 vote(questionnumber)
-        elif inp == 'a':
+        elif inp == u'a':
             add_question()
-        elif inp == 'q':
+        elif inp == u'q':
             return
         else:
             # if no valid key is pressed then do some ami/x esthetics.
-            echo(term.red + '\r\nNo such command. Try again.\r\n')
-            waitprompt()
+            echo(term.red(u'\r\nNo such command. Try again.\r\n'))
+            waitprompt(term)

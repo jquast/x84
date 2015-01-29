@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""" Password reset script for x/84, http://github.com/jquast/x84 """
+""" Password reset script for x/84. """
 from __future__ import division
 
 import string
@@ -159,7 +159,7 @@ def display_banner_animation(banner_text):
     echo(term.move_up())
 
     guess = get_garbage()
-    for idx in range(0, animation_length):
+    for _ in range(0, animation_length):
         # check for screen resize
         if session.poll_event('refresh'):
             # remove artifacts, get new center

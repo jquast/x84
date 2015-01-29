@@ -221,9 +221,11 @@ def init_bbs_ini():
     cfg_bbs.set('session', 'default_encoding', 'utf8')
 
     cfg_bbs.add_section('irc')
-    cfg_bbs.set('irc', 'server', 'irc.efnet.org')
+    cfg_bbs.set('irc', 'server', 'efnet.portlane.se')
     cfg_bbs.set('irc', 'port', '6667')
     cfg_bbs.set('irc', 'channel', '#1984')
+    cfg_bbs.set('irc', 'enable_privnotice', 'yes')
+    cfg_bbs.set('irc', 'maxnick', '9')
     cfg_bbs.set('irc', 'ssl', 'no')
 
     cfg_bbs.add_section('shroo-ms')
@@ -241,47 +243,19 @@ def init_bbs_ini():
     cfg_bbs.set('nua', 'max_email', '30')
     cfg_bbs.set('nua', 'max_location', '24')
     cfg_bbs.set('nua', 'allow_apply', 'yes')
-    invalid_handles = u','.join((
-        ','.join(cfg_bbs.get('matrix', 'byecmds').split()),
-        ','.join(cfg_bbs.get('matrix', 'newcmds').split()),
+    invalid_handles = u', '.join((
+        cfg_bbs.get('matrix', 'byecmds'),
+        cfg_bbs.get('matrix', 'newcmds'),
         'anonymous', 'sysop',))
     cfg_bbs.set('nua', 'invalid_handles', invalid_handles)
     cfg_bbs.set('nua', 'handle_validation', '^[A-Za-z0-9]{3,11}$')
 
     cfg_bbs.add_section('msg')
     cfg_bbs.set('msg', 'max_subject', '40')
-    # maximum recursion for searching 'head' in a reply-to chain;
-    # as each get_msg() is a lookup, thread-related sorting could
-    # become too expensive.
-    cfg_bbs.set('msg', 'max_depth', '8')
-
-    # not implemented
     # by default, anybody can make up a new tag. otherwise, only
-    # those of groups specified may.
-#    cfg_bbs.set('msg', 'moderated_tags', 'no')
-#    cfg_bbs.set('msg', 'tag_moderators', 'sysop, moderator')
-
-    cfg_bbs.add_section('dosemu')
-    cfg_bbs.set('dosemu', 'enabled', 'no')
-    cfg_bbs.set('dosemu', 'bin', '/usr/bin/dosemu')
-    cfg_bbs.set('dosemu', 'home', '/DOS')
-#    # set to a valid folder to enable lord; dropfile is placed in lord folder.
-#    cfg_bbs.set('dosemu', 'lord_path', '/DOS/X/lord')
-#    cfg_bbs.set('dosemu', 'lord_dropfile', 'DORINFO')
-#    cfg_bbs.set('dosemu', 'lord_args',
-#                '-quiet -I \'$_com1 = "virtual"\' \'X:\\LORD\\START.BAT %%#\'')
-
-    cfg_bbs.add_section('sesame')
-    cfg_bbs.set('sesame', 'CavesOfPhear', '/usr/bin/phear')
-    cfg_bbs.set('sesame', 'CavesOfPhear_key', '!')
-    cfg_bbs.set('sesame', 'FrozenDepths', '/usr/bin/frozendepths')
-    cfg_bbs.set('sesame', 'FrozenDepths_key', '@')
-    cfg_bbs.set('sesame', 'DopeWars',
-                ('/usr/bin/dopewars -a -P {session[handle]} '
-                 '--single-player -u none'))
-    cfg_bbs.set('sesame', 'DopeWars_key', '$')
-    cfg_bbs.set('sesame', 'MyMan', '/usr/bin/myman')
-    cfg_bbs.set('sesame', 'MyMan_key', '&')
+    # those of the groups specified may.
+    cfg_bbs.set('msg', 'moderated_tags', 'no')
+    cfg_bbs.set('msg', 'tag_moderators', 'sysop, moderator')
 
     return cfg_bbs
 
@@ -322,7 +296,7 @@ def init_log_ini():
 
     cfg_log.add_section('loggers')
     cfg_log.set('loggers', 'keys',
-                'root, sqlitedict, paramiko, xmodem, requests')
+                'root, sqlitedict, paramiko, xmodem, requests, irc')
 
     cfg_log.add_section('logger_root')
     cfg_log.set('logger_root', 'level', 'INFO')
@@ -356,6 +330,13 @@ def init_log_ini():
     cfg_log.set('logger_requests', 'formatter', 'default')
     cfg_log.set('logger_requests', 'handlers', 'console, rotate_daily')
     cfg_log.set('logger_requests', 'qualname', 'requests')
+
+    # squelch irc debug, privacy-invasive
+    cfg_log.add_section('logger_irc')
+    cfg_log.set('logger_irc', 'level', 'INFO')
+    cfg_log.set('logger_irc', 'formatter', 'default')
+    cfg_log.set('logger_irc', 'handlers', 'console, rotate_daily')
+    cfg_log.set('logger_irc', 'qualname', 'irc.client')
 
     return cfg_log
 

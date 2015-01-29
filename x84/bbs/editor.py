@@ -39,7 +39,7 @@ class LineEditor(object):
     def __init__(self, width=None, content=u'', hidden=False,
                  colors=None, glyphs=None, keyset=None):
         """
-        Class constructor.
+        Class initializer.
 
         :param int width: the maximum input length.
         :param str content: given default content.
@@ -137,7 +137,13 @@ class LineEditor(object):
         return u''.join((disp_lightbar, content, self._term.cursor_visible))
 
     def process_keystroke(self, keystroke):
-        """ Process the keystroke and return string to refresh. """
+        """
+        Process the keystroke and return string to refresh.
+
+        :param blessed.keyboard.Keystroke keystroke: input from ``inkey()``.
+        :rtype: str
+        :returns: string sequence suitable for refresh.
+        """
         self._quit = False
         keystroke = hasattr(keystroke, 'code') and keystroke.code or keystroke
         if keystroke in self.keyset['refresh']:
@@ -205,15 +211,15 @@ class ScrollingEditor(AnsiWindow):
 
     def __init__(self, *args, **kwargs):
         """
-        Class constructor.
+        Class initializer.
 
         :param int width: width of window.
         :param int yloc: y-location of window.
         :param int xloc: x-location of window.
-        :param int max_length: maximum length of input (may be larger than width).
-        :param dict colors: color theme, only key value of ``highlight`` is used.
+        :param int max_length: maximum length of input (even when scrolled).
+        :param dict colors: color theme.
         :param dict glyphs: bordering window character glyphs.
-        :param dict keyset: command keys, global ``PC_KEYSET`` is used by default.
+        :param dict keyset: command keys, global ``PC_KEYSET`` is default.
         """
         self._term = getterminal()
         self._horiz_shift = 0
@@ -379,7 +385,13 @@ class ScrollingEditor(AnsiWindow):
         self._input_length = self._term.length(value)
 
     def process_keystroke(self, keystroke):
-        """ Process the keystroke and return string to refresh. """
+        """
+        Process the keystroke and return string to refresh.
+
+        :param blessed.keyboard.Keystroke keystroke: input from ``inkey()``.
+        :rtype: str
+        :returns: string sequence suitable for refresh.
+        """
         self._quit = False
         rstr = u''
         keystroke = hasattr(keystroke, 'code') and keystroke.code or keystroke

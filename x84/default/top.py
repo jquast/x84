@@ -1,5 +1,5 @@
 """
-Post-login screen for x/84, http://github.com/jquast/x84
+Post-login screen for x/84.
 
 When handle is None or u'', an in-memory account 'anonymous' is created
 and assigned to the session.
@@ -15,7 +15,11 @@ import os
 from x84.bbs import getterminal, showart, echo, get_ini
 from x84.bbs import getsession, get_user, User, LineEditor
 from x84.bbs import goto, gosub, DBProxy, syncterm_setfont
-from x84.default.common import coerce_terminal_encoding
+from x84.default.common import (
+    coerce_terminal_encoding,
+    show_description,
+    waitprompt,
+)
 
 # 3rd
 from sauce import SAUCE
@@ -165,7 +169,7 @@ def get_user_record(handle):
     If handle is ``anonymous``, Create and return a new User object.
     """
     if handle == u'anonymous':
-        log.debug('anonymous login'.format(handle))
+        log.debug('anonymous login')
         return User(u'anonymous')
 
     log.debug('login by {0!r}'.format(handle))
@@ -263,24 +267,16 @@ def describe_ssh_availability(term, session):
                  else u'')
     big_msg = term.bold_blue("Big Brother is Watching You")
     description = (
-        "    {term.red}You are using {session.kind}, but ssh is available "
-        "on port {ssh_port} of this server.  If you want a secure connection "
-        "with shorter latency, we recommend instead to use ssh!  {about_key}"
-        "Remember: {big_msg}!"
-        .format(term=term,
-                session=session,
-                ssh_port=ssh_port,
-                about_key=about_key,
-                big_msg=big_msg)
-    )
+        u"\r\n\r\n"
+        u"    {term.red}You are using {session.kind}, but ssh is available "
+        u"on port {ssh_port} of this server.  If you want a secure connection "
+        u"with shorter latency, we recommend instead to use ssh!  {about_key}"
+        u"Remember: {big_msg}!\r\n\r\n".format(
+            term=term, session=session, ssh_port=ssh_port,
+            about_key=about_key, big_msg=big_msg))
 
-    echo(u'\r\n\r\n')
-    for txt in term.wrap(description, width=min(80, term.width)):
-        echo(term.move_x(max(0, (term.width // 2) - 40)))
-        echo(term.red(txt.rstrip() + '\r\n'))
-    echo(u'\r\n\r\n')
-    echo(term.center(term.bold_black('Press any key to continue: ')).rstrip())
-    term.inkey()
+    show_description(term, description, color=None)
+    waitprompt(term)
 
 
 def main(handle=None):
@@ -295,11 +291,8 @@ def main(handle=None):
     # attempt to coerce encoding of terminal to match session.
     coerce_terminal_encoding(term, session.encoding)
 
-    # fetch user record
-    user = get_user_record(handle)
-
-    # register call
-    login(session, user)
+    # fetch user record and register, or "log" call
+    login(session, get_user_record(handle))
 
     # display art and prompt for quick login
     quick = do_intro_art(term, session)
@@ -309,32 +302,16 @@ def main(handle=None):
     if not quick:
         describe_ssh_availability(term, session)
 
+        gosub('msgarea', quick=True)
+
         # only display news if the account has not
         # yet read the news since last update.
         gosub('news', quick=True)
 
-        # display last 10 callers, if any
+        # display last 10 callers
         gosub('lc')
 
         # one-liners
         gosub('ol')
 
     goto('main')
-
-    # WIP
-
-    # 6. check for new public/private msgs,
-    #gosub('readmsgs', set())
-    #session.activity = 'top'
-
-    # 8. one-liners
-    # gosub('ol')
-    #session.activity = 'top'
-
-    # 9. weather
-    # if session.user.get('location', None):
-    #    gosub('weather')
-    #session.activity = 'top'
-
-    # 10. automsg
-    # gosub('automsg')

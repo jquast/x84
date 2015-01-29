@@ -1,54 +1,17 @@
 #!/usr/bin/env python2.7
-"""
-x84net message poll for x/84, https://github.com/jquast/x84
+""" x84net message poll for x/84. """
 
-To configure message polling, add a tag for the network to the ``'server_tags'``
-attribute in the ``[msg]`` section of your default.ini.  Optionally include a
-custom 'origin' line.  If not provided, ``"Sent from <bbsname>"`` will be
-used.
-
-Next, create a section using the name of that tag, prefixed with
-``'msgnet_'``.  For example, if the tag is ``'x84net'``, create a
-``'msgnet_x84net'`` section.
-
-The following attributes are required:
-
- - ``url_base``: The base URL for the message network's REST API.
- - ``board_id``: Your board's ID in the network.
- - ``token``: Your board's secure token, assigned to you by the network admin.
-
-The following attributes are optional:
-
- - ``ca_path``: The path to a CA bundle if the server's CA is not already
-   included in your operating system.
- - ``poll_interval``: The number of seconds elapsed between polling a message
-   network for new messages (default is 1984, ~33 minutes).
-
-If you wish to tag your messages with a custom origin line when they are
-delivered to the network hub, add an 'origin_line' attribute to the ``[msg]``
-section of your ``default.ini``.
-
-Example *default.ini* configuration::
-
-    [msg]
-    network_tags = x84net
-    origin_line = Sent from a mediocre BBS.
-
-    [msgnet_x84net]
-    url_base = https://some.server:8443/api/
-    board_id = 1
-    token = somereallylongtoken
-    poll_interval = 300
-"""
-
-# local imports
+# std imports
 import logging
 import hashlib
 import time
 import json
 import os
 
-# 3rd party imports
+# local
+from . import cmdline
+
+# 3rd-party
 import requests
 
 
@@ -144,7 +107,7 @@ def push_rest(net, msg, parent):
 
 
 def get_networks():
-    " Get configured message networks. "
+    """ Get list configured message networks. """
     from x84.bbs import get_ini
 
     log = logging.getLogger(__name__)
@@ -189,7 +152,7 @@ def get_networks():
                          "option {key}, value={ca_path}.  default ca_verify "
                          "will be used. ".format(section=section,
                                                  key='ca_path',
-                                                 value=ca_path))
+                                                 ca_path=ca_path))
             else:
                 net['verify'] = ca_path
 
@@ -198,6 +161,9 @@ def get_networks():
 
 
 def get_last_msg_id(last_file):
+    """ Get the "last message id" by data file ``last_file``. """
+    # TODO(jquast): This should have been done internally (and far
+    #               more easily!) by a DBProxy database.
     last_msg_id = -1
 
     log = logging.getLogger(__name__)
@@ -219,7 +185,7 @@ def get_last_msg_id(last_file):
 
 
 def poll_network_for_messages(net):
-    " pull for new messages of network, storing locally. "
+    """ Poll for new messages of network, ``net``. """
     from x84.bbs import Msg, DBProxy
     from x84.bbs.msgbase import to_localtime
 
@@ -294,7 +260,7 @@ def poll_network_for_messages(net):
 
 
 def publish_network_messages(net):
-    " Push messages to network. "
+    """ Push messages to network, ``net``. """
     from x84.bbs import DBProxy
     from x84.bbs.msgbase import format_origin_line, MSGDB
 
@@ -354,14 +320,16 @@ def publish_network_messages(net):
 
 
 def poller(poll_interval):
+    """ Blocking function periodically polls configured message networks. """
     log = logging.getLogger(__name__)
 
     # get all networks
     networks = get_networks()
 
-    while networks:
-        poll(networks)
-        time.sleep(poll_interval)
+    if networks:
+        while True:
+            do_poll(networks)
+            time.sleep(poll_interval)
     else:
         log.error(u'No networks configured for poll/publish.')
 
@@ -378,7 +346,7 @@ def main(background_daemon=True):
     :rtype: None
     """
     from threading import Thread
-    from x84.bbs import get_ini
+    from x84.bbs.ini import get_ini
 
     log = logging.getLogger(__name__)
 
@@ -396,9 +364,12 @@ def main(background_daemon=True):
         poller(poll_interval)
 
 
-def poll(networks):
-    """ message polling process """
+def do_poll(networks):
+    """
+    Message polling process.
 
+    Function is called periodically by :func:`poller`.
+    """
     # pull-from all networks
     map(poll_network_for_messages, networks)
 
@@ -411,9 +382,8 @@ if __name__ == '__main__':
     # as we are running outside of the 'engine' context, it is necessary
     # for us to initialize the .ini configuration scheme so that the list
     # of web modules and ssl options may be gathered.
-    import x84.engine
     import x84.bbs.ini
-    x84.bbs.ini.init(*x84.engine.parse_args())
+    x84.bbs.ini.init(*cmdline.parse_args())
 
     # do not execute message polling as a background thread.
     main(background_daemon=False)

@@ -1,6 +1,4 @@
-"""
-last callers web module for x/84, https://github.com/jquast/x84
-"""
+""" last callers web module for x/84. """
 
 import web
 from datetime import datetime
