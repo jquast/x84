@@ -40,24 +40,24 @@ def lb_init(position=None, menu_index=None):
         ('c', 'chAt'),
         ('i', 'iRC chAt'),
         ('',  '                  '),
-        ('',  '----[FIleS]----'),
+        ('',  '----[DaT@]----'),
         ('fb', 'FIle BrOWsEr'),
         ('',  '                  '),
         ('',  '----[SeRVIcES]----'),
+        ('w', "whO'S ONliNE"),
+        ('u', 'uSER LiST'),
         ('l', 'lASt CAllS'),
         ('o', 'oNE liNERS'),
         ('b', 'bbS NEXUS'),
         ('f', 'WeAThER fORECASt'),
         ('t', 'tEtRiS'),
         ('v', "vOtINg BoOth"),
-        ('w', "whO'S ONliNE"),
+        ('e', 'edit PROfilE'),
         ('',  '                  '),
         ('',  '-----[SySTeM]-----'),
         ('!', 'ENCOdiNG'),
         ('kb', 'kEYbOaRd tESt'),
-        ('s', 'sYS. iNfO'),
-        ('u', 'uSER LiST'),
-        ('e', 'edit PROfilE'), ]
+        ('s', 'sYS. iNfO'), ]
 
     if ini.CFG.getboolean('dosemu', 'enabled') and (
             ini.CFG.get('dosemu', 'lord_path') != 'no'):
