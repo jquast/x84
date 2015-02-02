@@ -15,7 +15,7 @@ from x84.bbs import (
     echo,
     ini,
 )
-from x84.default.common import (
+from .common import (
     render_menu_entries,
     display_banner,
     display_prompt,
