@@ -43,6 +43,9 @@ def lb_init(position=None, menu_index=None):
         ('',  '----[DaT@]----'),
         ('fb', 'FIle BrOWsEr'),
         ('',  '                  '),
+        ('',  '----[gAMeS]----'),
+        ('gt', 'tEtRiS'),
+        ('',  '                  '),
         ('',  '----[SeRVIcES]----'),
         ('w', "whO'S ONliNE"),
         ('u', 'uSER LiST'),
@@ -50,14 +53,13 @@ def lb_init(position=None, menu_index=None):
         ('o', 'oNE liNERS'),
         ('b', 'bbS NEXUS'),
         ('f', 'WeAThER fORECASt'),
-        ('t', 'tEtRiS'),
         ('v', "vOtINg BoOth"),
         ('e', 'edit PROfilE'),
         ('',  '                  '),
         ('',  '-----[SySTeM]-----'),
         ('!', 'ENCOdiNG'),
         ('kb', 'kEYbOaRd tESt'),
-        ('s', 'sYS. iNfO'), ]
+        ('s', 'sYS. iNfO'),]
 
     if ini.CFG.getboolean('dosemu', 'enabled') and (
             ini.CFG.get('dosemu', 'lord_path') != 'no'):
@@ -90,7 +92,8 @@ def lb_init(position=None, menu_index=None):
     if 'sysop' in session.user.groups:
         entries += (('v', 'VidEO CASSEttE'),)
 
-    entries += (('g', 'gOOdbYE /lOGOff'),)
+    entries += (('',  '                  '),)
+    entries += (('g', 'gOOdbYE / lOGOff'),)
 
     lightbar.update(entries)
 
@@ -128,13 +131,12 @@ def lb_refresh(lb_pager=None):
 def show_banner():
     """ Display main menu banner """
     from x84.bbs import showart, echo, getterminal
+    from common import display_banner
     import os
 
+    art_encoding = 'cp437'
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'main.ans')
-
-    # displays a centered main menu header in topaz encoding for utf8
-    for line in showart(artfile, 'topaz', center=True):
-        echo(line)
+    line_no = display_banner(filepattern=artfile, encoding=art_encoding)
 
 
 def main():
@@ -156,7 +158,7 @@ def main():
         'o': 'ol',
         'b': 'bbslist',
         'f': 'weather',
-        't': 'tetris',
+        'gt': 'tetris',
         'w': 'online',
         '!': 'charset',
         'kb': 'extras.test_keyboard_keys',
