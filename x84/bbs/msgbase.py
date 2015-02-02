@@ -67,10 +67,13 @@ def list_msgs(tags=None):
     return set(int(key) for key in DBProxy(MSGDB).keys())
 
 
-def list_privmsgs(handle):
+def list_privmsgs(handle=None):
     """ Return all private messages for given user handle. """
     db_priv = DBProxy(PRIVDB)
-    return db_priv.get(handle, set())
+    if handle:
+        return db_priv.get(handle, set())
+    # flatten list of [set(1, 2), set(3, 4)] to set(1, 2, 3, 4)
+    return set([_idx for indices in db_priv.values() for _idx in indices])
 
 
 def list_tags():
@@ -175,17 +178,23 @@ class Msg(object):
                 db_tag[tag] = set([self.idx])
 
         # persist message as child to parent;
-        assert self.parent not in self.children
+        assert self.parent not in self.children, ('circular reference',
+                                                  self.parent, self.children)
         if self.parent is not None:
-            parent_msg = get_msg(self.parent)
-            if self.idx != parent_msg.idx:
-                parent_msg.children.add(self.idx)
-                parent_msg.save()
+            try:
+                parent_msg = get_msg(self.parent)
+            except KeyError:
+                log.warn('Child message {0}.parent = {1}: '
+                         'parent does not exist!'.format(self.idx, self.parent))
             else:
-                log.error('Parent idx same as message idx; stripping')
-                self.parent = None
-                with db_msg:
-                    db_msg['%d' % (self.idx)] = self
+                if self.idx != parent_msg.idx:
+                    parent_msg.children.add(self.idx)
+                    parent_msg.save()
+                else:
+                    log.error('Parent idx same as message idx; stripping')
+                    self.parent = None
+                    with db_msg:
+                        db_msg['%d' % (self.idx)] = self
 
         # persist message record to PRIVDB
         if 'public' not in self.tags:

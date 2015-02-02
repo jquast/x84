@@ -9,7 +9,7 @@ of the original main.py first !!)
 """
 
 __author__ = 'megagumbo'
-__version__ = 1.0
+__version__ = 1.1
 
 
 def lb_init(position=None, menu_index=None):
@@ -31,24 +31,30 @@ def lb_init(position=None, menu_index=None):
 
     # Lightbar main menu entries
     entries = [
-        #('',  '-----[COmMs]-----'),
+        ('',  '-----[COmMs]-----'),
         ('$', 'rEAD bUllETiNS'),
         ('n', 'latest nEWS'),
-        ('p', 'pOSt A MSG'),
-        ('r', 'rEAd All MSGS'),
+        ('hn', 'hACkEr nEWS'),
+        # ('p', 'pOSt A MSG'),
+        ('r', 'MEsSAgE ArEAs'),
         ('c', 'chAt'),
         ('i', 'iRC chAt'),
-        #('',  '                  '),
-        #('',  '----[SeRVIcES]----'),
+        ('',  '                  '),
+        ('',  '----[FIleS]----'),
+        ('fb', 'FIle BrOWsEr'),
+        ('',  '                  '),
+        ('',  '----[SeRVIcES]----'),
         ('l', 'lASt CAllS'),
         ('o', 'oNE liNERS'),
         ('b', 'bbS NEXUS'),
         ('f', 'WeAThER fORECASt'),
         ('t', 'tEtRiS'),
+        ('v', "vOtINg BoOth"),
         ('w', "whO'S ONliNE"),
-        #('',  '                  '),
-        #('',  '-----[SySTeM]-----'),
+        ('',  '                  '),
+        ('',  '-----[SySTeM]-----'),
         ('!', 'ENCOdiNG'),
+        ('kb', 'kEYbOaRd tESt'),
         ('s', 'sYS. iNfO'),
         ('u', 'uSER LiST'),
         ('e', 'edit PROfilE'), ]
@@ -141,7 +147,9 @@ def main():
         '$': 'bulletins',
         'n': 'news',
         'p': 'writemsg',
-        'r': 'readmsgs',
+        'r': 'msgarea',
+        'fb': 'fbrowse',
+        'hn': 'hackernews',
         'c': 'chat',
         'i': 'ircchat',
         'l': 'lc',
@@ -151,8 +159,10 @@ def main():
         't': 'tetris',
         'w': 'online',
         '!': 'charset',
+        'kb': 'extras.test_keyboard_keys',
         's': 'si',
         'u': 'userlist',
+        'v': 'vote',
         'e': 'profile',
         'x': 'main',
         'g': 'logoff',

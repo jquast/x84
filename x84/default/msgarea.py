@@ -30,6 +30,7 @@ from x84.bbs import (
     get_ini,
     get_msg,
     timeago,
+    DBProxy,
     gosub,
     echo,
     Msg,
@@ -49,13 +50,19 @@ import dateutil
 TIME_FMT = '%A %b-%d, %Y at %r UTC'
 
 #: banner art displayed in main()
-art_file = 'art/hx-msg.ans'
+art_file = get_ini(
+    section='msgarea', key='art_file'
+) or 'art/hx-msg.ans'
 
 #: character encoding of banner art
-art_encoding = 'cp437'
+art_encoding = get_ini(
+    section='msgarea', key='art_encoding'
+) or 'cp437'
 
 #: preferred fontset for SyncTerm emulator
-syncterm_font = 'topaz'
+syncterm_font = get_ini(
+    section='msgarea', key='syncterm_font'
+) or 'topaz'
 
 #: When set False, menu items are not colorized and render much
 #: faster on slower systems (such as raspberry pi).
@@ -111,7 +118,7 @@ def get_menu(messages):
             MenuItem(u'v', u'private ({0})'.format(len(messages['private'])))
         )
     items.extend([
-        MenuItem(u'n', u'post public'),
+        MenuItem(u'p', u'post public'),
         MenuItem(u'w', u'write private'),
         MenuItem(u'c', u'change area'),
         MenuItem(u'?', u'help'),
@@ -142,8 +149,17 @@ def get_messages_by_subscription(session, subscription):
             messages_bytag[tag_pattern]['all'].update(msg_indicies)
         messages_bytag[tag_pattern]['new'] = (
             messages_bytag[tag_pattern]['all'] - messages_read)
+
+    # now occlude all private messages :)
+    all_private = list_privmsgs(None)
+    messages['new'] -= all_private
+    messages['all'] -= all_private
+
+    # and make a list of only our own
     messages['private'] = list_privmsgs(session.user.handle)
-    messages['new'] = ((messages['all'] | messages['private']) - messages_read)
+
+    # and calculate 'new' messages
+    messages['new'] = (messages['all'] | messages['private']) - messages_read
 
     return messages, messages_bytag
 
@@ -154,7 +170,7 @@ def describe_message_area(term, subscription, messages_bytags, colors):
         colors['highlight'](u'msgarea: '),
         colors['text'](u', ').join((
             u''.join((
-                quote(term, tag_pattern, colors),
+                quote(tag_pattern, colors),
                 u'({num_new}/{num_all})'.format(
                     num_new=get_num(messages_bytags, tag_pattern, 'new'),
                     num_all=get_num(messages_bytags, tag_pattern, 'all'))
@@ -164,7 +180,7 @@ def describe_message_area(term, subscription, messages_bytags, colors):
 
 
 def validate_tag_patterns(tag_patterns):
-    all_tags = list_tags()
+    all_tags = list_tags() or set([u'public'])
     removed = []
     for tag_pattern in set(tag_patterns):
         if not fnmatch.filter(all_tags, tag_pattern):
@@ -173,13 +189,14 @@ def validate_tag_patterns(tag_patterns):
     return removed, tag_patterns
 
 
-def quote(term, txt, colors):
+def quote(txt, colors):
     return u''.join(((u'"'), colors['highlight'](txt), (u'"')))
 
 
 def do_describe_available_tags(term, colors):
     sorted_tags = sorted([(len(list_msgs(tags=(tag,))), tag)
-                          for tag in list_tags()], reverse=True)
+                          for tag in list_tags() or [u'public']
+                          ], reverse=True)
     decorated_tags = [
         colors['text'](tag) +
         colors['lowlight']('({0})'.format(num_msgs))
@@ -206,13 +223,13 @@ def get_network_tag_description(term, colors):
                        'messaging, '),
         u''.join((
             colors['text'](u'hosting network messages by tag '),
-            u', '.join(quote(term, tag, colors) for tag in server_tags),
+            u', '.join(quote(tag, colors) for tag in server_tags),
         )) if server_tags else u'',
         (colors['text'](
             u' and ') if (server_tags and network_tags) else u''),
         u''.join((
             colors['text'](u'participating in network messages by tag '),
-            u', '.join(quote(term, tag, colors) for tag in network_tags),
+            u', '.join(quote(tag, colors) for tag in network_tags),
         )) if network_tags else u'',
         u'.',
     ))
@@ -232,7 +249,7 @@ def do_describe_message_system(term, colors):
                 u'Finally, private messages may be shared among groups.  You '
                 u'may post messages to any group you are a member of: '),
             colors['text'](
-                u', '.join(quote(term, grp, colors) for grp in groups)),
+                u', '.join(quote(grp, colors) for grp in groups)),
             colors['text'](u'.')
         ))
 
@@ -243,26 +260,26 @@ def do_describe_message_system(term, colors):
             u'message stored on this system.  A tag might provide the '
             u'general label of the topic of conversation, which may be '
             u'subscribed to.  For example, '),
-        quote(term, u'python', colors),
+        quote(u'python', colors),
         colors['text'](
             u' may be used for topics related to the python programming '
             u'language.  This is similar to flicker or gmail tags, or '
             u'hashtags.  Public messages are always tagged '),
-        quote(term, u'public', colors),
+        quote(u'public', colors),
         colors['text'](u'.  '),
         get_network_tag_description(term, colors),
         u'\r\n\r\n',
         colors['text'](
             u'Furthermore, glob expressions may be used such as '),
-        quote(term, u'*', colors),
+        quote(u'*', colors),
         u' ',
         colors['text']('for all messages, or expression '),
-        quote(term, u'lang-*', colors),
+        quote(u'lang-*', colors),
         u' ',
         colors['text']('might subscribe to both '),
-        quote(term, u'lang-python', colors),
+        quote(u'lang-python', colors),
         colors['text'](u' and '),
-        quote(term, u'lang-go', colors),
+        quote(u'lang-go', colors),
         colors['text'](u'.'),
         describe_group_tags(),
     ))
@@ -426,7 +443,7 @@ def display_message(session, term, msg_index, colors):
     txt_private = (colors['highlight'](' (private)')
                    if not 'public' in msg.tags else u'')
     txt_from = color_handle(msg.author)
-    txt_tags = u', '.join((quote(term, tag, colors)
+    txt_tags = u', '.join((quote(tag, colors)
                            for tag in msg.tags))
     txt_subject = colors['highlight'](msg.subject)
     txt_body = decode_pipe(msg.body)
@@ -455,6 +472,40 @@ def display_message(session, term, msg_index, colors):
                  break_long_words=True)
 
 
+def can_delete(session):
+    moderated = get_ini('msg', 'moderated_tags', getter='getboolean')
+    tag_moderators = set(get_ini('msg', 'tag_moderators', split=True))
+    return ('sysop' in session.user.groups or
+            moderated and tag_moderators & session.user.groups)
+
+
+def delete_message(msg):
+    """ Experimental message delete! """
+    # ! belongs as msg.delete() function !
+    msg.recipient = u''
+    msg.subject = u''
+    msg.body = u''
+    msg.children = set()
+    msg.parent = None
+    msg.tags = set()
+    msg.save()
+    with DBProxy('tags') as tag_db:
+        for key, values in tag_db.items()[:]:
+            if msg.idx in values:
+                newvalue = values - set([msg.idx])
+                if newvalue:
+                    tag_db[key] = newvalue
+                else:
+                    # no more messages by this tag, delete it
+                    del tag_db[key]
+    with DBProxy('privmsg') as priv_db:
+        for key, values in priv_db.items()[:]:
+            if msg.idx in values:
+                priv_db[key] = values - set([msg.idx])
+    with DBProxy('msgbase') as msg_db:
+        del msg_db['%d' % int(msg.idx)]
+
+
 def do_reader_prompt(session, term, index, message_indices, colors):
     xpos = max(0, (term.width // 2) - (80 // 2))
     opts = []
@@ -464,6 +515,8 @@ def do_reader_prompt(session, term, index, message_indices, colors):
         opts += (('n', 'ext'),)
     if allow_tag(session, message_indices[index]):
         opts += (('e', 'dit tags'),)
+    if can_delete(session):
+        opts += (('D', 'elete'),)
     opts += (('r', 'eply'),)
     opts += (('q', 'uit'),)
     opts += (('idx', ''),)
@@ -507,6 +560,9 @@ def do_reader_prompt(session, term, index, message_indices, colors):
                 echo(u'\r\n')
                 msg.save()
             return index
+        elif inp == u'D' and can_delete(session):
+            delete_message(msg=get_msg(message_indices[index]))
+            return None
         elif inp == u'r':
             # write message reply
             msg = create_reply_message(session=session,
@@ -810,6 +866,10 @@ def prompt_body(term, msg, colors):
     with term.fullscreen():
         content = gosub('editor', save_key=None,
                         continue_draft=msg.body)
+    # set syncterm font, if any
+    if term.kind.startswith('ansi'):
+        echo(syncterm_setfont(syncterm_font))
+    echo(term.move(term.height, 0) + term.normal + u'\r\n')
     if content and content.strip():
         msg.body = content
         return True
@@ -866,7 +926,7 @@ def prompt_tags(session, term, msg, colors, public=True):
             cannot_tag = [_tag for _tag in msg.tags if _tag not in all_tags]
             if cannot_tag:
                 echo(u''.join((u'\r\n', term.move_x(xpos),
-                               u', '.join((quote(term, tag, colors)
+                               u', '.join((quote(tag, colors)
                                            for tag in cannot_tag)),
                                u': not allowed; this system is moderated.')))
                 term.inkey(2)

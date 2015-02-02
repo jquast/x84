@@ -2,6 +2,7 @@
 # std imports
 from __future__ import division
 import collections
+import logging
 import math
 
 # local
@@ -18,7 +19,7 @@ WindowDimension = collections.namedtuple(
 #: for ytalk-like version of split-screen of small windows, show user@bbs
 system_bbsname = get_ini(section='system', key='bbsname')
 
-ANSWER, HANGUP = 1, 2
+ANSWER, HANGUP, REJECTED = 1, 2, 3
 
 art_encoding = 'cp437'
 
@@ -123,24 +124,22 @@ def get_editors(top_winsize, bot_winsize, top_editors, bot_editors):
             make_editor_series(bot_winsize, bot_editors))
 
 
-def do_chat(session, term, other_sid, dial=None, call_from=None):
+def do_chat(session, term, log, other_sid, dial=None, call_from=None):
     """ Main procedure. """
     editor = None
     dirty = True
     top_idx = bot_idx = 0
     dialing = bool(dial)
     answering = bool(call_from)
+
+    data = session.flush_event('chat')
+    if data:
+        log.debug('Flushed chat data: %r', data)
+
     session.activity = (u'{doing} {call_from}'.format(
         doing=('answering call from' if answering else
                'requesting chat with'),
         call_from=call_from))
-    log = logging.getLogger(__name__)
-
-    # expunge all 'chat' events before initiating new ones.
-    while True:
-        data = session.poll_event('chat')
-        if data is None:
-            break
 
     # send chat request
     if dial:
@@ -207,6 +206,10 @@ def do_chat(session, term, other_sid, dial=None, call_from=None):
                 display_hangup(term, pos=top_winsize, who=call_from or dial)
                 term.inkey()
                 break
+            elif data == (REJECTED,):
+                display_rejected(term, pos=bot_winsize, who=dial)
+                term.inkey()
+                break
             elif dialing and data == (ANSWER,):
                 dialing = False
                 dirty = True
@@ -233,6 +236,11 @@ def display_answering(term, pos, who):
 def display_hangup(term, pos, who):
     echo(term.move(pos.yloc + (pos.height // 2), pos.xloc))
     echo(u'{0} hung up.'.format(who).center(pos.width).rstrip())
+
+
+def display_rejected(term, pos, who):
+    echo(term.move(pos.yloc + (pos.height // 2), pos.xloc))
+    echo(u'{0} is rejecting chat requests.'.format(who).center(pos.width).rstrip())
 
 
 def do_answer(term, session, other_sid):
@@ -314,6 +322,14 @@ def do_hangup(session, other_sid):
 
 def main(*args, **kwargs):
     session, term = getsession(), getterminal()
+    log = logging.getLogger(__name__)
+
+    if kwargs.get('call_from') and session.kind not in ('telnet', 'ssh'):
+        # reject chat requests unless we are a tty terminal of telnet or ssh.
+        route_data = (kwargs['other_sid'], 'chat') + (REJECTED,)
+        session.send_event('route', route_data)
+        log.debug("Rejected chat request; session.kind=%s", session.kind)
+        return True
 
     # set syncterm font, if any
     if syncterm_font and term.kind.startswith('ansi'):
@@ -321,6 +337,6 @@ def main(*args, **kwargs):
 
     with term.fullscreen():
         try:
-            return do_chat(session, term, *args, **kwargs)
+            return do_chat(session, term, log=log, *args, **kwargs)
         finally:
             do_hangup(session, other_sid=kwargs['other_sid'])

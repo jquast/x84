@@ -18,11 +18,12 @@ def prompt_resize_term(session, term, name):
                    term.height == want_rows):
             resize_msg = (u'Please resize your window to {0} x {1} '
                           u'current size is {term.width} x {term.height} '
-                          u'(or press return).'.format(
-                              want_cols, want_rows, term=term))
+                          u'or press return.  Press escape to cancel.'
+                          .format(want_cols, want_rows, term=term))
             echo(term.normal + term.home + term.clear_eos + term.home)
             pager = Pager(yloc=0, xloc=0, width=want_cols, height=want_rows,
                           colors={'border': term.bold_red})
+            echo(term.move(term.height - 1, term.width))
 
             echo(pager.refresh() + pager.border())
 
@@ -36,10 +37,15 @@ def prompt_resize_term(session, term, name):
 
             if event == 'input':
                 session.buffer_input(data, pushback=True)
-                if term.inkey(0).code == term.KEY_ENTER:
-                    break
+                inp = term.inkey(0)
+                while inp:
+                    if inp.code == term.KEY_ENTER:
+                        echo(term.normal + term.home + term.clear_eos)
+                        return True
+                    if inp.code == term.KEY_ESCAPE:
+                        return False
+                    inp = term.inkey(0)
 
-        echo(term.normal + term.home + term.clear_eos)
 
 
 def restore_screen(term, cols, rows):
@@ -136,7 +142,8 @@ def main(name):
     # pylint: disable=W0212
     #         Access to a protected member {_columns, _rows} of a client class
     store_columns, store_rows = term._columns, term._rows
-    prompt_resize_term(session, term, name)
+    if not prompt_resize_term(session, term, name):
+        return
 
     with acquire_node(session, name) as node:
 

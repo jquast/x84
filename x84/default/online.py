@@ -142,9 +142,8 @@ def chat(sessions):
     Sysop will send session id of -1, indicating the chat is forced.
     """
     from x84.bbs import gosub, getsession
-    session = getsession()
     (_, tgt_session) = get_node(sessions)
-    if tgt_session and tgt_session != session:
+    if tgt_session and tgt_session['sid'] != getsession().sid:
         gosub('chat', dial=tgt_session['handle'],
               other_sid=tgt_session['sid'])
 
