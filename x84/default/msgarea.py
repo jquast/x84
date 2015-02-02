@@ -944,4 +944,5 @@ def do_send_message(session, term, msg, colors):
     echo(u''.join((u'\r\n',
                    term.move_x(xpos),
                    colors['highlight']('message sent!'))))
+    session.send_event('global', ('newmsg', msg.idx,))
     term.inkey(1)

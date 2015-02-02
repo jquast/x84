@@ -1,3 +1,5 @@
+2.0.3
+  - minor bug: import common.py as relative from main.py
 2.0.1
   - bugfix: did not include default 'top' art
   - bugfix: could not press 'return' to continue in sesame
