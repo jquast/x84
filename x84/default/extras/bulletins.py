@@ -13,9 +13,13 @@ __version__ = 1.1
 
 
 def showansi(filename):
-    for line in showart(
-            os.path.dirname(__file__) + '../art/' + filename, 'topaz'):
-        echo(line)
+    """ Display main menu banner """
+    from common import display_banner
+    import os
+
+    art_encoding = 'cp437'
+    artfile = os.path.join(os.path.dirname(__file__), 'art', 'bulletinsmenu.ans')
+    line_no = display_banner(filepattern=artfile, encoding=art_encoding)
 
 # ---------------------------------------------------
 
