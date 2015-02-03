@@ -35,29 +35,29 @@ def lb_init(position=None, menu_index=None):
         ('$', 'rEAD bUllETiNS'),
         ('n', 'latest nEWS'),
         ('hn', 'hACkEr nEWS'),
-        # ('p', 'pOSt A MSG'),
         ('r', 'MEsSAgE ArEAs'),
-        ('c', 'chAt'),
         ('i', 'iRC chAt'),
         ('',  '                  '),
-        ('',  '----[FIleS]----'),
+        ('',  '----[DaT@]----'),
         ('fb', 'FIle BrOWsEr'),
         ('',  '                  '),
+        ('',  '----[gAMeS]----'),
+        ('gt', 'tEtRiS'),
+        ('',  '                  '),
         ('',  '----[SeRVIcES]----'),
+        ('w', "whO'S ONliNE"),
+        ('u', 'uSER LiST'),
         ('l', 'lASt CAllS'),
         ('o', 'oNE liNERS'),
         ('b', 'bbS NEXUS'),
         ('f', 'WeAThER fORECASt'),
-        ('t', 'tEtRiS'),
         ('v', "vOtINg BoOth"),
-        ('w', "whO'S ONliNE"),
+        ('e', 'edit PROfilE'),
         ('',  '                  '),
         ('',  '-----[SySTeM]-----'),
         ('!', 'ENCOdiNG'),
         ('kb', 'kEYbOaRd tESt'),
-        ('s', 'sYS. iNfO'),
-        ('u', 'uSER LiST'),
-        ('e', 'edit PROfilE'), ]
+        ('s', 'sYS. iNfO'),]
 
     if ini.CFG.getboolean('dosemu', 'enabled') and (
             ini.CFG.get('dosemu', 'lord_path') != 'no'):
@@ -90,7 +90,8 @@ def lb_init(position=None, menu_index=None):
     if 'sysop' in session.user.groups:
         entries += (('v', 'VidEO CASSEttE'),)
 
-    entries += (('g', 'gOOdbYE /lOGOff'),)
+    entries += (('',  '                  '),)
+    entries += (('g', 'gOOdbYE / lOGOff'),)
 
     lightbar.update(entries)
 
@@ -128,13 +129,12 @@ def lb_refresh(lb_pager=None):
 def show_banner():
     """ Display main menu banner """
     from x84.bbs import showart, echo, getterminal
+    from common import display_banner
     import os
 
+    art_encoding = 'cp437'
     artfile = os.path.join(os.path.dirname(__file__), 'art', 'main.ans')
-
-    # displays a centered main menu header in topaz encoding for utf8
-    for line in showart(artfile, 'topaz', center=True):
-        echo(line)
+    line_no = display_banner(filepattern=artfile, encoding=art_encoding)
 
 
 def main():
@@ -150,13 +150,12 @@ def main():
         'r': 'msgarea',
         'fb': 'fbrowse',
         'hn': 'hackernews',
-        'c': 'chat',
         'i': 'ircchat',
         'l': 'lc',
         'o': 'ol',
         'b': 'bbslist',
         'f': 'weather',
-        't': 'tetris',
+        'gt': 'tetris',
         'w': 'online',
         '!': 'charset',
         'kb': 'extras.test_keyboard_keys',
