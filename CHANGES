@@ -1,5 +1,9 @@
+2.0.4
+  - bugfix: sesame did not honor want_cols/rows when
+    the given terminal size was already of its exact
+    dimensions.
 2.0.3
-  - minor bug: import common.py as relative from main.py
+  - bugfix: import common.py as relative from main.py
 2.0.1
   - bugfix: did not include default 'top' art
   - bugfix: could not press 'return' to continue in sesame

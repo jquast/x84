@@ -45,7 +45,7 @@ def prompt_resize_term(session, term, name):
                     if inp.code == term.KEY_ESCAPE:
                         return False
                     inp = term.inkey(0)
-
+        return True
 
 
 def restore_screen(term, cols, rows):
