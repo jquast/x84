@@ -116,7 +116,7 @@ class X84SFTPServer(SFTPServerInterface):
 
     def _is_uploaddir(self, path):
         """ Check if this is the upload directory. """
-        return ('/{0}'.format(path) == uploads_dirname)
+        return (path == '/{0}'.format(uploads_dirname))
 
     def list_folder(self, path):
         """ List contents of a folder. """
