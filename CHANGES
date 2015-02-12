@@ -1,3 +1,5 @@
+2.0.5
+  - bugfix: ASCII colly diz with extended chars was causing an error
 2.0.4
   - bugfix: sftp server was not properly comparing the current path against the
     __uploads__ directory
