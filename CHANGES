@@ -1,4 +1,5 @@
 2.0.4
+  - bugfix: unicode wasn't being used when messages were quoted
   - bugfix: sftp server was not properly comparing the current path against the
     __uploads__ directory
   - bugfix: sesame did not honor want_cols/rows when
