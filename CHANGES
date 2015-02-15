@@ -1,9 +1,12 @@
-2.0.6
-  - bugfix: invalid values for idle timeout in profile.py would cause an error
+2.0.7
+  - bugfix: ValueError in profile.py for setting bad timeout value
   - bugfix: ASCII colly diz with extended chars was causing an error
+  - bugfix: KeyError in hackernews.py
   - deprecation: the "extras" subfolder of default script has been
     moved to https://github.com/x84-extras
-  - bugfix: KeyError in hackernews.py
+
+  (version 2.0.6 was not released to pypi)
+
 2.0.5
   - bugfix: UnicodeDecodeError when quoting some messages
   - bugfix: '__uploads__' folder not hidden by sftp as intended
