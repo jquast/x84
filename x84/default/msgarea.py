@@ -767,7 +767,7 @@ def main(quick=False):
                 echo(term.move(top_margin, 0) + term.clear_eos)
                 do_describe_message_system(term, colors)
                 waitprompt(term)
-                dirty = 1
+                dirty = 2
             elif inp.lower() == u'q':
                 return
             if given_inp:
