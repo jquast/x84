@@ -358,7 +358,13 @@ def view_article_summaries(session, term, rss_url, rss_title):
     echo(term.move(term.height // 2, 0))
     echo(term.center('Fetching {0} ...'.format(term.bold(rss_url))).rstrip())
     result = feedparser.parse(rss_url)
-    assert result['status'] == 200
+    if result.get('status') != 200:
+        # display 404, 500, or whatever non-200 code returned.
+        moveto_lastline = term.move(term.height, 0)
+        echo(moveto_lastline)
+        echo(term.center('failed: status={0}'.format(result.get('status'))))
+        term.inkey()
+        return
 
     articles = [Article(title=post.title,
                         link=post.link,
