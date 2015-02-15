@@ -1,4 +1,5 @@
 2.0.6
+  - bugfix: invalid values for idle timeout in profile.py would cause an error
   - bugfix: ASCII colly diz with extended chars was causing an error
   - deprecation: the "extras" subfolder of default script has been
     moved to https://github.com/x84-extras
