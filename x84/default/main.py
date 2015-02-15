@@ -157,7 +157,7 @@ def get_menu_items(session):
                  args=(), kwargs={}),
         MenuItem(inp_key=u'key',
                  text=u'keyboard test',
-                 script='extras.test_keyboard_keys',
+                 script='test_keyboard_keys',
                  args=(), kwargs={}),
         MenuItem(inp_key=u'ac',
                  text=u'adjust charset',
