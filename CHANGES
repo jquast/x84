@@ -1,3 +1,7 @@
+2.0.6
+  - bugfix: ASCII colly diz with extended chars was causing an error
+  - deprecation: the "extras" subfolder of default script has been
+    moved to https://github.com/x84-extras
 2.0.5
   - bugfix: UnicodeDecodeError when quoting some messages
   - bugfix: '__uploads__' folder not hidden by sftp as intended
