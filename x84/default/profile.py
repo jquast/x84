@@ -362,7 +362,10 @@ def do_command(term, session, inp, fields, tgt_user, point):
             if field_name == 'timeout':
                 # coerce to integer, set, and if tgt_user is our current
                 # user, then send new value for as engine event
-                timeout_val = int(inp)
+                try:
+                    timeout_val = int(inp)
+                except ValueError:
+                    return True
                 if tgt_user.handle != 'anonymous':
                     tgt_user[field_name] = timeout_val
                 if tgt_user.handle == session.user.handle:
