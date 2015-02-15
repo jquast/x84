@@ -418,9 +418,9 @@ def quote_body(msg):
     txt_sent = msg.stime.replace(
         tzinfo=dateutil.tz.tzlocal()
     ).astimezone(dateutil.tz.tzutc()).strftime(TIME_FMT)
-    txt_who = '|13{0}|07'.format(msg.author)
-    return ('On {txt_sent}, {txt_who} wrote:\r\n'
-            '{quotesep}\r\n{msg.body}\r\n{quotesep}'
+    txt_who = u'|13{0}|07'.format(msg.author)
+    return (u'On {txt_sent}, {txt_who} wrote:\r\n'
+            u'{quotesep}\r\n{msg.body}\r\n{quotesep}'
             .format(txt_sent=txt_sent, txt_who=txt_who,
                     quotesep=(quotesep_char * quotesep_len),
                     msg=msg))
