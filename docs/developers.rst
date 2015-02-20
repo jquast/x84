@@ -16,21 +16,25 @@ for making your own customizations of x/84's engine and api and building your
 own ``'scriptpath'`` (defined by ``~/.x84/default.ini``).  You may also simply
 install x/84 using pip_.
 
-**Debian / Ubuntu**
+**Debian, Ubuntu, Mint**
 
 You should install the following packages::
 
-    $ sudo apt-get install git python python-pip python-virtualenv virtualenvwrapper
+    $ sudo apt-get install build-essentials git libffi-dev libssl-dev python-dev python-setuptools python-pip python-virtualenv virtualenvwrapper
+
+And please make sure you're using an up-to-date version of pip::
+
+    $ sudo pip-2.7 --upgrade pip
 
 **Arch Linux**
 
 You should install the following packages::
 
-    $ sudo pacman -S git python2 python2-pip python2-virtualenv python2-virtualenvwrapper
+    $ sudo pacman -S gcc git libffi python2 python2-pip python2-virtualenv python2-virtualenvwrapper python2-pyopenssl
 
 And please make sure you're using an up-to-date version of pip::
 
-    $ pip-2.7 --upgrade pip
+    $ sudo pip-2.7 --upgrade pip
 
 Virtualenv
 ----------
@@ -40,11 +44,7 @@ you can install x/84 and its dependencies without root access and quickly
 activate the environment at any time, but without affecting system libraries
 or other python projects.
 
-1. Install virtualenvwrapper_::
-
-      pip install virtualenvwrapper
-
-2. Load virtualenvwrapper_::
+1. Load virtualenvwrapper_::
 
       . `which virtualenvwrapper.sh`
 
@@ -53,7 +53,7 @@ or other python projects.
    you change to a project folder. See `virtualenv tips and tricks`_
    if you're interested.
 
-3. Finally, make a virtualenv (named 'x84') using python version 2.7::
+2. Make a virtualenv (named 'x84') using python version 2.7::
 
       mkvirtualenv -p `which python2.7` x84
 
