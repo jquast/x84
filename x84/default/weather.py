@@ -153,7 +153,7 @@ def do_search(term, search):
         xml_stream = StringIO.StringIO(resp.content)
         locations = list([dict(elem.attrib.items())
                           for _, elem in ET.iterparse(xml_stream)
-                          if elem.tag == 'location'])
+                          if 'location' in elem.tag])
         if 0 == len(locations):
             disp_notfound()
         else:
