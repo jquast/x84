@@ -20,7 +20,7 @@ install x/84 using pip_.
 
 You should install the following packages::
 
-    $ sudo apt-get install build-essentials git libffi-dev libssl-dev python-dev python-setuptools python-pip python-virtualenv virtualenvwrapper
+    $ sudo apt-get install build-essential git libffi-dev libssl-dev python-dev python-setuptools python-pip python-virtualenv virtualenvwrapper
 
 And please make sure you're using an up-to-date version of pip::
 
