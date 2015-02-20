@@ -497,7 +497,11 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
                 decoder = 'cp437_art'
                 if session.encoding == 'utf8':
                     decoder = COLLY_DECODING
-                diz = [line.decode(decoder) for line in diz]
+                try:
+                    diz = [line.decode(decoder, errors='replace')
+                           for line in diz]
+                except UnicodeEncodeError:
+                    diz = [u'Invalid characters in FILE_ID.DIZ']
 
         elif ext in browser.diz_extractors:
             # is (supported) archive
@@ -512,7 +516,11 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
             decoder = 'cp437_art'
             if session.encoding == 'utf8':
                 decoder = COLLY_DECODING
-            diz = [line.decode(decoder) for line in diz]
+            try:
+                diz = [line.decode(decoder, errors='replace') for line in diz]
+            except UnicodeEncodeError:
+                diz = [u'Invalid characters in FILE_ID.DIZ']
+                db_desc[relativename] = diz
 
         elif is_flagged_dir(filename):
             # is pseudo-folder for flagged files

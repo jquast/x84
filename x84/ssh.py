@@ -464,7 +464,7 @@ class SshServer(BaseServer):
             self.server_socket.bind((self.address, self.port))
             self.server_socket.listen(self.LISTEN_BACKLOG)
         except socket.error as err:
-            self.log.error('Unable to bind {self.address}:self.port, {err}'
+            self.log.error('Unable to bind {self.address}:{self.port}, {err}'
                            .format(self=self, err=err))
             exit(1)
         self.log.info('ssh listening on {self.address}:{self.port}/tcp'
