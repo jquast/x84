@@ -453,23 +453,22 @@ class Session(object):
         if event == 'gosub':
             save_activity = self.activity
             self.log.info('event-driven gosub: {0}'.format(data))
-            _height, _width = self.terminal.height, self.terminal.width
             try:
                 self.runscript(Script(*data))
             finally:
                 self.activity = save_activity
-                n_height, n_width = self.terminal.height, self.terminal.width
-                if ((_height, _width) != (n_height, n_width)):
-                    # RECURSIVE: we call buffer_event to push-in a duplicate
-                    # "resize" event, so the script that was interrupted has
-                    # an opportunity to adjust to the new terminal dimensions
-                    # if the script that was event-driven as gosub had already
-                    # acquired and reacted to any refresh-resize events.
-                    data = ('resize', (n_height, n_width))
-                    self.buffer_event('refresh', data)
-                # otherwise its fine to not require the calling function to
+                # RECURSIVE: we call buffer_event to push-in a duplicate
+                # "resize" event, so the script that was interrupted has
+                # an opportunity to adjust to the new terminal dimensions
+                # (if any), or in the case of subpar clients such as netrunner
+                # and syncterm that do not handle "alt screen" correctly,
+                # it forces a refresh in the interrupted script, though there
+                # aren't any guarantees.
+                # Otherwise, it is fine to not require the calling function to
                 # refresh -- so long as the target script makes sure(!) to
                 # use the "with term.fullscreen()" context manager.
+                data = ('resize', self.terminal.height, self.terminal.width)
+                self.buffer_event('refresh', data)
             return True
 
         # respond to 'info-req' events by returning pickled session info
