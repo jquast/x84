@@ -1,8 +1,8 @@
 2.0.8
   - bugfix: XML element tag name in weather.py AccuWeather response now
     includes namespace
-2.0.7
   - bugfix: Refresh screen error in msgarea.py
+2.0.7
   - bugfix: ValueError in profile.py for setting bad timeout value
   - bugfix: ASCII colly diz with extended chars was causing an error
   - bugfix: KeyError in hackernews.py
