@@ -46,6 +46,8 @@ def prompt_resize_term(session, term, name):
                         return False
                     inp = term.inkey(0)
         return True
+    # if terminal type is 'ansi', just pass-through
+    return True
 
 
 def restore_screen(term, cols, rows):
