@@ -467,7 +467,7 @@ class Session(object):
                 # Otherwise, it is fine to not require the calling function to
                 # refresh -- so long as the target script makes sure(!) to
                 # use the "with term.fullscreen()" context manager.
-                data = ('resize', self.terminal.height, self.terminal.width)
+                data = ('resize', (self.terminal.height, self.terminal.width,))
                 self.buffer_event('refresh', data)
             return True
 
