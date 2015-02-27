@@ -1,4 +1,6 @@
 2.0.8
+  - bugfix: Fixed a nasty Return value bug in vote.py that could
+    cause a database failure.
   - bugfix: XML element tag name in weather.py AccuWeather response now
     includes namespace
   - bugfix: Refresh screen error in msgarea.py

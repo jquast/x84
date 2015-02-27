@@ -8,7 +8,7 @@ import os
 databasename = 'votingbooth'  # change this to use an alternative database file
 
 __author__ = 'Hellbeard'
-__version__ = 1.1
+__version__ = 1.2
 
 # -----------------------------------------------------------------------------------
 
@@ -184,7 +184,7 @@ def vote(questionnumber):
                      term.move(0, 0) + term.white(u'Your answer: '))
                 le = LineEditor(48)
                 new_alternative = le.read()
-                if new_alternative == '':
+                if new_alternative == '' or new_alternative == None:
                     return
                 results[(questionnumber, int(inp))] = 0  # init..
                 # init..
@@ -236,7 +236,7 @@ def add_question():
     echo(term.clear + term.white + u'\r\nQuestion: ')
     le = LineEditor(65)
     new_question = le.read()
-    if new_question == '':
+    if new_question == '' or new_question == None:
         return
 
     echo(term.bold_black(u'\r\n\r\nLeave a blank line when you are finished..'))
@@ -246,7 +246,7 @@ def add_question():
              term.red + str(new_amount) + term.white + u': ')
         le = LineEditor(48)
         alternatives[(amount_of_questions, new_amount)] = le.read()
-        if alternatives[(amount_of_questions, new_amount)] == '':
+        if alternatives[(amount_of_questions, new_amount)] == '' or alternatives[(amount_of_questions, new_amount)] == None :
             break
         else:
             results[(amount_of_questions, new_amount)] = 0
