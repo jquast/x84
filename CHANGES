@@ -7,6 +7,7 @@
   - workaround: always force refresh on event 'gosub' as terminal clients
     such as syncterm, netrunner, and etherterm do not support the
     "alt screen" sequence well, or at all.
+  - sometimes (when TERM is 'ansi') sesame doors did not run.
 2.0.7
   - bugfix: ValueError in profile.py for setting bad timeout value
   - bugfix: ASCII colly diz with extended chars was causing an error
