@@ -30,7 +30,7 @@ And please make sure you're using an up-to-date version of pip::
 
 You should install the following packages::
 
-    $ sudo pacman -S gcc git libffi python2 python2-pip python2-virtualenv python2-virtualenvwrapper python2-pyopenssl
+    $ sudo pacman -S gcc git libffi python2 python2-pip python2-virtualenv python-virtualenvwrapper python2-pyopenssl
 
 And please make sure you're using an up-to-date version of pip::
 
