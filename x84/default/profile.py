@@ -497,11 +497,13 @@ def get_next_user(tgt_user):
         return get_user(handles[idx - 1])
 
 
-def main():
+def main(tgt_handle=-1):
     """ Main procedure. """
     dirty = -1
     session, term = getsession(), getterminal()
     tgt_user = session.user
+    if(tgt_handle > -1):
+        tgt_user = get_user(tgt_handle)
     legal_input_characters = string.letters + u'<>'
 
     # re-display entire screen on loop,
