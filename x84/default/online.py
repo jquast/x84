@@ -132,7 +132,7 @@ def edit(sessions):
     from x84.bbs import gosub
     (node, tgt_session) = get_node(sessions)
     if node is not None:
-        gosub('profile', tgt_session['handle'])
+        gosub('profile', tgt_handle= tgt_session['handle'])
         return True
 
 
