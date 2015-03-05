@@ -9,7 +9,6 @@ import time
 import imp
 import sys
 import os
-import inspect
 
 # local
 from x84.bbs.exception import Disconnected, Goto
@@ -681,15 +680,6 @@ class Session(object):
         # capture the return value of the script and return
         # to the caller -- so value = gosub('my_game') can retrieve
         # the return value of its main() function.
-        target_args, target_varargs, target_keywords, target_defaults = inspect.getargspec(module.main)
-        default_count = len(() if target_defaults is None else target_defaults) 
-        default_args = set(() if target_args is None else target_args[-default_count:])
-        allowed_args = set(() if target_args is None else target_args).union(set(() if target_keywords is None else target_keywords)) 
-        required_args = allowed_args - default_args
-        provided_args = set(() if script.args is None else script.args).union(set(() if script.kwargs is None else script.kwargs.keys()))
-        if( len(required_args - provided_args) > 0 or len(provided_args - allowed_args) > 0 ):
-            raise RuntimeError("script {0}, module {1}: {2} function argument signature does not match argument(s) passed."
-                               .format(script_name, module, module.main))
         value = module.main(*script.args, **script.kwargs)
 
         # remove the current script from the script stack, since it has
