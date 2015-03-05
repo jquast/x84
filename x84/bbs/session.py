@@ -677,6 +677,7 @@ class Session(object):
         if not callable(module.main):
             raise RuntimeError("script {0}, module {1}: {2} not callable."
                                .format(script_name, module, module.main))
+                               
         # capture the return value of the script and return
         # to the caller -- so value = gosub('my_game') can retrieve
         # the return value of its main() function.
