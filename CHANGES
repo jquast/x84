@@ -1,3 +1,7 @@
+2.0.9
+  - bugfix: profile.py now accepts a target handle as an optional
+    argument to its main() function, so online.py can successfully
+    launch the profile editor for online users.
 2.0.8
   - bugfix: Fixed a nasty Return value bug in vote.py that could
     cause a database failure.
