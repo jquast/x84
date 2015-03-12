@@ -1,3 +1,6 @@
+2.0.10
+  - bugfix: display updates when posting to oneliners, issue #235
+
 2.0.9
   - bugfix: profile.py now accepts a target handle as an optional
     argument to its main() function, so online.py can successfully

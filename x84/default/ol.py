@@ -491,7 +491,7 @@ def do_prompt(term, session):
                         # user has said something to the local database,
                         # refresh it so that they can beam with pride ...
                         dirty = 1
-                        continue
+                        break
 
                     # only redraw prompt (user canceled)
                     dirty = 2
