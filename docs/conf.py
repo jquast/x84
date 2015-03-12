@@ -48,7 +48,7 @@ copyright = u'2003, Jeff Quast'
 # built documents.
 #
 # The short X.Y version.
-version = '2.0.9'
+version = '2.0.10'
 # The full version, including alpha/beta/rc tags.
 release = '2.0.9'
 
