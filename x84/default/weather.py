@@ -158,6 +158,7 @@ def do_search(term, search):
             disp_notfound()
         else:
             disp_found(len(locations))
+
     return locations
 
 
@@ -509,7 +510,7 @@ def main():
     while True:
         echo(u'\r\n\r\n')
         location = session.user.get('location', dict())
-        search = location.get('postal', u'')
+        search = location.get('city', u'') + ', ' + location.get('state', u'')
         disp_search_help()
         search = get_zipsearch(search)
         if search is None or 0 == len(search):
@@ -517,6 +518,7 @@ def main():
             return
 
         locations = do_search(term, search)
+
         if 0 != len(locations):
             location = (locations.pop() if 1 == len(locations)
                         else chose_location(locations) or dict())
@@ -552,6 +554,6 @@ def main():
                     get_centigrade()
                     break
                 elif inp.code == term.KEY_ENTER:
+                    chk_save_location(location)
                     return
 
-    chk_save_location(location)
