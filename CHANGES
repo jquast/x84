@@ -1,3 +1,11 @@
+2.0.11
+  - bugfix: weather.py fix incorrect postal code return from Accu Weather.
+    Changed the default to populate search by city/state instead of 
+    postal since this is no longer returned from accu weather correctly.
+    Also re-added missing save location field that was outside of 
+    while loop to funtion exit.
+  - bugfix: tetris.py fix for sending terminal font sequence prior to 
+    ansi screen display instead of after.
 2.0.10
   - bugfix: display updates when posting to oneliners, issue #235
 
