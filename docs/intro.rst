@@ -131,8 +131,8 @@ on *irc.efnet.org*.
 .. _pip: http://guide.python-distribute.org/installation.html#installing-pip
 .. _Documentation: http://x84.readthedocs.org/
 .. _developers: https://x84.readthedocs.org/en/latest/developers.html
-.. _clients: https://x84.readthedocs.org/en/latest/clients.html
-.. _scripting: https://x84.readthedocs.org/en/latest/bbs_api.html
+.. _clients: http://x84.readthedocs.org/en/latest/project_details.html#compatible-clients
+.. _scripting: https://x84.readthedocs.org/en/latest/api/userland.html
 .. _github: https://github.com/jquast/x84
 .. _web.py: http://webpy.org/
 .. _paramiko: http://www.lag.net/paramiko/
