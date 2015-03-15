@@ -1,3 +1,9 @@
+2.0.12
+  - bugfix: msgarea.py group members were not able to see private messages
+    assigned with their group tag. for example [sysop], if someone posted a
+    public message with only a sysop tag and/or private tag, no one in the group
+    was able to read it because private messages were not group tag checking
+    when being excluded from a users view.
 2.0.11
   - bugfix: weather.py fix incorrect postal code return from Accu Weather.
     Changed the default to populate search by city/state instead of
