@@ -157,6 +157,10 @@ def get_messages_by_subscription(session, subscription):
                 # Check this on Tag by Tag Basis
                 # Otherwise group members see no messages!
                 messages['all'] -= all_private
+            else:
+                # Remove group private messages so we don't
+                # remove on next tag_match loop.
+                all_private -= msg_indicies
 
         messages_bytag[tag_pattern]['new'] = (
             messages_bytag[tag_pattern]['all'] - messages_read)
