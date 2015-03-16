@@ -140,6 +140,10 @@ def get_messages_by_subscription(session, subscription):
     messages_bytag = {}
     messages_read = session.user.get('readmsgs', set())
 
+    # now occlude all private messages :)
+    # get this first so that we can skip groups that users are members of.
+    all_private = list_privmsgs(None)
+
     # this looks like perl code
     for tag_pattern in subscription:
         messages_bytag[tag_pattern] = collections.defaultdict(set)
@@ -147,20 +151,25 @@ def get_messages_by_subscription(session, subscription):
             msg_indicies = list_msgs(tags=(tag_match,))
             messages['all'].update(msg_indicies)
             messages_bytag[tag_pattern]['all'].update(msg_indicies)
+
+            if tag_match not in session.user.groups:
+                # If where not in a group, exclude all private messages!
+                # Check this on Tag by Tag Basis
+                # Otherwise group members see no messages!
+                messages['all'] -= all_private
+            else:
+                # Remove group private messages so we don't
+                # remove on next tag_match loop.
+                all_private -= msg_indicies
+
         messages_bytag[tag_pattern]['new'] = (
             messages_bytag[tag_pattern]['all'] - messages_read)
-
-    # now occlude all private messages :)
-    all_private = list_privmsgs(None)
-    messages['new'] -= all_private
-    messages['all'] -= all_private
 
     # and make a list of only our own
     messages['private'] = list_privmsgs(session.user.handle)
 
     # and calculate 'new' messages
     messages['new'] = (messages['all'] | messages['private']) - messages_read
-
     return messages, messages_bytag
 
 
