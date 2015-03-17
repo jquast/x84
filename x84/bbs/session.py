@@ -253,24 +253,19 @@ class Session(object):
 
     @property
     def script_path(self):
-        """ Base filepath folder for all scripts.
-        
-            rtype: list
         """
-        val = get_ini('system', 'scriptpath')
-
-        # system.scriptpath setting.
-        # coerce scriptpath to a list. Multiple scriptpath values allow the
-        # ability to override the x84/default modules, without modifying the
-        # original source tree files.
-        val = val.split(',')
+        Base filepath folder for all scripts.
+        
+        :rtype: list
+        """
+        scriptpath_dirs = get_ini('system', 'scriptpath', split=True)
 
         # ensure all specified folders exist
-        for directory in val:
+        for directory in scriptpath_dirs:
             assert os.path.isdir(directory), (
                 'configuration section [system], value scriptpath: '
                 'not a folder: {!r}'.format(directory))
-        return val
+        return scriptpath_dirs
 
     @property
     def current_script(self):
@@ -282,9 +277,10 @@ class Session(object):
 
     @property
     def script_module(self):
-        """ Base python module instance for userland scripts.
+        """
+        Base python module instance for userland scripts.
 
-            rtype: list
+        :rtype: list
         """
         if not self._script_module:
 
