@@ -196,6 +196,8 @@ def init_bbs_ini():
     cfg_bbs.set('web', 'chain', os.path.expanduser(
         os.path.join('~', '.x84', 'ca.cer')))
     cfg_bbs.set('web', 'modules', 'msgserve')
+    cfg_bbs.set('web', 'static_files', os.path.abspath(
+        os.path.join(os.path.dirname(__file__), os.path.pardir, 'default')))
 
     # default path if cmd argument is not absolute,
     cfg_bbs.add_section('door')

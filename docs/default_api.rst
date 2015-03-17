@@ -2,7 +2,13 @@
 Customizing your board
 ======================
 
-The ``default.ini`` file option, *scriptpath*, of section *[system]*, defines folder ``'default/'``, containing the scripts documented in this section.
+The ``default.ini`` file option, *scriptpath*, of section *[system]*, defines folder ``'default/'``, containing the scripts documented in this section. *scriptpath* accepts a comma delimited list of directories in which to store your customizations. Noting that the left most entry is of the highest preference. 
+
+For example.
+
+    scriptpath = /opt/bbs/scripts,/usr/local/src/x84/x84/default
+
+x84 searches for scripts in ``/opt/bbs/scripts`` first and then ``/usr/local/src/x84/x84/default``. This allows you to keep any customizations outside of the main source tree and then fall back to x84 defaults if they're not present in your customizations directory.
 
 Additional scripts can be found at https://github.com/x84-extras
 

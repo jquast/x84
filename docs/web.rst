@@ -51,7 +51,8 @@ Serving static files
 
 One of x/84's internal web modules is called ``static``. If you enable this
 module, x/84 will serve static file content from the ``www-static`` subdirectory
-of your system's script path. If you wish to set the document root to some other
+of your system's top-level ``scriptpath``. The top-level refers to the first
+item in this array.  If you wish to set the document root to some other
 location, use the ``document_root`` option in the ``[web]`` section of your
 configuration file. ::
 
