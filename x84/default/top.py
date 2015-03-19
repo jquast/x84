@@ -138,7 +138,7 @@ def display_prompt(term):
                      ).rstrip())
     echo(term.move_up() + term.move_up() + term.move_x(0))
     echo(term.center(u'quick login {0} ?\b\b'
-                     .format(_show_opt(term, u'yn'))
+                     .format(_show_opt(term, u'[yN]'))
                      ).rstrip())
 
 
@@ -233,7 +233,9 @@ def do_intro_art(term, session):
         if inp is None or inp.lower() == u'y':
             # escape/yes: quick login
             return True
-        elif inp.lower() == u'n':
+        # issue #242 : set 'N' as default, by adding a check for an empty
+        # unicode string.
+        elif inp.lower() in (u'n', u'\r', u'\n', u''):
             break
 
         if len(inp) == 1:
