@@ -44,8 +44,8 @@ def web_module():
 
     # determine document root for web server
     static_root = (get_ini('web', 'document_root')
-                   or os.path.join(get_ini('system', 'scriptpath'),
-                                   'www-static'))
+                   or os.path.join(get_ini('system', 'scriptpath',
+                   split=True)[0], 'www-static'))
     StaticApp.static_root = static_root
 
     return {

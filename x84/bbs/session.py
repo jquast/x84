@@ -75,7 +75,7 @@ class Session(object):
     _decoder = None
     _activity = None
     _user = None
-    _script_module = None
+    _script_module = []
 
     def __init__(self, terminal, sid, env, child_pipes, kind, addrport,
                  matrix_args, matrix_kwargs):
@@ -253,13 +253,19 @@ class Session(object):
 
     @property
     def script_path(self):
-        """ Base filepath folder for all scripts. """
-        val = get_ini('system', 'scriptpath')
-        # ensure folder exists
-        assert os.path.isdir(val), (
-            'configuration section [system], value scriptpath: '
-            'not a folder: {!r}'.format(val))
-        return val
+        """
+        Base filepath folder for all scripts.
+        
+        :rtype: list
+        """
+        scriptpath_dirs = get_ini('system', 'scriptpath', split=True)
+
+        # ensure all specified folders exist
+        for directory in scriptpath_dirs:
+            assert os.path.isdir(directory), (
+                'configuration section [system], value scriptpath: '
+                'not a folder: {!r}'.format(directory))
+        return scriptpath_dirs
 
     @property
     def current_script(self):
@@ -271,19 +277,26 @@ class Session(object):
 
     @property
     def script_module(self):
-        """ Base python module instance for userland scripts. """
-        if self._script_module is None:
-            # load default/__init__.py as 'default',
-            folder_name = os.path.basename(self.script_path)
+        """
+        Base python module instance for userland scripts.
 
-            # put it in sys.path for relative imports
-            if self.script_path not in sys.path:
-                sys.path.insert(0, self.script_path)
+        :rtype: list
+        """
+        if not self._script_module:
 
-            # discover import path to __init__.py, store result
-            lookup = imp.find_module('__init__', [self.script_path])
-            self._script_module = imp.load_module(folder_name, *lookup)
-            self._script_module.__path__ = self.script_path
+            for directory in self.script_path:
+                # load default/__init__.py as 'default',
+                folder_name = os.path.basename(directory)
+
+                # put it in sys.path for relative imports
+                if directory not in sys.path:
+                    sys.path.insert(0, directory)
+
+                # discover import path to __init__.py, store result
+                lookup = imp.find_module('__init__', [directory])
+                scr_module = imp.load_module(folder_name, *lookup)
+                scr_module.__path__ = directory
+                self._script_module.append(scr_module)
         return self._script_module
 
     @property
@@ -657,16 +670,17 @@ class Session(object):
         # if given a script name such as 'extras.target', adjust the lookup
         # path to be extended by {default_scriptdir}/extras, and adjust
         # script_name to be just 'target'.
-        script_relpath = self.script_module.__path__
-        lookup_paths = [script_relpath]
+        script_relpath = [ directory.__path__ for directory in self.script_module ]
+        lookup_paths = script_relpath[:]
+
         if '.' not in script.name:
             script_name = script.name
         else:
             # build another system path, relative to `script_module'
             remaining, script_name = script.name.rsplit('.', 1)
-            _lookup_path = os.path.join(script_relpath, *remaining.split('.'))
-            lookup_paths.append(_lookup_path)
-
+            for dir_relpath in script_relpath:
+                _lookup_path = os.path.join(dir_relpath, *remaining.split('.'))
+                lookup_paths.append(_lookup_path)
         lookup = imp.find_module(script_name, lookup_paths)
         module = imp.load_module(script_name, *lookup)
 

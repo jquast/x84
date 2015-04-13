@@ -191,10 +191,11 @@ def main(background_daemon=True):
 
     log = logging.getLogger(__name__)
 
-    SCRIPT_PATH = get_ini(section='system', key='scriptpath')
+    SCRIPT_PATH = get_ini(section='system', key='scriptpath', split=True)
 
     # ensure the SCRIPT_PATH is in os environment PATH for module lookup.
-    sys.path.insert(0, os.path.expanduser(SCRIPT_PATH))
+    for directory in SCRIPT_PATH:
+        sys.path.insert(0, os.path.expanduser(directory))
 
     web_modules = get_ini(section='web', key='modules', split=True)
 
