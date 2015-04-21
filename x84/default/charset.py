@@ -33,8 +33,8 @@ prompt_text = (u"Chose an encoding and set font until artwork "
                u"should chose cp437, though internationalized languages "
                u"will appear as '?'.  "
 
-               u"OSX Clients should chose an Andale Mono font. Linux "
-               u"clients should chose an Deja Vu Sans Mono font. ")
+               u"OSX Clients should chose the Andale Mono font. Linux "
+               u"clients should chose the Deja Vu Sans Mono font. ")
 
 #: horizontal margin from window edge for prompt
 prompt_padding = 10
