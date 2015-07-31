@@ -1,3 +1,7 @@
+2.0.13
+  - bugfix: common.py's two functions, display_banner and prompt_pager,
+    were not properly counting line numbers. prompt_pager also deals
+    with wrapped lines much better now.
 2.0.12
   - enhancement: [system] option scriptpath now supports a comma
     separated list of directories in which customizations are stored.
