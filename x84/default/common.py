@@ -129,7 +129,8 @@ def display_banner(filepattern, vertical_padding=0, **kwargs):
 
     art_generator = showart(filepattern, **kwargs)
     line_no = 0
-    for line_no, txt in enumerate(art_generator):
+    for txt in art_generator:
+        line_no += 1
         echo(txt)
 
     # return line number
@@ -184,12 +185,13 @@ def prompt_pager(content, line_no=0, colors=None, width=None,
         if txt.rstrip():
             result.extend(term.wrap(txt, width, **kwargs))
         else:
-            result.append(u'\r\n')
+            result.append(u'')
 
     xpos = 0
     if term.width:
         xpos = max(0, int((term.width / 2) - width / 2))
-    for line_no, txt in enumerate(result):
+    for txt in result:
+        line_no += 1
         if xpos:
             echo(term.move_x(xpos))
         echo(txt.rstrip() + term.normal + term.clear_eol + u'\r\n')
