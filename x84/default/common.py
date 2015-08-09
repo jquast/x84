@@ -183,7 +183,10 @@ def prompt_pager(content, line_no=0, colors=None, width=None,
     result = []
     for txt in content:
         if txt.rstrip():
-            result.extend(term.wrap(txt, width, **kwargs))
+            lines = term.wrap(txt, width, **kwargs)
+
+            for line in lines:
+                result.append(line)
         else:
             result.append(u'')
 
