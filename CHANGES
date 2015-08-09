@@ -1,3 +1,7 @@
+2.0.13
+  - bugfix: previously the 'stop/more/continuous' prompt was not pausing news
+    output in the appropriate place. prompt_pager also deals with wrapped lines
+    much better now.
 2.0.12
   - enhancement: [system] option scriptpath now supports a comma
     separated list of directories in which customizations are stored.
