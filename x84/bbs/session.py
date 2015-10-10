@@ -5,6 +5,7 @@
 import collections
 import traceback
 import logging
+import pickle
 import time
 import imp
 import sys
@@ -628,7 +629,11 @@ class Session(object):
             # ask engine process for new event data,
             poll = min(0.5, waitfor) or 0.01
             if self.reader.poll(poll):
-                event, data = self.reader.recv()
+                try:
+                    event, data = self.reader.recv()
+                except pickle.UnpicklingError as err:
+                    self.log.error(err)
+                    disconnect(reason='{0}'.format(err))
                 # it is necessary to always buffer an event, as some
                 # side-effects may occur by doing so.  When buffer_event
                 # returns True, those side-effects caused no data to be
