@@ -334,6 +334,9 @@ def start_process(sid, env, CFG, child_pipes, kind, addrport,
             'matrix_kwargs': matrix_kwargs or {},
         }
         Session(**kwargs).run()
+    except Disconnected as err:
+        log = logging.getLogger(__name__)
+        log.info(err)
     finally:
         # signal exit to engine
         try:
