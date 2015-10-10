@@ -5,7 +5,7 @@ import zipfile
 import os
 
 # local
-from x84.bbs import getsession, getterminal, echo, getch, syncterm_setfont
+from x84.bbs import getsession, getterminal, echo, syncterm_setfont
 from x84.bbs import get_ini, DBProxy, Lightbar, LineEditor
 from x84.bbs import send_modem, recv_modem
 from x84.default.common import filesize
@@ -396,7 +396,7 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
     while True:
         # read from lightbar
         while not inp:
-            inp = getch(0.2)
+            inp = term.inkey(0.2)
             # respond to screen dimension change by redrawing
             if session.poll_event('refresh'):
                 draw_interface(term, lightbar)

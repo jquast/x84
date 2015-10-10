@@ -94,13 +94,14 @@ class Selector(AnsiWindow):
 
     def read(self):
         """ Reads input until the ENTER or ESCAPE key is pressed (Blocking). """
-        from x84.bbs import getch
+        from x84.bbs import getterminal
         from x84.bbs.output import echo
         self._selected = False
         self._quit = False
         echo(self.refresh())
+        term = getterminal()
         while not (self.selected or self.quit):
-            echo(self.process_keystroke(getch()) or u'')
+            echo(self.process_keystroke(term.inkey()) or u'')
         if self.quit:
             return None
         return self.selection

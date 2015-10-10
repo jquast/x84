@@ -3,7 +3,7 @@
 import os
 
 # local
-from x84.bbs import getsession, getterminal, encode_pipe, echo, getch
+from x84.bbs import getsession, getterminal, encode_pipe, echo
 from x84.bbs import Lightbar, Selector, ScrollingEditor, showart
 from x84.bbs import syncterm_setfont
 
@@ -151,8 +151,9 @@ def yes_no(lightbar, msg, prompt_msg='are you sure? ', attr=None):
     sel.keyset['left'].extend(keyset['yes'])
     sel.keyset['right'].extend(keyset['no'])
     echo(sel.refresh())
+    term = getterminal()
     while True:
-        inp = getch()
+        inp = term.inkey()
         echo(sel.process_keystroke(inp))
         if((sel.selected and sel.selection == sel.left)
                 or inp in keyset['yes']):
@@ -386,7 +387,7 @@ def main(save_key=None, continue_draft=False):
             echo(redraw(lightbar, lneditor))
             dirty = False
         # poll for input
-        inp = getch(1)
+        inp = term.inkey(1)
 
         # buffer keystrokes for repeat
         if (not edit and inp is not None

@@ -11,7 +11,7 @@ import warnings
 
 # local
 from x84.bbs.ansiwin import AnsiWindow, GLYPHSETS
-from x84.bbs.session import getterminal, getch
+from x84.bbs.session import getterminal
 from x84.bbs.output import echo
 
 #: default command-key mapping.
@@ -189,7 +189,7 @@ class LineEditor(object):
         self._quit = False
         echo(self.refresh())
         while not (self.quit or self.carriage_returned):
-            inp = getch()
+            inp = term.inkey()
             echo(self.process_keystroke(inp))
         echo(self._term.normal)
         if not self.quit:
@@ -424,7 +424,7 @@ class ScrollingEditor(AnsiWindow):
         self._quit = False
         self._carriage_returned = False
         while not (self.quit or self.carriage_returned):
-            inp = getch()
+            inp = term.inkey()
             echo(self.process_keystroke(inp))
         if not self.quit:
             return self.content

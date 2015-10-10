@@ -11,7 +11,6 @@ import os
 #         No name 'core' in module 'distutils'
 #         Unable to import 'distutils.core'
 from distutils.core import setup
-from setuptools.command.develop import develop as _develop
 from setuptools import Command
 
 HERE = os.path.dirname(__file__)
@@ -19,70 +18,8 @@ README = 'README.rst'
 DOC_URL = 'http://x84.rtfd.org'
 
 
-def check_virtualenv():
-    """ Ensure a virtualenv is used. """
-    if not os.getenv('VIRTUAL_ENV'):
-        print('You must be in a virtualenv, See developer documentation '
-              'at filepath docs/developers.rst or online at {0}'
-              .format(DOC_URL), file=sys.stderr)
-        exit(1)
-
-
-class Develop(_develop):
-
-    """ Ensure a virtualenv is used and install developer requirements. """
-
-    def finalize_options(self):
-        """ Validate options. """
-        check_virtualenv()
-        _develop.finalize_options(self)
-
-    def run(self):
-        """ Run develop command. """
-        cargs = ['pip', 'install', '--upgrade', 'sphinx', 'tox']
-        print('>>', ' '.join(map(pipes.quote, list(cargs))))
-        subprocess.check_call(cargs)
-        _develop.run(self)
-
-
-class BuildDocs(Command):
-
-    """ Build documentation using sphinx. """
-
-    #: path to source documentation folder.
-    DOCS_SRC = os.path.join(HERE, 'docs')
-
-    #: path to output html documentation folder.
-    DOCS_DST = os.path.join(HERE, 'build', 'docs')
-
-    user_options = []
-
-    def initialize_options(self):
-        """ Initialize options. """
-        pass
-
-    def finalize_options(self):
-        """ Validation options. """
-        # pylint: disable=R0201
-        #         Method could be a function
-        check_virtualenv()
-
-    def run(self):
-        """ Call sphinx-build. """
-        try:
-            subprocess.call(
-                ('sphinx-build', '-v', '-n', '-E',
-                 self.DOCS_SRC, self.DOCS_DST),
-                stdout=sys.stdout, stderr=sys.stderr)
-        except OSError as err:
-            if err.errno != errno.ENOENT:
-                raise
-            print("run '{0} develop' first".format(__file__), file=sys.stderr)
-            sys.exit(1)
-
-
 setup(name='x84',
-      version='2.0.12',
+      version='2.0.13',
       description=("Framework for Telnet and SSH BBS or MUD server "
                    "development with example default bbs board"),
       long_description=open(os.path.join(HERE, README)).read(),
@@ -103,7 +40,7 @@ setup(name='x84',
                               ],
       },
       install_requires=[
-          'blessed==1.9.5',
+          'blessed>=1.9.5,<2.0.0',
           'requests==2.5.1',
           'irc==11.0.1',
           'sqlitedict==1.1.0',
@@ -172,9 +109,5 @@ setup(name='x84',
           'Topic :: Terminals :: Telnet',
           'Topic :: Terminals',
       ],
-      cmdclass={
-          'develop': Develop,
-          'docs': BuildDocs,
-      },
       zip_safe=False,
 )
