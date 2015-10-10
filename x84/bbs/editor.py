@@ -188,6 +188,7 @@ class LineEditor(object):
         self._carriage_returned = False
         self._quit = False
         echo(self.refresh())
+        term = getterminal()
         while not (self.quit or self.carriage_returned):
             inp = term.inkey()
             echo(self.process_keystroke(inp))
