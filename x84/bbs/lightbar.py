@@ -2,7 +2,7 @@
 
 # local imports
 from x84.bbs.ansiwin import AnsiWindow
-from x84.bbs.session import getterminal, getch
+from x84.bbs.session import getterminal
 from x84.bbs.output import decode_pipe, echo
 
 
@@ -218,8 +218,9 @@ class Lightbar(AnsiWindow):
         self._selected = False
         self._quit = False
         echo(self.refresh())
+        term = getterminal()
         while not (self.selected or self.quit):
-            echo(self.process_keystroke(getch()))
+            echo(self.process_keystroke(term.inkey()))
         if self.quit:
             return None
         return self.selection[0]

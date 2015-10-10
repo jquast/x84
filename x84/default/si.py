@@ -7,7 +7,7 @@ def main():
     #         Too many local variables
     #         Used builtin function 'map'
     #         Too many branches
-    from x84.bbs import getsession, getterminal, echo, getch, syncterm_setfont
+    from x84.bbs import getsession, getterminal, echo, syncterm_setfont
     from x84.engine import __url__ as url
     import platform
     import random
@@ -83,7 +83,7 @@ def main():
                     term.width, width,),
                 u'\r\n\r\n',
                 u'press any key...',)))
-            getch()
+            term.inkey()
             return (None, None)
         if term.height < height:
             echo(u''.join((
@@ -93,7 +93,7 @@ def main():
                     term.height, height),
                 u'\r\n\r\n',
                 u'press any key...',)))
-            getch()
+            term.inkey()
             return (None, None)
         xloc = (term.width / 2) - (width / 2)
         yloc = (term.height / 2) - (height / 2)
@@ -196,7 +196,7 @@ def main():
                                  + u' ' + line)
                 txt_x, txt_y = refresh()
                 continue
-            inp = getch(tm_out)
+            inp = term.inkey(tm_out)
             if inp in (term.KEY_UP, 'k'):
                 if tm_out >= tm_min:
                     tm_out -= tm_step
