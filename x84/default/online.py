@@ -200,7 +200,7 @@ def main():
     #         Too many branches
     #         Too many local variables
     #         Too many statements
-    from x84.bbs import getsession, getterminal, getch, echo
+    from x84.bbs import getsession, getterminal, echo
     session, term = getsession(), getterminal()
     SELF_ID = session.sid
     ayt_lastfresh = 0
@@ -218,7 +218,7 @@ def main():
 
     while True:
         ayt_lastfresh = broadcast_ayt(ayt_lastfresh)
-        inp = getch(POLL_KEY)
+        inp = term.inkey(POLL_KEY)
         if session.poll_event('refresh') or (
                 inp in (u' ', term.KEY_REFRESH, unichr(12))):
             dirty = time.time()

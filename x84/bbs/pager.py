@@ -1,7 +1,7 @@
 """ Pager package for x/84. """
 from x84.bbs.ansiwin import AnsiWindow
 from x84.bbs.output import encode_pipe, decode_pipe
-from x84.bbs.session import getterminal, getch
+from x84.bbs.session import getterminal
 from x84.bbs.output import echo
 
 VI_KEYSET = {
@@ -136,8 +136,9 @@ class Pager(AnsiWindow):
         """
         self._quit = False
         echo(self.refresh())
+        term = getterminal()
         while not self.quit:
-            echo(self.process_keystroke(getch()))
+            echo(self.process_keystroke(term.inkey()))
 
     def move_home(self):
         """
