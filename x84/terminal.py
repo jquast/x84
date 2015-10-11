@@ -304,6 +304,7 @@ def start_process(sid, env, CFG, child_pipes, kind, addrport,
     import x84.bbs.ini
     from x84.bbs.ipc import make_root_logger
     from x84.bbs.session import Session
+    from x84.bbs.exception import Disconnected
 
     # CFG must be pickled and sent to child process; on windows systems,
     # fork() does not duplicate that it has been initialized, and requires
