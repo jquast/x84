@@ -19,6 +19,11 @@ class Terminal(BlessedTerminal):
         self._rows = rows
         self._columns = columns
         BlessedTerminal.__init__(self, kind, stream)
+        # *PATCH* against 'is None' check in method Terminal.inkey()
+        # that raises RuntimeError to "prevent indefinite blocking
+        # timeout without a keyboard attached" -- which is often our
+        # intention.
+        self._keyboard_fd = 'defunc'
         if sys.platform.lower().startswith('win32'):
             self._normal = '\x1b[m'
 
