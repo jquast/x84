@@ -424,6 +424,7 @@ class ScrollingEditor(AnsiWindow):
         echo(self.refresh())
         self._quit = False
         self._carriage_returned = False
+        term = getterminal()
         while not (self.quit or self.carriage_returned):
             inp = term.inkey()
             echo(self.process_keystroke(inp))
