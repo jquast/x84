@@ -82,7 +82,7 @@ class BuildDocs(Command):
 
 
 setup(name='x84',
-      version='2.0.12',
+      version='2.0.13',
       description=("Framework for Telnet and SSH BBS or MUD server "
                    "development with example default bbs board"),
       long_description=open(os.path.join(HERE, README)).read(),
@@ -103,7 +103,7 @@ setup(name='x84',
                               ],
       },
       install_requires=[
-          'blessed==1.9.5',
+          'blessed>=1.9.5,<2.0.0',
           'requests==2.5.1',
           'irc==11.0.1',
           'sqlitedict==1.1.0',
