@@ -52,8 +52,12 @@ def getch(timeout=None):
     were built upon getch(), and as such, this remains ...
     """
     # mark deprecate in v2.1; remove entirely in v3.0
-    # warnings.warn('getch() is deprecated, use getterminal().inkey()')
+    warnings.warn('getch() is deprecated, use getterminal().inkey()')
     keystroke = getterminal().inkey(timeout)
+    # and this is the purpose for deprecation; old versions used to
+    # return None to indicate timeout; but it is more correct to always
+    # return strings, so that .lower() and such operations are always
+    # successful without conditional 'is None' checks.
     if keystroke == u'':
         return None
     if keystroke.is_sequence:

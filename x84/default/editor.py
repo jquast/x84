@@ -3,7 +3,7 @@
 import os
 
 # local
-from x84.bbs import getsession, getterminal, encode_pipe, echo, getch
+from x84.bbs import getsession, getterminal, encode_pipe, echo
 from x84.bbs import Lightbar, Selector, ScrollingEditor, showart
 from x84.bbs import syncterm_setfont
 
@@ -151,8 +151,9 @@ def yes_no(lightbar, msg, prompt_msg='are you sure? ', attr=None):
     sel.keyset['left'].extend(keyset['yes'])
     sel.keyset['right'].extend(keyset['no'])
     echo(sel.refresh())
+    term = getterminal()
     while True:
-        inp = getch()
+        inp = term.inkey()
         echo(sel.process_keystroke(inp))
         if((sel.selected and sel.selection == sel.left)
                 or inp in keyset['yes']):
@@ -386,12 +387,10 @@ def main(save_key=None, continue_draft=False):
             echo(redraw(lightbar, lneditor))
             dirty = False
         # poll for input
-        inp = getch(1)
+        inp = term.inkey(1)
 
         # buffer keystrokes for repeat
-        if (not edit and inp is not None
-                and not isinstance(inp, int)
-                and inp.isdigit()):
+        if (not edit and inp and inp.isdigit()):
             digbuf += inp
             if len(digbuf) > 10:
                 # overflow,
@@ -409,8 +408,13 @@ def main(save_key=None, continue_draft=False):
             digbuf = u''
 
         # toggle edit mode,
-        if inp in keyset['command'] or not edit and inp in keyset['edit']:
+        if (inp in keyset['command'] or
+            inp.code in keyset['command']) or not edit and (
+                inp in keyset['edit'] or
+                inp.code in keyset['edit']):
+
             edit = not edit  # toggle
+
             if not edit:
                 # switched to command mode, merge our lines
 
@@ -418,6 +422,7 @@ def main(save_key=None, continue_draft=False):
 
                 merge()
                 lightbar.colors['highlight'] = term.yellow_reverse
+
             else:
                 # switched to edit mode, save draft,
                 # instantiate new line editor
@@ -440,7 +445,8 @@ def main(save_key=None, continue_draft=False):
             save_draft(save_key, get_lbcontent(lightbar))
 
         # command mode, insert line
-        elif not edit and inp in keyset['insert']:
+        elif not edit and (inp in keyset['insert'] or
+                           inp.code in keyset['insert']):
             for _ in count_repeat():
                 lightbar.content.insert(lightbar.index,
                                         (lightbar.index, HARDWRAP,))
@@ -449,7 +455,8 @@ def main(save_key=None, continue_draft=False):
             dirty = True
 
         # command mode; goto line
-        elif not edit and inp in keyset['goto']:
+        elif not edit and (inp in keyset['goto'] or
+                           inp.code in keyset['goto']):
             if num_repeat == -1:
                 # 'G' alone goes to end of file,
                 num_repeat = len(lightbar.content)
@@ -457,7 +464,8 @@ def main(save_key=None, continue_draft=False):
             echo(statusline(lightbar))
 
         # command mode; insert-before (switch to edit mode)
-        elif not edit and inp in keyset['insert-before']:
+        elif not edit and (inp in keyset['insert-before'] or
+                           inp.code in keyset['insert-before']):
             lightbar.content.insert(lightbar.index,
                                     (lightbar.index, HARDWRAP,))
             set_lbcontent(lightbar, get_lbcontent(lightbar))
@@ -469,7 +477,8 @@ def main(save_key=None, continue_draft=False):
             save_draft(save_key, get_lbcontent(lightbar))
 
         # command mode; insert-after (switch to edit mode)
-        elif not edit and inp in keyset['insert-after']:
+        elif not edit and (inp in keyset['insert-after'] or
+                           inp.code in keyset['insert-after']):
             lightbar.content.insert(lightbar.index + 1,
                                     (lightbar.index + 1, HARDWRAP,))
             set_lbcontent(lightbar, get_lbcontent(lightbar))
@@ -482,7 +491,8 @@ def main(save_key=None, continue_draft=False):
             save_draft(save_key, get_lbcontent(lightbar))
 
         # command mode, undo
-        elif not edit and inp in keyset['undo']:
+        elif not edit and (inp in keyset['undo'] or
+                           inp.code in keyset['insert-after']):
             for _ in count_repeat():
                 if len(UNDO):
                     set_lbcontent(lightbar, UNDO.pop())
@@ -492,15 +502,16 @@ def main(save_key=None, continue_draft=False):
                     break
 
         # command mode, join line
-        elif not edit and inp in keyset['join']:
+        elif not edit and (inp in keyset['join'] or
+                           inp.code in keyset['join']):
             for _ in count_repeat():
                 if lightbar.index + 1 < len(lightbar.content):
                     idx = lightbar.index
-                    lightbar.content[idx] = (idx,
-                                             WHITESPACE.join((
-                                                 lightbar.content[
-                                                     idx][1].rstrip(),
-                                                 lightbar.content[idx + 1][1].lstrip(),)))
+                    lightbar.content[idx] = (
+                        idx, WHITESPACE.join((
+                            lightbar.content[idx][1].rstrip(),
+                            lightbar.content[idx + 1][1].lstrip(),))
+                    )
                     del lightbar.content[idx + 1]
                     prior_length = len(lightbar.content)
                     set_lbcontent(lightbar, get_lbcontent(lightbar))
@@ -563,7 +574,8 @@ def main(save_key=None, continue_draft=False):
             if inp in (u'\r', term.KEY_ENTER,):
                 lightbar.content.insert(lightbar.index + 1,
                                         [lightbar.selection[0] + 1, u''])
-                inp = term.KEY_DOWN
+                # inject a down ...
+                inp.code = term.KEY_DOWN
                 dirty = True
             ucs = lightbar.process_keystroke(inp)
             if lightbar.moved:
@@ -576,7 +588,8 @@ def main(save_key=None, continue_draft=False):
 
         # edit mode -- append character / backspace
         elif edit and inp is not None:
-            if (inp in keyset['rubout']
+            if ((inp in keyset['rubout'] or
+                 inp.code in keyset['rubout'])
                     and len(lneditor.content) == 0
                     and lightbar.index > 0):
                 # erase past margin,

@@ -200,7 +200,7 @@ def main():
     #         Too many branches
     #         Too many local variables
     #         Too many statements
-    from x84.bbs import getsession, getterminal, getch, echo
+    from x84.bbs import getsession, getterminal, echo
     session, term = getsession(), getterminal()
     SELF_ID = session.sid
     ayt_lastfresh = 0
@@ -218,28 +218,27 @@ def main():
 
     while True:
         ayt_lastfresh = broadcast_ayt(ayt_lastfresh)
-        inp = getch(POLL_KEY)
-        if session.poll_event('refresh') or (
-                inp in (u' ', term.KEY_REFRESH, unichr(12))):
+        inp = term.inkey(POLL_KEY)
+        if session.poll_event('refresh') or (inp in (u' ', unichr(12))):
             dirty = time.time()
             cur_row = 0
-        elif inp in (u'q', 'Q', term.KEY_EXIT, unichr(27)):
+        elif inp.lower() in (u'q', unichr(27)) or inp.code == term.KEY_EXIT:
             echo(u'\r\n\r\n')
             return
-        elif inp in (u'c', 'C'):
+        elif inp.lower() == u'c':
             cur_row = 0 if chat(sessions) else cur_row
             dirty = time.time()
-        elif inp in (u's', 'S'):
+        elif inp.lower() == u's':
             cur_row = 0 if sendmsg(sessions) else cur_row
             dirty = time.time()
-        elif inp is not None and 'sysop' in session.user.groups:
-            if inp in (u'e', u'E'):
+        elif inp and 'sysop' in session.user.groups:
+            if inp.lower() == u'e':
                 cur_row = 0 if edit(sessions) else cur_row
                 dirty = time.time()
-            elif inp in (u'v', u'V'):
+            elif inp.lower() == u'v':
                 cur_row = 0 if view(sessions) else cur_row + 3
                 dirty = time.time()
-            elif inp in (u'd', u'D'):
+            elif inp.lower() == u'd':
                 disconnect(sessions)
                 dirty = time.time()
 
