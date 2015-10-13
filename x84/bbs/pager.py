@@ -106,22 +106,29 @@ class Pager(AnsiWindow):
         """
         self.moved = False
         rstr = u''
-        keystroke = hasattr(keystroke, 'code') and keystroke.code or keystroke
-        if keystroke in self.keyset['refresh']:
+        if (keystroke in self.keyset['refresh'] or
+                keystroke.code in self.keyset['refresh']):
             rstr += self.refresh()
-        elif keystroke in self.keyset['up']:
+        elif (keystroke in self.keyset['up'] or
+              keystroke.code in self.keyset['up']):
             rstr += self.move_up()
-        elif keystroke in self.keyset['down']:
+        elif (keystroke in self.keyset['down'] or
+              keystroke.code in self.keyset['down']):
             rstr += self.move_down()
-        elif keystroke in self.keyset['home']:
+        elif (keystroke in self.keyset['home'] or
+              keystroke.code in self.keyset['home']):
             rstr += self.move_home()
-        elif keystroke in self.keyset['end']:
+        elif (keystroke in self.keyset['end'] or
+              keystroke.code in self.keyset['end']):
             rstr += self.move_end()
-        elif keystroke in self.keyset['pgup']:
+        elif (keystroke in self.keyset['pgup'] or
+              keystroke.code in self.keyset['pgup']):
             rstr += self.move_pgup()
-        elif keystroke in self.keyset['pgdown']:
+        elif (keystroke in self.keyset['pgdown'] or
+              keystroke.code in self.keyset['pgdown']):
             rstr += self.move_pgdown()
-        elif keystroke in self.keyset['exit']:
+        elif (keystroke in self.keyset['exit'] or
+              keystroke.code in self.keyset['exit']):
             self._quit = True
         return rstr
 

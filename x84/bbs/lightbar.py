@@ -177,7 +177,7 @@ class Lightbar(AnsiWindow):
                 return (self.refresh_row(self.vitem_idx))
         return u''
 
-    def process_keystroke(self, key):
+    def process_keystroke(self, keystroke):
         """
         Process the keystroke and return string to refresh.
 
@@ -190,22 +190,29 @@ class Lightbar(AnsiWindow):
         self._vitem_lastidx = self.vitem_idx
         self._vitem_lastshift = self.vitem_shift
         rstr = u''
-        keystroke = hasattr(key, 'code') and key.code or key
-        if keystroke in self.keyset['home']:
+        if (keystroke in self.keyset['home'] or
+                keystroke.code in self.keyset['home']):
             rstr = self.move_home()
-        elif keystroke in self.keyset['end']:
+        elif (keystroke in self.keyset['end'] or
+              keystroke.code in self.keyset['end']):
             rstr = self.move_end()
-        elif keystroke in self.keyset['pgup']:
+        elif (keystroke in self.keyset['pgup'] or
+              keystroke.code in self.keyset['pgup']):
             rstr = self.move_pageup()
-        elif keystroke in self.keyset['pgdown']:
+        elif (keystroke in self.keyset['pgdown'] or
+              keystroke.code in self.keyset['pgdown']):
             rstr = self.move_pagedown()
-        elif keystroke in self.keyset['up']:
+        elif (keystroke in self.keyset['up'] or
+              keystroke.code in self.keyset['up']):
             rstr = self.move_up()
-        elif keystroke in self.keyset['down']:
+        elif (keystroke in self.keyset['down'] or
+              keystroke.code in self.keyset['down']):
             rstr = self.move_down()
-        elif keystroke in self.keyset['enter']:
+        elif (keystroke in self.keyset['enter'] or
+              keystroke.code in self.keyset['enter']):
             self.selected = True
-        elif keystroke in self.keyset['exit']:
+        elif (keystroke in self.keyset['exit'] or
+              keystroke.code in self.keyset['exit']):
             self._quit = True
         return rstr
 

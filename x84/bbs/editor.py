@@ -395,20 +395,25 @@ class ScrollingEditor(AnsiWindow):
         """
         self._quit = False
         rstr = u''
-        keystroke = hasattr(keystroke, 'code') and keystroke.code or keystroke
-        if keystroke in self.keyset['refresh']:
+        if (keystroke in self.keyset['refresh'] or
+                keystroke.code in self.keyset['refresh']):
             rstr = self.refresh()
-        elif keystroke in self.keyset['backspace']:
+        elif (keystroke in self.keyset['backspace'] or
+              keystroke.code in self.keyset['backspace']):
             rstr = self.backspace()
-        elif keystroke in self.keyset['backword']:
+        elif (keystroke in self.keyset['backword'] or
+              keystroke.code in self.keyset['backword']):
             rstr = self.backword()
-        elif keystroke in self.keyset['enter']:
+        elif (keystroke in self.keyset['enter'] or
+              keystroke.code in self.keyset['enter']):
             self._carriage_returned = True
             rstr = u''
-        elif keystroke in self.keyset['exit']:
+        elif (keystroke in self.keyset['exit'] or
+              keystroke.code in self.keyset['exit']):
             self._quit = True
             rstr = u''
-        elif isinstance(keystroke, int):
+        elif keystroke.is_sequence:
+            # could beep also, (error)
             rstr = u''
         else:
             if ord(keystroke) >= 0x20:
