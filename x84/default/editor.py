@@ -574,7 +574,8 @@ def main(save_key=None, continue_draft=False):
             if inp in (u'\r', term.KEY_ENTER,):
                 lightbar.content.insert(lightbar.index + 1,
                                         [lightbar.selection[0] + 1, u''])
-                inp = term.KEY_DOWN
+                # inject a down ...
+                inp.code = term.KEY_DOWN
                 dirty = True
             ucs = lightbar.process_keystroke(inp)
             if lightbar.moved:
