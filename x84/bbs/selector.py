@@ -77,18 +77,23 @@ class Selector(AnsiWindow):
         :returns: string sequence suitable for refresh.
         """
         self._moved = False
-        keystroke = hasattr(keystroke, 'code') and keystroke.code or keystroke
-        if keystroke in self.keyset['refresh']:
+        if (keystroke in self.keyset['refresh'] or
+                keystroke.code in self.keyset['refresh']):
             return self.refresh()
-        elif keystroke in self.keyset['left']:
+        elif (keystroke in self.keyset['left'] or
+              keystroke.code in self.keyset['left']):
             return self.move_left()
-        elif keystroke in self.keyset['right']:
+        elif (keystroke in self.keyset['right'] or
+              keystroke.code in self.keyset['right']):
             return self.move_right()
-        elif keystroke in self.keyset['toggle']:
+        elif (keystroke in self.keyset['toggle'] or
+              keystroke.code in self.keyset['toggle']):
             return self.toggle()
-        elif keystroke in self.keyset['exit']:
+        elif (keystroke in self.keyset['exit'] or
+              keystroke.code in self.keyset['exit']):
             self._quit = True
-        elif keystroke in self.keyset['enter']:
+        elif (keystroke in self.keyset['enter'] or
+              keystroke.code in self.keyset['enter']):
             self._selected = True
         return u''
 

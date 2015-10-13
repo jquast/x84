@@ -181,7 +181,9 @@ def main():
             echo(term.move(int(yloc), int(xloc)) + melt_colors[-1] + star)
 
     with term.hidden_cursor():
+
         while txt_x is not None and txt_y is not None:
+
             if session.poll_event('refresh'):
                 num_stars = int(num_stars)
                 stars = dict([(n, (random.choice('\\|/-'),
@@ -196,43 +198,44 @@ def main():
                                  + u' ' + line)
                 txt_x, txt_y = refresh()
                 continue
+
             inp = term.inkey(tm_out)
-            if inp in (term.KEY_UP, 'k'):
+
+            if inp.code == term.KEY_UP or inp.lower() == u'k':
                 if tm_out >= tm_min:
                     tm_out -= tm_step
-            elif inp in (term.KEY_DOWN, 'j'):
+            elif inp.code == term.KEY_DOWN or inp.lower() == u'j':
                 if tm_out <= tm_max:
                     tm_out += tm_step
-            elif inp in (term.KEY_LEFT, 'h'):
+            elif inp.code == term.KEY_LEFT or inp.lower() == u'h':
                 if num_stars > 2:
                     num_stars = int(num_stars * .5)
                     stars = dict([(n, (random.choice('\\|/-'),
                                        float(random.choice(range(term.width))),
                                        float(random.choice(range(term.height)))
                                        )) for n in range(num_stars)])
-            elif inp in (term.KEY_RIGHT, 'l'):
+            elif inp.code == term.KEY_RIGHT or inp.lower() == u'l':
                 if num_stars < (term.width * term.height) / 4:
                     num_stars = int(num_stars * 1.5)
                     stars = dict([(n, (random.choice('\\|/-'),
                                        float(random.choice(range(term.width))),
                                        float(random.choice(range(term.height)))
                                        )) for n in range(num_stars)])
-            elif inp in (u'*',) and not show_star:
-                show_star = True
-            elif inp in (u'*',) and show_star:
-                for star in stars:
-                    erase(star)
-                show_star = False
-            elif inp is not None:
+            elif inp in (u'*',):
+                show_star = not show_star
+                if not show_star:
+                    for star in stars:
+                        erase(star)
+            elif inp:
+                # any other key just exits, like a screen saver.
                 echo(term.move(term.height, 0))
                 break
+
             melt()
+
             for star_key, star_val in stars.items():
                 erase(star_key)
-                # pylint: disable=W0142
-                #         Used * or ** magic
                 stars[star_key] = iter_star(*star_val)
                 draw_star(*stars[star_key])
-            # pylint: disable=W0142
-            #         Used * or ** magic
+
             wind = iter_wind(*wind)
