@@ -37,7 +37,7 @@ def register_score(handle, score):
 
 def show_scores():
     from x84.bbs import DBProxy, Pager, getterminal
-    from x84.bbs import getch, echo, getsession, ini
+    from x84.bbs import echo, getsession, ini
     session, term = getsession(), getterminal()
     allscores = DBProxy('tetris').items()
     if 0 == len(allscores):
@@ -109,14 +109,14 @@ def show_scores():
                     term.bold_blue('uit')))),
             )))
             dirty = 0
-        echo(pager.process_keystroke(getch(1)))
+        echo(pager.process_keystroke(term.inkey(1)))
 
 
 def play():
     import time
     from random import randint
     import os
-    from x84.bbs import getterminal, getch, from_cp437, AnsiWindow, syncterm_setfont
+    from x84.bbs import getterminal, from_cp437, AnsiWindow, syncterm_setfont
     from x84.bbs import echo as echo_unbuffered
     term = getterminal()
     field = []
@@ -309,7 +309,9 @@ def play():
         u'\r\n\r\n',
         u'%s PRESS ANY kEY' % (term.bold_black('...'),),
     )))
-    getch()
+
+    term.inkey()
+
     # set syncterm font to cp437
     if term.kind.startswith('ansi'):
         echo_unbuffered(syncterm_setfont('cp437'))
@@ -495,7 +497,7 @@ def play():
         echo(buf)
         buf = ''
         flush()
-        key = getch(slice + 0.01)
+        key = term.inkey(slice + 0.01)
         now = time.time()
         # hidepiece()
         if key is not None:
@@ -540,8 +542,8 @@ def play():
                         term.move(fieldy1 + 10 / 2 + 3, fieldx1 - 11))
                     echo_unbuffered(u'press RETURN'.center(40))
                     while True:
-                        inp = getch()
-                        if inp in (u'\r', term.KEY_ENTER):
+                        inp = term.inkey()
+                        if inp.code == term.KEY_ENTER:
                             break
                     return (score, level, lines)
 
