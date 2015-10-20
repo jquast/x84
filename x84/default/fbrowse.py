@@ -388,14 +388,15 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
     browser.last_diz_len = 0
     diz = ''
     # force it to describe the very first file when browser loads
-    inp = lightbar.keyset['home'][0]
+    lightbar.home()
     # prime our loop
     isdir = False
     filepath = ''
+    inp = None
 
     while True:
         # read from lightbar
-        while not inp:
+        while inp is None:
             inp = term.inkey(0.2)
             # respond to screen dimension change by redrawing
             if session.poll_event('refresh'):
