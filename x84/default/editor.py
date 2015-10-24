@@ -574,17 +574,15 @@ def main(save_key=None, continue_draft=False):
             if inp in (u'\r', term.KEY_ENTER,):
                 lightbar.content.insert(lightbar.index + 1,
                                         [lightbar.selection[0] + 1, u''])
-                # inject a down ...
-                inp.code = term.KEY_DOWN
+                lightbar.move_down()
                 dirty = True
             ucs = lightbar.process_keystroke(inp)
-            if lightbar.moved:
-                # XXX optimize redraws
-                echo(term.normal + lneditor.erase_border())
-                echo(ucs)
-                lneditor = get_lneditor(lightbar)
-                save_draft(save_key, get_lbcontent(lightbar))
-                echo(lneditor.border() + lneditor.refresh())
+            #if lightbar.moved: # XXX optimize redraws
+            echo(term.normal + lneditor.erase_border())
+            echo(ucs)
+            lneditor = get_lneditor(lightbar)
+            save_draft(save_key, get_lbcontent(lightbar))
+            echo(lneditor.border() + lneditor.refresh())
 
         # edit mode -- append character / backspace
         elif edit and inp is not None:
