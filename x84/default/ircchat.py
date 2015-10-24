@@ -392,7 +392,7 @@ def establish_connection(term, session):
         elif event == 'input':
             session.buffer_input(data, pushback=True)
             inp = term.inkey(0)
-            while inp is not None:
+            while not inp:
                 if inp.lower() == u'q' or inp.code == term.KEY_ESCAPE:
                     echo(u'Canceled!')
                     raise EOFError()
@@ -417,7 +417,7 @@ def establish_connection(term, session):
         elif event == 'input':
             session.buffer_input(data, pushback=True)
             inp = term.inkey(0)
-            while inp is not None:
+            while not inp:
                 if inp.lower() == u'q' or inp.code == term.KEY_ESCAPE:
                     echo(u'Canceled!')
                     raise EOFError()

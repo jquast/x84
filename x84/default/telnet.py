@@ -68,7 +68,7 @@ def main(host, port=None, encoding='cp437'):
                     carriage_returned = True
                 elif carriage_returned and inp in (b'\x0a', b'\x00'):
                     carriage_returned = False
-                elif inp is not None:
+                elif inp:
                     telnet_client.write(inp)
                     log.debug('send {!r}'.format(inp))
                     carriage_returned = False

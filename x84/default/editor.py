@@ -386,6 +386,7 @@ def main(save_key=None, continue_draft=False):
             session.activity = 'editing %s' % (save_key,)
             echo(redraw(lightbar, lneditor))
             dirty = False
+
         # poll for input
         inp = term.inkey(1)
 
@@ -525,7 +526,7 @@ def main(save_key=None, continue_draft=False):
                 save_draft(save_key, get_lbcontent(lightbar))
 
         # command mode, basic cmds & movement
-        elif not edit and inp is not None:
+        elif not edit and inp:
             if inp in (u'a', u'A',):
                 if yes_no(lightbar, term.yellow(u'- ')
                           + term.bold_red(u'AbORt')
@@ -575,8 +576,8 @@ def main(save_key=None, continue_draft=False):
                 lightbar.content.insert(lightbar.index + 1,
                                         [lightbar.selection[0] + 1, u''])
                 # inject a down ...
-                inp.code = term.KEY_DOWN
                 dirty = True
+                echo(lightbar.move_down())
             ucs = lightbar.process_keystroke(inp)
             if lightbar.moved:
                 # XXX optimize redraws
@@ -587,7 +588,7 @@ def main(save_key=None, continue_draft=False):
                 echo(lneditor.border() + lneditor.refresh())
 
         # edit mode -- append character / backspace
-        elif edit and inp is not None:
+        elif edit and inp:
             if ((inp in keyset['rubout'] or
                  inp.code in keyset['rubout'])
                     and len(lneditor.content) == 0
@@ -605,6 +606,6 @@ def main(save_key=None, continue_draft=False):
                 if lneditor.moved:
                     echo(statusline(lightbar))
 
-        if inp is not None and not isinstance(inp, int) and not inp.isdigit():
+        if inp and not inp.isdigit():
             # commands were processed, reset num_repeat to 1
             num_repeat = -1
