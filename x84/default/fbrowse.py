@@ -383,12 +383,13 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
     """ Browse a directory. """
     # build and sort directory listing
     reload_dir(session, directory, lightbar, sub)
+    echo(lightbar.move_home())
     echo(lightbar.refresh())
     filename, _ = lightbar.selection
     browser.last_diz_len = 0
     diz = ''
     # force it to describe the very first file when browser loads
-    lightbar.home()
+
     # prime our loop
     isdir = False
     filepath = ''
