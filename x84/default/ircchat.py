@@ -482,10 +482,7 @@ def input_event(term, client, editor):
     retval = True
     inp = term.inkey(0)
     while inp:
-        if inp.is_sequence:
-            echo(editor.process_keystroke(inp.code))
-        else:
-            echo(editor.process_keystroke(inp))
+        echo(editor.process_keystroke(inp))
 
         if not editor.carriage_returned:
             retval = True
