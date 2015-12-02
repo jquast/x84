@@ -278,7 +278,7 @@ def recv_input(editors, edit_idx, inp):
             editor = editors[edit_idx]
             editor.update(editor.content)
             echo(editor.refresh() + editor.fixate())
-        echo(editor.process_keystroke(inp.code))
+        echo(editor.process_keystroke(inp))
     else:
         echo(editor.process_keystroke(inp))
 
