@@ -1034,8 +1034,7 @@ class TelnetServer(BaseServer):
         Create a new Telnet Server.
 
         :param ConfigParser.ConfigParser config: configuration section
-                                         ``[telnet]``, with options ``'addr'``,
-                                         ``'port'``
+            ``[telnet]``, with options ``'addr'``, ``'port'``
         """
         self.log = logging.getLogger(__name__)
         self.address = config.get('telnet', 'addr')
