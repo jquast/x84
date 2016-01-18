@@ -549,6 +549,7 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
         describe_file(term=term, diz=diz, directory=directory,
                       filename=filename, isdir=isdir)
         echo(lightbar.refresh_quick() + lightbar.fixate())
+        inp = ''  # fuck i dont know
 
 
 def main():
