@@ -99,14 +99,16 @@ def main():
 
     idx = refresh_all()
     while True:
+
         if session.poll_event('refresh'):
             idx = refresh_all()
         elif session.poll_event('automsg'):
             refresh_automsg(-1)
             echo(u'\a')  # bel
             refresh_prompt(prompt_msg)
+
         inp = term.inkey(5)
-        if inp.lower() == 'g' or term.code == term.KEY_EXIT:
+        if inp.lower() == 'g' or inp.code == term.KEY_EXIT:
             # http://www.xfree86.org/4.5.0/ctlseqs.html
             # Restore xterm icon and window title from stack.
             echo(unichr(27) + u'[23;0t')
