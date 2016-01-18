@@ -393,12 +393,12 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
     # prime our loop
     isdir = False
     filepath = ''
-    inp = None
+    inp = ''
 
     while True:
         # read from lightbar
-        while inp is None:
-            inp = term.inkey(0.2)
+        while not inp:
+            inp = term.inkey(0.5)
             # respond to screen dimension change by redrawing
             if session.poll_event('refresh'):
                 draw_interface(term, lightbar)
@@ -549,7 +549,6 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
         describe_file(term=term, diz=diz, directory=directory,
                       filename=filename, isdir=isdir)
         echo(lightbar.refresh_quick() + lightbar.fixate())
-        inp = u''
 
 
 def main():
