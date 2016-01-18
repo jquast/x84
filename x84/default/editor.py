@@ -223,8 +223,8 @@ def main(save_key=None, continue_draft=False):
     movement = (term.KEY_UP, term.KEY_DOWN, term.KEY_NPAGE,
                 term.KEY_PPAGE, term.KEY_HOME, term.KEY_END,
                 u'\r', term.KEY_ENTER)
-    keyset = {'edit': (term.KEY_ENTER,),
-              'command': (unichr(27), term.KEY_ESCAPE),
+    keyset = {'edit': ('\r', '\n'),
+              'command': (unichr(27),),
               'kill': (u'K',),
               'undo': (u'u', 'U',),
               'goto': (u'G',),
@@ -232,8 +232,7 @@ def main(save_key=None, continue_draft=False):
               'insert-before': (u'O',),
               'insert-after': (u'o',),
               'join': (u'J',),
-              'rubout': (unichr(8), unichr(127),
-                         unichr(23), term.KEY_BACKSPACE,),
+              'rubout': (unichr(8), unichr(127), unichr(23)),
               }
 
     def merge():
@@ -388,7 +387,7 @@ def main(save_key=None, continue_draft=False):
             dirty = False
 
         # poll for input
-        inp = term.inkey(1)
+        inp = term.inkey()
 
         # buffer keystrokes for repeat
         if (not edit and inp and inp.isdigit()):
@@ -409,10 +408,7 @@ def main(save_key=None, continue_draft=False):
             digbuf = u''
 
         # toggle edit mode,
-        if (inp in keyset['command'] or
-            inp.code in keyset['command']) or not edit and (
-                inp in keyset['edit'] or
-                inp.code in keyset['edit']):
+        if (inp in keyset['command']) or not edit and inp in keyset['edit']:
 
             edit = not edit  # toggle
 
@@ -446,8 +442,7 @@ def main(save_key=None, continue_draft=False):
             save_draft(save_key, get_lbcontent(lightbar))
 
         # command mode, insert line
-        elif not edit and (inp in keyset['insert'] or
-                           inp.code in keyset['insert']):
+        elif not edit and inp in keyset['insert']:
             for _ in count_repeat():
                 lightbar.content.insert(lightbar.index,
                                         (lightbar.index, HARDWRAP,))
@@ -456,8 +451,7 @@ def main(save_key=None, continue_draft=False):
             dirty = True
 
         # command mode; goto line
-        elif not edit and (inp in keyset['goto'] or
-                           inp.code in keyset['goto']):
+        elif not edit and inp in keyset['goto']:
             if num_repeat == -1:
                 # 'G' alone goes to end of file,
                 num_repeat = len(lightbar.content)
@@ -465,8 +459,7 @@ def main(save_key=None, continue_draft=False):
             echo(statusline(lightbar))
 
         # command mode; insert-before (switch to edit mode)
-        elif not edit and (inp in keyset['insert-before'] or
-                           inp.code in keyset['insert-before']):
+        elif not edit and inp in keyset['insert-before']:
             lightbar.content.insert(lightbar.index,
                                     (lightbar.index, HARDWRAP,))
             set_lbcontent(lightbar, get_lbcontent(lightbar))
@@ -478,8 +471,7 @@ def main(save_key=None, continue_draft=False):
             save_draft(save_key, get_lbcontent(lightbar))
 
         # command mode; insert-after (switch to edit mode)
-        elif not edit and (inp in keyset['insert-after'] or
-                           inp.code in keyset['insert-after']):
+        elif not edit and inp in keyset['insert-after']:
             lightbar.content.insert(lightbar.index + 1,
                                     (lightbar.index + 1, HARDWRAP,))
             set_lbcontent(lightbar, get_lbcontent(lightbar))
@@ -492,8 +484,7 @@ def main(save_key=None, continue_draft=False):
             save_draft(save_key, get_lbcontent(lightbar))
 
         # command mode, undo
-        elif not edit and (inp in keyset['undo'] or
-                           inp.code in keyset['insert-after']):
+        elif not edit and inp in keyset['undo']:
             for _ in count_repeat():
                 if len(UNDO):
                     set_lbcontent(lightbar, UNDO.pop())
@@ -503,8 +494,7 @@ def main(save_key=None, continue_draft=False):
                     break
 
         # command mode, join line
-        elif not edit and (inp in keyset['join'] or
-                           inp.code in keyset['join']):
+        elif not edit and inp in keyset['join']:
             for _ in count_repeat():
                 if lightbar.index + 1 < len(lightbar.content):
                     idx = lightbar.index
@@ -548,18 +538,6 @@ def main(save_key=None, continue_draft=False):
             elif inp in (u'?',):
                 show_help(term)
                 term.inkey()
-                # pager = Pager(lightbar.height, lightbar.width,
-                #              lightbar.yloc, lightbar.xloc)
-                # pager.update(get_help())
-                #pager.colors['border'] = term.bold_blue
-                # echo(pager.border() + pager.title(u''.join((
-                #    term.bold_blue(u'-( '),
-                #    term.white_on_blue(u'r'), u':', term.bold(u'eturn'),
-                #    u' ',
-                #    term.bold_blue(u' )-'),))))
-                #pager.keyset['exit'].extend([u'r', u'R'])
-                # pager.read()
-                # echo(pager.erase_border())
                 dirty = True
             else:
                 moved = False
@@ -570,9 +548,9 @@ def main(save_key=None, continue_draft=False):
                     echo(statusline(lightbar))
 
         # edit mode; movement
-        elif edit and inp in movement:
+        elif edit and (inp in movement or inp.code in movement):
             dirty = merge()
-            if inp in (u'\r', term.KEY_ENTER,):
+            if inp in (u'\r', u'\n') or inp.code == term.KEY_ENTER:
                 lightbar.content.insert(lightbar.index + 1,
                                         [lightbar.selection[0] + 1, u''])
                 # inject a down ...
@@ -589,10 +567,9 @@ def main(save_key=None, continue_draft=False):
 
         # edit mode -- append character / backspace
         elif edit and inp:
-            if ((inp in keyset['rubout'] or
-                 inp.code in keyset['rubout'])
-                    and len(lneditor.content) == 0
-                    and lightbar.index > 0):
+            if (inp in keyset['rubout'] and
+                    len(lneditor.content) == 0 and
+                    lightbar.index > 0):
                 # erase past margin,
                 echo(term.normal + lneditor.erase_border())
                 del lightbar.content[lightbar.index]
