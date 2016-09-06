@@ -2,6 +2,9 @@
   - bugfix: previously the 'stop/more/continuous' prompt was not pausing news
     output in the appropriate place. prompt_pager also deals with wrapped lines
     much better now.
+  - bugfix: OpenSSL has changed a method signature in their library, which
+    broke the versions of cffi and cryptography x84 relies on. increased the
+    required versions of these libraries.
 2.0.12
   - enhancement: [system] option scriptpath now supports a comma
     separated list of directories in which customizations are stored.
