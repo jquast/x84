@@ -85,6 +85,11 @@ Note that only Linux, BSD, or OSX is supported, due to the blessed_ dependency o
    will not be able to run any of the web, ssh, and sftp servers, and
    password hashing (and verification) will be significantly slower.
 
+   If you receive an error about ``setuptools_ext`` not being found, you
+   may need to upgrade your installed version of setuptools and try again::
+
+     pip install -U setuptools
+
 
 4. Launch the *x84.engine* python module::
 

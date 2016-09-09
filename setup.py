@@ -132,8 +132,8 @@ setup(name='x84',
               # x/84 to be "pure python" to remain compatible with alternative
               # python interpreter implementations.
               'bcrypt==1.1.0',
-              'cffi==0.8.6',
-              'cryptography==0.7.1',
+              'cffi==1.7.0',
+              'cryptography==1.2.3',
               'ecdsa==0.11',
               'enum34==1.0.4',
               'paramiko==1.15.2',
