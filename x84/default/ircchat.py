@@ -29,6 +29,9 @@ PORT = get_ini('irc', 'port', getter='getint') or 6667
 #: irc channel
 CHANNEL = get_ini('irc', 'channel') or '#1984'
 
+#: irc server password
+PASSWORD = get_ini('irc', 'password') or None
+
 #: maximum length irc nicks
 MAX_NICK = get_ini('irc', 'max_nick', getter='getint') or 9
 
@@ -218,6 +221,8 @@ class IRCChat(object):
         """ Reply received from /NAMES command """
         nicks = list()
         for nick in event.arguments[2].split(' '):
+            if not len(nick):
+                continue
             stripped_nick = (nick[1:]
                              if nick[0] in ('@', '+',)
                              else nick)
@@ -364,6 +369,8 @@ def establish_connection(term, session):
         from ssl import wrap_socket
         from irc.connection import Factory
         kwargs['connect_factory'] = Factory(wrapper=wrap_socket)
+    if PASSWORD is not None:
+        kwargs['password'] = PASSWORD
 
     echo(u'Connecting to {server}:{port} for channel {chan}.\r\n\r\n'
          'press [{key_q}] to abort ... '.format(
