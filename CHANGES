@@ -1,6 +1,7 @@
 2.0.14
   - enhancement: ability to connect to irc servers with password protection
     using 'password' setting in 'irc' section of default.ini
+  - enhancement: pipe codes for colors/modes are now supported in ircchat.py.
 2.0.13
   - bugfix: previously the 'stop/more/continuous' prompt was not pausing news
     output in the appropriate place. prompt_pager also deals with wrapped lines
