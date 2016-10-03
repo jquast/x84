@@ -140,20 +140,18 @@ def get_messages_by_subscription(session, subscription):
     messages_bytag = {}
     messages_read = session.user.get('readmsgs', set())
 
+    # now occlude all private messages :)
+    all_private = list_privmsgs(None)
+
     # this looks like perl code
     for tag_pattern in subscription:
         messages_bytag[tag_pattern] = collections.defaultdict(set)
         for tag_match in fnmatch.filter(all_tags, tag_pattern):
             msg_indicies = list_msgs(tags=(tag_match,))
-            messages['all'].update(msg_indicies)
-            messages_bytag[tag_pattern]['all'].update(msg_indicies)
+            messages['all'].update(msg_indicies - all_private)
+            messages_bytag[tag_pattern]['all'].update(msg_indicies - all_private)
         messages_bytag[tag_pattern]['new'] = (
             messages_bytag[tag_pattern]['all'] - messages_read)
-
-    # now occlude all private messages :)
-    all_private = list_privmsgs(None)
-    messages['new'] -= all_private
-    messages['all'] -= all_private
 
     # and make a list of only our own
     messages['private'] = list_privmsgs(session.user.handle)
