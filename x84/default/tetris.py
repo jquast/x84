@@ -503,14 +503,14 @@ def play():
         if key is not None:
             if key in (u'q', u'Q'):
                 return (0, 0, 0)
-            elif key in (term.KEY_LEFT, u'h',):
+            elif key.code == term.KEY_LEFT or key == u'h':
                 xpos, ypos, r, m = movepiece(xpos - 1, ypos, r)
-            elif key in (term.KEY_RIGHT, u'l',):
+            elif key.code == term.KEY_RIGHT or key == u'l':
                 xpos, ypos, r, m = movepiece(xpos + 1, ypos, r)
-            elif key in (term.KEY_UP, u'k',):
+            elif key.code == term.KEY_UP or key == u'k':
                 xpos, ypos, r, m = movepiece(
                     xpos, ypos, (r + 1) % len(layout[p]))
-            elif key in (term.KEY_DOWN, u'j',):
+            elif key.code == term.KEY_DOWN or key == u'j':
                 xpos, ypos, r, m = movepiece(xpos, ypos + 1, r)
             elif key in (' ',):
                 m = True
