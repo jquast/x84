@@ -1,3 +1,10 @@
+2.0.15
+  - refactor: all example scripts now prefer getterminal().inkey() rather than
+    deprecated getch(), getch() returns multiple types, None for timeout,
+    keycode as integer for application keys, or string for characters.
+    inkey() interface always returns a string, sometimes empty, with
+    .code attribute for application keys.
+
 2.0.13
   - bugfix: previously the 'stop/more/continuous' prompt was not pausing news
     output in the appropriate place. prompt_pager also deals with wrapped lines
