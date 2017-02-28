@@ -4,7 +4,6 @@
 # std imports
 import collections
 import traceback
-import warnings
 import logging
 import pickle
 import time
@@ -53,8 +52,6 @@ def getch(timeout=None):
     and definitely never an integer. However some internal UI libraries
     were built upon getch(), and as such, this remains ...
     """
-    # mark deprecate in v2.1; remove entirely in v3.0
-    warnings.warn('getch() is deprecated, use getterminal().inkey()')
     keystroke = getterminal().inkey(timeout)
     # and this is the purpose for deprecation; old versions used to
     # return None to indicate timeout; but it is more correct to always
