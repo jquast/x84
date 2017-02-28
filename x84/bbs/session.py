@@ -5,6 +5,7 @@
 import collections
 import traceback
 import logging
+import pickle
 import time
 import imp
 import sys
@@ -51,9 +52,11 @@ def getch(timeout=None):
     and definitely never an integer. However some internal UI libraries
     were built upon getch(), and as such, this remains ...
     """
-    # mark deprecate in v2.1; remove entirely in v3.0
-    # warnings.warn('getch() is deprecated, use getterminal().inkey()')
     keystroke = getterminal().inkey(timeout)
+    # and this is the purpose for deprecation; old versions used to
+    # return None to indicate timeout; but it is more correct to always
+    # return strings, so that .lower() and such operations are always
+    # successful without conditional 'is None' checks.
     if keystroke == u'':
         return None
     if keystroke.is_sequence:
@@ -628,7 +631,11 @@ class Session(object):
             # ask engine process for new event data,
             poll = min(0.5, waitfor) or 0.01
             if self.reader.poll(poll):
-                event, data = self.reader.recv()
+                try:
+                    event, data = self.reader.recv()
+                except pickle.UnpicklingError as err:
+                    self.log.error(err)
+                    disconnect(reason='{0}'.format(err))
                 # it is necessary to always buffer an event, as some
                 # side-effects may occur by doing so.  When buffer_event
                 # returns True, those side-effects caused no data to be

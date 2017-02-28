@@ -11,7 +11,7 @@ import warnings
 
 # local
 from x84.bbs.ansiwin import AnsiWindow, GLYPHSETS
-from x84.bbs.session import getterminal, getch
+from x84.bbs.session import getterminal
 from x84.bbs.output import echo
 
 #: default command-key mapping.
@@ -188,8 +188,9 @@ class LineEditor(object):
         self._carriage_returned = False
         self._quit = False
         echo(self.refresh())
+        term = getterminal()
         while not (self.quit or self.carriage_returned):
-            inp = getch()
+            inp = term.inkey()
             echo(self.process_keystroke(inp))
         echo(self._term.normal)
         if not self.quit:
@@ -394,20 +395,25 @@ class ScrollingEditor(AnsiWindow):
         """
         self._quit = False
         rstr = u''
-        keystroke = hasattr(keystroke, 'code') and keystroke.code or keystroke
-        if keystroke in self.keyset['refresh']:
+        if (keystroke in self.keyset['refresh'] or
+                keystroke.code in self.keyset['refresh']):
             rstr = self.refresh()
-        elif keystroke in self.keyset['backspace']:
+        elif (keystroke in self.keyset['backspace'] or
+              keystroke.code in self.keyset['backspace']):
             rstr = self.backspace()
-        elif keystroke in self.keyset['backword']:
+        elif (keystroke in self.keyset['backword'] or
+              keystroke.code in self.keyset['backword']):
             rstr = self.backword()
-        elif keystroke in self.keyset['enter']:
+        elif (keystroke in self.keyset['enter'] or
+              keystroke.code in self.keyset['enter']):
             self._carriage_returned = True
             rstr = u''
-        elif keystroke in self.keyset['exit']:
+        elif (keystroke in self.keyset['exit'] or
+              keystroke.code in self.keyset['exit']):
             self._quit = True
             rstr = u''
-        elif isinstance(keystroke, int):
+        elif keystroke.is_sequence:
+            # could beep also, (error)
             rstr = u''
         else:
             if ord(keystroke) >= 0x20:
@@ -423,8 +429,9 @@ class ScrollingEditor(AnsiWindow):
         echo(self.refresh())
         self._quit = False
         self._carriage_returned = False
+        term = getterminal()
         while not (self.quit or self.carriage_returned):
-            inp = getch()
+            inp = term.inkey()
             echo(self.process_keystroke(inp))
         if not self.quit:
             return self.content

@@ -19,6 +19,11 @@ class Terminal(BlessedTerminal):
         self._rows = rows
         self._columns = columns
         BlessedTerminal.__init__(self, kind, stream)
+        # *PATCH* against 'is None' check in method Terminal.inkey()
+        # that raises RuntimeError to "prevent indefinite blocking
+        # timeout without a keyboard attached" -- which is often our
+        # intention.
+        self._keyboard_fd = 'defunc'
         if sys.platform.lower().startswith('win32'):
             self._normal = '\x1b[m'
 
@@ -304,6 +309,7 @@ def start_process(sid, env, CFG, child_pipes, kind, addrport,
     import x84.bbs.ini
     from x84.bbs.ipc import make_root_logger
     from x84.bbs.session import Session
+    from x84.bbs.exception import Disconnected
 
     # CFG must be pickled and sent to child process; on windows systems,
     # fork() does not duplicate that it has been initialized, and requires
@@ -334,6 +340,9 @@ def start_process(sid, env, CFG, child_pipes, kind, addrport,
             'matrix_kwargs': matrix_kwargs or {},
         }
         Session(**kwargs).run()
+    except Disconnected as err:
+        log = logging.getLogger(__name__)
+        log.info(err)
     finally:
         # signal exit to engine
         try:

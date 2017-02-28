@@ -37,7 +37,7 @@ def register_score(handle, score):
 
 def show_scores():
     from x84.bbs import DBProxy, Pager, getterminal
-    from x84.bbs import getch, echo, getsession, ini
+    from x84.bbs import echo, getsession, ini
     session, term = getsession(), getterminal()
     allscores = DBProxy('tetris').items()
     if 0 == len(allscores):
@@ -109,14 +109,14 @@ def show_scores():
                     term.bold_blue('uit')))),
             )))
             dirty = 0
-        echo(pager.process_keystroke(getch(1)))
+        echo(pager.process_keystroke(term.inkey(1)))
 
 
 def play():
     import time
     from random import randint
     import os
-    from x84.bbs import getterminal, getch, from_cp437, AnsiWindow, syncterm_setfont
+    from x84.bbs import getterminal, from_cp437, AnsiWindow, syncterm_setfont
     from x84.bbs import echo as echo_unbuffered
     term = getterminal()
     field = []
@@ -309,7 +309,9 @@ def play():
         u'\r\n\r\n',
         u'%s PRESS ANY kEY' % (term.bold_black('...'),),
     )))
-    getch()
+
+    term.inkey()
+
     # set syncterm font to cp437
     if term.kind.startswith('ansi'):
         echo_unbuffered(syncterm_setfont('cp437'))
@@ -495,20 +497,20 @@ def play():
         echo(buf)
         buf = ''
         flush()
-        key = getch(slice + 0.01)
+        key = term.inkey(slice + 0.01)
         now = time.time()
         # hidepiece()
         if key is not None:
             if key in (u'q', u'Q'):
                 return (0, 0, 0)
-            elif key in (term.KEY_LEFT, u'h',):
+            elif key.code == term.KEY_LEFT or key == u'h':
                 xpos, ypos, r, m = movepiece(xpos - 1, ypos, r)
-            elif key in (term.KEY_RIGHT, u'l',):
+            elif key.code == term.KEY_RIGHT or key == u'l':
                 xpos, ypos, r, m = movepiece(xpos + 1, ypos, r)
-            elif key in (term.KEY_UP, u'k',):
+            elif key.code == term.KEY_UP or key == u'k':
                 xpos, ypos, r, m = movepiece(
                     xpos, ypos, (r + 1) % len(layout[p]))
-            elif key in (term.KEY_DOWN, u'j',):
+            elif key.code == term.KEY_DOWN or key == u'j':
                 xpos, ypos, r, m = movepiece(xpos, ypos + 1, r)
             elif key in (' ',):
                 m = True
@@ -540,8 +542,8 @@ def play():
                         term.move(fieldy1 + 10 / 2 + 3, fieldx1 - 11))
                     echo_unbuffered(u'press RETURN'.center(40))
                     while True:
-                        inp = getch()
-                        if inp in (u'\r', term.KEY_ENTER):
+                        inp = term.inkey()
+                        if inp.code == term.KEY_ENTER:
                             break
                     return (score, level, lines)
 

@@ -15,7 +15,7 @@ def main(host, port=None, encoding='cp437'):
     #         Too many statements
     import telnetlib
     from functools import partial
-    from x84.bbs import getsession, getterminal, echo, getch, from_cp437, telnet
+    from x84.bbs import getsession, getterminal, echo, from_cp437, telnet
     import logging
     log = logging.getLogger()
 
@@ -28,7 +28,7 @@ def main(host, port=None, encoding='cp437'):
         telnet.callback_cmdopt, env_term=session.env['TERM'], height=term.height, width=term.width))
     echo(u"\r\n\r\nEscape character is 'ctrl-^.'")
     if not session.user.get('expert', False):
-        getch(3)
+        term.inkey(3)
     echo(u'\r\nTrying %s:%s... ' % (host, port,))
     # pylint: disable=W0703
     #         Catching too general exception Exception
@@ -37,7 +37,7 @@ def main(host, port=None, encoding='cp437'):
     except Exception as err:
         echo(term.bold_red('\r\n%s\r\n' % (err,)))
         echo(u'\r\n press any key ..')
-        getch()
+        term.inkey()
         return
 
     echo(u'\r\n... ')
@@ -68,7 +68,7 @@ def main(host, port=None, encoding='cp437'):
                     carriage_returned = True
                 elif carriage_returned and inp in (b'\x0a', b'\x00'):
                     carriage_returned = False
-                elif inp is not None:
+                elif inp:
                     telnet_client.write(inp)
                     log.debug('send {!r}'.format(inp))
                     carriage_returned = False
@@ -77,5 +77,5 @@ def main(host, port=None, encoding='cp437'):
     echo(u''.join(('\r\n\r\n', term.clear_el, term.normal, 'press any key')))
     echo(u'\x1b[r')  # unset 'set scrolling region', sometimes set by BBS's
     session.flush_event('input')
-    getch()
+    term.inkey()
     return

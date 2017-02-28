@@ -5,7 +5,7 @@ import zipfile
 import os
 
 # local
-from x84.bbs import getsession, getterminal, echo, getch, syncterm_setfont
+from x84.bbs import getsession, getterminal, echo, syncterm_setfont
 from x84.bbs import get_ini, DBProxy, Lightbar, LineEditor
 from x84.bbs import send_modem, recv_modem
 from x84.default.common import filesize
@@ -383,20 +383,22 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
     """ Browse a directory. """
     # build and sort directory listing
     reload_dir(session, directory, lightbar, sub)
+    echo(lightbar.move_home())
     echo(lightbar.refresh())
     filename, _ = lightbar.selection
     browser.last_diz_len = 0
     diz = ''
     # force it to describe the very first file when browser loads
-    inp = lightbar.keyset['home'][0]
+
     # prime our loop
     isdir = False
     filepath = ''
+    inp = ''
 
     while True:
         # read from lightbar
         while not inp:
-            inp = getch(0.2)
+            inp = term.inkey(0.5)
             # respond to screen dimension change by redrawing
             if session.poll_event('refresh'):
                 draw_interface(term, lightbar)
@@ -415,7 +417,8 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
         isdir = bool(filepath[-1:] == os.path.sep)
         _, ext = os.path.splitext(filename.lower())
 
-        if inp in lightbar.keyset['home']:
+        if (inp in lightbar.keyset['home'] or
+                inp.code in lightbar.keyset['home']):
             # lightbar 'home' keystroke bug; redraw current line
             echo(lightbar.refresh_row(idx))
             echo(lightbar.refresh_row(lightbar.vitem_idx))
@@ -465,14 +468,14 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
         clear_diz(term)
         save_diz = True
 
-        if lightbar.selected or inp in (term.KEY_LEFT, term.KEY_RIGHT,):
+        if lightbar.selected or inp.code in (term.KEY_LEFT, term.KEY_RIGHT,):
 
-            if sub and inp is term.KEY_LEFT:
+            if sub and inp.code == term.KEY_LEFT:
                 # term.KEY_LEFT backs up
                 return True
 
             if (isdir or is_flagged_dir(filename) and (
-                    lightbar.selected or inp is term.KEY_RIGHT)):
+                    lightbar.selected or inp.code == term.KEY_RIGHT)):
                 # 'select' key pressed
 
                 if filename == '..{0}'.format(os.path.sep):
@@ -546,7 +549,7 @@ def browse_dir(session, db_desc, term, lightbar, directory, sub=False):
         describe_file(term=term, diz=diz, directory=directory,
                       filename=filename, isdir=isdir)
         echo(lightbar.refresh_quick() + lightbar.fixate())
-        inp = None
+        inp = ''  # fuck i dont know
 
 
 def main():

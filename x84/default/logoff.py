@@ -8,7 +8,7 @@ def main():
     #         Too many branches
     from x84.bbs import DBProxy, getsession, getterminal, echo
     from x84.bbs import ini, LineEditor, timeago, showart
-    from x84.bbs import disconnect, getch
+    from x84.bbs import disconnect
     import time
     import os
     session, term = getsession(), getterminal()
@@ -99,27 +99,30 @@ def main():
 
     idx = refresh_all()
     while True:
+
         if session.poll_event('refresh'):
             idx = refresh_all()
         elif session.poll_event('automsg'):
             refresh_automsg(-1)
             echo(u'\a')  # bel
             refresh_prompt(prompt_msg)
-        inp = getch(1)
-        if inp in (u'g', u'G', term.KEY_EXIT, unichr(27), unichr(3),):
+
+        inp = term.inkey(5)
+        if inp.lower() == 'g' or inp.code == term.KEY_EXIT:
             # http://www.xfree86.org/4.5.0/ctlseqs.html
             # Restore xterm icon and window title from stack.
             echo(unichr(27) + u'[23;0t')
             echo(goodbye_msg)
-            getch(1.5)
+            term.inkey(1.5)
             disconnect('logoff.')
-        elif inp in (u'n', u'N', term.KEY_DOWN, term.KEY_NPAGE,):
+
+        elif inp.lower() == 'n':
             idx = refresh_automsg(idx + 1)
             refresh_prompt(prompt_msg)
-        elif inp in (u'p', u'P', term.KEY_UP, term.KEY_PPAGE,):
+        elif inp.lower() == 'p':
             idx = refresh_automsg(idx - 1)
             refresh_prompt(prompt_msg)
-        elif inp in (u's', u'S'):
+        elif inp.lower() == 's':
             # new prompt: say something !
             refresh_prompt(prompt_say)
             msg = LineEditor(width=automsg_len).read()
@@ -133,6 +136,6 @@ def main():
                 session.send_event('global', ('automsg', True,))
                 refresh_automsg(idx)
                 echo(u''.join((u'\r\n\r\n', commit_msg,)))
-                getch(0.5)  # for effect, LoL
+                term.inkey(0.5)  # for effect, LoL
             # display prompt
             refresh_prompt(prompt_msg)
