@@ -4,11 +4,19 @@
     keycode as integer for application keys, or string for characters.
     inkey() interface always returns a string, sometimes empty, with
     .code attribute for application keys.
-
+2.0.14
+  - enhancement: ability to connect to irc servers with password protection
+    using 'password' setting in 'irc' section of default.ini
+  - enhancement: pipe codes for colors/modes are now supported in ircchat.py.
+  - bugfix: msgarea.py fix unread message count (only include messages the
+    user can view)
 2.0.13
   - bugfix: previously the 'stop/more/continuous' prompt was not pausing news
     output in the appropriate place. prompt_pager also deals with wrapped lines
     much better now.
+  - bugfix: OpenSSL has changed a method signature in their library, which
+    broke the versions of cffi and cryptography x84 relies on. increased the
+    required versions of these libraries.
 2.0.12
   - enhancement: [system] option scriptpath now supports a comma
     separated list of directories in which customizations are stored.

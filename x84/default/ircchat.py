@@ -8,8 +8,8 @@ import time
 import re
 
 # local
-from x84.bbs import ScrollingEditor, getsession, echo, getterminal
-from x84.bbs import get_ini, syncterm_setfont, LineEditor
+from x84.bbs import (ScrollingEditor, getsession, echo, getterminal,
+                     get_ini, syncterm_setfont, LineEditor)
 
 # 3rd party
 import irc.client
@@ -29,6 +29,9 @@ PORT = get_ini('irc', 'port', getter='getint') or 6667
 #: irc channel
 CHANNEL = get_ini('irc', 'channel') or '#1984'
 
+#: irc server password
+PASSWORD = get_ini('irc', 'password') or None
+
 #: maximum length irc nicks
 MAX_NICK = get_ini('irc', 'max_nick', getter='getint') or 9
 
@@ -44,6 +47,17 @@ COLOR_INPUTBAR = get_ini('irc', 'color_inputbar') or 'reverse'
 #: syncterm font to use
 SYNCTERM_FONT = get_ini('irc', 'syncterm_font') or 'topaz'
 
+#: mirc color list
+MIRC_COLORS = (
+    'bold_white', 'black', 'blue', 'green', 'bold_red', 'red',
+    'magenta', 'yellow', 'bold_yellow', 'bold_green', 'cyan',
+    'bold_cyan', 'bold_blue', 'bold_magenta', 'bold_black',
+    'white',
+)
+
+#: ansi color list for mapping to mirc colors
+ANSI_COLORS = ('black', 'blue', 'green', 'cyan', 'red', 'magenta', 'yellow',
+               'white')
 
 class IRCChat(object):
 
@@ -76,13 +90,7 @@ class IRCChat(object):
         def color_repl(match):
             """ Regex function for replacing color codes """
 
-            mirc_colors = [
-                'bold_white', 'black', 'blue', 'green', 'bold_red', 'red',
-                'magenta', 'yellow', 'bold_yellow', 'bold_green', 'cyan',
-                'bold_cyan', 'bold_blue', 'bold_magenta', 'bold_black',
-                'white',
-            ]
-            num_colors = len(mirc_colors)
+            num_colors = len(MIRC_COLORS)
             bgc = None
             fgc = int(match.group(1))
             boldbg = False
@@ -92,14 +100,14 @@ class IRCChat(object):
                 if bgc >= num_colors:
                     bgc = None
                 else:
-                    attr = 'on_{0}'.format(mirc_colors[bgc])
+                    attr = 'on_{0}'.format(MIRC_COLORS[bgc])
                     if 'bold_' in attr:
                         attr = attr.replace('bold_', '')
                         boldbg = True
             if fgc >= num_colors:
                 fgc = None
             else:
-                attr = '{0}{1}{2}'.format(mirc_colors[fgc],
+                attr = '{0}{1}{2}'.format(MIRC_COLORS[fgc],
                                           '_' if attr else '', attr)
             if boldbg:
                 attr = 'blink_{0}'.format(attr)
@@ -153,12 +161,60 @@ class IRCChat(object):
         # pylint: disable=W0141
         commands = map(
             self.term.bold, [
-                u'/HELP', u'/ME', u'/TOPIC', u'/NAMES'])
+                u'/HELP', u'/COLORS', u'/ME', u'/TOPIC', u'/NAMES'])
         self.queue(u'{0} Use {1} to quit. Other commands: {2}'.format(
             self._indicator(),
             self.term.bold(u'/QUIT'),
             self.term.white(u', ').join(commands),
         ))
+
+    def colors(self):
+        """ Show color codes """
+
+        self.queue(u''.join((u'{0} Color codes are available through use of ',
+                             u'the pipe character.'))
+                   .format(self._indicator()))
+
+        fgc = u'{0} Foreground: '
+
+        for x in range(0, 8):
+            val = u'0' + unicode(x)
+
+            if x == 0:
+                fgc += self.term.on_white
+
+            fgc += u''.join((getattr(self.term, ANSI_COLORS[x]), u'|', val,
+                             self.term.normal, u' '))
+
+        for x in range(0, 8):
+            val = unicode(x + 8)
+
+            if len(val) == 1:
+                val = u'0' + val
+
+            fgc += u''.join((getattr(self.term, 'bold_' + ANSI_COLORS[x]),
+                             u'|', val, self.term.normal, u' '))
+
+        self.queue(fgc.format(self._indicator()))
+
+        bgc = u'{0} Background: '
+
+        for x in range(0, 8):
+            val = u'b' + unicode(x)
+
+            if x > 0:
+                bgc += self.term.bright_white
+
+            bgc += u''.join((getattr(self.term, 'on_' + ANSI_COLORS[x]), u'|',
+                             val, self.term.normal, u' '))
+
+        self.queue(bgc.format(self._indicator()))
+        self.queue(u'{0} Other: {1} {2} {3} |nn normal'
+                   .format(self._indicator(),
+                           self.term.bold(u'|bb bold'),
+                           self.term.underline(u'|uu underline'),
+                           self.term.reverse(u'|rr reverse')))
+
 
     def connect(self, *args, **kwargs):
         """ Try to connect to the server """
@@ -218,6 +274,8 @@ class IRCChat(object):
         """ Reply received from /NAMES command """
         nicks = list()
         for nick in event.arguments[2].split(' '):
+            if not len(nick):
+                continue
             stripped_nick = (nick[1:]
                              if nick[0] in ('@', '+',)
                              else nick)
@@ -364,6 +422,8 @@ def establish_connection(term, session):
         from ssl import wrap_socket
         from irc.connection import Factory
         kwargs['connect_factory'] = Factory(wrapper=wrap_socket)
+    if PASSWORD is not None:
+        kwargs['password'] = PASSWORD
 
     echo(u'Connecting to {server}:{port} for channel {chan}.\r\n\r\n'
          'press [{key_q}] to abort ... '.format(
@@ -473,6 +533,106 @@ def irc_event(term, data, scrollback, editor):
     ]))
 
 
+def ansi_encode(term, text):
+    """
+    Convert pipe codes into ANSI codes
+
+    :param blessed.Terminal term: The current pty
+    :param str text: The text to encode
+    :rtype: str
+    :returns: Encoded text
+    """
+
+    pipes = re.compile(r'\|(0[0-9]|1[0-5]|b[0-7]|bb|uu|rr|nn)',
+                       flags=re.IGNORECASE)
+    output = u''
+    ptr = 0
+    match = None
+
+    for match in pipes.finditer(text):
+        val = match.group(1).lower()
+        attr = u''
+
+        if not val.isnumeric():
+            if val == 'bb':
+                attr = term.bold
+            elif val == 'uu':
+                attr = term.underline
+            elif val == 'rr':
+                attr = term.reverse
+            elif val == 'nn':
+                attr = term.normal
+            elif val[0] == 'b':
+                int_value = int(val[1], 10)
+                attr = getattr(term, 'on_' + ANSI_COLORS[int_value])
+        else:
+            if val.startswith('0'):
+                val = val[1:]
+
+            int_value = int(val, 10)
+
+            if int_value < 8:
+                attr = getattr(term, ANSI_COLORS[int_value])
+            elif int_value >= 8:
+                attr = getattr(term, 'bold_' + ANSI_COLORS[int_value - 8])
+
+        output += text[ptr:match.start()] + attr
+        ptr = match.end()
+
+    output = text if match is None else u''.join((output, text[match.end():]))
+
+    return u''.join((output, term.normal))
+
+
+def mirc_encode(term, text):
+    """
+    Convert pipe codes into mIRC codes
+
+    :param blessed.Terminal term: The current pty
+    :param str text: The text to encode
+    :rtype: str
+    :returns: Encoded text
+    """
+
+    # map "regular" pipe codes to mIRC equivalents
+    mirc_map = (1, 2, 3, 10, 5, 6, 7, 15, 14, 12, 9, 11, 4, 13, 8, 0)
+    pipes = re.compile(r'\|(0[0-9]|1[0-5]|b[0-7]|bb|uu|rr|nn)',
+                       flags=re.IGNORECASE)
+    output = u''
+    ptr = 0
+    match = None
+
+    for match in pipes.finditer(text):
+        val = match.group(1).lower()
+        attr = u''
+
+        if not val.isnumeric():
+            if val == 'bb':
+                attr = u'\x02'
+            elif val == 'uu':
+                attr = u'\x1f'
+            elif val == 'rr':
+                attr = u'\x16'
+            elif val == 'nn':
+                attr = u'\x0f'
+            elif val[0] == 'b':
+                int_value = int(val[1], 10)
+                attr = u''.join((u'\x030,', unicode(mirc_map[int_value])))
+        else:
+            if val.startswith('0'):
+                val = val[1:]
+
+            int_value = int(val, 10)
+            attr = u''.join((u'\x03', unicode(mirc_map[int_value])))
+
+        output += text[ptr:match.start()] + attr
+        ptr = match.end()
+
+    output = text if match is None else u''.join((output, text[match.end():]))
+
+    return u''.join((output, u'\x0f'))
+
+
 def input_event(term, client, editor):
     """
     React to input event, processing /commands.
@@ -496,11 +656,6 @@ def input_event(term, client, editor):
 
             lowered = line.lower()
 
-            # fix mIRC codes that are sent improperly
-            line = (line
-                    .replace('\x15', '\x1f')   # underline
-                    .replace('\x12', '\x16'))  # reverse
-
             # parse input for potential commands
             if lowered == u'/quit':
                 client.connection.quit(
@@ -516,14 +671,18 @@ def input_event(term, client, editor):
                                                   term.bold_blue))
             elif lowered == u'/help':
                 client.help()
+            elif lowered == u'/colors':
+                client.colors()
             elif line.startswith(u'/'):
                 # some other .. unsupported command
                 retval = True
             else:
+                for_irc = mirc_encode(term, line)
+                for_x84 = ansi_encode(term, line)
                 # no command was received; post pubmsg, instead
-                client.connection.privmsg(CHANNEL, line)
+                client.connection.privmsg(CHANNEL, for_irc)
                 client.queue(client.format_pubmsg(
-                    client.nick, line, term.bold_blue))
+                    client.nick, for_x84, term.bold_blue))
         inp = term.inkey(0)
     return retval
 
