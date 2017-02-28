@@ -4,6 +4,8 @@
     keycode as integer for application keys, or string for characters.
     inkey() interface always returns a string, sometimes empty, with
     .code attribute for application keys.
+  - This refactoring allows us to use the latest version of 'blessed'
+    library.
 2.0.14
   - enhancement: ability to connect to irc servers with password protection
     using 'password' setting in 'irc' section of default.ini
