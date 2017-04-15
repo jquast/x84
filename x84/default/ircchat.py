@@ -676,7 +676,7 @@ def input_event(term, client, editor):
             elif line.startswith(u'/'):
                 # some other .. unsupported command
                 retval = True
-            else:
+            elif line.strip():
                 for_irc = mirc_encode(term, line)
                 for_x84 = ansi_encode(term, line)
                 # no command was received; post pubmsg, instead

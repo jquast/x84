@@ -304,11 +304,12 @@ def main(handle=None):
     if not quick:
         describe_ssh_availability(term, session)
 
-        gosub('msgarea', quick=True)
+        # naw, it's no good!
+        #gosub('msgarea', quick=True)
 
         # only display news if the account has not
         # yet read the news since last update.
-        gosub('news', quick=True)
+        #gosub('news', quick=True)
 
         # display last 10 callers
         gosub('lc')
