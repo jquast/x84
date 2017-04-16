@@ -10,6 +10,7 @@ import time
 import imp
 import sys
 import os
+import inspect
 
 # local
 from x84.bbs.exception import Disconnected, Goto
@@ -702,7 +703,10 @@ class Session(object):
         # capture the return value of the script and return
         # to the caller -- so value = gosub('my_game') can retrieve
         # the return value of its main() function.
-        value = module.main(*script.args, **script.kwargs)
+        if( len(inspect.getargspec(module.main)[0]) > 0):
+            value = module.main(*script.args, **script.kwargs)
+        else:
+            value = module.main()
 
         # remove the current script from the script stack, since it has
         # finished executing.
