@@ -52,7 +52,7 @@ TIME_FMT = '%A %b-%d, %Y at %r UTC'
 #: banner art displayed in main()
 art_file = get_ini(
     section='msgarea', key='art_file'
-) or 'art/hx-msg.ans'
+) or 'art/msgarea.ans'
 
 #: character encoding of banner art
 art_encoding = get_ini(

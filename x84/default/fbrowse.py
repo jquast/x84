@@ -110,6 +110,30 @@ def diz_from_lha(binary, filename):
     return description
 
 
+def diz_from_rar(binary, filename):
+    """
+    RAR format. Depends on the external binary 'unrar'.
+    """
+    import subprocess
+    import tempfile
+    import shutil
+    description = u'No description'
+    path = tempfile.mkdtemp(prefix='x84_')
+    args = ('x',filename,'{0}'.format(path))
+    proc = subprocess.Popen((binary,) + args, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    proc.wait()
+    dizfilename = os.path.join(path, 'file_id.diz')
+    if proc.returncode == 0 and os.path.isfile(dizfilename):
+        with open(dizfilename, 'rb') as dizfile:
+            description = dizfile.read().decode('cp437_art')
+    try:
+        shutil.rmtree(path)
+    except OSError:
+        pass
+    return description
+
+
 def diz_from_zip(filename, method=zipfile.ZIP_STORED):
     """
     Pull FILE_ID.DIZ from `filename` using particular zipfile `method`.
@@ -567,7 +591,7 @@ def main():
     # assign extractors to file types
     browser.diz_extractors['.zip'] = diz_from_zip
 
-    # detect LHA and DMS support
+    # detect LHA, DMS & RAR support
     output, _ = subprocess.Popen(('which', 'lha'), stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE).communicate()
     if output:
@@ -577,6 +601,11 @@ def main():
                                  stderr=subprocess.PIPE).communicate()
     if output:
         browser.diz_extractors['.dms'] = functools.partial(diz_from_dms,
+                                                          output.rstrip())
+    output, _ = subprocess.Popen(('which', 'unrar'), stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE).communicate()
+    if output:
+        browser.diz_extractors['.rar'] = functools.partial(diz_from_rar,
                                                           output.rstrip())
 
     # load flagged files
