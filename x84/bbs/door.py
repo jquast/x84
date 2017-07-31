@@ -353,7 +353,8 @@ class Door(object):
     blocksize = 7680
     master_fd = None
 
-    def __init__(self, cmd='/bin/uname', args=(), env=None, cp437=False):
+    def __init__(self, cmd='/bin/uname', args=(), env=None, cp437=False,
+                 raw=False):
         """
         Class initializer.
 
@@ -365,6 +366,7 @@ class Door(object):
         :param dict env: Environment variables to extend to the sub-process.
                          You should more than likely specify values for TERM,
                          PATH, HOME, and LANG.
+        :param bool raw: Whether or not to use raw output
         """
         self._session, self._term = getsession(), getterminal()
         self.cmd = cmd
@@ -388,6 +390,7 @@ class Door(object):
 
         self.cp437 = cp437
         self._utf8_decoder = codecs.getincrementaldecoder('utf8')()
+        self.raw = raw
 
     def run(self):
         """
@@ -523,17 +526,26 @@ class Door(object):
                 data = os.read(self.master_fd, self.blocksize)
                 if 0 == len(data):
                     break
-                echo(self.output_filter(data))
+                if self.raw:
+                    self._session.write(data.decode('iso8859-1'), 'iso8859-1')
+                else:
+                    echo(self.output_filter(data))
 
             # block up to self.time_ipoll for keyboard input
-            event, data = self._session.read_events(
-                ('refresh', 'input',), self.time_ipoll)
+
+            events = ('input',)
+
+            if not self.raw:
+                events += ('refresh',)
+
+            event, data = self._session.read_events(events, self.time_ipoll)
 
             if event == 'refresh' and data[0] == 'resize':
                 self.resize()
 
             elif event == 'input':
-                data = self.input_filter(data)
+                if not self.raw:
+                    data = self.input_filter(data)
                 if 0 != len(data):
                     n_written = os.write(self.master_fd, data)
                     if n_written != len(data):
