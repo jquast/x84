@@ -1,5 +1,8 @@
 2.0.15
   - bugfix: upgraded six version to 1.9.0 to meet blessed requirements
+  - enhancement: added 'raw' flag to x84.bbs.door.Door to send raw output to
+    the session.write method. useful for incorporating external file transfer
+    programs.
   - refactor: all example scripts now prefer getterminal().inkey() rather than
     deprecated getch(), getch() returns multiple types, None for timeout,
     keycode as integer for application keys, or string for characters.
