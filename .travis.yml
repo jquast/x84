@@ -1,0 +1,27 @@
+sudo: false
+language: python
+python:
+- '2.7'
+- '3.6'
+before_install:
+- python -c "import setuptools; print(setuptools.__version__)"
+install:
+- pip install wheel codecov coverage
+- python setup.py install bdist_wheel
+- pip install ./dist/x84-*.whl
+script:
+- tox
+- tox --installpkg ./dist/x84-*.whl --travis-after
+after_success: coverage combine && codecov
+branches:
+  only:
+  - master
+deploy:
+  provider: pypi
+  user: tehmaze
+  password:
+    secure: Lp29kI7owYCxfw+97vKhs6aWaQcn3wBVudtx+mSjOJTcFQ6Jbkcqm6k220tcBQ694NEH8yS0lP2Ft5OZYGO/SJZl9dANF19Zubp6GE/T7ESOOeWfoYthPaRT5QU3dvvxs6ffxIv0601b0kawZxYnOaccmaG9km6a5FVwmnh/slA=
+  on:
+    tags: true
+    python: 3.6
+  distributions: sdist bdist_wheel
