@@ -11,3 +11,5 @@ run
 *~
 .tox
 MANIFEST
+python_modules
+.vscode

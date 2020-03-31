@@ -47,7 +47,7 @@ new_usernames = get_ini(
 #: maximum length of user handles
 username_max_length = get_ini(
     section='nua', key='max_user', getter='getint'
-) or 10
+) or 12
 
 #: minimum length of user handles
 username_min_length = get_ini(
@@ -63,7 +63,7 @@ invalid_usernames = get_ini(
 #: login name validation as a regular expression
 username_re_validator = get_ini(
     section='nua', key='handle_validation'
-) or ['^[A-Za-z0-9]{3,11}$']
+) or ['^[A-Za-z0-9]{3,12}$']
 
 
 #: maximum length of user 'location' field
