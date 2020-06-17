@@ -49,7 +49,7 @@ def get_lastcallers(last):
                    in DBProxy('lastcalls').items()])[:last]
 
 
-def main(last=10):
+def main(last=9):
     """
     Script entry point.
 

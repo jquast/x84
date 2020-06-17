@@ -80,6 +80,7 @@ def main():
 
     userlist = [header] + ['-' * header_length]
 
+    echo(u'Fetching ... ')
     for _ur in iter_userlist():
         location_txt = u''
         if 'location' in userlist_fmt:
@@ -93,7 +94,7 @@ def main():
             location=location_txt,
             lastcall=timeago_txt))
 
-    echo(u'\r\n')
+    echo(term.move_x(0) + term.clear_eol + u'Processing ...' + term.move_x(0))
 
     # display users, using a command-prompt pager.
     prompt_pager(content=userlist,

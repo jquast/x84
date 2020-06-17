@@ -23,14 +23,11 @@ def main():
             term.red_underline(u'Escape/g'),))
     prompt_say = u''.join((term.bold_blue(handle),
                            term.bold_blue(u' SAYS WhAt'), term.bold(': '),))
-    boards = (('1984.ws', 'x/84 dEfAUlt bOARd', 'Dingo',),
-              ('htc.zapto.org', 'Haunting the Chapel', 'Mercyful fate',),
+    boards = (('htc.zapto.org', 'Haunting the Chapel', 'Mercyful fate',),
+              ('bbs.force9.org', 'fORCE9 (Euro HQ!)', 'RiPuk',),
               ('bbs.pharcyde.org', 'Pharcyde BBS', 'Access Denied',),
-              ('bloodisland.ph4.se', 'Blood Island/X', 'Xzippo',),
-              ('blackflag.acid.org:2627', 'Piranha: Black Flag', 'Caphood',),
-              ('oddnetwork.org', '79 columns', 'Haliphax'),
-              ('bbs.beardy.se', 'The Swamp', 'Beardy'),
-              ('bbs.maze.io', 'rANDOM nOIZE', 'maze'),)
+              ('blackflag.acid.org', 'The BLACK fLAG - ACiD Telnet HQ', 'Caphood',),
+              ('oddnetwork.org', '79 columns', 'Haliphax'),)
     board_fmt = u'%25s %-30s %-15s\r\n'
     goodbye_msg = u''.join((
         term.move(term.height, 0),
