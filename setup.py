@@ -41,6 +41,8 @@ setup(name='x84',
       },
       install_requires=[
           'blessed>=1.17.8,<2',
+          'feedparser>=5.2.1,<6',
+          'html2text==2019.8.11',
           'irc>=16.4,<17',
           'requests>=2.23.0,<3',
           'sauce>=1.2,<2',
