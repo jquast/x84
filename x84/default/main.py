@@ -102,7 +102,10 @@ def get_menu_items(session):
     """ Returns list of MenuItem entries. """
     #: A declaration of menu items and their acting gosub script
     menu_items = [
-        # most 'expressive' scripts,
+        # hi :-)
+        #
+        # put your own fun scripts here
+        #
         MenuItem(inp_key=u'irc',
                  text=u'irc chat',
                  script='ircchat',
@@ -111,10 +114,6 @@ def get_menu_items(session):
                  text=u"who's online",
                  script='online',
                  args=(), kwargs={}),
-#        MenuItem(inp_key=u'fb',
-#                 text=u'file browser',
-#                 script='fbrowse',
-#                 args=(), kwargs={}),
         MenuItem(inp_key=u'pe',
                  text=u'profile editor',
                  script='profile',
@@ -136,17 +135,9 @@ def get_menu_items(session):
                  text=u'one-liners',
                  script='ol',
                  args=(), kwargs={}),
-        MenuItem(inp_key=u'tetris',
-                 text=u'tetris game',
-                 script='tetris',
-                 args=(), kwargs={}),
         MenuItem(inp_key=u'vote',
                  text=u'voting booth',
                  script='vote',
-                 args=(), kwargs={}),
-        MenuItem(inp_key=u'lc',
-                 text=u'last callers',
-                 script='lc',
                  args=(), kwargs={}),
         MenuItem(inp_key=u'user',
                  text=u'user list',
@@ -160,20 +151,6 @@ def get_menu_items(session):
                  text=u'system info',
                  script='si',
                  args=(), kwargs={}),
-        MenuItem(inp_key=u'key',
-                 text=u'keyboard test',
-                 script='test_keyboard_keys',
-                 args=(), kwargs={}),
-        MenuItem(inp_key=u'ac',
-                 text=u'adjust charset',
-                 script='charset',
-                 args=(), kwargs={}),
-
-        MenuItem(inp_key=u'msg',
-                 text=u'message area',
-                 script='msgarea',
-                 args=(), kwargs={}),
-
         MenuItem(inp_key=u'g',
                  text=u'logoff system',
                  script='logoff',
