@@ -101,7 +101,7 @@ def status(term, elapsed):
 def main():
     session, term = getsession(), getterminal()
     session.activity = "Tripping out on colors!"
-    term.color_distance_algorithm = blessed.color.COLOR_DISTANCE_ALGORITHMS['rgb-weighted']
+    term.color_distance_algorithm = 'rgb-weighted'
 
     with term.hidden_cursor(), term.fullscreen():
         pause, dirty = False, True
