@@ -106,10 +106,13 @@ def get_menu_items(session):
         #
         # put your own fun scripts here
         #
-        MenuItem(inp_key=u'irc',
-                 text=u'irc chat',
-                 script='ircchat',
-                 args=(), kwargs={}),
+# ugh, the upstream 'irc' module is a PITA, it has broken dependencies
+# in the the jaraco.* modules, they're not well-managed or declared,
+# all cross-wired and broken and not python 2 compatible when they aren't
+#        MenuItem(inp_key=u'irc',
+#                 text=u'irc chat',
+#                 script='ircchat',
+#                 args=(), kwargs={}),
         MenuItem(inp_key=u'who',
                  text=u"who's online",
                  script='online',
