@@ -85,3 +85,6 @@ class IPCStream(object):
         # PicklingError: Can't pickle <type 'function'>: attribute
         #                lookup __builtin__.function failed
         self.writer.send(('output', (unicode(ucs), encoding)))
+
+    def flush(self):
+        pass

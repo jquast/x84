@@ -1,3 +1,21 @@
+|06Tue Jun 16 21:05:00 UTC 2020
+|01============================
+
+The *final* release of x/84 for Python *2* is published.  Remember that Python 2 reached EOL this year (2020), and I have *no plans* to continue to work on x/84, or to upgrade it for Python 3. Sorry!
+
+Thank you everyone who contributed and cared, for your great support over the past 10+ years of development.  Thank you so much -- especially to haliphax, maze, Mercyful, and hellbeard. This project would have died a few years too soon without your support!
+
+Also, since then, NuSkooler wrote *another modern FOSS* BBS system, in javascript:
+
+    https://github.com/NuSkooler/enigma-bbs
+
+And it is still being updated, even today when I write this, so please have a look at that project, give it a star and tell your friends :-)
+
+This release also updates the version of "blessed", a package I *do* maintain, which fully supports 24-bit colors! I've added a small demonstration door plasma.py ("ct" from main menu).  This version of blessed also works on Windows, so maybe x/84 does too?! I don't know... who wants to install Windows in a VM to find out?  Not me :-)
+
+Best wishes!! Your sysop always,
+jq
+
 |06Sun Jan 11 19:05:31 PST 2015
 |01============================
 

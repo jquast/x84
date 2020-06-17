@@ -304,7 +304,8 @@ def main(handle=None):
     if not quick:
         describe_ssh_availability(term, session)
 
-        gosub('msgarea', quick=True)
+        # meh, "msgarea" is a bit too complicated for most
+        #gosub('msgarea', quick=True)
 
         # only display news if the account has not
         # yet read the news since last update.

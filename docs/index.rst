@@ -18,7 +18,6 @@ Contents:
    developers
    default_api
    api/*
-   future_direction
 
 
 =======

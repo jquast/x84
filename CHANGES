@@ -1,3 +1,12 @@
+2.0.16
+  - This is the *final* release of x/84, there will be no more updates!!
+  - update all setup.py requirements to the latest, here's hoping the
+    direct downstream dependencies honor SEMVER and this continues to
+    work for many more years to come!
+  - removed bbs.modem api and xmodem dependencies, it is not used
+  - removed 'weather' from main menu, it is broken
+  - removed 'sysop' from main menu, the "x84 message net" is dead
+  - added 'ct', a 24-bit color example program (from blessed)
 2.0.15
   - bugfix: upgraded six version to 1.9.0 to meet blessed requirements
   - enhancement: added 'raw' flag to x84.bbs.door.Door to send raw output to
