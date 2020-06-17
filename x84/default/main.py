@@ -119,10 +119,15 @@ def get_menu_items(session):
                  text=u'profile editor',
                  script='profile',
                  args=(), kwargs={}),
-        MenuItem(inp_key=u'weather',
-                 text=u'weather forecast',
-                 script='weather',
+#        MenuItem(inp_key=u'weather',
+#                 text=u'weather forecast',
+#                 script='weather',
+#                 args=(), kwargs={}),
+        MenuItem(inp_key=u'ct',
+                 text=u'24-bit colortest',
+                 script='plasma',
                  args=(), kwargs={}),
+
         MenuItem(inp_key=u'hn',
                  text=u'hacker news',
                  script='hackernews',
@@ -176,13 +181,13 @@ def get_menu_items(session):
 
     ]
 
-    # add sysop menu for sysop users, only.
-    if session.user.is_sysop:
-        menu_items.append(
-            MenuItem(inp_key='sysop',
-                     text=u'sysop area',
-                     script='sysop',
-                     args=(), kwargs={}))
+#    # add sysop menu for sysop users, only.
+#    if session.user.is_sysop:
+#        menu_items.append(
+#            MenuItem(inp_key='sysop',
+#                     text=u'sysop area',
+#                     script='sysop',
+#                     args=(), kwargs={}))
 
     # add sesame doors, if any.
     menu_items.extend(get_sesame_menu_items(session))

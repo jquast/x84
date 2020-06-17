@@ -35,6 +35,14 @@ class Terminal(BlessedTerminal):
             self._session = getsession()
         return self._session
 
+    @property
+    def number_of_colors(self):
+        return 1 << 24
+
+    @number_of_colors.setter
+    def number_of_colors(self, value):
+        pass
+
     def inkey(self, timeout=None, esc_delay=0.35, *_):
         # pylint: disable=C0111
         #         Missing docstring
@@ -44,7 +52,6 @@ class Terminal(BlessedTerminal):
             log = logging.getLogger(__name__)
             log.warn('UnicodeDecodeError: {0}'.format(err))
             return u'?'
-    inkey.__doc__ = BlessedTerminal.inkey.__doc__
 
     def set_keyboard_decoder(self, encoding):
         """ Set or change incremental decoder for keyboard input. """
@@ -69,14 +76,12 @@ class Terminal(BlessedTerminal):
 
         # no value available within timeout.
         return False
-    kbhit.__doc__ = BlessedTerminal.kbhit.__doc__
 
     def getch(self):
         # pylint: disable=C0111
         #         Missing docstring
         val = self.session.read_event('input')
         return self._keyboard_decoder.decode(val, final=False)
-    getch.__doc__ = BlessedTerminal.getch.__doc__
 
     def _height_and_width(self):
         # pylint: disable=C0111
@@ -84,7 +89,6 @@ class Terminal(BlessedTerminal):
         from blessed.terminal import WINSZ
         return WINSZ(ws_row=self._rows, ws_col=self._columns,
                      ws_xpixel=None, ws_ypixel=None)
-    _height_and_width.__doc__ = BlessedTerminal._height_and_width.__doc__
 
     @contextlib.contextmanager
     def raw(self):

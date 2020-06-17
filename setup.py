@@ -19,7 +19,7 @@ DOC_URL = 'http://x84.rtfd.org'
 
 
 setup(name='x84',
-      version='2.0.15',
+      version='2.0.16',
       description=("Framework for Telnet and SSH BBS or MUD server "
                    "development with example default bbs board"),
       long_description=open(os.path.join(HERE, README)).read(),
@@ -40,46 +40,25 @@ setup(name='x84',
                               ],
       },
       install_requires=[
-          'blessed>=1.9.5,<2.0.0',
-          'requests==2.5.1',
-          'irc==11.0.1',
-          'sqlitedict==1.1.0',
-          'python-dateutil==2.3',
-          'jaraco.timing==1.1',
-          'jaraco.util==10.6',
-          'more-itertools==2.2',
-          'sauce==1.1',
-          'six==1.9.0',
-          'wsgiref==0.1.2',
-          'xmodem==0.3.2',
-          'feedparser==5.1.3',
-          'html2text==2014.12.29',
+          'blessed>=1.17.8,<2',
+          'feedparser>=5.2.1,<6',
+          'html2text==2019.8.11',
+          'irc>=16.4,<17',
+          'requests>=2.23.0,<3',
+          'sauce>=1.2,<2',
+          'six>=1.15.0,<2',
+          'sqlitedict>=1.6.0,<2',
+          'wcwidth>=0.2.4,<1',
+          'python-dateutil>=2.8.1,<3',
+          'backports.functools-lru-cache>=1.6.1,<2'
       ],
       extras_require={
           'with_crypto': (
-              # These cryptogaphy requirements may only be installed:
-              # - if a C compiler is available,
-              # - if libssl is available,
-              # - (sometimes, only) if libffi is available
-              #
-              # for this reason, they are **optional**, so that x/84 may be
-              # installed without a compiler or these external C libraries
-              # -- however it is **highly** recommended to always try to
-              # use install x84[with_crypto].  It has always been a goal for
-              # x/84 to be "pure python" to remain compatible with alternative
-              # python interpreter implementations.
-              'bcrypt==1.1.0',
-              'cffi==1.7.0',
-              'cryptography==1.2.3',
-              'ecdsa==0.11',
-              'enum34==1.0.4',
-              'paramiko==1.18.3',
-              'pyOpenSSL==0.14',
-              'pyasn1==0.1.7',
-              'pycparser==2.10',
-              'pycrypto==2.6.1',
-              'web.py==0.37',
-              'cherrypy==3.6.0',
+              'bcrypt>=3.1.7,<4',
+              'cherrypy>=17.4.2,<18',
+              'cryptography>=2.9.2,<3',
+              'paramiko>=2.7.1,<3',
+              'web.py>=0.51,<1',
           )
       },
       entry_points={

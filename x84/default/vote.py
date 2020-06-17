@@ -365,12 +365,14 @@ def generate_database():  # generates a database file with a generic question.
     alternatives[(0, 1)] = 'Daydream'
     alternatives[(0, 2)] = 'Mystic'
     alternatives[(0, 3)] = 'Synchronet'
+    alternatives[(0, 4)] = 'ENiGMA½'
 
     results = {}
     results[(0, 0)] = 0
     results[(0, 1)] = 0
     results[(0, 2)] = 0
     results[(0, 3)] = 0
+    results[(0, 4)] = 0
 
     amount_of_alternatives = []
     # this is the only list/dict that is not zerobased..

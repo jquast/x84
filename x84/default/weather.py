@@ -1,4 +1,9 @@
-""" Weather forecast script for x/84. """
+"""
+(Archived) Weather forecast script for x/84.
+
+You could try to turn this into your own, if you like, but the REST API that
+we piggy-backed for years has finally closed out, it no longert works !
+"""
 from xml.etree import cElementTree as ET
 import itertools
 import textwrap

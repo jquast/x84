@@ -85,13 +85,6 @@ Userland/scripting API
    :members:
    :show-inheritance:
 
-``x84.bbs.modem``
------------------
-
-.. automodule:: x84.bbs.modem
-   :members:
-   :show-inheritance:
-
 ``x84.bbs.msgbase``
 -------------------
 

@@ -1,25 +1,14 @@
-.. image:: https://landscape.io/github/jquast/x84/master/landscape.svg
-    :target: https://landscape.io/github/jquast/x84/master
-    :alt: Code Health
-
-.. image:: https://img.shields.io/pypi/v/x84.svg
-    :alt: Latest Version
-    :target: https://pypi.python.org/pypi/x84
-
-.. image:: https://pypip.in/license/x84/badge.svg
-    :alt: License
-    :target: http://opensource.org/licenses/MIT
-
-.. image:: https://img.shields.io/pypi/dm/x84.svg
-    :alt: Downloads
-
 Introduction
 ============
 
-**An experimental python Telnet and SSH server framework**
+**An experimental python 2 Telnet (and SSH) BBS**
+
+**this project is abandoned**, so please don't get too excited! Maybe you
+would be more interested in ENiGMA½_
 
 The primary purpose of x/84 is to provide a server framework for building
 environments that emulate the feeling of an era that predates the world wide web.
+
 It may be used for developing a classic bulletin board system (BBS) -- one is
 provided as the 'default' scripting layer.  It may also be used to develop a MUD,
 a text-based game, or a game-hosting server such as done by dgamelaunch.
@@ -28,49 +17,14 @@ You may access the "default board" provided by x/84 at telnet host 1984.ws::
 
     telnet 1984.ws
 
-    # or
-    ssh anonymous@1984.ws
-
-    # or
-    rlogin 1984.ws
-
-
-Technologies
-------------
-
-x/84 supplies a scripting_ engine for developing character-at a time telnet
-or ssh server, such as **MUD** or **BBS** systems.  Technologies used in x/84
-are derived from miniboa_ (Apache 2.0 Licensed) for telnet, blessed_
-(MIT Licensed) for terminal capabilities, sqlitedict_ (Public Domain) for
-persistent data, paramiko_ for ssh and sftp services, and web.py_ for http
-service.
-
-Asynchronous inter-process communication between sessions is provided through
-an event queuing framework, for scripting of 'shared' experiences. Several
-examples of these are provided, such as *chat.py*. The default board
-provides several demonstrating activities.
-
-All terminal types supported by curses (the termlib and terminfo) databases are
-allowed, with a "pythonic" terminal framework supplied through blessed_.
-
-Portability is as equal to python, and has been tested on Raspberry Pi, Android,
-Mac, OpenBSD, Solaris, etc.
-
-**ANSI Art**, such as found on ACiD_ *dark domains* DVD, is translated for
-reasonably accurate reproductions for both UTF-8 and IBM CP437 terminals. This
-allows classic DOS art to be used on modern terminals such as Terminal.app, or
-classic emulating terminals such as syncterm_. Artwork with Sauce_ records are
-also supported.
-
-See clients_ for a list of compatible clients.
-
+See clients_ for a list of compatible clients, though any terminal should be just fine.
 
 Quickstart
 ----------
 
-Note that only Linux, BSD, or OSX is supported, due to the blessed_ dependency on curses.
+Note that only Linux, BSD, or OSX is supported. Windows might even work, but hasn't been tested.
 
-1. Install python_ 2.7 and pip_. More than likely this is possible through your
+1. Install python_ **2.7** and pip_. More than likely this is possible through your
    preferred distribution packaging system.
 
 3. Install x/84::
@@ -88,7 +42,7 @@ Note that only Linux, BSD, or OSX is supported, due to the blessed_ dependency o
    If you receive an error about ``setuptools_ext`` not being found, you
    may need to upgrade your installed version of setuptools and try again::
 
-     pip install -U setuptools
+     pip install -U setuptools pip
 
 
 4. Launch the *x84.engine* python module::
@@ -117,13 +71,9 @@ section for preparing a developer's environment if you wish to contribute
 upstream.  Of note, the *Terminal* interface is used for keyboard input
 and screen output, and is very well-documented in blessed_.
 
-This project isn't terribly serious (for example, there are no tests), though
-contributions (especially fixes and documentation) are welcome.  See the
-project on github_ for source tree and issue tracking.  If there are features,
-bugs, or changes you would like to see, feel free to open an issue.
-
-If you would like to chat with developers of x/84, we are in channel *#1984*
-on *irc.efnet.org*.
+This project isn't terribly serious (for example, there are no tests).  See the project on github_
+for source tree. Please note that this project is **abandoned**.  Feel free to do whatever the heck
+you want with it, though, it is Open Source and ISC licensed!
 
 .. _miniboa: https://code.google.com/p/miniboa/
 .. _sqlitedict: http://pypi.python.org/pypi/sqlitedict
@@ -141,3 +91,4 @@ on *irc.efnet.org*.
 .. _github: https://github.com/jquast/x84
 .. _web.py: http://webpy.org/
 .. _paramiko: http://www.lag.net/paramiko/
+.. _ENiGMA½: https://enigma-bbs.github.io/
