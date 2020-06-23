@@ -1,4 +1,5 @@
 """ Voting booth script for x/84. """
+# -*- coding: utf-8 -*-
 
 from common import waitprompt, prompt_pager
 from x84.bbs import getsession, getterminal, echo, LineEditor
