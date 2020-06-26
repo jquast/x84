@@ -19,7 +19,7 @@ DOC_URL = 'http://x84.rtfd.org'
 
 
 setup(name='x84',
-      version='2.0.17',
+      version='2.0.18',
       description=("Framework for Telnet and SSH BBS or MUD server "
                    "development with example default bbs board"),
       long_description=open(os.path.join(HERE, README)).read(),
