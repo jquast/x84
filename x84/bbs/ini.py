@@ -39,7 +39,7 @@ def init(lookup_bbs, lookup_log):
 
     # exploit last argument, presumed to be within a folder
     # writable by our process, and where the ini is wanted
-    # -- engine.py specifys a default of: ~/.x84/somefile.ini
+    # -- engine.py specifies a default of: ~/.x84/somefile.ini
     loaded = False
     cfg_logfile = lookup_log[-1]
     for cfg_logfile in lookup_log:

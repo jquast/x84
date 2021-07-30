@@ -355,7 +355,7 @@ class Lightbar(AnsiWindow):
             self.vitem_idx = self.visible_height - 2
 
         # if we are a shifted window, shift 1 line up while keeping our
-        # lightbar position until the bottom-most item is within visable range.
+        # lightbar position until the bottom-most item is within visible range.
         while (self.vitem_shift and self.vitem_shift + self.visible_height - 1
                 > len(self.content)):
             self.vitem_shift -= 1

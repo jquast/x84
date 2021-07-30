@@ -630,7 +630,7 @@ class DOSDoor(Door):
         return data
 
     def input_filter(self, data):
-        """ filter keyboard input (used for "throway" bug workaround). """
+        """ filter keyboard input (used for "throwaway" bug workaround). """
         return data if time.time() - self._stime > self.START_BLOCK else u''
 
     def resize(self):

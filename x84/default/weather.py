@@ -308,7 +308,7 @@ def get_zipsearch(zipcode=u''):
 
 def chose_location_lightbar(locations):
     """
-    Lightbar pager for chosing a location.
+    Lightbar pager for choosing a location.
     """
     from x84.bbs import getterminal, echo, Lightbar
     term = getterminal()

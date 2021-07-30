@@ -304,7 +304,7 @@ def start_process(sid, env, CFG, child_pipes, kind, addrport,
     :param tuple addrport: ``(client-ip, client-port)`` as string and integer.
     :param tuple matrix_args: optional positional arguments to pass to matrix
                               script.
-    :param dict matrix_kwargs: optional keyward arguments to pass to matrix
+    :param dict matrix_kwargs: optional keyword arguments to pass to matrix
                                script.
     """
     # pylint: disable=R0913,R0914

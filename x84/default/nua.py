@@ -2,7 +2,7 @@
 """
 New user account script for x/84.
 
-This script is closely coupled with, and dependend on by profile.py.
+This script is closely coupled with, and dependent on by profile.py.
 """
 # std imports
 from __future__ import division

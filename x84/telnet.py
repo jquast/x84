@@ -316,7 +316,7 @@ class TelnetClient(BaseClient):
 
     def _iac_sniffer(self, byte):
         """
-        Watches incomming data for Telnet IAC sequences.
+        Watches incoming data for Telnet IAC sequences.
         Passes the data, if any, with the IAC commands stripped to
         _recv_byte().
         """
@@ -400,7 +400,7 @@ class TelnetClient(BaseClient):
 
     def _three_byte_cmd(self, option):
         """
-        Handle incoming Telnet commmands that are three bytes long.
+        Handle incoming Telnet commands that are three bytes long.
         """
         cmd = self.telnet_got_cmd
         self.log.debug('recv IAC %s %s', name_option(cmd), name_option(option))

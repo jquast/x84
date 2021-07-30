@@ -213,7 +213,7 @@ def do_intro_art(term, session):
     """
     Display random art file, prompt for quick login.
 
-    Bonus: allow chosing other artfiles with '<' and '>'.
+    Bonus: allow choosing other artfiles with '<' and '>'.
     """
     # set syncterm font, if any
     if syncterm_font and term.kind.startswith('ansi'):
